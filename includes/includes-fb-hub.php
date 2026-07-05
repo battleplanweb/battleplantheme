@@ -31,8 +31,13 @@ class BPFB_Hub {
 	const NS         = 'bpfb/v1';
 	const OPT_CONN   = 'bpfb_connection';     // { user_token, obtained_at, pages:[{id,name,access_token}] }
 	const OPT_STATE  = 'bpfb_oauth_state';    // short-lived CSRF state for the OAuth round-trip
-	// Scopes for Phase 1 (reviews). DMs would add pages_messaging / instagram_manage_messages later.
-	const SCOPES     = 'pages_show_list,pages_read_engagement,pages_read_user_content,business_management';
+	// OAuth scopes: reviews (pages_read_*) + Facebook Messenger DMs. Instagram messaging is NOT requested
+	// here — `instagram_basic` is deprecated and Meta blocks IG scopes inside a Messenger flow, so IG is
+	// set up separately. Filterable via `bpfb_oauth_scopes` so IG scopes can be added once configured.
+	const SCOPES     = 'pages_show_list,pages_read_engagement,pages_read_user_content,business_management,pages_messaging,pages_manage_metadata';
+	const OPT_EVENTS = 'bpfb_webhook_events'; // small ring buffer of recent webhook events (debug/verify)
+
+	public static function oauth_scopes() { return (string) apply_filters( 'bpfb_oauth_scopes', self::SCOPES ); }
 
 	public static function graph_version() {
 		return defined( 'BP_FB_GRAPH_VERSION' ) ? (string) BP_FB_GRAPH_VERSION : 'v21.0';
@@ -43,6 +48,7 @@ class BPFB_Hub {
 		// No standalone "Facebook" tab — the Connect controls render inside Tools → Client Reviews.
 		add_action( 'admin_post_bpfb_connect', array( __CLASS__, 'handle_connect' ) );
 		add_action( 'admin_post_bpfb_disconnect', array( __CLASS__, 'handle_disconnect' ) );
+		add_action( 'admin_post_bpfb_subscribe', array( __CLASS__, 'handle_subscribe' ) );
 	}
 
 	// Where the OAuth round-trip returns to (now the consolidated Client Reviews screen).
@@ -92,6 +98,274 @@ class BPFB_Hub {
 		return is_array( $body ) ? $body : array();
 	}
 
+	/** POST to a Graph path (form-encoded). Throws on Graph error, same contract as graph_get(). */
+	private static function graph_post( $path, $params, $token ) {
+		$params['access_token'] = $token;
+		$url = 'https://graph.facebook.com/' . self::graph_version() . '/' . ltrim( $path, '/' );
+		$res = wp_remote_post( $url, array( 'timeout' => 20, 'body' => $params ) );
+		if ( is_wp_error( $res ) ) throw new Exception( $res->get_error_message() );
+		$code = (int) wp_remote_retrieve_response_code( $res );
+		$body = json_decode( wp_remote_retrieve_body( $res ), true );
+		if ( isset( $body['error'] ) ) {
+			$ec  = $body['error']['code'] ?? $code;
+			$msg = $body['error']['message'] ?? 'Unknown Graph error';
+			throw new Exception( '(' . $ec . ') ' . $msg );
+		}
+		if ( $code < 200 || $code >= 300 ) throw new Exception( 'HTTP ' . $code );
+		return is_array( $body ) ? $body : array();
+	}
+
+	/* ─────────────── Messaging: webhooks + send (Messenger + Instagram DMs) ─────────────── */
+
+	public static function webhook_url() { return rest_url( self::NS . '/webhook' ); }
+
+	// The verify token you ALSO paste into Meta's webhook config. Auto-generated once; override with a
+	// constant define( 'BP_FB_WEBHOOK_TOKEN', '...' ) if you prefer.
+	public static function webhook_token() {
+		if ( defined( 'BP_FB_WEBHOOK_TOKEN' ) && BP_FB_WEBHOOK_TOKEN ) return (string) BP_FB_WEBHOOK_TOKEN;
+		$t = get_option( 'bpfb_webhook_token' );
+		if ( ! $t ) { $t = wp_generate_password( 24, false ); update_option( 'bpfb_webhook_token', $t ); }
+		return (string) $t;
+	}
+
+	// GET: Meta's one-time subscription handshake. Echo the bare challenge back.
+	public static function rest_webhook_verify( WP_REST_Request $req ) {
+		$mode      = (string) $req->get_param( 'hub_mode' );          // 'hub.mode' → hub_mode (PHP dots→underscores)
+		$token     = (string) $req->get_param( 'hub_verify_token' );
+		$challenge = (string) $req->get_param( 'hub_challenge' );
+		if ( 'subscribe' === $mode && hash_equals( self::webhook_token(), $token ) ) {
+			status_header( 200 );
+			header( 'Content-Type: text/plain' );
+			echo $challenge; // Meta expects the raw value, not JSON
+			exit;
+		}
+		// Plain visit (no verification params): return a tiny status so we can confirm the LIVE code +
+		// how many webhook events have been stored. Open the webhook URL in a browser to see this.
+		if ( '' === $mode ) {
+			return new WP_REST_Response( array(
+				'bpfb'   => 'webhook',
+				'build'  => 'dm-debug-3',
+				'events' => count( self::recent_events() ),
+			), 200 );
+		}
+		return new WP_Error( 'bpfb_verify_failed', 'Verification failed.', array( 'status' => 403 ) );
+	}
+
+	// POST: message events. Verify X-Hub-Signature-256 over the RAW body, parse, store (Stage 2 forwards).
+	public static function rest_webhook_receive( WP_REST_Request $req ) {
+		$raw      = $req->get_body();
+		$sig      = (string) $req->get_header( 'x-hub-signature-256' );
+		$expected = 'sha256=' . hash_hmac( 'sha256', $raw, self::app_secret() );
+		$sig_ok   = $sig && hash_equals( $expected, $sig );
+
+		// Ground-truth log (independent of any option/cache) so we can confirm Meta is hitting us at all.
+		error_log( '[bpfb webhook] POST len=' . strlen( (string) $raw ) . ' sig=' . ( $sig ? 'present' : 'none' ) . ' sig_ok=' . ( $sig_ok ? '1' : '0' ) );
+
+		// DEBUG: record every POST hit (with signature status) so the admin table proves whether Meta is
+		// reaching us and whether the app-secret signature matches. Remove once messaging is confirmed.
+		self::store_event( array(
+			'platform' => 'webhook-hit',
+			'page_id'  => $sig_ok ? 'sig OK' : ( $sig ? 'SIG MISMATCH' : 'no sig header' ),
+			'sender'   => '',
+			'text'     => substr( (string) $raw, 0, 300 ),
+		) );
+
+		if ( ! $sig_ok ) {
+			return new WP_REST_Response( array( 'ok' => false ), 200 ); // 200 so Meta won't retry-storm; ignored
+		}
+
+		$data     = json_decode( $raw, true );
+		$object   = is_array( $data ) ? (string) ( $data['object'] ?? '' ) : '';
+		$platform = ( 'instagram' === $object ) ? 'instagram' : 'facebook';
+
+		foreach ( ( $data['entry'] ?? array() ) as $entry ) {
+			$page_id = (string) ( $entry['id'] ?? '' );
+			foreach ( ( $entry['messaging'] ?? array() ) as $m ) {
+				if ( empty( $m['message'] ) ) continue; // skip delivery/read receipts for now
+				$ev = array(
+					'platform' => $platform,
+					'page_id'  => $page_id,
+					'sender'   => (string) ( $m['sender']['id'] ?? '' ),
+					'text'     => (string) ( $m['message']['text'] ?? '' ),
+					'mid'      => (string) ( $m['message']['mid'] ?? '' ),
+					'at'       => (int) ( $m['timestamp'] ?? 0 ),
+					'echo'     => ! empty( $m['message']['is_echo'] ),
+				);
+				self::store_event( $ev );
+				if ( empty( $ev['echo'] ) ) self::forward_message( $ev ); // route → Site Pulse inbox
+			}
+		}
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	// Keep the last ~50 events for admin verification (debug only — the real inbox lives in Site Pulse).
+	private static function store_event( array $ev ) {
+		$ev['stored_at'] = current_time( 'mysql' );
+		$list = get_option( self::OPT_EVENTS, array() );
+		if ( ! is_array( $list ) ) $list = array();
+		array_unshift( $list, $ev );
+		update_option( self::OPT_EVENTS, array_slice( $list, 0, 50 ) );
+	}
+	public static function recent_events() {
+		$l = get_option( self::OPT_EVENTS, array() );
+		return is_array( $l ) ? $l : array();
+	}
+
+	// Subscribe a Page to the app's webhooks so its messages start flowing to /webhook.
+	public static function subscribe_page( $page_id ) {
+		$token = self::page_token( $page_id );
+		if ( ! $token ) throw new Exception( 'No token for page ' . $page_id );
+		return self::graph_post( $page_id . '/subscribed_apps', array(
+			'subscribed_fields' => 'messages,messaging_postbacks,message_reactions,messaging_referrals',
+		), $token );
+	}
+
+	public static function handle_subscribe() {
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Not allowed.' );
+		check_admin_referer( 'bpfb_subscribe' );
+		@set_time_limit( 120 );
+
+		// Only subscribe Pages MAPPED to a client (those with a Facebook Page ID in the registry). Looping
+		// over every connected Page is dozens of Graph calls and times out — and we only need DMs for the
+		// Pages we actually manage.
+		$mapped = array();
+		if ( class_exists( 'BPGBP_Hub' ) && method_exists( 'BPGBP_Hub', 'get_site_map' ) ) {
+			foreach ( BPGBP_Hub::get_site_map() as $cfg ) {
+				$fp = (string) ( $cfg['facebook_page_id'] ?? '' );
+				if ( '' !== $fp ) $mapped[ $fp ] = true;
+			}
+		}
+
+		$ok = 0; $err = '';
+		foreach ( self::pages() as $p ) {
+			$pid = (string) ( $p['id'] ?? '' );
+			if ( empty( $mapped[ $pid ] ) ) continue; // skip Pages not mapped to a client
+			try { self::subscribe_page( $pid ); $ok++; }
+			catch ( Exception $e ) { $err = $e->getMessage(); }
+		}
+		$args = $err ? array( 'fb_error' => rawurlencode( $err ) ) : array( 'subscribed' => $ok );
+		wp_safe_redirect( add_query_arg( $args, self::admin_return_url() ) );
+		exit;
+	}
+
+	// Send a reply to a customer. Same endpoint for FB + IG. RESPONSE = inside the 24h window; pass a $tag
+	// (e.g. HUMAN_AGENT) to message outside it. Returns the Graph response or throws.
+	public static function send_message( $page_id, $recipient_id, $text, $tag = '' ) {
+		$token = self::page_token( $page_id );
+		if ( ! $token ) throw new Exception( 'No token for page ' . $page_id );
+		$body = array(
+			'recipient'      => wp_json_encode( array( 'id' => (string) $recipient_id ) ),
+			'message'        => wp_json_encode( array( 'text' => (string) $text ) ),
+			'messaging_type' => $tag ? 'MESSAGE_TAG' : 'RESPONSE',
+		);
+		if ( $tag ) $body['tag'] = $tag;
+		return self::graph_post( $page_id . '/messages', $body, $token );
+	}
+
+	/* ─────────────── DM routing → Site Pulse + reply relay ─────────────── */
+
+	const OPT_ROUTES = 'bpfb_dm_routes'; // { page_id: site_key } overrides; default = registry FB-page match
+
+	// The registry client a Page's DMs route to: explicit override, else the client whose facebook_page_id
+	// matches that Page. Returns [ site_key, site_url, secret, label ] or null.
+	public static function route_for_page( $page_id ) {
+		if ( ! class_exists( 'BPGBP_Hub' ) || ! method_exists( 'BPGBP_Hub', 'get_site_map' ) ) return null;
+		$sites  = BPGBP_Hub::get_site_map();
+		$routes = get_option( self::OPT_ROUTES, array() );
+		$key    = ( is_array( $routes ) && ! empty( $routes[ $page_id ] ) ) ? (string) $routes[ $page_id ] : '';
+		if ( '' === $key ) {
+			foreach ( $sites as $sk => $cfg ) {
+				if ( (string) ( $cfg['facebook_page_id'] ?? '' ) === (string) $page_id ) { $key = (string) $sk; break; }
+			}
+		}
+		if ( '' === $key || empty( $sites[ $key ] ) ) return null;
+		$cfg = $sites[ $key ];
+		return array(
+			'site_key' => $key,
+			'site_url' => ! empty( $cfg['site_url'] ) ? rtrim( (string) $cfg['site_url'], '/' ) : '',
+			'secret'   => (string) ( $cfg['secret'] ?? '' ),
+			'label'    => (string) ( $cfg['label'] ?? $key ),
+		);
+	}
+
+	// Best-effort sender display name (FB: name; IG: name/username). Empty if Meta won't share it.
+	public static function sender_name( $page_id, $sender_id, $platform ) {
+		$token = self::page_token( $page_id );
+		if ( ! $token || ! $sender_id ) return '';
+		try {
+			$fields = ( 'instagram' === $platform ) ? 'name,username' : 'name';
+			$r = self::graph_get( (string) $sender_id, array( 'fields' => $fields ), $token );
+			return (string) ( $r['name'] ?? $r['username'] ?? '' );
+		} catch ( Exception $e ) { return ''; }
+	}
+
+	// Forward one inbound message to its routed Site Pulse site (signed with that site's registry secret —
+	// the same HMAC scheme as the testimonial push). Silent no-op if the Page isn't routed/configured.
+	public static function forward_message( array $ev ) {
+		$route = self::route_for_page( (string) ( $ev['page_id'] ?? '' ) );
+		if ( ! $route || '' === $route['site_url'] || '' === $route['secret'] ) return;
+
+		$page_name = '';
+		foreach ( self::pages() as $p ) { if ( (string) $p['id'] === (string) $ev['page_id'] ) { $page_name = (string) ( $p['name'] ?? '' ); break; } }
+
+		$payload = array(
+			'platform'    => (string) ( $ev['platform'] ?? 'facebook' ),
+			'page_id'     => (string) ( $ev['page_id'] ?? '' ),
+			'page_name'   => $page_name,
+			'sender_id'   => (string) ( $ev['sender'] ?? '' ),
+			'sender_name' => self::sender_name( (string) $ev['page_id'], (string) ( $ev['sender'] ?? '' ), (string) ( $ev['platform'] ?? '' ) ),
+			'text'        => (string) ( $ev['text'] ?? '' ),
+			'mid'         => (string) ( $ev['mid'] ?? '' ),
+			'at'          => (int) ( $ev['at'] ?? 0 ),
+		);
+		$raw = wp_json_encode( $payload );
+		$ts  = (string) time();
+		$sig = hash_hmac( 'sha256', $ts . '.' . $raw, $route['secret'] );
+		wp_remote_post( $route['site_url'] . '/?rest_route=/bpfb-dm/v1/message', array(
+			'timeout' => 15,
+			'headers' => array(
+				'X-BPGBP-Site'      => $route['site_key'],
+				'X-BPGBP-Timestamp' => $ts,
+				'X-BPGBP-Signature' => $sig,
+				'Content-Type'      => 'application/json',
+			),
+			'body'    => $raw,
+		) );
+	}
+
+	// Reply relay: a Site Pulse site POSTs here (signed with its registry secret) to send a reply out via
+	// the Page token the hub holds. Verifies the caller owns that Page's route.
+	public static function rest_send( WP_REST_Request $req ) {
+		$raw  = $req->get_body();
+		$site = (string) $req->get_header( 'x-bpgbp-site' );
+		$ts   = (string) $req->get_header( 'x-bpgbp-timestamp' );
+		$sig  = (string) $req->get_header( 'x-bpgbp-signature' );
+		if ( ! $site || ! $ts || abs( time() - (int) $ts ) > 300 ) return new WP_Error( 'bpfb_send_auth', 'Auth failed.', array( 'status' => 401 ) );
+
+		$sites  = ( class_exists( 'BPGBP_Hub' ) && method_exists( 'BPGBP_Hub', 'get_site_map' ) ) ? BPGBP_Hub::get_site_map() : array();
+		$secret = (string) ( $sites[ $site ]['secret'] ?? '' );
+		if ( '' === $secret || ! hash_equals( hash_hmac( 'sha256', $ts . '.' . $raw, $secret ), $sig ) ) {
+			return new WP_Error( 'bpfb_send_sig', 'Signature mismatch.', array( 'status' => 403 ) );
+		}
+
+		$d       = json_decode( $raw, true );
+		$page_id = (string) ( $d['page_id'] ?? '' );
+		$to      = (string) ( $d['recipient_id'] ?? '' );
+		$text    = (string) ( $d['text'] ?? '' );
+		if ( ! $page_id || ! $to || '' === $text ) return new WP_Error( 'bpfb_send_bad', 'Missing fields.', array( 'status' => 400 ) );
+
+		// The Page must route to the calling site (a site can't send as another site's Page).
+		$route = self::route_for_page( $page_id );
+		if ( ! $route || $route['site_key'] !== $site ) return new WP_Error( 'bpfb_send_forbidden', 'Page not routed to this site.', array( 'status' => 403 ) );
+
+		try {
+			$res = self::send_message( $page_id, $to, $text );
+			return new WP_REST_Response( array( 'ok' => true, 'mid' => (string) ( $res['message_id'] ?? '' ) ), 200 );
+		} catch ( Exception $e ) {
+			return new WP_Error( 'bpfb_send_failed', $e->getMessage(), array( 'status' => 502 ) );
+		}
+	}
+
 	/* ─────────────── OAuth ─────────────── */
 
 	// Step 1: admin clicks "Connect Facebook" → we stash a CSRF state and bounce to Meta's dialog.
@@ -105,7 +379,7 @@ class BPFB_Hub {
 			'redirect_uri'  => self::redirect_uri(),
 			'state'         => $state,
 			'response_type' => 'code',
-			'scope'         => self::SCOPES,
+			'scope'         => self::oauth_scopes(),
 		) );
 		wp_redirect( $url );
 		exit;
@@ -124,6 +398,17 @@ class BPFB_Hub {
 			'methods'             => 'GET',
 			'callback'            => array( __CLASS__, 'rest_callback' ),
 			'permission_callback' => '__return_true', // validated by the OAuth `state` below
+		) );
+		// Messenger / Instagram webhook: GET = Meta's subscription verification, POST = message events.
+		register_rest_route( self::NS, '/webhook', array(
+			array( 'methods' => 'GET',  'callback' => array( __CLASS__, 'rest_webhook_verify' ),  'permission_callback' => '__return_true' ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'rest_webhook_receive' ), 'permission_callback' => '__return_true' ),
+		) );
+		// Reply relay: Site Pulse sites POST here (HMAC-signed) to send a reply out through the Page token.
+		register_rest_route( self::NS, '/send', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'rest_send' ),
+			'permission_callback' => '__return_true', // HMAC-verified inside
 		) );
 	}
 
@@ -234,6 +519,9 @@ class BPFB_Hub {
 		if ( isset( $_GET['fb_error'] ) ) {
 			echo '<div class="notice notice-error is-dismissible"><p><strong>Facebook said:</strong> ' . esc_html( wp_unslash( $_GET['fb_error'] ) ) . '</p></div>';
 		}
+		if ( isset( $_GET['subscribed'] ) ) {
+			echo '<div class="notice notice-success is-dismissible"><p>Subscribed <strong>' . (int) $_GET['subscribed'] . '</strong> Page(s) to messaging webhooks.</p></div>';
+		}
 
 		$pages = self::pages();
 		$count = count( $pages );
@@ -254,6 +542,33 @@ class BPFB_Hub {
 			echo '</form>';
 		}
 		echo '<p class="description" style="margin:8px 0 0">Redirect URI for your Meta app (Facebook Login → Settings → Valid OAuth Redirect URIs): <code>' . esc_html( self::redirect_uri() ) . '</code></p>';
+		echo '</div>';
+
+		// ── Messaging (Messenger + Instagram DMs) ──
+		echo '<div style="margin:6px 0 18px;padding:12px 14px;border:1px solid #dcdcde;border-radius:6px;background:#fff;max-width:1000px">';
+		echo '<strong>Messaging (DMs):</strong> the inbox lives in Site Pulse — this just wires the Meta webhook + lets Pages subscribe.';
+		echo '<p class="description" style="margin:8px 0 2px">In your Meta app → <em>Webhooks</em> (and the Messenger / Instagram products), use:</p>';
+		echo '<table class="widefat striped" style="max-width:900px;margin:4px 0 10px"><tbody>';
+		echo '<tr><td style="width:160px"><strong>Callback URL</strong></td><td><code>' . esc_html( self::webhook_url() ) . '</code></td></tr>';
+		echo '<tr><td><strong>Verify token</strong></td><td><code>' . esc_html( self::webhook_token() ) . '</code></td></tr>';
+		echo '<tr><td><strong>Subscribe fields</strong></td><td><code>messages, messaging_postbacks</code> (Page) &amp; the Instagram <code>messages</code> field</td></tr>';
+		echo '</tbody></table>';
+		if ( $pages ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block">';
+			wp_nonce_field( 'bpfb_subscribe' );
+			echo '<input type="hidden" name="action" value="bpfb_subscribe">';
+			echo '<button class="button button-small">Subscribe mapped Pages to messaging</button> <span class="description">Subscribes only Pages mapped to a client (the Facebook column). Run after the webhook verifies green.</span>';
+			echo '</form>';
+		}
+		$events = self::recent_events();
+		if ( $events ) {
+			echo '<p class="description" style="margin:12px 0 4px"><strong>Recent webhook messages</strong> (debug — newest first):</p>';
+			echo '<table class="widefat striped" style="max-width:900px"><thead><tr><th>When</th><th>Platform</th><th>Page</th><th>Sender</th><th>Text</th></tr></thead><tbody>';
+			foreach ( array_slice( $events, 0, 10 ) as $ev ) {
+				echo '<tr><td>' . esc_html( $ev['stored_at'] ?? '' ) . '</td><td>' . esc_html( $ev['platform'] ?? '' ) . '</td><td><code>' . esc_html( $ev['page_id'] ?? '' ) . '</code></td><td><code>' . esc_html( $ev['sender'] ?? '' ) . '</code></td><td>' . esc_html( mb_substr( (string) ( $ev['text'] ?? '' ), 0, 120 ) ) . '</td></tr>';
+			}
+			echo '</tbody></table>';
+		}
 		echo '</div>';
 	}
 }

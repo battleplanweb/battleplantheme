@@ -737,6 +737,13 @@ a#bbblink {
 	margin:                                                    0 auto !important;
 }
 
+.widget .widget-intro {
+	font-size:                                                 calc(var(--font-size-text) * 0.8);
+	margin-top:                                                8px;
+	margin-bottom:                                             -10px;
+}
+
+
 /* Sections
 --------------------------------------------- */
 .section.section-inline:not(.break-out) {

@@ -30,9 +30,15 @@ function bp_run_chron_gbp(bool $force = false): void {
 // 2) Fetch GBP data for each Place ID
 			$google_rating     = 0.0;
 			$google_review_num = 0;
+			$fetched_ok        = 0;                                        // Place IDs that fetched cleanly this run
+			$fetch_errors      = [];                                       // collected errors → one deduped alert, not one-per-PID
+			$old_review_total  = (int) ($google_info['google-reviews'] ?? 0); // last-known-good total, for drop detection
 
 			foreach ($placeIDs as $placeID) {
-				if (strlen($placeID) <= 10) continue;
+				if (strlen($placeID) <= 10) {
+					$fetch_errors[] = "PID '$placeID' — skipped (too short / not a valid Place ID)";
+					continue;
+				}
 
 				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount,utcOffsetMinutes';
 				$url    = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . _PLACES_API;
@@ -51,25 +57,28 @@ function bp_run_chron_gbp(bool $force = false): void {
 				$cerrm  = curl_error($ch);
 				curl_close($ch);
 
-				if ($cerr && function_exists('emailMe')) {
-					emailMe('Chron A - Places API cURL Error - ' . $customer_info['name'], "PID: $placeID\nError: $cerr $cerrm");
+				// Collect errors instead of emailing per-PID-per-run (that flood is what got
+				// spam-filtered). One deduped alert is sent after the loop, and the `continue`
+				// no longer depends on emailMe() existing (it always must skip a bad response).
+				if ($cerr) {
+					$fetch_errors[] = "PID $placeID — cURL error $cerr: $cerrm";
 					continue;
 				}
 
-				if (($http < 200 || $http >= 300) && function_exists('emailMe')) {
-					emailMe('Chron A - Places API HTTP Error - ' . $customer_info['name'], "PID: $placeID\nHTTP: $http\nBody:\n" . $result);
+				if ($http < 200 || $http >= 300) {
+					$fetch_errors[] = "PID $placeID — HTTP $http\n" . $result;
 					continue;
 				}
 
 				$gbp = json_decode($result, true);
 
-				if (!is_array($gbp) && function_exists('emailMe')) {
-					emailMe('Chron A - Places API JSON Error - ' . $customer_info['name'], "PID: $placeID\nBody:\n" . $result);
+				if (!is_array($gbp)) {
+					$fetch_errors[] = "PID $placeID — invalid JSON response\n" . $result;
 					continue;
 				}
 
-				if (isset($gbp['error']) && function_exists('emailMe')) {
-					emailMe('Chron A - Places API Error - ' . $customer_info['name'], print_r($gbp['error'], true) . "\n\nFull response:\n" . $result);
+				if (isset($gbp['error'])) {
+					$fetch_errors[] = "PID $placeID — API error:\n" . print_r($gbp['error'], true);
 					continue;
 				}
 
@@ -81,6 +90,7 @@ function bp_run_chron_gbp(bool $force = false): void {
 				$google_info[$placeID]['google-rating']  = $rat;
 				$google_review_num += $urc;
 				$google_rating     += ($rat * $urc);
+				$fetched_ok++;
 
 				$phone = $gbp['internationalPhoneNumber'] ?? '';
 				if (preg_match('/^\+1[\s\-\.]?(\d{3})[\s\-\.]?(\d{3})[\s\-\.]?(\d{4})$/', $phone, $m)) {
@@ -178,15 +188,39 @@ function bp_run_chron_gbp(bool $force = false): void {
 				$google_info[$placeID]['current-hours'] = $gbp['currentOpeningHours'] ?? null;
 			}
 
-			$google_info['google-reviews'] = $google_review_num;
-			if ($google_review_num > 0) {
-				$google_info['google-rating'] = $google_rating / $google_review_num;
-			}
-			$google_info['date'] = $today;
+// 3) Only commit + advance the sync date when at least one Place ID fetched cleanly.
+//    A fully-failed run must NOT zero the counts or stamp the date — doing exactly
+//    that is what hid a year-long API-key outage by making frozen data look fresh.
+			if ($fetched_ok > 0) {
 
-// 3) Save GBP data and notify of any differences vs customer_info
-			update_option('bp_gbp_update', $google_info, false);
-			gbp_diff_vs_ci_and_notify($customer_info, $google_info, $placeIDs);
+				// On a fully-clean run, flag a large unexpected drop before overwriting the
+				// stored total (the wrong/merged Place ID signature). Skipped on partial
+				// failures, where a lower sum just means some PIDs didn't answer this run.
+				if (empty($fetch_errors) && $old_review_total > 0 && $google_review_num > 0
+					&& ($old_review_total - $google_review_num) >= 10
+					&& ($old_review_total - $google_review_num) >= $old_review_total * 0.10) {
+					bp_chron_a_notify_drop($customer_info, $old_review_total, $google_review_num);
+				}
+
+				$google_info['google-reviews'] = $google_review_num;
+				if ($google_review_num > 0) {
+					$google_info['google-rating'] = $google_rating / $google_review_num;
+				}
+				$google_info['date'] = $today;
+
+				update_option('bp_gbp_update', $google_info, false);
+				gbp_diff_vs_ci_and_notify($customer_info, $google_info, $placeIDs);
+
+				if (empty($fetch_errors)) {
+					bp_chron_a_clear_failure_state();                 // healthy run — reset the failure streak
+				} else {
+					bp_chron_a_notify_failure($customer_info, $fetch_errors, false); // partial: deduped heads-up
+				}
+
+			} else {
+				// Every Place ID failed — leave the last-known-good data untouched and alert (deduped).
+				bp_chron_a_notify_failure($customer_info, $fetch_errors, true);
+			}
 		}
 	}
 
@@ -209,4 +243,67 @@ function bp_run_chron_gbp(bool $force = false): void {
 	if ($ci_new !== $customer_info) {
 		update_customer_info($ci_new);
 	}
+}
+
+
+/*--------------------------------------------------------------
+# Chron A alerting — deduped, delivered via emailMe() (Brevo)
+--------------------------------------------------------------*/
+
+/**
+ * Alert that the GBP sync is failing. Deduped to at most one email per site per
+ * 3 days for as long as the failure streak lasts — so a fleet-wide outage sends a
+ * handful of emails, not one per Place ID per run (the flood that got spam-filtered
+ * and let a year-long outage go unnoticed). $critical = every Place ID failed and the
+ * data is now frozen; false = a partial failure (some Place IDs still synced).
+ */
+function bp_chron_a_notify_failure(array $customer_info, array $errors, bool $critical): void {
+	$now       = time();
+	$failSince = (int) get_option('bp_chron_a_fail_since', 0);
+	if ($failSince === 0) {
+		update_option('bp_chron_a_fail_since', $now, false);
+		$failSince = $now;
+	}
+
+	$lastAlert = (int) get_option('bp_chron_a_last_alert', 0);
+	if ($now - $lastAlert < 3 * DAY_IN_SECONDS) return;   // already alerted within the window
+	update_option('bp_chron_a_last_alert', $now, false);
+
+	$site = str_replace('https://', '', get_bloginfo('url'));
+	$days = max(1, (int) floor(($now - $failSince) / DAY_IN_SECONDS));
+
+	$body  = '<p><strong>' . ($critical ? 'GBP sync is DOWN' : 'GBP sync partially failing')
+	       . '</strong> on ' . esc_html($site) . '.</p>';
+	if ($critical) {
+		$body .= '<p>Every Place ID failed to fetch. Reviews, hours and NAP are frozen at the last good '
+		       . 'values and the sync date was NOT advanced. Failing for ~' . $days . ' day(s).</p>';
+	}
+	$body .= '<pre style="white-space:pre-wrap">' . esc_html(implode("\n\n", $errors)) . '</pre>';
+
+	emailMe(($critical ? '⚠️ GBP sync DOWN · ' : 'GBP sync partial-fail · ') . ($customer_info['name'] ?? $site), $body);
+}
+
+/**
+ * Alert that the Google review count dropped unexpectedly (a large drop is the
+ * classic wrong/merged Place ID signature, or a review purge). One-shot: once the
+ * lower value is stored the next run's baseline matches it, so it won't re-fire
+ * unless the count drops again.
+ */
+function bp_chron_a_notify_drop(array $customer_info, int $oldTotal, int $newTotal): void {
+	$site  = str_replace('https://', '', get_bloginfo('url'));
+	$body  = '<p>Google review count on <strong>' . esc_html($site) . '</strong> dropped from '
+	       . $oldTotal . ' to ' . $newTotal . '.</p>';
+	$body .= '<p>Small drops are normal (Google removes reviews); a large one can mean the stored Place ID '
+	       . 'now points at a wrong/merged listing, or a review purge. Worth a quick check of the live listing.</p>';
+
+	emailMe('GBP review count dropped · ' . ($customer_info['name'] ?? $site), $body);
+}
+
+/**
+ * Clear the failure streak after a clean run. delete_option() is a safe no-op when
+ * the options aren't set.
+ */
+function bp_chron_a_clear_failure_state(): void {
+	delete_option('bp_chron_a_fail_since');
+	delete_option('bp_chron_a_last_alert');
 }

@@ -50,7 +50,7 @@
 		launcher = el('button', 'bp-chat-launcher');
 		launcher.type = 'button';
 		launcher.setAttribute('aria-label', bpChat.launcher || 'Chat with us');
-		launcher.innerHTML = '<span class="bp-chat-launcher-icon" aria-hidden="true">' +
+		launcher.innerHTML = '<span class="bp-chat-launcher-icon unique" aria-hidden="true">' +
 			'<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
 			'<path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" ' +
 			'fill="currentColor"/></svg></span>';
@@ -61,7 +61,7 @@
 		panel.setAttribute('aria-label', (bpChat.company || 'Chat') + ' chat');
 
 		var head = el('div', 'bp-chat-head');
-		head.appendChild(el('span', 'bp-chat-title', bpChat.company || 'Chat'));
+		head.appendChild(el('span', 'bp-chat-title unique', bpChat.company || 'Chat'));
 		var close = el('button', 'bp-chat-close', '×');
 		close.type = 'button';
 		close.setAttribute('aria-label', 'Close chat');
@@ -112,8 +112,20 @@
 		log.innerHTML = '';
 		// Greeting is always shown first. It's UI-only — never pushed into `messages`,
 		// so it's never sent to the API — then any stored transcript follows.
-		addBubble('assistant', bpChat.greeting || 'Hi! How can I help you today?');
+		addBubble('assistant', greetingText());
 		messages.forEach(function (m) { addBubble(m.role, m.content); });
+	}
+
+	// The opening bubble. Supports a {greeting} token that resolves to a
+	// time-of-day salutation from the visitor's local clock.
+	function greetingText() {
+		var g = bpChat.greeting || 'Hi! How can I help you today?';
+		if (g.indexOf('{greeting}') !== -1) {
+			var h = new Date().getHours();
+			var part = h < 12 ? 'Good morning' : (h < 18 ? 'Good afternoon' : 'Good evening');
+			g = g.replace(/\{greeting\}/g, part);
+		}
+		return g;
 	}
 
 	// ---- Consent card (explicit SMS opt-in) ----------------------------
@@ -182,7 +194,7 @@
 	function showTyping() {
 		var wrap = el('div', 'bp-chat-msg bp-chat-assistant bp-chat-typing');
 		var b = el('div', 'bp-chat-bubble');
-		b.innerHTML = '<span></span><span></span><span></span>';
+		b.innerHTML = '<span class="bp-chat-typing-dot unique"></span><span class="bp-chat-typing-dot unique"></span><span class="bp-chat-typing-dot unique"></span>';
 		wrap.appendChild(b);
 		log.appendChild(wrap);
 		log.scrollTop = log.scrollHeight;
@@ -194,7 +206,12 @@
 		open = !open;
 		root.classList.toggle('bp-chat-open', open);
 		if (open) {
-			setTimeout(function () { input.focus(); }, 50);
+			// Auto-focus on desktop only. On touch devices this forces the
+			// on-screen keyboard up and pushes the greeting out of view — let
+			// the visitor read the greeting and tap the box when they're ready.
+			if (window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
+				setTimeout(function () { input.focus(); }, 50);
+			}
 		}
 	}
 

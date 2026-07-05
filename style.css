@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v43.13
+Version: v43.14
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -1007,6 +1007,93 @@ ul.side-by-side li {
 
 ul.side-by-side img {
 	box-sizing:                                                content-box;
+}
+
+/* Before / After comparison — [get-before-after]. Two images + a CSS overlay
+   (center circle + arrow, BEFORE/AFTER tabs). Variable-driven: theme per site
+   by setting the --ba-* custom properties (e.g. --ba-before-bg / --ba-after-bg). */
+.before-after {
+	--ba-gap:                                                  2px;
+	--ba-radius:                                               6px;
+	--ba-circle-size:                                          2.8em;
+	--ba-arrow-scale:                                          0.8;
+	--ba-circle-bg:                                            var(--white);
+	--ba-arrow-color:                                          var(--accent-color);
+	--ba-tab-color:                                            var(--white);
+	--ba-tab-font:                                             var(--font-primary);
+	--ba-tab-inset:                                            1em;
+	--ba-before-bg:                                            var(--darkest-grey);
+	--ba-after-bg:                                             var(--accent-color);
+
+	position:                                                  relative;
+	display:                                                   flex;
+	gap:                                                       var(--ba-gap);
+	border-radius:                                             var(--ba-radius);
+	overflow:                                                  hidden;
+}
+
+.before-after > img {
+	flex:                                                      1 1 0;
+	min-width:                                                 0;
+	object-fit:                                                cover;
+	display:                                                   block;
+}
+
+.ba-overlay {
+	position:                                                  absolute;
+	inset:                                                     0;
+	pointer-events:                                            none;
+}
+
+/* Center circle */
+.ba-overlay::before {
+	content:                                                   "";
+	position:                                                  absolute;
+	top:                                                       50%;
+	left:                                                      50%;
+	width:                                                     var(--ba-circle-size);
+	height:                                                    var(--ba-circle-size);
+	transform:                                                 translate(-50%, -50%);
+	background:                                                var(--ba-circle-bg);
+	border-radius:                                             50%;
+	box-shadow:                                                0 2px 12px var(--black-med);
+}
+
+.ba-overlay::after {
+	content:                                                   "";
+	position:                                                  absolute;
+	top:                                                       50%;
+	left:                                                      50%;
+	width:                                                     calc(var(--ba-circle-size) * var(--ba-arrow-scale));
+	height:                                                    calc(var(--ba-circle-size) * var(--ba-arrow-scale));
+	transform:                                                 translate(-45%, -50%);
+	background-color:                                          var(--ba-arrow-color);
+	-webkit-mask:                                              url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>") no-repeat center / contain;
+	        mask:                                              url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>") no-repeat center / contain;
+}
+
+/* BEFORE / AFTER tabs in the bottom corners */
+.ba-tab {
+	position:                                                  absolute;
+	bottom:                                                    var(--ba-tab-inset);
+	padding:                                                   0.4em 1.1em;
+	font-family:                                               var(--ba-tab-font);
+	font-weight:                                               bold;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.08em;
+	line-height:                                               1;
+	color:                                                     var(--ba-tab-color);
+	border-radius:                                             4px;
+}
+
+.ba-tab-before {
+	left:                                                      var(--ba-tab-inset);
+	background:                                                var(--ba-before-bg);
+}
+
+.ba-tab-after {
+	right:                                                     var(--ba-tab-inset);
+	background:                                                var(--ba-after-bg);
 }
 
 img.img-404 {

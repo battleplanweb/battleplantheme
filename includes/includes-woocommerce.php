@@ -20,7 +20,7 @@ if ( ! defined( '_BP_SET_ALT_TEXT' ) ) { define( '_BP_SET_ALT_TEXT', 'false' ); 
 add_shortcode( 'get-cart', 'battleplan_getCartNum' );
 function battleplan_getCartNum($atts, $content = null ) {
 	if ( !is_admin() && !is_wplogin() ) :
-		global $woocommerce; $cartQty = $woocommerce->cart->get_cart_contents_count();
+		$cartQty = ( function_exists('WC') && WC()->cart ) ? WC()->cart->get_cart_contents_count() : 0;
 		$printCart = "[get-icon type='cart' link='/cart/' sr='shopping cart'" . ($cartQty > 0 ? " after='".$cartQty."']" : "]");
 		return do_shortcode($printCart);
 	endif;

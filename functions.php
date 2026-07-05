@@ -138,29 +138,20 @@ if (!function_exists('bp_ga4_path_to_label')) {
 
 // Send an email to myself
 function emailMe($subject, $htmlMessage, $replyTo = null) {
-    $to   = 'info@bp-webdev.com';
-    $from = 'no-reply@bp-webdev.com';
+    $to = 'glendon@bp-webdev.com';
 
     $subject = trim(preg_replace('/\r|\n/', '', (string) $subject));
 
-	if (function_exists('mb_encode_mimeheader')) {
-        $subject = mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n");
+    $headers = ['Content-Type: text/html; charset=UTF-8'];
+    if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) {
+        $headers[] = 'Reply-To: ' . $replyTo;
     }
 
-	$replyTo = filter_var($replyTo, FILTER_VALIDATE_EMAIL) ?: $from;
-
-    $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: Battle Plan Web Design <' . $from . '>',
-        'Reply-To: ' . $replyTo,
-        'X-Mailer: PHP/' . phpversion(),
-    ];
-    $headersStr = implode("\r\n", $headers);
-
-    $additionalParams = '-f ' . escapeshellarg($from);
-
-    return mail($to, $subject, (string) $htmlMessage, $headersStr, $additionalParams);
+    // Deliver through wp_mail() so it rides the site's configured Brevo transport
+    // (WP Mail SMTP). Raw PHP mail() from WP Engine is unauthenticated (no SPF/DKIM)
+    // and was being silently dropped / spam-filed — which hid a year-long GBP sync
+    // outage because these internal alerts never actually arrived.
+    return wp_mail($to, $subject, (string) $htmlMessage, $headers);
 }
 
 
@@ -1640,6 +1631,9 @@ require_once get_template_directory().'/includes/includes-time-tracker.php';
 // BPGBP_REFRESH_TOKEN actually becomes the hub and registers the /bpgbp/v1/* routes.
 require_once get_template_directory().'/includes/includes-gbp-hub.php';
 require_once get_template_directory().'/includes/includes-gbp-hub-registry.php';
+// GBP posting client: auto-posts blog + jobsite-geo publishes to this site's GBP listing via the hub.
+// Loaded everywhere but dormant unless the site is a configured hub client (bpgbp_cfg credentials).
+require_once get_template_directory().'/includes/includes-gbp-client.php';
 // Facebook (Meta) hub — OAuth + Page reviews. Like the GBP hub, it only activates on the install whose
 // wp-config defines BP_FB_APP_ID / BP_FB_APP_SECRET; dormant everywhere else.
 require_once get_template_directory().'/includes/includes-fb-hub.php';

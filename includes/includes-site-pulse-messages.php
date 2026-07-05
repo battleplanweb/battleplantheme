@@ -36,7 +36,11 @@ function sp_msg_contacts( int $exclude_user_id ): array {
 
 function sp_msg_user( int $uid ): array {
 	$u = get_userdata( $uid );
-	return [ 'id' => $uid, 'name' => $u ? site_pulse_display_name( $u ) : 'Unknown user' ];
+	return [
+		'id'    => $uid,
+		'name'  => $u ? site_pulse_display_name( $u ) : 'Unknown user',
+		'photo' => function_exists( 'site_pulse_user_photo' ) ? site_pulse_user_photo( $uid ) : '',
+	];
 }
 
 // Participant user IDs of a conversation.
@@ -102,21 +106,49 @@ function sp_msg_conversation_meta( int $conv_id, int $viewer ): array {
 	$pids = sp_msg_participant_ids( $conv_id );
 	$people = array_map( 'sp_msg_user', $pids );
 
+	$avatar = '';
+	$members = [];
 	if ( $conv && (int) $conv['is_group'] ) {
 		$title = $conv['title'] !== null && $conv['title'] !== ''
 			? $conv['title']
 			: implode( ', ', array_map( fn( $p ) => $p['name'], array_filter( $people, fn( $p ) => $p['id'] !== $viewer ) ) );
+		$members = sp_msg_group_members_ordered( $conv_id, $viewer ); // for the stacked group avatar
 	} else {
 		$other = array_values( array_filter( $people, fn( $p ) => $p['id'] !== $viewer ) );
-		$title = $other ? $other[0]['name'] : 'Conversation';
+		$title  = $other ? $other[0]['name'] : 'Conversation';
+		$avatar = $other ? (string) ( $other[0]['photo'] ?? '' ) : ''; // the DM partner's directory photo
 	}
 	return [
 		'id'           => $conv_id,
 		'is_group'     => $conv ? (int) $conv['is_group'] : 0,
 		'created_by'   => $conv ? (int) $conv['created_by'] : 0,
 		'title'        => $title,
+		'avatar'       => $avatar,
+		'members'      => $members,
 		'participants' => $people,
 	];
+}
+
+// A group's members (excluding the viewer) as [ {name, photo} ], ordered by who commented most
+// recently first — so the stacked group avatar shows the latest contributor on top.
+function sp_msg_group_members_ordered( int $conv_id, int $viewer ): array {
+	global $wpdb;
+	$m  = site_pulse_table( 'messages' );
+	$cp = site_pulse_table( 'conversation_participants' );
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT p.user_id, ( SELECT MAX(id) FROM $m WHERE conversation_id = %d AND sender_id = p.user_id ) AS last_mid
+		 FROM $cp p WHERE p.conversation_id = %d",
+		$conv_id, $conv_id
+	), ARRAY_A ) ?: [];
+	usort( $rows, fn( $a, $b ) => ( (int) $b['last_mid'] ) <=> ( (int) $a['last_mid'] ) ); // most recent first
+	$out = [];
+	foreach ( $rows as $r ) {
+		$uid = (int) $r['user_id'];
+		if ( $uid === $viewer ) continue;
+		$u = sp_msg_user( $uid );
+		$out[] = [ 'name' => $u['name'], 'photo' => $u['photo'] ];
+	}
+	return $out;
 }
 
 // One-time migration: fold legacy 1:1 messages (conversation_id = 0) into conversations.
@@ -193,6 +225,8 @@ function site_pulse_ajax_messages_conversations(): void {
 			'id'        => $cid,
 			'is_group'  => $meta['is_group'],
 			'name'      => $meta['title'],
+			'avatar'    => $meta['avatar'] ?? '',
+			'members'   => $meta['members'] ?? [],
 			'last'      => $last ? $last['body'] : '',
 			'last_mine' => $last ? ( (int) $last['sender_id'] === $me ) : false,
 			'unread'    => $unread,
@@ -203,6 +237,34 @@ function site_pulse_ajax_messages_conversations(): void {
 
 // A conversation's messages (ascending) + header meta. Marks it read for the viewer.
 add_action( 'wp_ajax_site_pulse_messages_thread', 'site_pulse_ajax_messages_thread' );
+// Short preview text of a message (for reply quotes): its body, or a label for an attachment-only one.
+function sp_msg_reply_snippet( array $r ): string {
+	$body = trim( (string) ( $r['body'] ?? '' ) );
+	if ( $body !== '' ) return mb_strimwidth( $body, 0, 90, '…' );
+	if ( ! empty( $r['attach_mime'] ) && strpos( (string) $r['attach_mime'], 'image/' ) === 0 ) return 'Photo';
+	if ( ! empty( $r['attach_url'] ) ) return (string) ( $r['attach_name'] ?: 'Attachment' );
+	return '';
+}
+
+// Build the {sender, snippet} quote for a message that replies to another. $by_id = id→row map from
+// the thread fetch; falls back to a direct lookup if the replied-to message isn't in that window.
+function sp_msg_reply_preview( int $reply_to_id, array $by_id = [] ): ?array {
+	if ( ! $reply_to_id ) return null;
+	$r = $by_id[ $reply_to_id ] ?? null;
+	if ( ! $r ) {
+		global $wpdb;
+		$r = $wpdb->get_row( $wpdb->prepare(
+			"SELECT sender_id, body, attach_url, attach_name, attach_mime FROM " . site_pulse_table( 'messages' ) . " WHERE id = %d",
+			$reply_to_id
+		), ARRAY_A );
+	}
+	if ( ! $r ) return null;
+	return [
+		'sender'  => sp_msg_user( (int) $r['sender_id'] )['name'],
+		'snippet' => sp_msg_reply_snippet( $r ),
+	];
+}
+
 function site_pulse_ajax_messages_thread(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$me  = site_pulse_effective_user_id();
@@ -213,9 +275,13 @@ function site_pulse_ajax_messages_thread(): void {
 	$m = site_pulse_table( 'messages' );
 
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, sender_id, body, edited, attach_url, attach_name, attach_mime, action_created, created_at FROM $m WHERE conversation_id = %d ORDER BY created_at ASC, id ASC LIMIT 500",
+		"SELECT id, sender_id, body, edited, attach_url, attach_name, attach_mime, action_created, reply_to_id, created_at FROM $m WHERE conversation_id = %d ORDER BY created_at ASC, id ASC LIMIT 500",
 		$cid
 	), ARRAY_A ) ?: [];
+
+	// Map id → row so a message that replies to another can show a quoted preview of it.
+	$by_id = [];
+	foreach ( $rows as $r ) $by_id[ (int) $r['id'] ] = $r;
 
 	$messages = array_map( fn( $r ) => [
 		'id'          => (int) $r['id'],
@@ -227,6 +293,7 @@ function site_pulse_ajax_messages_thread(): void {
 		'attach_name' => $r['attach_name'],
 		'attach_mime' => $r['attach_mime'],
 		'has_task'    => (int) $r['action_created'] === 1, // an action item was already made from this message
+		'reply'       => sp_msg_reply_preview( (int) $r['reply_to_id'], $by_id ),
 		'at'          => $r['created_at'],
 	], $rows );
 
@@ -409,6 +476,7 @@ function site_pulse_ajax_messages_send(): void {
 
 	$body = sanitize_textarea_field( $body );
 	global $wpdb;
+	$reply_to = sp_msg_valid_reply_to( (int) ( $_POST['reply_to_id'] ?? 0 ), $cid );
 	$now = current_time( 'mysql' );
 	$wpdb->insert( site_pulse_table( 'messages' ), [
 		'conversation_id' => $cid,
@@ -416,6 +484,7 @@ function site_pulse_ajax_messages_send(): void {
 		'recipient_id'    => 0,
 		'body'            => $body,
 		'is_read'         => 0,
+		'reply_to_id'     => $reply_to,
 		'created_at'      => $now,
 	] );
 	$msg_id = (int) $wpdb->insert_id;
@@ -435,8 +504,20 @@ function site_pulse_ajax_messages_send(): void {
 		'attach_url'  => null,
 		'attach_name' => null,
 		'attach_mime' => null,
+		'reply'       => sp_msg_reply_preview( $reply_to ),
 		'at'          => $now,
 	] ] );
+}
+
+// Validate a reply target: must be a message in the same conversation, else 0.
+function sp_msg_valid_reply_to( int $reply_to_id, int $cid ): int {
+	if ( ! $reply_to_id ) return 0;
+	global $wpdb;
+	$ok = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table( 'messages' ) . " WHERE id = %d AND conversation_id = %d",
+		$reply_to_id, $cid
+	) );
+	return $ok ? $reply_to_id : 0;
 }
 
 // Upload a file and post it as a message (optionally with a caption from the composer). Multipart;
@@ -486,6 +567,7 @@ function site_pulse_ajax_messages_upload_send(): void {
 	if ( $body !== '' ) $body = sanitize_textarea_field( $body );
 
 	global $wpdb;
+	$reply_to = sp_msg_valid_reply_to( (int) ( $_POST['reply_to_id'] ?? 0 ), $cid );
 	$now = current_time( 'mysql' );
 	$wpdb->insert( site_pulse_table( 'messages' ), [
 		'conversation_id' => $cid,
@@ -496,6 +578,7 @@ function site_pulse_ajax_messages_upload_send(): void {
 		'attach_url'      => esc_url_raw( $moved['url'] ),
 		'attach_name'     => sanitize_text_field( $name ),
 		'attach_mime'     => sanitize_text_field( $moved['type'] ),
+		'reply_to_id'     => $reply_to,
 		'created_at'      => $now,
 	] );
 	$msg_id = (int) $wpdb->insert_id;
@@ -513,6 +596,7 @@ function site_pulse_ajax_messages_upload_send(): void {
 		'attach_url'  => $moved['url'],
 		'attach_name' => $name,
 		'attach_mime' => $moved['type'],
+		'reply'       => sp_msg_reply_preview( $reply_to ),
 		'at'          => $now,
 	] ] );
 }
@@ -530,7 +614,7 @@ function sp_msg_notify_participants( int $conv_id, int $sender_id, string $body 
 	foreach ( sp_msg_participant_ids( $conv_id ) as $uid ) {
 		if ( $uid === $sender_id ) continue;
 		if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
-		if ( site_pulse_get_setting( 'messages_email_enabled', '0' ) === '1' ) sp_msg_email_recipient( $uid, $prefix );
+		if ( site_pulse_get_setting( 'notifications_email_enabled', '0' ) === '1' ) sp_msg_email_recipient( $uid, $prefix ); // follows the app-wide Allow email switch
 	}
 }
 

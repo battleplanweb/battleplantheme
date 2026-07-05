@@ -31,8 +31,8 @@ if ( $logo_url ) {
 } else {
 	$printPage .=     '<div class="sp-login-icon">';
 	$printPage .=       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true" focusable="false">';
-	$printPage .=         '<circle cx="32" cy="32" r="28" fill="var(--sp-accent-color, #2563eb)" opacity="0.1"/>';
-	$printPage .=         '<path fill="var(--sp-accent-color, #2563eb)" d="M32 18c-2.2 0-4 1.8-4 4v2h-2c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V26c0-1.1-.9-2-2-2h-2v-2c0-2.2-1.8-4-4-4zm0 3c.6 0 1 .4 1 1v2h-2v-2c0-.6.4-1 1-1zm0 9c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>';
+	$printPage .=         '<circle cx="32" cy="32" r="28" fill="var(--sp-primary, #2563eb)" opacity="0.1"/>';
+	$printPage .=         '<path fill="var(--sp-primary, #2563eb)" d="M32 18c-2.2 0-4 1.8-4 4v2h-2c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V26c0-1.1-.9-2-2-2h-2v-2c0-2.2-1.8-4-4-4zm0 3c.6 0 1 .4 1 1v2h-2v-2c0-.6.4-1 1-1zm0 9c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>';
 	$printPage .=       '</svg>';
 	$printPage .=     '</div>';
 }

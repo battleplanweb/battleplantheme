@@ -21,7 +21,7 @@ SMS after the visitor leaves — the transcript lives server-side,
 keyed by the visitor's phone number once captured.
 --------------------------------------------------------------*/
 
-if ( ! defined( 'BP_CHAT_DB_VERSION' ) ) define( 'BP_CHAT_DB_VERSION', '1.1' );
+if ( ! defined( 'BP_CHAT_DB_VERSION' ) ) define( 'BP_CHAT_DB_VERSION', '1.2' );
 
 function bp_chat_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'bp_chat_' . $name;
@@ -43,6 +43,7 @@ function bp_chat_install_db(): void {
 		opted_out tinyint(1) NOT NULL DEFAULT 0,
 		consent_at datetime DEFAULT NULL,
 		consent_ip varchar(45) DEFAULT NULL,
+		human_at datetime DEFAULT NULL,
 		lead_sent_at datetime DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
@@ -241,8 +242,15 @@ function bp_chat_handle_inbound_sms( WP_REST_Request $req ) {
 	$o        = bp_chat_config();
 	$customer = function_exists( 'customer_info' ) ? customer_info() : [];
 
+	// A text FROM the contractor's own phone is a reply to the customer they're
+	// currently handling — relay it. Handled BEFORE keyword parsing so the
+	// contractor's words are never swallowed as STOP/HELP.
+	if ( $from === bp_chat_normalize_phone( (string) ( $o['contractor_sms'] ?? '' ) ) ) {
+		return bp_chat_handle_contractor_reply( $body, $customer, $o );
+	}
+
 	// Compliance keywords (Twilio also enforces STOP at the carrier level; we
-	// mirror it so the AI never tries to reply to an opted-out number).
+	// mirror it so we never try to reply to an opted-out number).
 	$kw = strtoupper( $body );
 	if ( in_array( $kw, [ 'STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT' ], true ) ) {
 		$conv = bp_chat_conv_get_by_phone( $from );
@@ -257,12 +265,6 @@ function bp_chat_handle_inbound_sms( WP_REST_Request $req ) {
 	if ( $kw === 'HELP' || $kw === 'INFO' ) {
 		$company = $customer['name'] ?? get_bloginfo( 'name' );
 		bp_chat_send_sms( $from, "{$company}: reply with your question and we'll help. Reply STOP to opt out." );
-		return bp_chat_twiml_response();
-	}
-
-	// A text FROM the contractor's own phone isn't a customer lead. (Phase 2 will
-	// use this branch for missed-call "DONE" handling; for now, don't AI-reply.)
-	if ( $from === bp_chat_normalize_phone( (string) ( $o['contractor_sms'] ?? '' ) ) ) {
 		return bp_chat_twiml_response();
 	}
 
@@ -282,10 +284,93 @@ function bp_chat_handle_inbound_sms( WP_REST_Request $req ) {
 
 	bp_chat_msg_add( (int) $conv['id'], 'user', $body, 'sms' );
 
+	// This customer is now the one the contractor's replies will route to.
+	bp_chat_active_conv_set( (int) $conv['id'] );
+
+	// Forward the customer's message to the contractor so they can jump in.
+	$label = bp_chat_conv_label( $conv );
+	bp_chat_forward_to_contractor( "{$label}: {$body}", $o );
+
+	// If the contractor has already taken this conversation over, stay hands-off
+	// — their reply will come back through the contractor branch above. Until
+	// then, the AI covers so the customer is never left hanging.
+	if ( ! empty( $conv['human_at'] ) ) {
+		return bp_chat_twiml_response();
+	}
+
 	$reply = bp_chat_run_sms( $conv, $customer, $o );
 	if ( $reply !== '' ) bp_chat_send_sms( $from, $reply );
 
 	return bp_chat_twiml_response(); // we already replied via the REST API
+}
+
+/*--------------------------------------------------------------
+# Human Takeover — SMS relay between contractor and customer
+----------------------------------------------------------------
+Single-number relay: the contractor texts the business number and we
+route it to the customer they're currently handling (the most recent
+active hand-off). This reliably handles one live customer at a time —
+the planned upgrade to per-customer dedicated numbers removes that
+limit. The "active conversation" pointer is a single site option
+because each site has one contractor.
+--------------------------------------------------------------*/
+
+/** The conversation the contractor's next reply routes to. */
+function bp_chat_active_conv_set( int $id ): void { update_option( 'bp_chat_active_conv', $id, false ); }
+function bp_chat_active_conv_get(): int { return (int) get_option( 'bp_chat_active_conv', 0 ); }
+
+/** A short, human label for a conversation (name if known, else last 4 digits). */
+function bp_chat_conv_label( array $conv ): string {
+	$name = trim( (string) ( $conv['name'] ?? '' ) );
+	if ( $name !== '' ) return $name;
+	$phone = (string) ( $conv['phone'] ?? '' );
+	return $phone !== '' ? 'Customer ' . substr( $phone, -4 ) : 'Customer';
+}
+
+/** Text the contractor (fire-and-forget). */
+function bp_chat_forward_to_contractor( string $message, array $o ): bool {
+	$to = bp_chat_normalize_phone( (string) ( $o['contractor_sms'] ?? '' ) );
+	if ( $to === '' ) return false;
+	return bp_chat_send_sms( $to, $message );
+}
+
+/** A compact transcript ("Customer: …" / "AI: …") for the hand-off summary. */
+function bp_chat_transcript_text( int $conv_id, int $limit = 20 ): string {
+	$msgs  = bp_chat_history( $conv_id, $limit );
+	$lines = [];
+	foreach ( $msgs as $m ) {
+		$who = $m['role'] === 'assistant' ? 'AI' : 'Customer';
+		$lines[] = $who . ': ' . $m['content'];
+	}
+	return implode( "\n", $lines );
+}
+
+/**
+ * Relay a contractor's SMS reply to the customer they're currently handling.
+ * The first such reply flips the conversation to human control, so the AI
+ * stops auto-answering from that point on.
+ */
+function bp_chat_handle_contractor_reply( string $body, array $customer, array $o ) {
+	$conv_id = bp_chat_active_conv_get();
+	$conv    = $conv_id ? bp_chat_conv_get( $conv_id ) : [];
+
+	if ( ! $conv || empty( $conv['phone'] ) ) {
+		bp_chat_forward_to_contractor( "No active text conversation to reply to right now.", $o );
+		return bp_chat_twiml_response();
+	}
+	if ( ! empty( $conv['opted_out'] ) ) {
+		bp_chat_forward_to_contractor( bp_chat_conv_label( $conv ) . " has opted out of texts, so I can't send that.", $o );
+		return bp_chat_twiml_response();
+	}
+
+	// First contractor reply = human takeover; AI goes silent for this convo.
+	if ( empty( $conv['human_at'] ) ) {
+		bp_chat_conv_update( (int) $conv['id'], [ 'human_at' => current_time( 'mysql' ) ] );
+	}
+
+	bp_chat_send_sms( (string) $conv['phone'], $body );
+	bp_chat_msg_add( (int) $conv['id'], 'assistant', $body, 'sms' );
+	return bp_chat_twiml_response();
 }
 
 /** Empty TwiML (we send replies via the REST API, not via TwiML). */

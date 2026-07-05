@@ -29,6 +29,17 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 
 	if (function_exists('bp_cf7_sweep_content')) bp_cf7_sweep_content();
 
+/*--------------------------------------------------------------
+# One-time: remove framework-replaced & dev plugins
+#
+# TEMPORARY sweep. Deactivates + deletes plugins the framework has
+# absorbed (CF7, Akismet, Enable Media Replace, Admin Columns Pro,
+# Post-to-GMB) plus dev tools. Self-gated by an option so it runs at
+# most once per site (retries nightly only if a delete fails).
+--------------------------------------------------------------*/
+
+	bp_chron_remove_legacy_plugins();
+
 	bp_typeface_refresh();
 
 	if (function_exists('battleplan_remove_user_roles')) battleplan_remove_user_roles();
@@ -562,4 +573,66 @@ function bp_check_for_post_updates(): void {
 	if ($other) $body .= '<h3>Updated by Other Users</h3><ul>' . $other . '</ul>';
 	if ($mine)  $body .= '<h3>Updated by battleplanweb</h3><ul>' . $mine . '</ul>';
 	if ($body)  emailMe('Content Updates Detected · ' . get_bloginfo('name'), $body);
+}
+
+/*--------------------------------------------------------------
+# One-time legacy-plugin cleanup (called from housekeeping above)
+#
+# Deactivate + fully delete plugins the framework replaced, plus dev
+# tools. Runs at most once per site: the `bp_legacy_plugin_cleanup`
+# option is stamped on completion (incl. when nothing was installed),
+# so it never re-scans. If a delete fails, the option is NOT stamped
+# and the sweep retries on the next nightly housekeeping run.
+#
+# `delete_plugins()` fires each plugin's uninstall hook, so this is a
+# full removal (files + the plugin's own uninstall cleanup), matching
+# a manual "Deactivate → Delete" in the admin.
+--------------------------------------------------------------*/
+
+function bp_chron_remove_legacy_plugins(): void {
+	$flag = 'bp_legacy_plugin_cleanup';
+	if (get_option($flag)) return; // already handled on this site
+
+	$targets = [
+		'post-to-google-my-business-premium/post-to-google-my-business.php',
+		'admin-columns-pro/admin-columns-pro.php',
+		'akismet/akismet.php',
+		'contact-form-7/wp-contact-form-7.php',
+		'enable-media-replace/enable-media-replace.php',
+		'git-updater/git-updater.php',
+		'query-monitor/query-monitor.php',
+	];
+
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+
+	// Only act on plugins actually present here.
+	$installed = get_plugins(); // keyed by "dir/file.php"
+	$present   = [];
+	foreach ($targets as $t) {
+		if (isset($installed[$t]) || file_exists(WP_PLUGIN_DIR . '/' . $t)) $present[] = $t;
+	}
+
+	if (empty($present)) {
+		update_option($flag, ['time' => current_time('mysql'), 'removed' => []], false);
+		return; // nothing to do — stamp so we don't re-scan every night
+	}
+
+	// Deactivate (running normal deactivation hooks), then delete the files.
+	deactivate_plugins($present);
+
+	if (!WP_Filesystem()) {
+		error_log('BP legacy plugin cleanup: filesystem unavailable — will retry next night.');
+		return; // do not stamp; retry
+	}
+
+	$result = delete_plugins($present);
+
+	if (is_wp_error($result)) {
+		error_log('BP legacy plugin cleanup: delete failed — ' . $result->get_error_message() . ' (will retry next night).');
+		return; // do not stamp; retry
+	}
+
+	update_option($flag, ['time' => current_time('mysql'), 'removed' => $present], false);
+	error_log('BP legacy plugin cleanup removed: ' . implode(', ', $present));
 }

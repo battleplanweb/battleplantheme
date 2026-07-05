@@ -684,7 +684,7 @@ function battleplan_formField( $atts, $content = null ) {
 // Widgets
 add_shortcode( 'widget', 'battleplan_buildWidget' );
 function battleplan_buildWidget( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'', 'start'=>'', 'end'=>'', 'track'=>''), $atts );
+	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'intro'=>''), $atts );
 	$type = strtolower(preg_replace("/[\s_]/", "-", esc_attr($a['type'])));
 	$title = esc_attr($a['title']);
 	$lock = esc_attr($a['lock']);
@@ -692,6 +692,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	$set = esc_attr($a['set']);
 	$class = esc_attr($a['class']);
 	$show = esc_attr($a['show']);
+	$intro = esc_attr($a['intro']);
 	$hide = esc_attr($a['hide']);
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));
@@ -755,6 +756,9 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 		$buildWidget = '<div class="'.$buildClasses.'"'.$tracking.'>';
 		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
+
+		if ( $intro !== '' ) $buildWidget .= '<div class="widget-intro">'.$intro.'</div>';
+
 		$buildWidget .= '<div class="widget-content">'.do_shortcode($content).'</div>';
 		$buildWidget .= '</div>';
 	endif;

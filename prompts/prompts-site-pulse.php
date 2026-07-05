@@ -98,7 +98,37 @@ Return ONLY valid JSON — no markdown, no preamble — in this exact format:
 }
 
 // Tags a batch of Google reviews with the topics each one discusses and the sentiment of each topic.
-function site_pulse_prompt_review_tags(): string {
+function site_pulse_prompt_review_tags( array $categories = array() ): string {
+	// Configured mode: classify into a FIXED set of super-categories (each with guiding sub-topics).
+	if ( ! empty( $categories ) ) {
+		$lines = array();
+		foreach ( $categories as $c ) {
+			$subs    = ! empty( $c['subs'] ) ? ' — covers: ' . implode( ', ', $c['subs'] ) : '';
+			$lines[] = '- ' . $c['name'] . $subs;
+		}
+		$cat_block = implode( "\n", $lines );
+
+		return "You classify customer reviews of a restaurant into a FIXED set of categories, with a sentiment for each.
+
+The ONLY allowed categories (use the exact category name as the \"label\") and the sub-topics each one covers:
+$cat_block
+
+You receive a JSON array of reviews, each { \"i\": index, \"stars\": the reviewer's OVERALL star rating 1-5, \"text\": review }. For EACH review, decide which of the categories above it actually discusses, and give each a 1–5 score for how the reviewer felt about THAT category — like the star rating they'd give that aspect on its own.
+
+Rules:
+- The \"label\" MUST be exactly one of the category names listed above. Map any specific detail (a sub-topic like food, parking, staff) to its PARENT category. Never output a sub-topic name and never invent a new label.
+- \"score\" is an integer 1–5 (1 = terrible, 3 = mixed/okay, 5 = excellent). Base it on what the reviewer says about that category, USING the overall star rating as context — the overall rating shapes how much weight a stray praise or complaint carries. The SAME off-hand gripe is a small ding inside a 5-star review but a serious problem inside a 1-star one. A category's score often differs from the overall stars:
+  • A 1-star review that only rips the food → Quality 1.
+  • A 5-star, glowing review that mentions a slightly rude server → Experience 3-4 (a minor gripe that didn't sink an otherwise great visit).
+  • A 1-star review that pans everything but says the server was great → Service 3-4, even though the overall review is 1 star.
+- This isn't an exact science — aim for CONSISTENCY: score the same kind of situation the same way every time.
+- List each category at most once per review. A review may match 0 categories (generic praise with no specifics → empty list is fine).
+
+Return ONLY a JSON array, no prose, no markdown, in exactly this shape:
+[{\"i\":0,\"tags\":[{\"label\":\"Quality\",\"score\":2},{\"label\":\"Service\",\"score\":4}]},{\"i\":1,\"tags\":[]}]";
+	}
+
+	// Fallback (no categories configured yet) — original free-form topic tagging.
 	return "You label customer reviews of a restaurant by topic and sentiment.
 
 You receive a JSON array of reviews, each { \"i\": index, \"text\": review }. For EACH review, identify the distinct topics it actually discusses and the sentiment of each topic.
@@ -115,7 +145,7 @@ Return ONLY a JSON array, no prose, no markdown, in exactly this shape:
 
 // Answers a natural-language question over a set of report digests (trends, areas to improve, etc.).
 function site_pulse_prompt_report_qa(): string {
-	return "You are an operations analyst for a restaurant group. You answer questions about store performance using ONLY the report digests provided below. Each digest is one bi-weekly GM or Supervisor report, with its period (dates), location, a short summary, per-category scores (1 = serious problems … 5 = excellent) with sentiment, wins, issues, and keywords. They are listed oldest-first.
+	return "You are an operations analyst for a restaurant group. You answer questions about store performance using ONLY the report digests provided below. Each digest is one GM or Supervisor report, with its period (dates), location, a short summary, per-category scores (1 = serious problems … 5 = excellent) with sentiment, wins, issues, and keywords. They are listed oldest-first.
 
 How to answer:
 - Answer the question directly and concretely. Ground every claim in the digests — never invent.
@@ -128,7 +158,7 @@ How to answer:
 
 // Condenses one manager/supervisor report into a compact structured digest (the searchable "index").
 function site_pulse_prompt_report_digest( string $categories ): string {
-	return "You condense a restaurant manager's bi-weekly report into a compact, structured digest that will later be searched and trend-analyzed across many reports. You are given the report's metadata and the manager's written answers.
+	return "You condense a restaurant manager's report into a compact, structured digest that will later be searched and trend-analyzed across many reports. You are given the report's metadata and the manager's written answers.
 
 Preferred categories (score ONLY the ones the report meaningfully addresses): {$categories}.
 
@@ -145,16 +175,13 @@ Return ONLY valid JSON, no markdown, in exactly this shape:
 {\"summary\":\"...\",\"categories\":[{\"label\":\"Guest Service\",\"score\":4,\"sentiment\":\"positive\",\"note\":\"...\"}],\"wins\":[\"...\"],\"issues\":[\"...\"],\"keywords\":[\"...\"]}";
 }
 
+
+
+
 // Drafts the owner's short public reply to a Google review, in the given brand's voice ($voice = guidance).
 function site_pulse_prompt_review_reply( string $brand, string $voice ): string {
-	$rand1 = rand( 1, 5 );
-	$rand2 = rand( 1, 4 );
-	$rand3 = rand( 1, 2 );
-	$rand4 = rand( 1, 6 );
-	$rand5 = rand( 1, 6 );
-	$rand6 = rand( 1, 3 );
-	$rand7 = rand( 1, 2 );
-	$rand8 = rand( 1, 4 );
+	$rand1 = rand( 1, 3 );
+	$rand2 = rand( 1, 6 );
 
 	$brand = '' !== $brand ? $brand : 'this business';
 	$voice = trim( $voice );
@@ -164,65 +191,34 @@ function site_pulse_prompt_review_reply( string $brand, string $voice ): string 
 	$prompt = "You write the OWNER'S short public reply to a Google review for {$brand}. You are given the location, the reviewer's first name, the star rating, and the review text.{$voice_block}
 
 Rules:
-- Keep the reply NO LONGER than the review itself — match its length. A short review gets a short reply (a sentence or two); only a long, detailed review warrants a longer response. Never out-write the reviewer.";
+- Keep the reply NO LONGER than the review itself — match its length. A short review gets a short reply (a sentence or two); only a long, detailed review warrants a longer response. Never out-write the reviewer.
+- Use the reviewer's first name naturally when it is known.
+- Reply should be professional, genuine, and friendly. Never generic or corporate.
+- If the reviewer gave specific examples, reference ONE of them or summarize briefly so that it is clear we read their comments.
+- Avoid clichés, and do not patronize the customer by simply repeating their words back to them.
+- Avoid phrases like 'means the world to us' & 'what we strive for'.
+- Avoid boasting and praising ourselves. Let the review stand for itself.  We are merely thankful.";
 
-if ( $rand1 === 1 || $rand === 2 ) {
-	$prompt .= "- Use the reviewer's first name naturally when it is known.";
-} elseif ( $rand1 === 3 ) {
-	$prompt .= "- Begin with the reviewer's first name when it is known.";
-} elseif ( $rand1 === 4 ) {
-	$prompt .= "- Begin 2nd sentence with the reviewer's first name when it is known.";
-} elseif ( $rand1 === 5 ) {
-	$prompt .= "- Don't use the reviewer's name.";
-}
-
-if ( $rand2 === 1 ) {
-	$prompt .= "- Reply should be warm, genuine, and specific. Never generic or corporate.";
-} elseif ( $rand2 === 2 ) {
-	$prompt .= "- Reply should be professional, but not corporate.";
-} elseif ( $rand2 === 3 ) {
-	$prompt .= "- Reply should be friendly and thankful.";
-} elseif ( $rand2 === 4 ) {
-	$prompt .= "- Reply should never sound like a generic customer service agent.";
-}
-
-if ( $rand3 === 1 ) {
-	$prompt .= "- Reference something concrete from their review.";
-}
-
-if ( $rand4 < 5 ) {
-	$prompt .= "- Avoid phrases like 'means the world to us' and 'that is what we strive for'.";
-}
-
-if ( $rand5 < 5 ) {
-	$prompt .= "- Avoid saying things that sound like we're praising ourselves.";
-}
-
-if ( $rand6 === 1 ) {
+if ( $rand1 === 1 ) {
 	$prompt .= "- Use our company name within the review.";
 }
 
-if ( $rand7 === 1 ) {
-	$prompt .= "- Positive review: thank them sincerely and warmly invite them back.";
-}
-
-if ( $rand8 === 1 ) {
-	$prompt .= "- Use a phrase like 'we're happy that we made you a satisfied customer'.";
-} elseif ( $rand8 === 2 ) {
-	$prompt .= "- Use a phrase like 'customers like you is why we love our job.";
+if ( $rand2 === 1 ) {
+	$prompt .= "- Use a phrase like 'we're happy that we could make you a satisfied customer'.";
+} elseif ( $rand2 === 2 ) {
+	$prompt .= "- Use a phrase like 'customers like you are why we love our job'.";
+} elseif ( $rand2 === 3 ) {
+	$prompt .= "- Use a phrase like 'we appreciate the time you took to leave a review'.";
+} elseif ( $rand2 === 4 ) {
+	$prompt .= "- Use a phrase like 'the best part of our day is reading reviews like this'.";
 }
 
 $prompt .= "
-- Critical review: acknowledge it honestly, apologize where warranted, and make it right or invite another visit. Never defensive, never excuses, and never argumentative.
-- Vary your opening and phrasing every time. Do NOT default to starting with \"Thank you for\". Avoid clichés and repetition.
 - DO NOT use the em-dash. Either create new sentence, or use elipsis.
 - No hashtags, no sign-off or signature block, and no emojis unless they genuinely fit the brand voice.
 
 Return ONLY the reply text — no quotes, no preamble, no labels.";
 
-;
-
 return $prompt;
-
 
 }

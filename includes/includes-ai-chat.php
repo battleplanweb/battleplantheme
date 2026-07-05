@@ -140,7 +140,7 @@ function bp_chat_enqueue_assets(): void {
 	}
 
 	$company = $customer['name'] ?? get_bloginfo( 'name' );
-	$default_greeting = "Hi! 👋 Have a question or need service? Ask me anything and I'll help.";
+	$default_greeting = "Hi! Have a question or need service? Ask me anything and I'll help.";
 
 	$default_text_consent = "{$company} can text you about your request. By tapping Yes, you agree to receive "
 		. "SMS messages from {$company} about your inquiry and appointment. Message frequency varies. "
@@ -493,17 +493,31 @@ function bp_chat_begin_text_thread( array &$conv, array $customer, string $raw_p
 	if ( $phone === '' ) return false;
 	if ( ( $conv['channel'] ?? 'web' ) === 'sms' ) return true; // already texting
 
+	$name = $name !== '' ? $name : (string) ( $conv['name'] ?? '' );
 	bp_chat_conv_update( (int) $conv['id'], [
 		'phone'   => $phone,
-		'name'    => $name !== '' ? $name : (string) ( $conv['name'] ?? '' ),
+		'name'    => $name,
 		'channel' => 'sms',
 	] );
 	$conv['channel'] = 'sms';
 	$conv['phone']   = $phone;
+	$conv['name']    = $name;
 
 	$opening = bp_chat_text_opening( $customer, $name );
 	$ok = bp_chat_send_sms( $phone, $opening );
 	if ( $ok ) bp_chat_msg_add( (int) $conv['id'], 'assistant', $opening, 'sms' );
+
+	// Hand this conversation to the contractor: make it the active relay target
+	// and text them the chat so far, so they can take over whenever they want.
+	// (The AI keeps covering the customer until the contractor's first reply.)
+	bp_chat_active_conv_set( (int) $conv['id'] );
+	$label      = bp_chat_conv_label( $conv );
+	$transcript = bp_chat_transcript_text( (int) $conv['id'] );
+	$note       = "📱 {$label} just moved to text ({$phone}).";
+	if ( $transcript !== '' ) $note .= "\n\nChat so far:\n{$transcript}";
+	$note .= "\n\nThey'll text you here. Reply to take over — I'll keep helping until you do.";
+	bp_chat_forward_to_contractor( $note, bp_chat_config() );
+
 	return $ok;
 }
 

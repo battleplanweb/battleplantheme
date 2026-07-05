@@ -506,9 +506,21 @@ function bp_admin_columns($config){
 
 				'bp-media_dimensions' => (function() use ($id){
 					$meta = wp_get_attachment_metadata($id);
-					return isset($meta['width'])
+					$dims = isset($meta['width'])
 						? $meta['width'].'×'.$meta['height']
 						: '';
+
+					// File weight, shown under the pixel dimensions
+					$bytes = isset($meta['filesize']) ? (int) $meta['filesize'] : 0;
+					if ( ! $bytes ) {
+						$file = get_attached_file($id);
+						if ( $file && file_exists($file) ) $bytes = filesize($file);
+					}
+					$weight = $bytes ? size_format($bytes, $bytes >= MB_IN_BYTES ? 1 : 0) : '';
+
+					$out = $dims;
+					if ( $weight ) $out .= ($dims ? '<br>' : '') . '<span class="bp-media-weight" style="color:#888;">' . esc_html($weight) . '</span>';
+					return $out;
 				}),
 
 				'bp-taxonomy' => fn() => bp_render_taxonomy_cell(

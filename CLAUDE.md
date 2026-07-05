@@ -105,7 +105,7 @@ Set via `add_filter('body_class', ...)`. Pick one from each group:
 | Sidebar style | `content-sidebar-box` `sidebar-line` `widget-box` (default) |
 | Content box | `content-box` (default: none) |
 | Accordion | `accordion-box` (default: none) |
-| Forms | `form-stacked` (default: inline) |
+| Forms | **Floating labels inside the field by default** (labels sit inside, float up on focus/fill). Add `form-label-outside` (on body, `.bp-form` wrapper, or a `.form-input`) to revert to labels outside; pair with `form-stacked` to stack those outside labels above their inputs |
 | Post thumbnail | `thumb-left` `thumb-right` + optional `switch-thumb` |
 
 ### battleplan_updateSiteOptions() — All Fields
@@ -399,6 +399,18 @@ Spring/fall fall back to summer/winter if not set.
 - `full` → attachment ID that gets `full-{pos}` class
 - Uses aspect ratio math so all images share equal height
 
+### [get-before-after] — Before/After comparison with overlay
+```
+[get-before-after before="/wp-content/uploads/before.webp" after="/wp-content/uploads/after.webp"
+                  before-label="Before" after-label="After" before-alt="" after-alt="" size="large" align="" class=""]
+```
+Two images side by side under a CSS overlay: a center circle + chevron and BEFORE/AFTER corner tabs. `before`/`after` accept **either** an attachment ID **or** a URL — local/root-relative URLs are resolved back to the attachment (so you get srcset + width/height); anything unresolved falls back to a plain `<img>`. The two photos are height-equalized via flex-stretch + `object-fit:cover`, so mismatched sizes still line up (matching aspect ratios crop least).
+- **Alt text:** leave `before-alt`/`after-alt` empty to auto-use each image's **Media Library alt** (`_wp_attachment_image_alt`); pass them only to override.
+- `align` → adds an `align-{value}` class to the wrapper (e.g. `align="center"` → `.before-after.align-center`); style per site.
+
+Styling is **variable-driven** on `.before-after` — theme per site by setting these in `style-site.css` (defaults in framework `style.css`):
+`--ba-before-bg` / `--ba-after-bg` (tab colors), `--ba-arrow-color`, `--ba-circle-bg`, `--ba-circle-size`, `--ba-tab-inset`, `--ba-tab-font`, `--ba-gap`, `--ba-radius`.
+
 ### [get-icon] — SVG icon
 ```
 [get-icon type="phone" class="" top="0" left="0" link="" sr="" new-tab="" before="" after="" grid=""]
@@ -688,7 +700,7 @@ These are defined once in [functions-forms.php](functions-forms.php) and shared 
 | `[bp-contact-form]` | Name, Email, Phone, Message |
 | `[bp-quote-form]` | Name, Email, Phone, City, Message |
 
-Both accept `redirect="/thanks/"` and `submit="Send My Message"` to override the post-submit redirect URL and submit-button label.
+Both accept `redirect="/thanks/"` and `submit="Send My Message"` to override the post-submit redirect URL and submit-button label, plus `class="…"` which lands on the `.bp-form` wrapper (e.g. `class="form-label-outside"` to revert that one form to outside labels).
 
 ### Field shortcodes (for custom form bodies)
 
@@ -989,11 +1001,17 @@ Every submission runs through this pipeline automatically:
 2. **Speed check** — `<5 seconds` from form render to submit = bot
 3. **HMAC verification** — cache-friendly form-token (no WordPress nonce, EverCache-safe)
 4. **Required-field enforcement** — every `[bp-…]` field marked `required="true"` is registered into a signed `bp_required` payload at render. The REST handler verifies the signature and confirms each named field has a non-empty value. Missing required fields = `Bot:incomplete` (silently spam-routed). Real users never hit this because their browser's HTML5 validation already enforced it; only direct POSTs that bypass the browser trip the check
-5. **Country block** — non-US senders blocked unless site-name matches whitelist
-6. **Email blocklist** — ~150 known spam-sender email domains
-7. **Word blocklist** — ~250 known spam phrases ("audit your website", "boost your leads", etc.)
+
+If none of the above tripped, the content blocklist pipeline (`bp_spam_check()`) runs, in this order:
+
+5. **Kill words** — the very first content check (`bp_blocklist_kill()`); ~55 high-confidence spam phrases. Matched against all fields (`stripos`), instant block (`reason: Kill`)
+6. **Country block** — non-US senders blocked unless site-name matches whitelist
+7. **Email blocklist** — ~150 known spam-sender email domains (`bp_blocklist_emails()`)
 8. **Phone blocklist** — leading-digit checks
-9. **AI filter** (if `ANTHROPIC_API_KEY` constant defined) — Claude Haiku evaluates the submission
+9. **Word blocklist** — ~250 known spam phrases ("audit your website", "boost your leads", etc.) (`bp_blocklist_words()`)
+10. **Name blocklist + inline message checks** — known spam usernames, URLs in the message body, name-repeated-as-message, sequential phone digits, email/email-confirm mismatch
+
+> The kill and word lists are kept de-duplicated: because matching is `stripos` (substring), a longer phrase that already contains a shorter listed phrase is redundant and is dropped — keep the shortest distinct phrase. (There is no AI spam filter — it was removed in favour of the deterministic blocklists.)
 
 Spam submissions still receive a "thanks" response (so bots don't learn what tripped them) but the email gets rerouted to `email@bp-webdev.com` with a `<- SPAM: Blocked {reason} ->` subject prefix, and the IP is fire-and-forget logged to the central `bp-webdev.com/wp-content/email-add-ip.php` endpoint.
 
@@ -1093,6 +1111,59 @@ WordPress bakes alt into post content at insert time and never updates it, so li
 
 One CSS file per feature/component. All loaded conditionally based on what's on the page.
 Site-specific overrides go in `style-site.css` in the child theme.
+
+### FIRM RULE — reuse existing classes; never rebuild what's already styled
+
+**Before writing any CSS for a new element or component, CHECK the existing CSS for a global/shared class that already fits.** The framework and `style-site.css` already style most common things (buttons, cards, lists, sections, layout columns, etc.). If a class exists that does the job, **use it.** Only after reusing the shared class do you add a narrower rule for the *specific differences* that element needs.
+
+**Do not write self-contained rules for individual elements when a class already handles elements just like it.** That produces the exact redundancy Glendon is trying to eliminate — every ID re-declaring the same shared properties, with only one line actually different between them.
+
+Wrong — every property re-declared per element, shared values duplicated:
+```css
+#box-1 { width: 50%; color: blue; background: red; }
+#box-2 { width: 50%; color: blue; background: green; }
+#box-3 { width: 75%; color: blue; background: red; }
+```
+
+Right — one base class holds the common case; each specific rule overrides *only* what differs:
+```css
+.box   { width: 50%; color: blue; background: red; }  /* the shared default */
+#box-2 { background: green; }                          /* only the difference */
+#box-3 { width: 75%; }                                 /* only the difference */
+```
+
+So the working order is always:
+1. **Search existing CSS first** (framework `style.css`, feature CSS files, `style-site.css`) for a class that already fits — reuse it.
+2. If it *almost* fits, apply the shared class **and** add a narrower rule (ID or more specific selector) that changes **only** the properties that differ. Never restate inherited values.
+3. Only when nothing shared fits do you author a genuinely new class — and if the pattern will recur, make it a **class**, not an ID, so the next element can reuse it too.
+
+This applies to the framework's variable-driven systems too: prefer setting the existing `--button-*` / color / spacing variables on a scope over hand-writing full property blocks (see the button and bullet-list sections below).
+
+### Layout: default to `display: grid`, override to `flex` only with a reason
+
+**Always reach for `display: grid` first.** It is the default layout tool for this framework — page sections, forms, card galleries, anything where content lines up in two dimensions (rows *and* columns). Glendon prefers grid and uses it for everything, so grid should be the assumption on every new build unless there is a specific reason not to.
+
+**Only switch to `display: flex` in these few cases, where flex is genuinely better — not as a style choice:**
+
+- **Content-sized items along one axis** — a row of items of *varying* widths that should each take only the space they need (toolbars, button rows, nav items). Grid's `repeat(auto-fit, minmax())` forces equal-width tracks; flex sizes to content.
+- **Push-to-end / split bars** — using `margin-left: auto` (or `margin-inline-start: auto`) to shove remaining items to the far end of a bar (logo left, buttons right). Flex absorbs free space along the main axis; grid can't do this cleanly.
+- **Independently-packing wrap** — `flex-wrap` where each row packs on its own and you *don't* want columns aligned across rows (tag/chip rows, breadcrumbs). Grid's auto-fit keeps everything column-aligned, which is wrong for chip-like content.
+- **Unknown / dynamic item counts on one axis** — a single row or column of a variable number of children that shouldn't be forced into a rigid matrix.
+
+Mental test: *"Do I care that things line up in the other direction too?"* Yes → grid. Only one axis, and content should drive sizing → flex.
+
+**When you do use flex, add a short comment saying WHY** — so Glendon can learn the flex cases over time. Example:
+
+```css
+/* flex, not grid: buttons are different widths and should size to content */
+.cta-row { display: flex; flex-wrap: wrap; gap: 0.5em; }
+
+/* flex, not grid: margin-auto pushes the nav to the right of the bar */
+.site-header { display: flex; align-items: center; }
+.site-header .nav { margin-inline-start: auto; }
+```
+
+If a layout could plausibly go either way, choose grid.
 
 ### style-site.css is COMPILED — it is never served directly
 
@@ -1541,3 +1612,19 @@ American Standard, Amana, Bryant, Carrier, Comfortmaker, Goodman, Heil, Honeywel
 - EverCache caches pages including nonces — use `DONOTCACHEPAGE` + `nocache_headers()` on `template_redirect` for any page with user-specific content
 - WAF (ModSecurity) strips POST fields named `password` on non-login endpoints — use an alternative field name (e.g. `member_pass`)
 - `bp_enqueue_script` prefers `.min.js` — if a `.min.js` exists on the server, changes to the `.js` file are ignored until re-minified
+
+---
+
+## Site Pulse — Permissions & Impersonation (follow these or it leaks)
+
+A god (Odin) can impersonate any user ("view as"). **The hard rule:** while impersonating, the god must see and do EXACTLY what that user can — nothing more. New code inherits this automatically *only* if it follows these patterns:
+
+1. **Resolve the actor with `site_pulse_effective_user_id()`, never `get_current_user_id()`, for any permission/data decision.** The effective id is the impersonated user while impersonating (and the real user otherwise). Using `get_current_user_id()` for a cap check reads the *god's* full caps while impersonating → leak. `get_current_user_id()` is only for real-god controls (the Odin bar, the `site_pulse_impersonate` start/stop handler).
+
+2. **Gate access with `site_pulse_user_can( site_pulse_effective_user_id(), 'cap' )`.** This already respects roles, per-user overrides, and module toggles.
+
+3. **For any "…or the god can do it" shortcut, use `site_pulse_god_can_override()` — NEVER raw `site_pulse_is_god()` / `site_pulse_is_god( get_current_user_id() )`.** `site_pulse_god_can_override()` = real god AND not impersonating, so the bypass goes inert while viewing-as someone. (The helper itself and the god-bar body class use a `site_pulse_is_god( (int) get_current_user_id() )` form on purpose so a blanket find/replace of the literal skips them.)
+
+4. **JS-side god UI:** gate on `D.userCaps` (effective) or `D.isGod` — both are already impersonation-aware (`sitePulseData.isGod` is set from `site_pulse_god_can_override()`). Never re-derive "is god" in JS from anything else.
+
+Caps/roles, nav, panels, widgets, and the JS localization all read the effective user, so anything built on caps inherits impersonation for free. The only ways to break it are (1) checking the raw current user for caps, or (2) a raw `is_god()` bypass — don't do either. Module on/off still shows real state on Settings → Modules (don't route that through the override).

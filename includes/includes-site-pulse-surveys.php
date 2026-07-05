@@ -100,7 +100,7 @@ function sp_survey_rest_receive( WP_REST_Request $request ) {
  * them as JSON, and denormalize the average + the "overall" dimension for fast
  * sorting and summary cards.
  */
-function sp_survey_store( array $data ): int {
+function sp_survey_store( array $data, bool $notify = true ): int {
 	global $wpdb;
 
 	$ratings = [];
@@ -116,6 +116,14 @@ function sp_survey_store( array $data ): int {
 	if ( ! empty( $data['visit_date'] ) ) {
 		$ts = strtotime( (string) $data['visit_date'] );
 		if ( $ts ) $visit = gmdate( 'Y-m-d', $ts );
+	}
+
+	// Web-form submissions are stamped "now"; the comment-card importer can pass an explicit
+	// created_at (the visit date) so historical cards land in the right Surveys date range.
+	$created_at = current_time( 'mysql' );
+	if ( ! empty( $data['created_at'] ) ) {
+		$cts = strtotime( (string) $data['created_at'] );
+		if ( $cts ) $created_at = gmdate( 'Y-m-d H:i:s', $cts );
 	}
 
 	$ok = $wpdb->insert(
@@ -138,7 +146,7 @@ function sp_survey_store( array $data ): int {
 			'overall'       => isset( $ratings['impression'] ) ? $ratings['impression'] : null,
 			'comments'      => sanitize_textarea_field( (string) ( $data['comments'] ?? '' ) ) ?: null,
 			'source_ip'     => sanitize_text_field( (string) ( $data['ip']          ?? '' ) ) ?: null,
-			'created_at'    => current_time( 'mysql' ),
+			'created_at'    => $created_at,
 		],
 		[ '%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%f','%d','%s','%s','%s' ]
 	);
@@ -148,12 +156,15 @@ function sp_survey_store( array $data ): int {
 
 	// Notify per the Notifications matrix. Subject = the store's GM (so the contextual GM/Supervisor
 	// columns target the right store's people); falls back to 0 when the store can't be resolved.
-	$loc_name = sanitize_text_field( (string) ( $data['location'] ?? '' ) );
-	$subject  = sp_survey_subject_user( $loc_name );
-	$msg      = 'New comment card' . ( $loc_name !== '' ? ' for ' . $loc_name : '' )
-		. ( $avg !== null ? sprintf( ' (avg %.1f stars)', $avg ) : '' );
-	if ( function_exists( 'site_pulse_dispatch_notification' ) ) {
-		site_pulse_dispatch_notification( 'survey_received', $subject, $msg, $survey_id, 'survey' );
+	// Skipped for hand-imported cards ($notify = false) — they'd otherwise spam a "new card" alert.
+	if ( $notify ) {
+		$loc_name = sanitize_text_field( (string) ( $data['location'] ?? '' ) );
+		$subject  = sp_survey_subject_user( $loc_name );
+		$msg      = 'New comment card' . ( $loc_name !== '' ? ' for ' . $loc_name : '' )
+			. ( $avg !== null ? sprintf( ' (avg %.1f stars)', $avg ) : '' );
+		if ( function_exists( 'site_pulse_dispatch_notification' ) ) {
+			site_pulse_dispatch_notification( 'survey_received', $subject, $msg, $survey_id, 'survey' );
+		}
 	}
 
 	return $survey_id;
@@ -188,7 +199,7 @@ function site_pulse_ajax_get_surveys(): void {
 	$user_id = site_pulse_effective_user_id();
 
 	$can_view = site_pulse_user_can( $user_id, 'view_surveys' )
-		|| site_pulse_is_god( get_current_user_id() );
+		|| site_pulse_god_can_override();
 	if ( ! $can_view ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	global $wpdb;
@@ -291,8 +302,8 @@ function site_pulse_ajax_get_surveys(): void {
 			'overall_dist'      => (object) $overall_dist,
 			'dim_distributions' => (object) array_map( fn( $d ) => (object) $d, $dim_dist ),
 		],
-		'can_manage'     => site_pulse_user_can( $user_id, 'manage_surveys' ) || site_pulse_is_god( get_current_user_id() ),
-		'is_god'         => site_pulse_is_god( get_current_user_id() ), // delete is god-only — gate the button on this
+		'can_manage'     => site_pulse_user_can( $user_id, 'manage_surveys' ) || site_pulse_god_can_override(),
+		'is_god'         => site_pulse_god_can_override(), // delete is god-only — gate the button on this
 		'archived'       => $archived,                                  // which list this is (0 active, 1 archived)
 		'archived_count' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $arch_tbl a JOIN $table s ON s.id = a.survey_id WHERE a.user_id = %d", $user_id ) ),
 	] );
@@ -309,7 +320,7 @@ function site_pulse_ajax_archive_survey(): void {
 	$user_id = site_pulse_effective_user_id();
 
 	$can = site_pulse_user_can( $user_id, 'view_surveys' )
-		|| site_pulse_is_god( get_current_user_id() );
+		|| site_pulse_god_can_override();
 	if ( ! $can ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	$id       = (int) ( $_POST['id'] ?? 0 );
@@ -343,7 +354,7 @@ function site_pulse_ajax_delete_survey(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
 	// Delete is god-only (battleplanweb), even for users who hold manage_surveys.
-	if ( ! site_pulse_is_god( get_current_user_id() ) ) {
+	if ( ! site_pulse_god_can_override() ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 
@@ -370,7 +381,7 @@ function site_pulse_ajax_get_survey_analytics(): void {
 
 	$can = site_pulse_user_can( $user_id, 'view_analytics' )
 		|| site_pulse_user_can( $user_id, 'view_surveys' )
-		|| site_pulse_is_god( get_current_user_id() );
+		|| site_pulse_god_can_override();
 	if ( ! $can ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	global $wpdb;

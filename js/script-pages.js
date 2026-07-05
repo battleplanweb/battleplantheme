@@ -1736,6 +1736,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					if (lbl) labelMaxWidth = Math.max(labelMaxWidth, lbl.offsetWidth);
 				});
 				if (labelMaxWidth > 0) {
+					labelMaxWidth += 1;
 					inputs.forEach(el => el.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`);
 				}
 			});
@@ -2389,8 +2390,9 @@ document.addEventListener("DOMContentLoaded", function () {
 		// Resize video on mobile, if necessary
 		if (thisDeviceW <= 860) {
 			getObjects('.block-video video[data-mobile-w]').forEach(video => {
-				video.style.width = `${video.getAttribute('data-mobile-w')}%`;
-				video.style.left = `${-(getDeviceW() - 100) / 2}%`;
+				const mobileW = parseFloat(video.getAttribute('data-mobile-w'));
+				video.style.width = `${mobileW}%`;
+				video.style.left = `${-(mobileW - 100) / 2}%`;
 			});
 		} else {
 			getObjects('.block-video video[data-mobile-w]').forEach(video => {

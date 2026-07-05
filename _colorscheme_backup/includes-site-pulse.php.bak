@@ -4902,340 +4902,6 @@ function site_pulse_luminance( string $hex ): float {
 	return 0.2126 * $lin( $r ) + 0.7152 * $lin( $g ) + 0.0722 * $lin( $b );
 }
 
-/*--------------------------------------------------------------
-# OKLCH color engine — perceptual, luminance-locked brand ramps
-#
-# The scheme is built deterministically from the company colors (no AI): the
-# provided colors are sorted and assigned to three roles by their perceptual
-# properties, then each role gets a 5-step ramp whose LIGHTNESS is locked to
-# fixed targets — only the hue/chroma comes from the brand color. That makes
-# the role tokens reliable no matter what colors are entered:
-#   --sp-primary-*   = the DARK family   (primary-color is always dark → safe as a dark surface / dark text; -light/-lightest are guaranteed lighter)
-#   --sp-secondary-* = the LIGHT family  (secondary-color is always light → safe as a light background; -dark/-darkest are guaranteed dark foregrounds)
-#   --sp-accent-*    = the VIVID family  (kept saturated → buttons, active states, links, highlights)
-# Math is OKLab/OKLCH (Björn Ottosson) so lightening/darkening stays on-hue
-# instead of going chalky or muddy the way naive RGB white/black mixing does.
---------------------------------------------------------------*/
-
-/** sRGB 0–255 channel → linear-light 0–1. */
-function site_pulse_srgb_to_linear( float $c ): float {
-	$c = $c / 255;
-	return $c <= 0.04045 ? $c / 12.92 : pow( ( $c + 0.055 ) / 1.055, 2.4 );
-}
-/** Linear-light 0–1 → sRGB 0–255 (gamut-clamped). */
-function site_pulse_linear_to_srgb( float $c ): float {
-	$c = max( 0.0, min( 1.0, $c ) );
-	$c = $c <= 0.0031308 ? 12.92 * $c : 1.055 * pow( $c, 1 / 2.4 ) - 0.055;
-	return $c * 255;
-}
-
-/** Hex → [ L, C, H ] in OKLCH (L 0–1, C ~0–0.4, H radians). */
-function site_pulse_hex_to_oklch( string $hex ): array {
-	[ $r, $g, $b ] = site_pulse_hex_to_rgb( $hex );
-	$r = site_pulse_srgb_to_linear( $r );
-	$g = site_pulse_srgb_to_linear( $g );
-	$b = site_pulse_srgb_to_linear( $b );
-
-	$l = 0.4122214708 * $r + 0.5363325363 * $g + 0.0514459929 * $b;
-	$m = 0.2119034982 * $r + 0.6806995451 * $g + 0.1073969566 * $b;
-	$s = 0.0883024619 * $r + 0.2817188376 * $g + 0.6299787005 * $b;
-	// inputs are non-negative, so a plain cube-root is safe.
-	$l_ = $l ** ( 1 / 3 ); $m_ = $m ** ( 1 / 3 ); $s_ = $s ** ( 1 / 3 );
-
-	$L = 0.2104542553 * $l_ + 0.7936177850 * $m_ - 0.0040720468 * $s_;
-	$A = 1.9779984951 * $l_ - 2.4285922050 * $m_ + 0.4505937099 * $s_;
-	$B = 0.0259040371 * $l_ + 0.7827717662 * $m_ - 0.8086757660 * $s_;
-
-	return [ $L, sqrt( $A * $A + $B * $B ), atan2( $B, $A ) ];
-}
-
-/** [ L, C, H ] OKLCH → hex (gamut-clamped in linear light). */
-function site_pulse_oklch_to_hex( float $L, float $C, float $H ): string {
-	$A = $C * cos( $H );
-	$B = $C * sin( $H );
-
-	$l_ = $L + 0.3963377774 * $A + 0.2158037573 * $B;
-	$m_ = $L - 0.1055613458 * $A - 0.0638541728 * $B;
-	$s_ = $L - 0.0894841775 * $A - 1.2914855480 * $B;
-	$l = $l_ ** 3; $m = $m_ ** 3; $s = $s_ ** 3; // integer exponent: sign-safe
-
-	$r =  4.0767416621 * $l - 3.3077115913 * $m + 0.2309699292 * $s;
-	$g = -1.2684380046 * $l + 2.6097574011 * $m - 0.3413193965 * $s;
-	$b = -0.0041960863 * $l - 0.7034186147 * $m + 1.7076147010 * $s;
-
-	return site_pulse_rgb_to_hex(
-		site_pulse_linear_to_srgb( $r ),
-		site_pulse_linear_to_srgb( $g ),
-		site_pulse_linear_to_srgb( $b )
-	);
-}
-
-/**
- * Build one role ramp: the lightness of every rung is FIXED (so the role token
- * is predictable), the hue is the brand color's, the chroma is the brand color's
- * (capped, optionally floored to guarantee vividness) scaled per-rung so the
- * pale/deep ends don't go neon. $rungs = [ name => [ L_target, chroma_factor ] ].
- */
-function site_pulse_oklch_ramp( string $srcHex, array $rungs, float $chromaCap, float $chromaFloor = 0.0 ): array {
-	[ , $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	$C0 = min( $C0, $chromaCap );
-	$C0 = max( $C0, $chromaFloor );
-	$out = [];
-	foreach ( $rungs as $name => $spec ) {
-		[ $L, $cf ] = $spec;
-		$out[ $name ] = site_pulse_oklch_to_hex( $L, $C0 * $cf, $H );
-	}
-	return $out;
-}
-
-/**
- * Assign the provided company colors to the three roles, by ENTRY ORDER:
- *   - the 3rd color entered is the ACCENT (people pick their tertiary/accent color last);
- *   - of the first two, the darker is primary and the lighter is secondary.
- * With 2 colors there's no accent slot, so darker=primary, lighter=secondary, accent=more saturated.
- * With 1, all three reuse it. Order is preserved (no dedupe) so the slots stay meaningful.
- * Returns [ 'primary'=>hex, 'secondary'=>hex, 'accent'=>hex ] or [] if none.
- */
-function site_pulse_assign_brand_roles( array $colors ): array {
-	$cols = [];
-	foreach ( $colors as $c ) {
-		$h = site_pulse_sanitize_hex( (string) $c );
-		if ( $h !== '' ) $cols[] = $h;   // keep entry order — slot 3 is the accent
-	}
-	$cols = array_slice( $cols, 0, 3 );
-	if ( ! $cols ) return [];
-
-	$n = count( $cols );
-	if ( $n === 1 ) {
-		return [ 'primary' => $cols[0], 'secondary' => $cols[0], 'accent' => $cols[0] ];
-	}
-
-	if ( $n === 2 ) {
-		$La = site_pulse_hex_to_oklch( $cols[0] )[0]; $Lb = site_pulse_hex_to_oklch( $cols[1] )[0];
-		$Ca = site_pulse_hex_to_oklch( $cols[0] )[1]; $Cb = site_pulse_hex_to_oklch( $cols[1] )[1];
-		return [
-			'primary'   => $La <= $Lb ? $cols[0] : $cols[1],
-			'secondary' => $La <= $Lb ? $cols[1] : $cols[0],
-			'accent'    => $Ca >= $Cb ? $cols[0] : $cols[1],
-		];
-	}
-
-	// 3 colors: slot 3 is the accent; the darker of the first two is primary, the lighter secondary.
-	$L0 = site_pulse_hex_to_oklch( $cols[0] )[0];
-	$L1 = site_pulse_hex_to_oklch( $cols[1] )[0];
-	return [
-		'primary'   => $L0 <= $L1 ? $cols[0] : $cols[1],
-		'secondary' => $L0 <= $L1 ? $cols[1] : $cols[0],
-		'accent'    => $cols[2],
-	];
-}
-
-/**
- * The primary (DARK) ramp. primary-color tracks the brand color's OWN lightness so it's as dark as
- * what the admin picked — only capped to a ceiling so a medium pick still darkens enough to stay a
- * legible dark surface/text (and floored so pure black still has a little life). The light rungs are
- * fixed up high for tints/hover-fills; the deep rungs sit below the color.
- */
-function site_pulse_oklch_primary_ramp( string $srcHex ): array {
-	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	// primary-color = the picked color VERBATIM when it's already a usable dark tone — no lightening,
-	// no desaturating (reducing chroma was making dark reds read as a washed, lighter maroon). Only a
-	// genuinely light pick is darkened to OKLCH L 0.42 to serve as the dark UI tone. Deep rungs sit
-	// below the color at full chroma; only the pale tints ease the chroma so they aren't neon.
-	if ( $L0 <= 0.45 ) {
-		$color = $srcHex; $Lc = $L0; $Cc = $C0;
-	} else {
-		$Lc = 0.42; $Cc = $C0; $color = site_pulse_oklch_to_hex( $Lc, $Cc, $H );
-	}
-	$tintC = min( $C0, 0.10 );
-	return [
-		'lightest' => site_pulse_oklch_to_hex( 0.965, $tintC * 0.45, $H ),
-		'light'    => site_pulse_oklch_to_hex( 0.880, $tintC * 0.80, $H ),
-		'color'    => $color,
-		'dark'     => site_pulse_oklch_to_hex( max( 0.12, $Lc - 0.09 ), $Cc, $H ),
-		'darkest'  => site_pulse_oklch_to_hex( max( 0.08, $Lc - 0.17 ), $Cc, $H ),
-	];
-}
-
-/**
- * The secondary (LIGHT) ramp. secondary-color tracks the brand color's own lightness so it's as light
- * as what the admin picked — floored so a mid pick still lightens enough to be a usable light
- * background. Chroma is kept low (muted). The deep rungs are fixed low for dark foregrounds on it.
- */
-function site_pulse_oklch_secondary_ramp( string $srcHex ): array {
-	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	// secondary-color = the picked color VERBATIM when it's already light enough to be a background;
-	// only a darker pick is lightened to OKLCH L 0.88 to serve as the light surface. Deep rungs are
-	// fixed low for dark foregrounds on it. Chroma kept muted on the synthesized tones.
-	if ( $L0 >= 0.82 ) {
-		$color = $srcHex; $Lc = $L0; $Cc = $C0;
-	} else {
-		$Lc = 0.88; $Cc = min( $C0, 0.05 ); $color = site_pulse_oklch_to_hex( $Lc, $Cc, $H );
-	}
-	return [
-		'lightest' => site_pulse_oklch_to_hex( min( 0.995, $Lc + 0.05 ), min( $C0, 0.04 ) * 0.6, $H ),
-		'light'    => site_pulse_oklch_to_hex( min( 0.985, $Lc + 0.025 ), min( $C0, 0.05 ) * 0.8, $H ),
-		'color'    => $color,
-		'dark'     => site_pulse_oklch_to_hex( 0.45, min( $C0, 0.06 ), $H ),
-		'darkest'  => site_pulse_oklch_to_hex( 0.30, min( $C0, 0.06 ), $H ),
-	];
-}
-
-/**
- * The accent (vivid) ramp keeps the brand pop's OWN lightness for accent-color (clamped to a vivid
- * band) so buttons stay on-brand; the other rungs are offset around it. Chroma is floored so the
- * accent stays lively even from a muted input. (Unlike primary/secondary, the accent's lightness is
- * NOT locked — accent is used as a fill with computed-contrast text, so its lightness can be free.)
- */
-function site_pulse_oklch_accent_ramp( string $srcHex ): array {
-	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	$C0 = min( max( $C0, 0.10 ), 0.45 );
-	$Lc = max( 0.50, min( 0.76, $L0 ) );
-	return [
-		'lightest' => site_pulse_oklch_to_hex( 0.95, $C0 * 0.35, $H ),
-		'light'    => site_pulse_oklch_to_hex( min( 0.88, $Lc + 0.16 ), $C0 * 0.70, $H ),
-		'color'    => site_pulse_oklch_to_hex( $Lc, $C0, $H ),
-		'dark'     => site_pulse_oklch_to_hex( max( 0.34, $Lc - 0.14 ), $C0, $H ),
-		'darkest'  => site_pulse_oklch_to_hex( max( 0.26, $Lc - 0.26 ), $C0 * 0.95, $H ),
-	];
-}
-
-/**
- * The complete CSS-variable map for a scheme built from the company colors.
- * Emits the three locked-lightness families (+ each one's best-contrast text),
- * lightly-branded neutrals, and fixed semantic colors, then runs the WCAG
- * contrast guard. Deterministic — same colors in, same scheme out.
- */
-function site_pulse_build_color_scheme( array $colors ): array {
-	$roles = site_pulse_assign_brand_roles( $colors );
-	if ( ! $roles ) return [];
-
-	// [ rung => [ locked OKLCH lightness, chroma scale ] ]
-	$ramps = [
-		'primary'   => site_pulse_oklch_primary_ramp( $roles['primary'] ),
-		'secondary' => site_pulse_oklch_secondary_ramp( $roles['secondary'] ),
-		'accent'    => site_pulse_oklch_accent_ramp( $roles['accent'] ),
-	];
-
-	$vars = [];
-	foreach ( $ramps as $fam => $ramp ) {
-		$vars[ "--sp-{$fam}-lightest" ] = $ramp['lightest'];
-		$vars[ "--sp-{$fam}-light" ]    = $ramp['light'];
-		$vars[ "--sp-{$fam}-color" ]    = $ramp['color'];
-		$vars[ "--sp-{$fam}-dark" ]     = $ramp['dark'];
-		$vars[ "--sp-{$fam}-darkest" ]  = $ramp['darkest'];
-		$vars[ "--sp-{$fam}-contrast" ] = site_pulse_best_foreground( [ $ramp['color'] ] );
-	}
-	$vars['--sp-accent-hover'] = $ramps['accent']['dark'];
-	$vars['--sp-accent-glow']  = site_pulse_color_rgba( $ramps['accent']['color'], 0.18 ); // active-item edge glow
-	$vars['--sp-primary-line'] = 'rgba(255,255,255,0.10)';                                 // hairline on the dark sidebar
-
-	// Lightly-branded neutrals (tinted by the brand hues, kept near-neutral by tiny chroma).
-	$pH = site_pulse_hex_to_oklch( $roles['primary'] )[2];
-	$sH = site_pulse_hex_to_oklch( $roles['secondary'] )[2];
-	$vars['--sp-text']           = site_pulse_oklch_to_hex( 0.27, 0.012, $pH );
-	$vars['--sp-text-secondary'] = site_pulse_oklch_to_hex( 0.50, 0.012, $pH );
-	$vars['--sp-text-light']     = site_pulse_oklch_to_hex( 0.66, 0.012, $pH );
-	$vars['--sp-bg']             = site_pulse_oklch_to_hex( 0.975, 0.010, $sH );
-	$vars['--sp-bg-white']       = '#ffffff';
-	$vars['--sp-border']         = site_pulse_oklch_to_hex( 0.900, 0.012, $sH );
-	$vars['--sp-border-focus']   = $ramps['accent']['light'];
-
-	// Fixed semantic colors — meaning beats brand-matching; keep green/amber/red recognizable.
-	$vars['--sp-success']       = '#2f8f57';
-	$vars['--sp-success-light'] = site_pulse_color_mix_white( '#2f8f57', 0.90 );
-	$vars['--sp-warning']       = '#c77d18';
-	$vars['--sp-warning-light'] = site_pulse_color_mix_white( '#c77d18', 0.90 );
-	$vars['--sp-danger']        = '#d0432f';
-	$vars['--sp-danger-light']  = site_pulse_color_mix_white( '#d0432f', 0.90 );
-
-	return site_pulse_enforce_contrast( $vars );
-}
-
-/**
- * AI-tuned scheme: Claude evaluates the company colors and returns the three families + neutrals +
- * semantics, which we lay over the deterministic build (so any field the model omits still has a
- * sane value), derive the dependent tokens, and run the WCAG guard. Returns
- * [ 'vars'=>map, 'rationale'=>string ] or NULL if AI is unavailable/failed (caller falls back to the
- * deterministic build). Same token model as build_color_scheme() — the CSS is unchanged.
- */
-function site_pulse_ai_build_color_scheme( array $brand, &$debug = null ): ?array {
-	$base = site_pulse_build_color_scheme( $brand );
-	if ( ! $base ) { $debug = 'no-colors'; return null; }
-	if ( ! site_pulse_get_api_key() ) { $debug = 'no-api-key'; return null; }
-
-	$roles   = site_pulse_assign_brand_roles( $brand );   // slot 3 = accent; darker of 1&2 = primary
-	$assign  = "- primary family base (the dark UI tone): {$roles['primary']}\n";
-	$assign .= "- secondary family base (the light backgrounds): {$roles['secondary']}\n";
-	$assign .= "- accent family base (the pop): {$roles['accent']}\n";
-
-	$shape = '{'
-		. '"primary":{"lightest":"#rrggbb","light":"#rrggbb","color":"#rrggbb","dark":"#rrggbb","darkest":"#rrggbb"},'
-		. '"secondary":{"lightest":"#rrggbb","light":"#rrggbb","color":"#rrggbb","dark":"#rrggbb","darkest":"#rrggbb"},'
-		. '"accent":{"lightest":"#rrggbb","light":"#rrggbb","color":"#rrggbb","dark":"#rrggbb","darkest":"#rrggbb"},'
-		. '"neutral":{"text":"#rrggbb","text_secondary":"#rrggbb","text_light":"#rrggbb","bg":"#rrggbb","border":"#rrggbb"},'
-		. '"semantic":{"success":"#rrggbb","warning":"#rrggbb","danger":"#rrggbb"},'
-		. '"rationale":"one short sentence"}';
-
-	$system = 'You are a senior brand and UI designer building an accessible color scheme for a web-app dashboard. Reply with ONLY one JSON object — no prose, no markdown fences.';
-
-	$prompt  = "Build a complete, WCAG-AA color scheme for an internal web-app dashboard. The role of each company color is ALREADY decided — use these exact base colors, do NOT reassign or swap them:\n{$assign}\n";
-	$prompt .= "For each family, use the assigned base color VERBATIM as its \"color\" tone (keep it rich and recognizable — do NOT wash it out, desaturate it, or shift its hue) and build the other four tones around it:\n";
-	$prompt .= "- \"primary\" = the DARK family: navigation sidebar background, headings, dark text. Build lighter tints above the base and deeper shades below it. White text must read on primary.color — if the assigned base is too light for that, deepen it just enough.\n";
-	$prompt .= "- \"secondary\" = the LIGHT family: light card/panel backgrounds. Dark text must read on secondary.color — if the assigned base is too dark, lighten it just enough.\n";
-	$prompt .= "- \"accent\" = the VIVID family: buttons, links, the active menu item, highlights.\n";
-	$prompt .= "Give each family 5 tones strictly ordered lightest > light > color > dark > darkest, each clearly distinct.\n";
-	$prompt .= "Also: \"neutral\" — text (near-black body text), text_secondary, text_light, bg (very light page tint), border (subtle light divider); and \"semantic\" — success (green), warning (amber), danger (red).\n";
-	$prompt .= "Every text/background pair must be clearly legible; favor light backgrounds with dark text. Use #rrggbb hex for every value.\n";
-	$prompt .= "Return ONLY this JSON shape:\n{$shape}";
-
-	$resp = site_pulse_call_claude( $prompt, $system, [ 'max_tokens' => 1200, 'timeout' => 45 ], $debug );
-	if ( $resp === null ) return null;
-
-	$json = trim( $resp );
-	if ( preg_match( '/\{.*\}/s', $json, $m ) ) $json = $m[0];
-	$p = json_decode( $json, true );
-	if ( ! is_array( $p ) ) { $debug = 'unparseable AI response'; return null; }
-
-	$vars = $base;
-	$applyFam = function ( $key, $obj ) use ( &$vars ) {
-		if ( ! is_array( $obj ) ) return;
-		foreach ( [ 'lightest', 'light', 'color', 'dark', 'darkest' ] as $t ) {
-			$h = site_pulse_sanitize_hex( (string) ( $obj[ $t ] ?? '' ) );
-			if ( $h !== '' ) $vars[ "--sp-{$key}-{$t}" ] = $h;
-		}
-	};
-	$applyFam( 'primary',   $p['primary']   ?? null );
-	$applyFam( 'secondary', $p['secondary'] ?? null );
-	$applyFam( 'accent',    $p['accent']    ?? null );
-
-	if ( is_array( $p['neutral'] ?? null ) ) {
-		$nmap = [ 'text' => '--sp-text', 'text_secondary' => '--sp-text-secondary', 'text_light' => '--sp-text-light', 'bg' => '--sp-bg', 'border' => '--sp-border' ];
-		foreach ( $nmap as $k => $var ) {
-			$h = site_pulse_sanitize_hex( (string) ( $p['neutral'][ $k ] ?? '' ) );
-			if ( $h !== '' ) $vars[ $var ] = $h;
-		}
-	}
-	if ( is_array( $p['semantic'] ?? null ) ) {
-		foreach ( [ 'success', 'warning', 'danger' ] as $k ) {
-			$h = site_pulse_sanitize_hex( (string) ( $p['semantic'][ $k ] ?? '' ) );
-			if ( $h !== '' ) { $vars[ "--sp-{$k}" ] = $h; $vars[ "--sp-{$k}-light" ] = site_pulse_color_mix_white( $h, 0.90 ); }
-		}
-	}
-
-	// Dependent tokens derived from the (possibly AI-chosen) family colors.
-	$vars['--sp-primary-contrast']   = site_pulse_best_foreground( [ $vars['--sp-primary-color'] ] );
-	$vars['--sp-secondary-contrast'] = site_pulse_best_foreground( [ $vars['--sp-secondary-color'] ] );
-	$vars['--sp-accent-contrast']    = site_pulse_best_foreground( [ $vars['--sp-accent-color'] ] );
-	$vars['--sp-accent-hover']       = $vars['--sp-accent-dark'];
-	$vars['--sp-accent-glow']        = site_pulse_color_rgba( $vars['--sp-accent-color'], 0.18 );
-	$vars['--sp-border-focus']       = $vars['--sp-accent-light'];
-	$vars['--sp-bg-white']           = '#ffffff';
-
-	$rationale = isset( $p['rationale'] ) ? sanitize_text_field( (string) $p['rationale'] ) : '';
-	return [ 'vars' => site_pulse_enforce_contrast( $vars ), 'rationale' => $rationale ];
-}
-
 /** WCAG contrast ratio (1–21) between two hex colors. */
 function site_pulse_contrast_ratio( string $a, string $b ): float {
 	$la = site_pulse_luminance( $a );
@@ -5272,10 +4938,13 @@ function site_pulse_best_foreground( array $bgs, array $candidates = [ '#ffffff'
 function site_pulse_enforce_contrast( array $v ): array {
 	// text var => [ [ background vars it must read on ], minimum ratio ]
 	$rules = [
-		'--sp-primary-contrast'   => [ [ '--sp-primary-color' ], 4.5 ],   // light text on the dark family
-		'--sp-accent-contrast'    => [ [ '--sp-accent-color' ], 4.5 ],    // text on accent buttons/fills
-		'--sp-secondary-contrast' => [ [ '--sp-secondary-color' ], 4.5 ], // dark text on the light family
-		'--sp-text'               => [ [ '--sp-bg-white', '--sp-bg' ], 4.5 ],
+		'--sp-sidebar-text'        => [ [ '--sp-sidebar-bg' ], 4.5 ],
+		// text-hover covers both hovered items AND active sub-items (both sit on bg-hover).
+		'--sp-sidebar-text-hover'  => [ [ '--sp-sidebar-bg-hover' ], 4.5 ],
+		// text-active is reserved for the active TOP-level item, which sits only on bg-active.
+		'--sp-sidebar-text-active' => [ [ '--sp-sidebar-bg-active' ], 4.5 ],
+		'--sp-primary-contrast'    => [ [ '--sp-primary' ], 4.5 ],
+		'--sp-text'                => [ [ '--sp-bg-white', '--sp-bg' ], 4.5 ],
 	];
 	foreach ( $rules as $textVar => $rule ) {
 		[ $bgVars, $minRatio ] = $rule;
@@ -5459,16 +5128,28 @@ function site_pulse_saved_brand_colors(): array {
 
 /** The active CSS-variable map: the saved AI scheme, else a legacy per-role scheme, else none. */
 function site_pulse_color_active_vars(): array {
-	// The saved scheme (the AI-tuned map) is the source of truth — AI can't run on every page load,
-	// so the chosen scheme is stored at Save time. If none is stored but company colors are, fall
-	// back to the deterministic build; with neither, the stylesheet :root defaults stand.
-	$raw = (string) site_pulse_get_setting( 'color_vars', '' );
+	$vars = [];
+	$raw  = (string) site_pulse_get_setting( 'color_vars', '' );
 	if ( $raw !== '' ) {
 		$decoded = json_decode( $raw, true );
-		if ( is_array( $decoded ) && $decoded ) return site_pulse_enforce_contrast( $decoded );
+		if ( is_array( $decoded ) && $decoded ) $vars = $decoded;
 	}
-	$brand = site_pulse_saved_brand_colors();
-	return $brand ? site_pulse_build_color_scheme( $brand ) : [];
+	if ( ! $vars ) {
+		// Back-compat: derive from older per-role keys if an install saved one before this build.
+		foreach ( site_pulse_color_roles() as $key => $role ) {
+			$rawr = site_pulse_color_role_raw( $key );
+			if ( $rawr === null ) continue;
+			$base = site_pulse_sanitize_hex( $rawr );
+			if ( $base === '' ) continue;
+			$vars += site_pulse_color_role_vars( $key, $base );
+		}
+	}
+	// Lay the computed brand palette down FIRST as a fallback, then let the saved scheme ($vars)
+	// override it — so the AI-tuned high/low stored in color_vars win, but a slot the AI didn't
+	// set still gets a sensible computed value. Entering company colors alone (no AI run) emits
+	// just the fallback palette, overriding the stylesheet's default brand slots. With neither
+	// saved, this is empty and the stylesheet defaults stand.
+	return site_pulse_enforce_contrast( array_merge( site_pulse_brand_palette( site_pulse_saved_brand_colors() ), $vars ) );
 }
 
 /**
@@ -5503,6 +5184,7 @@ function site_pulse_ajax_admin_get_color_scheme(): void {
 
 	wp_send_json_success( [
 		'brand'          => $brand,
+		'mood'           => (string) site_pulse_get_setting( 'color_mood', '' ),
 		'active'         => (bool) site_pulse_color_active_vars(),
 		'alert_keywords' => (string) site_pulse_get_setting( 'dashboard_alert_keywords', '' ),
 		'news_enabled'   => (string) site_pulse_get_setting( 'dashboard_news_enabled', '1' ),
@@ -5516,34 +5198,34 @@ function site_pulse_ajax_admin_save_color_scheme(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
 
-	// Persist BOTH the company colors (to repopulate the form) AND the previewed scheme map (the
-	// AI-tuned result the admin just approved) — AI can't run on every render, so the chosen map is
-	// what active_vars emits. Order preserved (slot 3 = accent).
-	$brandRaw = $_POST['brand_colors'] ?? '';
-	$blist    = is_string( $brandRaw ) ? json_decode( wp_unslash( $brandRaw ), true ) : ( is_array( $brandRaw ) ? $brandRaw : [] );
-	if ( ! is_array( $blist ) ) $blist = [];
-	$bclean = [];
-	foreach ( $blist as $c ) { $h = site_pulse_sanitize_hex( (string) $c ); if ( $h !== '' ) $bclean[] = $h; }
-	$bclean = array_slice( $bclean, 0, 3 );
-	if ( ! $bclean ) wp_send_json_error( [ 'message' => 'Enter at least one company color.' ] );
-
 	$raw  = $_POST['vars'] ?? '';
 	$vars = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
-	$allowed = array_keys( site_pulse_build_color_scheme( [ '#888888' ] ) ); // canonical token set
-	$clean = [];
-	if ( is_array( $vars ) ) {
-		foreach ( $vars as $k => $v ) {
-			if ( ! in_array( $k, $allowed, true ) ) continue;
-			$val = site_pulse_sanitize_css_color( (string) $v );
-			if ( $val !== '' ) $clean[ $k ] = $val;
-		}
-	}
-	if ( ! $clean ) $clean = site_pulse_build_color_scheme( $bclean ); // nothing usable sent → fresh build
+	if ( ! is_array( $vars ) || ! $vars ) wp_send_json_error( [ 'message' => 'No colors to save — generate a scheme first.' ] );
 
-	site_pulse_set_setting( 'color_brand', wp_json_encode( $bclean ) );
+	$allowed = array_keys( site_pulse_color_ai_to_vars( [] ) ); // canonical role --sp-* var names
+	foreach ( site_pulse_brand_slots() as $slot ) {            // + the brand palette vars (AI-tuned tones)
+		$allowed[] = "--sp-{$slot}-color";
+		foreach ( site_pulse_brand_variants() as $variant ) $allowed[] = "--sp-{$slot}-{$variant}";
+	}
+	$clean   = [];
+	foreach ( $vars as $k => $v ) {
+		if ( ! in_array( $k, $allowed, true ) ) continue;
+		$val = site_pulse_sanitize_css_color( (string) $v );
+		if ( $val === '' ) continue;
+		$clean[ $k ] = $val;
+	}
+	if ( ! $clean ) wp_send_json_error( [ 'message' => 'No valid colors to save.' ] );
+
 	site_pulse_set_setting( 'color_vars', wp_json_encode( $clean ) );
-	global $wpdb;
-	$wpdb->delete( site_pulse_table( 'config' ), [ 'config_key' => 'color_mood' ] );
+
+	// Remember the brand inputs + mood so the form can repopulate them next time.
+	$brandRaw = $_POST['brand_colors'] ?? '';
+	$blist    = is_string( $brandRaw ) ? json_decode( wp_unslash( $brandRaw ), true ) : ( is_array( $brandRaw ) ? $brandRaw : [] );
+	if ( is_array( $blist ) ) {
+		$bclean = array_values( array_filter( array_map( fn( $c ) => site_pulse_sanitize_hex( (string) $c ), $blist ) ) );
+		site_pulse_set_setting( 'color_brand', wp_json_encode( array_slice( $bclean, 0, 3 ) ) );
+	}
+	site_pulse_set_setting( 'color_mood', sanitize_text_field( wp_unslash( $_POST['mood'] ?? '' ) ) );
 
 	wp_send_json_success( [ 'message' => 'Color scheme saved.' ] );
 }
@@ -5561,38 +5243,106 @@ function site_pulse_ajax_admin_reset_color_scheme(): void {
 }
 
 /**
- * Scheme generator (live preview, NOT saved until Save): Claude evaluates the company colors and
- * returns the three-family scheme. If AI is unavailable (no key / failure) it falls back to the
- * deterministic OKLCH build so the button always works. Same token model either way.
+ * AI scheme builder: the admin gives 2–4 brand colors + an optional mood; Claude returns a
+ * COMPLETE color scheme (every nav state, text level, button, border) as hex per field. The
+ * result is mapped to CSS variables and returned for live preview — NOT saved until Save.
  */
-add_action( 'wp_ajax_site_pulse_admin_generate_color_scheme', 'site_pulse_ajax_admin_generate_color_scheme' );
-function site_pulse_ajax_admin_generate_color_scheme(): void {
+add_action( 'wp_ajax_site_pulse_admin_ai_color_scheme', 'site_pulse_ajax_admin_ai_color_scheme' );
+function site_pulse_ajax_admin_ai_color_scheme(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
 
-	$raw   = $_POST['brand_colors'] ?? '';
-	$list  = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
+	$raw  = $_POST['brand_colors'] ?? '';
+	$list = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
 	$brand = [];
 	if ( is_array( $list ) ) {
 		foreach ( $list as $c ) {
 			$hex = site_pulse_sanitize_hex( (string) $c );
-			if ( $hex !== '' ) $brand[] = $hex;   // keep entry order — slot 3 is the accent
+			if ( $hex !== '' ) $brand[] = $hex;
 		}
 	}
-	$brand = array_slice( $brand, 0, 3 );
-	if ( ! $brand ) wp_send_json_error( [ 'message' => 'Enter at least one company color.' ] );
+	$brand = array_slice( array_values( array_unique( $brand ) ), 0, 3 );
+	if ( count( $brand ) < 1 ) wp_send_json_error( [ 'message' => 'Enter at least one brand color.' ] );
 
-	$debug = null;
-	$ai    = site_pulse_ai_build_color_scheme( $brand, $debug );
-	if ( $ai ) {
-		wp_send_json_success( [ 'vars' => $ai['vars'], 'rationale' => ( $ai['rationale'] ?: 'AI-tuned from your colors.' ) ] );
+	if ( ! site_pulse_get_api_key() ) {
+		wp_send_json_error( [ 'message' => 'No Claude API key set. Add one under Settings → API Keys first.' ] );
 	}
 
-	// Fallback: deterministic build so the scheme still works without a key / on AI failure.
-	$note = ( $debug === 'no-api-key' )
-		? 'Built locally — add a Claude API key under Settings → API Keys for AI tuning.'
-		: 'Built locally (AI unavailable' . ( $debug ? ": $debug" : '' ) . ').';
-	wp_send_json_success( [ 'vars' => site_pulse_build_color_scheme( $brand ), 'rationale' => $note ] );
+	$note   = sanitize_text_field( wp_unslash( $_POST['note'] ?? '' ) );
+	$fields = site_pulse_ai_color_fields();
+	$slots  = site_pulse_brand_slots();
+
+	// Each brand color, labelled by its role. The AI is asked to TUNE four tonal variants for each.
+	$brand_lines   = '';
+	$present_slots = [];
+	foreach ( $brand as $i => $hex ) {
+		if ( ! isset( $slots[ $i ] ) ) break;
+		$present_slots[] = $slots[ $i ];
+		$brand_lines    .= "- {$slots[ $i ]}: {$hex}\n";
+	}
+
+	$field_lines = '';
+	foreach ( $fields as $key => $f ) $field_lines .= "- \"$key\": {$f['desc']}\n";
+	$example = wp_json_encode( array_map( fn( $f ) => $f['default'], $fields ) );
+
+	// JSON shape: every role color + a "palette" object of four tuned variants per present slot.
+	$palette_shape = [];
+	foreach ( $present_slots as $slot ) $palette_shape[] = "\"$slot\":{\"lightest\":\"#rrggbb\",\"light\":\"#rrggbb\",\"dark\":\"#rrggbb\",\"darkest\":\"#rrggbb\"}";
+	$shape = '{'
+		. implode( ',', array_map( fn( $k ) => "\"$k\":\"#rrggbb\"", array_keys( $fields ) ) )
+		. ',"palette":{' . implode( ',', $palette_shape ) . '}'
+		. ',"rationale":"one short sentence"}';
+
+	$system = 'You are a senior brand and UI designer producing complete, WCAG-AA-accessible color schemes for a web-app dashboard. Reply with ONLY a single JSON object — no prose, no markdown code fences.';
+
+	$prompt  = "Design a COMPLETE color scheme for a business's internal web-app dashboard, themed around their brand colors. You choose EVERY color in the UI — backgrounds, text, navigation states, buttons, borders — so guarantee that every text color is clearly legible on whatever background it sits on.\n\n";
+	$prompt .= "The brand colors, by role:\n" . $brand_lines;
+	if ( $note !== '' ) $prompt .= "\nDesired mood / feel: $note\n";
+	$prompt .= "\nSTEP 1 — For EACH brand color above, derive FOUR tonal variants tuned to THAT specific color. Tune the amounts to the color itself — do NOT apply a fixed offset; a dark, saturated color needs a much bigger lift to its light tones than a pale color does, and vice-versa for the dark tones:\n";
+	$prompt .= "- \"lightest\": a VERY pale tint — used as a card / panel background. Near-black body text MUST read on it (≥4.5:1 vs #1a1a1a).\n";
+	$prompt .= "- \"light\": a light highlight — hover fills, highlight borders.\n";
+	$prompt .= "- \"dark\": a shadow tone — borders, dividers, shadows.\n";
+	$prompt .= "- \"darkest\": the deepest tone — strong borders and deep fills. White text MUST read on it (≥4.5:1 vs #ffffff).\n";
+	$prompt .= "Order them strictly by lightness: lightest > light > base color > dark > darkest, each clearly distinct from its neighbour.\n";
+	$prompt .= "\nSTEP 2 — Build the whole UI scheme, leaning on these brand colors and the variants you just derived, plus tasteful neutrals. Sensible defaults: 'dominant' for primary/accent; a brand color or its 'dark'/'darkest' for the sidebar and for card/table borders; 'lightest' for card/panel fills; 'light' for hover/highlights; keep the page surface white. You may copy a brand value verbatim or nudge it for contrast. Keep success green-ish, warning amber-ish, danger red-ish.\n";
+	$prompt .= "\nProvide a #rrggbb hex for EVERY one of these role keys:\n" . $field_lines;
+	$prompt .= "\nCritical legibility rules:\n";
+	$prompt .= "- Every *text* color MUST have strong contrast against the background it appears on — sidebar_text on sidebar_bg; sidebar_active_text on BOTH sidebar_active_bg AND sidebar_bg_hover; text/text_secondary on both bg and surface; primary_contrast on primary.\n";
+	$prompt .= "- Make sidebar_active_bg clearly distinct from sidebar_bg so the active menu item stands out.\n";
+	$prompt .= "- For ANY text color, if no brand-derived tone can clear 4.5:1 on the background it sits on, use white or near-black instead — legibility beats brand-matching. (Notably: sidebar_active_text sits on sidebar_active_bg, and sidebar_text_hover sits on sidebar_bg_hover and must read there since active sub-items reuse it.)\n";
+	$prompt .= "- A light, mostly-neutral bg + surface with dark text is safest; only go dark if the mood calls for it, and then keep every text color light enough to read.\n";
+	$prompt .= "\nFor reference, this EXAMPLE role scheme (cream + orange + slate) is well-balanced and accessible — match this level of polish and contrast, but built from the brand colors above:\n";
+	$prompt .= $example . "\n";
+	$prompt .= "\nReturn ONLY this JSON shape (all color values #rrggbb hex):\n" . $shape;
+
+	$debug = null;
+	$resp  = site_pulse_call_claude( $prompt, $system, [ 'max_tokens' => 1500, 'timeout' => 45 ], $debug );
+	if ( $resp === null ) wp_send_json_error( [ 'message' => 'AI request failed' . ( $debug ? ": $debug" : '.' ) ] );
+
+	$json = trim( $resp );
+	if ( preg_match( '/\{.*\}/s', $json, $m ) ) $json = $m[0];
+	$parsed = json_decode( $json, true );
+	if ( ! is_array( $parsed ) ) wp_send_json_error( [ 'message' => 'AI returned an unreadable response. Please try again.' ] );
+
+	// Brand palette vars: base = the user's color; the four variants = the AI's tuned tones,
+	// falling back to the computed tints when the AI omitted or returned an invalid value.
+	$palette = site_pulse_brand_palette( $brand ); // base + computed-fallback variants
+	$ai_pal  = ( isset( $parsed['palette'] ) && is_array( $parsed['palette'] ) ) ? $parsed['palette'] : [];
+	foreach ( $present_slots as $slot ) {
+		$tones = ( isset( $ai_pal[ $slot ] ) && is_array( $ai_pal[ $slot ] ) ) ? $ai_pal[ $slot ] : [];
+		foreach ( site_pulse_brand_variants() as $variant ) {
+			$cand = site_pulse_sanitize_hex( (string) ( $tones[ $variant ] ?? '' ) );
+			if ( $cand !== '' ) $palette[ "--sp-{$slot}-{$variant}" ] = $cand;
+		}
+	}
+
+	// AI role colors + the brand palette vars (so the live preview shows both and they persist),
+	// then the deterministic contrast guard so any text the AI left illegible gets auto-corrected.
+	$vars      = array_merge( site_pulse_color_ai_to_vars( $parsed ), $palette );
+	$vars      = site_pulse_enforce_contrast( $vars );
+	$rationale = isset( $parsed['rationale'] ) ? sanitize_text_field( (string) $parsed['rationale'] ) : '';
+
+	wp_send_json_success( [ 'vars' => $vars, 'rationale' => $rationale ] );
 }
 
 

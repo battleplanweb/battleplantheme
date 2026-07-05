@@ -34,6 +34,7 @@ class BPGBP_Hub {
 	const ACCOUNTS_URL    = 'https://mybusinessaccountmanagement.googleapis.com/v1/accounts';
 	const LOCATIONS_URL   = 'https://mybusinessbusinessinformation.googleapis.com/v1/%s/locations';
 	const POST_URL        = 'https://mybusiness.googleapis.com/v4/%s/localPosts';
+	const MEDIA_URL       = 'https://mybusiness.googleapis.com/v4/%s/media';              // %s = accounts/X/locations/Y — Photos gallery
 	const REVIEWS_URL     = 'https://mybusiness.googleapis.com/v4/%s/reviews';            // %s = accounts/X/locations/Y
 	const REVIEW_REPLY_URL= 'https://mybusiness.googleapis.com/v4/%s/reviews/%s/reply';   // %s = location, %s = reviewId
 	const MAX_CLOCK_SKEW  = 300; // seconds — replay/clock-skew window for signed requests
@@ -168,6 +169,18 @@ class BPGBP_Hub {
 			)
 		);
 
+		// Client sites push a photo to their location's Photos gallery (media.create). Same per-site HMAC;
+		// location is hub-enforced. Distinct from /post — this adds to the permanent gallery, not a post.
+		register_rest_route(
+			self::NS,
+			'/media',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'handle_media' ),
+				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
+			)
+		);
+
 		// Client sites read their own location's reviews. Per-site HMAC; a GET has an
 		// empty body, so the client signs hash_hmac(sha256, timestamp . '.' . '', secret).
 		register_rest_route(
@@ -289,7 +302,11 @@ class BPGBP_Hub {
 			$token  = self::get_access_token();
 			$result = self::google_request( 'POST', sprintf( self::POST_URL, $location ), $token, $post );
 		} catch ( Exception $e ) {
-			return new WP_Error( 'bpgbp_google_error', $e->getMessage(), array( 'status' => 502 ) );
+			// Return HTTP 200 with an error payload rather than a 5xx: a real 502/500 from the REST endpoint
+			// gets its body replaced by the host/CDN error page, so the client never sees Google's actual
+			// message. 200 + {ok:false,error} passes through intact. Also log it for server-side visibility.
+			error_log( 'BPGBP hub post error (location ' . $location . '): ' . $e->getMessage() );
+			return new WP_REST_Response( array( 'ok' => false, 'error' => $e->getMessage() ), 200 );
 		}
 
 		return new WP_REST_Response(
@@ -298,6 +315,51 @@ class BPGBP_Hub {
 				'name'      => isset( $result['name'] ) ? $result['name'] : null,
 				'searchUrl' => isset( $result['searchUrl'] ) ? $result['searchUrl'] : null,
 				'state'     => isset( $result['state'] ) ? $result['state'] : null,
+			),
+			200
+		);
+	}
+
+	/* ───────────────────────── POST bpgbp/v1/media ─────────────────────────
+	 * Add a photo to the location's Photos gallery (v4 media.create with a sourceUrl). Like handle_post,
+	 * the location is hub-enforced and Google errors come back as HTTP 200 {ok:false,error} so the CDN
+	 * doesn't eat them. Image must be a publicly reachable JPG/PNG (the client converts WebP before calling). */
+	public static function handle_media( WP_REST_Request $request ) {
+		$sites    = self::get_sites();
+		$site_key = $request->get_param( '_bpgbp_site_key' );
+		$location = $sites[ $site_key ]['location']; // hub-enforced
+
+		$params    = (array) $request->get_json_params();
+		$image_url = isset( $params['image_url'] ) ? esc_url_raw( $params['image_url'] ) : '';
+		if ( '' === $image_url ) {
+			return new WP_Error( 'bpgbp_no_image', 'An image_url is required.', array( 'status' => 400 ) );
+		}
+
+		// Category = where the photo files in the gallery. Validate against Google's enum; default ADDITIONAL.
+		$allowed  = array( 'ADDITIONAL', 'AT_WORK', 'EXTERIOR', 'INTERIOR', 'PRODUCT', 'FOOD_AND_DRINK', 'COMMON_AREA', 'TEAMS' );
+		$category = isset( $params['category'] ) ? strtoupper( (string) $params['category'] ) : 'ADDITIONAL';
+		if ( ! in_array( $category, $allowed, true ) ) $category = 'ADDITIONAL';
+
+		$media = array(
+			'mediaFormat'         => 'PHOTO',
+			'locationAssociation' => array( 'category' => $category ),
+			'sourceUrl'           => $image_url,
+		);
+
+		try {
+			$token  = self::get_access_token();
+			$result = self::google_request( 'POST', sprintf( self::MEDIA_URL, $location ), $token, $media );
+		} catch ( Exception $e ) {
+			error_log( 'BPGBP hub media error (location ' . $location . '): ' . $e->getMessage() );
+			return new WP_REST_Response( array( 'ok' => false, 'error' => $e->getMessage() ), 200 );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'ok'          => true,
+				'name'        => isset( $result['name'] ) ? $result['name'] : null,
+				'googleUrl'   => isset( $result['googleUrl'] ) ? $result['googleUrl'] : null,
+				'thumbnailUrl'=> isset( $result['thumbnailUrl'] ) ? $result['thumbnailUrl'] : null,
 			),
 			200
 		);

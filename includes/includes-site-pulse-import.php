@@ -252,7 +252,7 @@ function sp_import_build_prompt( array $fields ): array {
 		fn( $f ) => "- {$f['key']} ({$f['type']}): {$f['label']}" . ( $f['options'] ? " [options: {$f['options']}]" : '' ),
 		$fields
 	);
-	$system = 'You extract data from a single restaurant General Manager (GM) bi-weekly report into structured JSON. Output ONLY valid JSON — no prose, no code fences.';
+	$system = 'You extract data from a single restaurant General Manager (GM) report into structured JSON. Output ONLY valid JSON — no prose, no code fences.';
 	$prompt = "This document is ONE GM report. Extract it into a JSON object with exactly this shape:\n"
 		. "{\n"
 		. "  \"gm_name\": \"\",         // the GM/manager who wrote it (\"\" if unknown)\n"

@@ -263,7 +263,7 @@ function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $b
 			'starRating' => (int) $r['star_rating'],
 			'comment'    => $r['comment'],
 			'createTime' => $r['create_time'] ? gmdate( 'c', strtotime( $r['create_time'] ) ) : '',
-			'reply'      => $has_reply ? [ 'comment' => $r['reply_comment'], 'updateTime' => $r['reply_time'] ] : null,
+			'reply'      => $has_reply ? [ 'comment' => $r['reply_comment'], 'updateTime' => $r['reply_time'], 'by' => ( ! empty( $r['reply_by'] ) ? site_pulse_display_name( (int) $r['reply_by'] ) : '' ) ] : null,
 			'tags'       => ( isset( $r['tags'] ) && $r['tags'] ) ? ( json_decode( $r['tags'], true ) ?: [] ) : [],
 			'location'   => isset( $r['location'] ) ? (string) $r['location'] : '',
 			'store'      => isset( $r['store'] ) ? (string) $r['store'] : '',
@@ -322,7 +322,7 @@ function site_pulse_ajax_get_reviews(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
 
-	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() );
+	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override();
 	if ( ! $can_view ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	$force     = ! empty( $_POST['refresh'] );
@@ -399,7 +399,9 @@ function site_pulse_ajax_get_reviews(): void {
 		'has_older'        => $has_older,      // Google back-catalogue still un-synced (Load Older)
 		'stale'            => (bool) $error,
 		'error'            => $error,
-		'can_manage'       => site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() ),
+		// Reply / Add-as-testimonial are gated on this. Impersonation-aware (effective user), so "view as"
+		// a role without Manage reviews correctly hides the buttons.
+		'can_manage'       => site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( $user_id ),
 	] );
 }
 
@@ -413,7 +415,7 @@ function site_pulse_ajax_load_older_reviews(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
 
-	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() );
+	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override();
 	if ( ! $can_view ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	$cutoff    = sp_reviews_range_cutoff( sanitize_text_field( wp_unslash( $_POST['range'] ?? '30' ) ) );
@@ -472,7 +474,7 @@ function site_pulse_ajax_load_older_reviews(): void {
 		'totalReviewCount' => $total,
 		'has_older'        => $has_older,
 		'error'            => $error,
-		'can_manage'       => site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() ),
+		'can_manage'       => site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override(),
 	] );
 }
 
@@ -486,7 +488,7 @@ function site_pulse_ajax_reply_review(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
 
-	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() ) ) ) {
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( $user_id ) ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 
@@ -502,16 +504,18 @@ function site_pulse_ajax_reply_review(): void {
 	$res = sp_reviews_hub_request( 'POST', 'reply', [ 'review_id' => $review_id, 'comment' => $comment, 'location' => $location ] );
 	if ( is_wp_error( $res ) ) wp_send_json_error( [ 'message' => $res->get_error_message() ] );
 
-	$reply = ( '' === $comment ) ? null : [ 'comment' => $comment, 'updateTime' => ( $res['updateTime'] ?? '' ) ];
+	// Internal credit: record WHO on the team posted the reply (effective user), shown in the panel only —
+	// Google has no concept of an internal author. `by` rides the response so the card updates immediately.
+	$reply = ( '' === $comment ) ? null : [ 'comment' => $comment, 'updateTime' => ( $res['updateTime'] ?? '' ), 'by' => site_pulse_display_name( $user_id ) ];
 
 	// Reflect the reply in the stored row so the panel updates without a re-fetch.
 	global $wpdb;
 	$t = sp_reviews_table();
 	if ( '' === $comment ) {
-		$wpdb->query( $wpdb->prepare( "UPDATE $t SET reply_comment = '', reply_time = NULL WHERE review_id = %s", $review_id ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE $t SET reply_comment = '', reply_time = NULL, reply_by = NULL WHERE review_id = %s", $review_id ) );
 	} else {
 		$rtime = ! empty( $res['updateTime'] ) ? gmdate( 'Y-m-d H:i:s', strtotime( $res['updateTime'] ) ) : current_time( 'mysql', true );
-		$wpdb->query( $wpdb->prepare( "UPDATE $t SET reply_comment = %s, reply_time = %s WHERE review_id = %s", $comment, $rtime, $review_id ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE $t SET reply_comment = %s, reply_time = %s, reply_by = %d WHERE review_id = %s", $comment, $rtime, $user_id, $review_id ) );
 	}
 
 	site_pulse_log(
@@ -533,7 +537,7 @@ function site_pulse_ajax_review_to_testimonial(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
 
-	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() ) ) ) {
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( $user_id ) ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 
@@ -574,6 +578,24 @@ function site_pulse_ajax_review_to_testimonial(): void {
 // one only when none of these fit. Kept restaurant-flavoured since that's the current use.
 const SP_REVIEWS_TAG_TOPICS = [ 'Food', 'Service', 'Atmosphere', 'Cleanliness', 'Value', 'Wait Time', 'Drinks', 'Portions', 'Staff', 'Order Accuracy' ];
 
+// The configured "super categories" the client wants reviews ranked into — each with guiding sub-topics.
+// Stored as a setting (JSON): [ { name, subs:[…] }, … ]. Empty until configured in Review Settings.
+function sp_reviews_categories(): array {
+	$raw = site_pulse_get_setting( 'review_categories', '' );
+	$arr = $raw !== '' ? json_decode( $raw, true ) : null;
+	if ( ! is_array( $arr ) ) return [];
+	$out = [];
+	foreach ( $arr as $c ) {
+		if ( ! is_array( $c ) ) continue;
+		$name = trim( (string) ( $c['name'] ?? '' ) );
+		if ( '' === $name ) continue;
+		$subs = [];
+		foreach ( (array) ( $c['subs'] ?? [] ) as $s ) { $s = trim( (string) $s ); if ( '' !== $s ) $subs[] = $s; }
+		$out[] = [ 'name' => $name, 'subs' => $subs ];
+	}
+	return $out;
+}
+
 function sp_reviews_untagged_count(): int {
 	global $wpdb;
 	return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . sp_reviews_table() . ' WHERE tags IS NULL' );
@@ -595,10 +617,16 @@ function sp_reviews_parse_tag_reply( string $reply ): array {
 		foreach ( (array) ( $entry['tags'] ?? [] ) as $tg ) {
 			$label = isset( $tg['label'] ) ? trim( (string) $tg['label'] ) : '';
 			if ( '' === $label ) continue;
+			// Per-category 1-5 score (new). 0 = not provided (old/fallback tags that only had sentiment).
+			$score = isset( $tg['score'] ) ? (int) $tg['score'] : 0;
+			if ( $score < 1 || $score > 5 ) $score = 0;
+			// Sentiment: use the AI's if given, otherwise derive it from the score (for chip colour + filters).
 			$sent = isset( $tg['sentiment'] ) ? strtolower( trim( (string) $tg['sentiment'] ) ) : '';
-			if ( ! in_array( $sent, [ 'positive', 'negative', 'neutral' ], true ) ) $sent = 'neutral';
-			$tags[] = [ 'label' => $label, 'sentiment' => $sent ];
-			if ( count( $tags ) >= 4 ) break; // cap chips per card
+			if ( ! in_array( $sent, [ 'positive', 'negative', 'neutral' ], true ) ) {
+				$sent = $score >= 4 ? 'positive' : ( 3 === $score ? 'neutral' : ( $score >= 1 ? 'negative' : 'neutral' ) );
+			}
+			$tags[] = [ 'label' => $label, 'score' => $score, 'sentiment' => $sent ];
+			if ( count( $tags ) >= 6 ) break; // cap chips per card (enough for the configured super-categories)
 		}
 		$out[ (int) $entry['i'] ] = $tags;
 	}
@@ -627,20 +655,30 @@ function sp_reviews_tag_batch( int $max = 60, int $per = 20 ): array {
 
 	while ( $tagged < $max && time() < $deadline ) {
 		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT id, comment FROM $t WHERE tags IS NULL AND comment <> '' ORDER BY create_time DESC LIMIT %d", $per
+			"SELECT id, comment, star_rating FROM $t WHERE tags IS NULL AND comment <> '' ORDER BY create_time DESC LIMIT %d", $per
 		), ARRAY_A );
 		if ( ! $rows ) break;
 
 		$items = [];
 		foreach ( array_values( $rows ) as $idx => $r ) {
-			$items[] = [ 'i' => $idx, 'text' => mb_substr( (string) $r['comment'], 0, 1200 ) ];
+			// Include the overall star rating so the AI can weight per-category scores by review context.
+			$items[] = [ 'i' => $idx, 'stars' => (int) $r['star_rating'], 'text' => mb_substr( (string) $r['comment'], 0, 1200 ) ];
 		}
 
-		$prompt = 'Preferred topic labels (use when they fit; add a short new one only if none do): '
-			. implode( ', ', SP_REVIEWS_TAG_TOPICS ) . ".\n\nReviews (JSON):\n" . wp_json_encode( $items );
+		// When super-categories are configured, classify strictly into them; otherwise fall back to the
+		// original free-form topic tagging.
+		$cats = sp_reviews_categories();
+		if ( $cats ) {
+			$system = site_pulse_prompt_review_tags( $cats );
+			$prompt = "Reviews (JSON):\n" . wp_json_encode( $items );
+		} else {
+			$system = site_pulse_prompt_review_tags();
+			$prompt = 'Preferred topic labels (use when they fit; add a short new one only if none do): '
+				. implode( ', ', SP_REVIEWS_TAG_TOPICS ) . ".\n\nReviews (JSON):\n" . wp_json_encode( $items );
+		}
 
 		$debug = null;
-		$reply = site_pulse_call_claude( $prompt, site_pulse_prompt_review_tags(), [
+		$reply = site_pulse_call_claude( $prompt, $system, [
 			'model'      => 'claude-haiku-4-5-20251001',
 			'max_tokens' => 1500,
 		], $debug );
@@ -679,7 +717,21 @@ function sp_reviews_tag_cron(): void {
 		foreach ( $locations as $L ) {
 			if ( time() >= $deadline ) break;
 			$lm = sp_reviews_loc_meta( $meta, $L['id'] );
-			if ( ! empty( $lm['complete'] ) ) continue;
+
+			// Back-catalogue already fully synced → just pull the NEWEST page each run so reviews that have
+			// come in since last time land in the DB (and get AI-tagged below) — no manual panel visit /
+			// "Analyze reviews" click needed. Untagged rows are settled by sp_reviews_tag_batch() at the end.
+			if ( ! empty( $lm['complete'] ) ) {
+				$sync = sp_reviews_sync( $L['id'], $L['label'], $L['brand'], '', 50 );
+				if ( ! is_wp_error( $sync ) ) {
+					if ( null !== $sync['total'] ) $lm['total'] = $sync['total'];
+					if ( null !== $sync['avg'] )   $lm['avg']   = $sync['avg'];
+					$lm['synced_at']         = time();
+					$meta['loc'][ $L['id'] ] = $lm;
+				}
+				continue;
+			}
+
 			$token = (string) ( $lm['next_token'] ?? '' );
 			$did_restart = false;
 			while ( time() < $deadline ) {
@@ -711,13 +763,67 @@ add_action( 'wp_ajax_site_pulse_analyze_reviews', 'site_pulse_ajax_analyze_revie
 function site_pulse_ajax_analyze_reviews(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
-	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() ) ) ) {
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override() ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 
 	$res = sp_reviews_tag_batch( 60, 20 );
 	if ( $res['error'] && 0 === $res['tagged'] ) wp_send_json_error( [ 'message' => $res['error'] ] );
 	wp_send_json_success( $res );
+}
+
+/* --------------------------------------------------------------
+# Review categories (super-categories + sub-categories) — settings
+-------------------------------------------------------------- */
+
+add_action( 'wp_ajax_site_pulse_get_review_categories', 'site_pulse_ajax_get_review_categories' );
+function site_pulse_ajax_get_review_categories(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+	wp_send_json_success( [ 'categories' => sp_reviews_categories() ] );
+}
+
+add_action( 'wp_ajax_site_pulse_save_review_categories', 'site_pulse_ajax_save_review_categories' );
+function site_pulse_ajax_save_review_categories(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$in    = json_decode( (string) wp_unslash( $_POST['categories'] ?? '[]' ), true );
+	$clean = [];
+	if ( is_array( $in ) ) {
+		foreach ( $in as $c ) {
+			if ( ! is_array( $c ) ) continue;
+			$name = sanitize_text_field( (string) ( $c['name'] ?? '' ) );
+			if ( '' === $name ) continue;                 // skip blank category rows
+			$subs = [];
+			foreach ( (array) ( $c['subs'] ?? [] ) as $s ) {
+				$s = sanitize_text_field( (string) $s );
+				if ( '' !== $s ) $subs[] = $s;
+			}
+			$clean[] = [ 'name' => $name, 'subs' => array_values( array_unique( $subs ) ) ];
+		}
+	}
+
+	$prev = site_pulse_get_setting( 'review_categories', '' );
+	$next = wp_json_encode( $clean );
+	site_pulse_set_setting( 'review_categories', $next );
+
+	// If the categories actually changed, clear existing tags so reviews re-classify under the new scheme
+	// on the next "Analyze reviews" run / hourly cron (the old arbitrary labels no longer apply).
+	$recategorized = false;
+	if ( $prev !== $next ) {
+		global $wpdb;
+		$wpdb->query( 'UPDATE ' . sp_reviews_table() . ' SET tags = NULL, tagged_at = NULL' );
+		$recategorized = true;
+	}
+
+	wp_send_json_success( [ 'categories' => $clean, 'recategorized' => $recategorized ] );
 }
 
 
@@ -742,7 +848,7 @@ add_action( 'wp_ajax_site_pulse_review_stats', 'site_pulse_ajax_review_stats' );
 function site_pulse_ajax_review_stats(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id  = site_pulse_effective_user_id();
-	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() );
+	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override();
 	if ( ! $can_view ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	global $wpdb;
@@ -784,8 +890,10 @@ function site_pulse_ajax_review_stats(): void {
 			$seen[ $key ] = true;
 			$sent = isset( $tg['sentiment'] ) ? strtolower( (string) $tg['sentiment'] ) : 'neutral';
 			if ( ! in_array( $sent, [ 'positive', 'neutral', 'negative' ], true ) ) $sent = 'neutral';
-			if ( ! isset( $topics[ $label ] ) ) $topics[ $label ] = [ 'positive' => 0, 'neutral' => 0, 'negative' => 0 ];
+			$sc = isset( $tg['score'] ) ? (int) $tg['score'] : 0;
+			if ( ! isset( $topics[ $label ] ) ) $topics[ $label ] = [ 'positive' => 0, 'neutral' => 0, 'negative' => 0, 'score_sum' => 0, 'score_n' => 0 ];
 			$topics[ $label ][ $sent ]++;
+			if ( $sc >= 1 && $sc <= 5 ) { $topics[ $label ]['score_sum'] += $sc; $topics[ $label ]['score_n']++; }
 		}
 	}
 
@@ -794,11 +902,13 @@ function site_pulse_ajax_review_stats(): void {
 		$mentions = $c['positive'] + $c['neutral'] + $c['negative'];
 		if ( ! $mentions ) continue;
 		$out[] = [
-			'label'    => $label,
-			'mentions' => $mentions,
-			'pos_pct'  => (int) round( $c['positive'] / $mentions * 100 ),
-			'neu_pct'  => (int) round( $c['neutral']  / $mentions * 100 ),
-			'neg_pct'  => (int) round( $c['negative'] / $mentions * 100 ),
+			'label'     => $label,
+			'mentions'  => $mentions,
+			'pos_pct'   => (int) round( $c['positive'] / $mentions * 100 ),
+			'neu_pct'   => (int) round( $c['neutral']  / $mentions * 100 ),
+			'neg_pct'   => (int) round( $c['negative'] / $mentions * 100 ),
+			'avg_score' => $c['score_n'] ? round( $c['score_sum'] / $c['score_n'], 1 ) : null, // per-category 1-5 rating
+			'score_n'   => $c['score_n'],
 		];
 	}
 	usort( $out, function ( $a, $b ) { return $b['mentions'] <=> $a['mentions']; } );
@@ -826,6 +936,261 @@ function site_pulse_ajax_review_stats(): void {
 
 
 /*--------------------------------------------------------------
+# Trends — per-store scorecard vs the company average
+--------------------------------------------------------------*/
+
+/** Map each review store (GBP location label) to the supervisor of that store's GM. Bridges the GBP
+ *  location list to the Site Pulse locations table by normalized name, then locations to supervisors via
+ *  the GM's supervisor_id. Returns [ storeLabel => [ 'id' => sup_user_id, 'name' => display_name ] ]. */
+function sp_reviews_store_supervisor_map(): array {
+	static $cache = null;
+	if ( null !== $cache ) return $cache;
+
+	$norm = function ( $s ) { return preg_replace( '/[^a-z0-9]/', '', strtolower( (string) $s ) ); };
+
+	// Site Pulse store locations indexed by normalized name → location id.
+	$spByNorm = [];
+	foreach ( site_pulse_get_all_locations( true, true ) as $L ) {
+		$k = $norm( $L['name'] );
+		if ( '' !== $k && ! isset( $spByNorm[ $k ] ) ) $spByNorm[ $k ] = (int) $L['id'];
+	}
+
+	// A store's supervisor = the supervisor of that store's GM (role 'manager') — NOT just any employee
+	// who happens to sit at the location (a line cook's supervisor is the GM, which would be wrong here).
+	global $wpdb;
+	$gmRole   = site_pulse_get_role_by_slug( 'manager' );
+	$gmRoleId = $gmRole ? (int) $gmRole['id'] : 0;
+	$locSup   = [];
+	if ( $gmRoleId ) {
+		$profiles = $wpdb->get_results( $wpdb->prepare(
+			"SELECT location_id, supervisor_id FROM " . site_pulse_table( 'user_profiles' ) . " WHERE status = 'active' AND role_id = %d AND location_id > 0 AND supervisor_id > 0",
+			$gmRoleId
+		), ARRAY_A ) ?: [];
+		foreach ( $profiles as $p ) {
+			$lid = (int) $p['location_id'];
+			if ( ! isset( $locSup[ $lid ] ) ) $locSup[ $lid ] = (int) $p['supervisor_id'];
+		}
+	}
+
+	$map = [];
+	foreach ( sp_reviews_locations() as $g ) {
+		$lid   = $spByNorm[ $norm( $g['label'] ) ] ?? 0;
+		$supId = $lid ? ( $locSup[ $lid ] ?? 0 ) : 0;
+		if ( $supId ) $map[ (string) $g['label'] ] = [ 'id' => $supId, 'name' => site_pulse_display_name( $supId ) ];
+	}
+	return $cache = $map;
+}
+
+add_action( 'wp_ajax_site_pulse_review_scorecard', 'site_pulse_ajax_review_scorecard' );
+function site_pulse_ajax_review_scorecard(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override();
+	if ( ! $can_view ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+
+	global $wpdb;
+	$t = sp_reviews_table();
+
+	$range  = sanitize_text_field( wp_unslash( $_POST['range'] ?? 'all' ) );
+	$cutoff = sp_reviews_range_cutoff( $range );
+	$fBrand = sanitize_text_field( wp_unslash( $_POST['brand'] ?? '' ) );
+	$group  = sanitize_text_field( wp_unslash( $_POST['group'] ?? 'store' ) );
+	if ( 'supervisor' !== $group ) $group = 'store';
+	$fSup   = (int) ( $_POST['supervisor'] ?? 0 );
+
+	$where = '1=1'; $args = [];
+	if ( '' !== $cutoff ) { $where .= ' AND create_time >= %s'; $args[] = $cutoff; }
+	if ( '' !== $fBrand ) { $where .= ' AND brand = %s';        $args[] = $fBrand; }
+
+	$sql  = "SELECT store, brand, star_rating, tags FROM $t WHERE $where";
+	$rows = $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A );
+	$rows = $rows ?: [];
+
+	$catNames = array_map( function ( $c ) { return $c['name']; }, sp_reviews_categories() );
+	$supMap   = sp_reviews_store_supervisor_map();
+
+	$groups  = [];
+	$co      = [ 'count' => 0, 'star_sum' => 0, 'star_n' => 0, 'cat' => [] ];
+	$supSeen = []; // sup_id => name, for the filter dropdown
+	foreach ( $rows as $r ) {
+		$store   = (string) $r['store']; if ( '' === $store ) $store = '(unknown)';
+		$supInfo = $supMap[ $store ] ?? null;
+		$supId   = $supInfo ? (int) $supInfo['id'] : 0;
+		$supName = $supInfo ? (string) $supInfo['name'] : '';
+		if ( $supId ) $supSeen[ $supId ] = $supName;
+
+		$s       = (int) $r['star_rating'];
+		$hasStar = ( $s >= 1 && $s <= 5 );
+
+		// Parse this review's category scores once (label => score), de-duping repeats within a review.
+		$parsed = [];
+		$tags   = $r['tags'] ? json_decode( $r['tags'], true ) : [];
+		if ( is_array( $tags ) ) {
+			foreach ( $tags as $tg ) {
+				$label = isset( $tg['label'] ) ? trim( (string) $tg['label'] ) : '';
+				$sc    = isset( $tg['score'] ) ? (int) $tg['score'] : 0;
+				if ( '' !== $label && $sc >= 1 && $sc <= 5 ) $parsed[ $label ] = $sc;
+			}
+		}
+
+		// Company baseline = every review in range/brand (NOT scoped by the supervisor filter), so a
+		// filtered view still compares against the whole company.
+		$co['count']++;
+		if ( $hasStar ) { $co['star_sum'] += $s; $co['star_n']++; }
+		foreach ( $parsed as $label => $sc ) {
+			if ( ! isset( $co['cat'][ $label ] ) ) $co['cat'][ $label ] = [ 'sum' => 0, 'n' => 0 ];
+			$co['cat'][ $label ]['sum'] += $sc; $co['cat'][ $label ]['n']++;
+		}
+
+		// Grouped rows honor the supervisor filter.
+		if ( $fSup && $supId !== $fSup ) continue;
+		$key = ( 'supervisor' === $group ) ? ( $supId ? $supName : '(Unassigned)' ) : $store;
+		if ( ! isset( $groups[ $key ] ) ) {
+			$groups[ $key ] = [ 'brand' => ( 'supervisor' === $group ? '' : (string) $r['brand'] ), 'sup_id' => $supId, 'count' => 0, 'star_sum' => 0, 'star_n' => 0, 'cat' => [] ];
+		}
+		$groups[ $key ]['count']++;
+		if ( $hasStar ) { $groups[ $key ]['star_sum'] += $s; $groups[ $key ]['star_n']++; }
+		foreach ( $parsed as $label => $sc ) {
+			if ( ! isset( $groups[ $key ]['cat'][ $label ] ) ) $groups[ $key ]['cat'][ $label ] = [ 'sum' => 0, 'n' => 0 ];
+			$groups[ $key ]['cat'][ $label ]['sum'] += $sc; $groups[ $key ]['cat'][ $label ]['n']++;
+		}
+	}
+
+	$avg = function ( $sum, $n ) { return $n ? round( $sum / $n, 1 ) : null; };
+
+	$company = [ 'count' => $co['count'], 'stars' => $avg( $co['star_sum'], $co['star_n'] ), 'scores' => [] ];
+	foreach ( $catNames as $cn ) {
+		$company['scores'][ $cn ] = isset( $co['cat'][ $cn ] ) ? $avg( $co['cat'][ $cn ]['sum'], $co['cat'][ $cn ]['n'] ) : null;
+	}
+
+	$out = [];
+	foreach ( $groups as $name => $d ) {
+		$scores = [];
+		foreach ( $catNames as $cn ) {
+			$scores[ $cn ] = isset( $d['cat'][ $cn ] ) ? $avg( $d['cat'][ $cn ]['sum'], $d['cat'][ $cn ]['n'] ) : null;
+		}
+		$out[] = [ 'store' => $name, 'brand' => $d['brand'], 'sup_id' => (int) $d['sup_id'], 'count' => (int) $d['count'], 'stars' => $avg( $d['star_sum'], $d['star_n'] ), 'scores' => $scores ];
+	}
+	usort( $out, function ( $a, $b ) { return ( $b['stars'] ?? 0 ) <=> ( $a['stars'] ?? 0 ); } );
+
+	$supervisors = [];
+	foreach ( $supSeen as $id => $nm ) $supervisors[] = [ 'id' => $id, 'name' => $nm ];
+	usort( $supervisors, function ( $a, $b ) { return strcasecmp( $a['name'], $b['name'] ); } );
+
+	$brands = $wpdb->get_col( "SELECT DISTINCT brand FROM $t WHERE brand IS NOT NULL AND brand <> '' ORDER BY brand" ) ?: [];
+
+	wp_send_json_success( [
+		'categories'  => $catNames,
+		'company'     => $company,
+		'stores'      => $out,
+		'brands'      => $brands,
+		'supervisors' => $supervisors,
+		'group'       => $group,
+		'supervisor'  => $fSup,
+		'range'       => $range,
+	] );
+}
+
+/** AJAX — monthly time series per store (or per supervisor) for every metric, for the line chart that
+ *  compares stores over time. Same filters as the scorecard. Returns all metrics so the client can
+ *  switch the metric picker without re-fetching. */
+add_action( 'wp_ajax_site_pulse_review_trend_series', 'site_pulse_ajax_review_trend_series' );
+function site_pulse_ajax_review_trend_series(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id  = site_pulse_effective_user_id();
+	$can_view = site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override();
+	if ( ! $can_view ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+
+	global $wpdb;
+	$t = sp_reviews_table();
+
+	$range  = sanitize_text_field( wp_unslash( $_POST['range'] ?? 'all' ) );
+	$cutoff = sp_reviews_range_cutoff( $range );
+	$fBrand = sanitize_text_field( wp_unslash( $_POST['brand'] ?? '' ) );
+	$group  = sanitize_text_field( wp_unslash( $_POST['group'] ?? 'store' ) );
+	if ( 'supervisor' !== $group ) $group = 'store';
+	$fSup   = (int) ( $_POST['supervisor'] ?? 0 );
+
+	$where = '1=1'; $args = [];
+	if ( '' !== $cutoff ) { $where .= ' AND create_time >= %s'; $args[] = $cutoff; }
+	if ( '' !== $fBrand ) { $where .= ' AND brand = %s';        $args[] = $fBrand; }
+	$where .= ' AND create_time IS NOT NULL';
+
+	$sql  = "SELECT store, star_rating, tags, create_time FROM $t WHERE $where";
+	$rows = $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A );
+	$rows = $rows ?: [];
+
+	$catNames = array_map( function ( $c ) { return $c['name']; }, sp_reviews_categories() );
+	$metrics  = array_merge( [ 'stars' ], $catNames );
+	$supMap   = sp_reviews_store_supervisor_map();
+
+	$agg = []; $co = []; $buckets_set = [];
+	foreach ( $rows as $r ) {
+		$store   = (string) $r['store']; if ( '' === $store ) $store = '(unknown)';
+		$supInfo = $supMap[ $store ] ?? null;
+		$supId   = $supInfo ? (int) $supInfo['id'] : 0;
+		$supName = $supInfo ? (string) $supInfo['name'] : '';
+		if ( $fSup && $supId !== $fSup ) continue;
+
+		$gkey   = ( 'supervisor' === $group ) ? ( $supId ? $supName : '(Unassigned)' ) : $store;
+		$bucket = substr( (string) $r['create_time'], 0, 7 ); // YYYY-MM
+		if ( '' === $bucket ) continue;
+		$buckets_set[ $bucket ] = true;
+
+		$vals = [];
+		$s = (int) $r['star_rating']; if ( $s >= 1 && $s <= 5 ) $vals['stars'] = $s;
+		$tags = $r['tags'] ? json_decode( $r['tags'], true ) : [];
+		if ( is_array( $tags ) ) {
+			foreach ( $tags as $tg ) {
+				$lab = isset( $tg['label'] ) ? trim( (string) $tg['label'] ) : '';
+				$sc  = isset( $tg['score'] ) ? (int) $tg['score'] : 0;
+				if ( '' !== $lab && $sc >= 1 && $sc <= 5 ) $vals[ $lab ] = $sc;
+			}
+		}
+		foreach ( $vals as $m => $v ) {
+			$agg[ $gkey ][ $bucket ][ $m ]['sum'] = ( $agg[ $gkey ][ $bucket ][ $m ]['sum'] ?? 0 ) + $v;
+			$agg[ $gkey ][ $bucket ][ $m ]['n']   = ( $agg[ $gkey ][ $bucket ][ $m ]['n'] ?? 0 ) + 1;
+			$co[ $bucket ][ $m ]['sum'] = ( $co[ $bucket ][ $m ]['sum'] ?? 0 ) + $v;
+			$co[ $bucket ][ $m ]['n']   = ( $co[ $bucket ][ $m ]['n'] ?? 0 ) + 1;
+		}
+	}
+
+	ksort( $buckets_set );
+	$buckets = array_keys( $buckets_set );
+	$labels  = array_map( function ( $b ) { $ts = strtotime( $b . '-01' ); return $ts ? date( 'M y', $ts ) : $b; }, $buckets );
+
+	$avg = function ( $cell ) { return ( isset( $cell['n'] ) && $cell['n'] ) ? round( $cell['sum'] / $cell['n'], 2 ) : null; };
+
+	$out = [ 'buckets' => $buckets, 'bucket_labels' => $labels, 'group' => $group, 'metrics' => [] ];
+	foreach ( $metrics as $m ) {
+		$series = [];
+		foreach ( $agg as $gkey => $bdata ) {
+			$values = []; $has = false;
+			foreach ( $buckets as $b ) {
+				$v = isset( $agg[ $gkey ][ $b ][ $m ] ) ? $avg( $agg[ $gkey ][ $b ][ $m ] ) : null;
+				$values[] = $v;
+				if ( null !== $v ) $has = true;
+			}
+			if ( $has ) $series[] = [ 'key' => $gkey, 'values' => $values ];
+		}
+		// Stable legend order: best overall average first.
+		usort( $series, function ( $a, $b ) {
+			$af = array_filter( $a['values'], function ( $x ) { return null !== $x; } );
+			$bf = array_filter( $b['values'], function ( $x ) { return null !== $x; } );
+			$aa = $af ? array_sum( $af ) / count( $af ) : 0;
+			$ba = $bf ? array_sum( $bf ) / count( $bf ) : 0;
+			return $ba <=> $aa;
+		} );
+		$company = [];
+		foreach ( $buckets as $b ) $company[] = isset( $co[ $b ][ $m ] ) ? $avg( $co[ $b ][ $m ] ) : null;
+		$out['metrics'][ $m ] = [ 'series' => $series, 'company' => $company ];
+	}
+
+	wp_send_json_success( $out );
+}
+
+
+/*--------------------------------------------------------------
 # AI-drafted review replies (brand voice via site filters, regenerate)
 --------------------------------------------------------------*/
 
@@ -840,16 +1205,28 @@ function site_pulse_ajax_review_stats(): void {
  *   site_pulse_review_reply_prompt ( $system, $brand, $voice, $row ) → full system-prompt override
  *   site_pulse_review_reply_model  ( $model, $brand )                → model id override
  */
-function sp_reviews_generate_reply( array $row ) {
+function sp_reviews_generate_reply( array $row, string $guidance = '' ) {
 	$brand    = (string) ( $row['brand'] ?? '' );
 	$store    = (string) ( $row['store'] ?? '' );
 	$reviewer = (string) ( $row['reviewer'] ?? '' );
 	$rating   = (int) ( $row['star_rating'] ?? 0 );
 	$comment  = trim( (string) ( $row['comment'] ?? '' ) );
+	$guidance = trim( $guidance );   // the user's edited draft / extra instructions, when regenerating
+
+	// Admin-defined keyword prompts whose keyphrase appears in THIS review (e.g. "green beans" → a note
+	// about a recipe change). Injected into the prompt below so the reply can address the known issue;
+	// empty when nothing matches. Set in Settings → AI Prompts.
+	$kw_context = site_pulse_match_ai_prompts( $comment, $brand );
+
+	// Standing guidance for handling a bad review — added to the prompt for any low rating (≤3 stars), no
+	// keyword needed. Empty for 4–5 star reviews or when none is configured. Set in Settings → AI Prompts.
+	$critical_context = ( $rating >= 1 && $rating <= 3 ) ? site_pulse_match_critical_prompts( $brand ) : '';
 
 	// Too short to be worth an AI draft (a bare star rating, "Great service!", etc.) — a model call would
-	// just burn tokens producing a generic line. Inject a quick canned thank-you instead.
-	if ( mb_strlen( $comment ) < 40 ) {
+	// just burn tokens producing a generic line. Inject a quick canned thank-you instead. (Skipped when the
+	// user handed us an edited draft, a keyword prompt matched, or a critical-review prompt applies — then
+	// we always run the model so a bad review still gets a real, on-message reply.)
+	if ( '' === $guidance && '' === $kw_context && '' === $critical_context && mb_strlen( $comment ) < 40 ) {
 		$canned = [
 			'Thank you!',
 			'Thank you for the review!',
@@ -863,21 +1240,26 @@ function sp_reviews_generate_reply( array $row ) {
 		return $canned[ array_rand( $canned ) ];
 	}
 
-	// No voice by default — the prompt's own rules already cover tone. A site supplies a real brand voice
-	// through this filter (functions-site.php); only then is a "Brand voice" section added to the prompt.
-	$voice = (string) apply_filters( 'site_pulse_review_reply_voice', '', $brand, $row );
+	// Brand voice: defaults to whatever's set in Settings → AI Prompts → Company Voice for this brand (or
+	// the blank-brand default). A site can still override via this filter (functions-site.php); if no voice
+	// is configured anywhere, the prompt's own rules cover tone and no "Brand voice" section is added.
+	$voice = (string) apply_filters( 'site_pulse_review_reply_voice', site_pulse_get_company_voice( $brand ), $brand, $row );
 
-	// Random angle each call so regenerated drafts don't converge on the same phrasing.
-	$nudges = apply_filters( 'site_pulse_review_reply_nudges', [
-		'Open by reacting to a specific detail they mentioned.',
-		'Open with understated, genuine warmth.',
-		'Lead with appreciation for them taking the time to write.',
-		'Start by naming what they loved (or, for a complaint, owning it plainly).',
-		'Begin conversationally — like a person, not a form letter.',
-		'Open with a little brand-appropriate personality.',
-	], $brand, $row );
-	$nudges = ( is_array( $nudges ) && $nudges ) ? array_values( $nudges ) : [ '' ];
-	$nudge  = $nudges[ array_rand( $nudges ) ];
+	// Random angle each call so regenerated drafts don't converge on the same phrasing. Skipped when the
+	// user supplied an edited draft — we follow THEIR wording rather than a random opener.
+	$nudge = '';
+	if ( '' === $guidance ) {
+		$nudges = apply_filters( 'site_pulse_review_reply_nudges', [
+			'Open by reacting to a specific detail they mentioned.',
+			'Open with understated, genuine warmth.',
+			'Lead with appreciation for them taking the time to write.',
+			'Start by naming what they loved (or, for a complaint, owning it plainly).',
+			'Begin conversationally — like a person, not a form letter.',
+			'Open with a little brand-appropriate personality.',
+		], $brand, $row );
+		$nudges = ( is_array( $nudges ) && $nudges ) ? array_values( $nudges ) : [ '' ];
+		$nudge  = $nudges[ array_rand( $nudges ) ];
+	}
 
 	$parts = preg_split( '/\s+/', trim( $reviewer ) );
 	$first = $parts ? $parts[0] : '';
@@ -887,11 +1269,35 @@ function sp_reviews_generate_reply( array $row ) {
 	$ctx .= "Star rating: {$rating} of 5\n";
 	$ctx .= 'Review: ' . ( '' !== $comment ? $comment : "(no written comment — a {$rating}-star rating only)" ) . "\n";
 
-	// Proportional length: the reply must not be longer than the review. Give the model the actual size.
-	$rev_words = max( 1, str_word_count( $comment ) );
-	$ctx .= "\nLength: keep the reply no longer than the review itself — this review is about {$rev_words} words, so reply in roughly that many words or fewer. A short review gets a short reply.";
+	// Topic-specific context the business flagged (only present because the review mentions those topics).
+	if ( '' !== $kw_context ) {
+		$ctx .= "\nContext the business wants reflected for topics this review raises — weave it in naturally where it fits (don't quote it verbatim, don't over-explain, never invent specifics beyond it):\n{$kw_context}\n";
+	}
 
-	if ( '' !== $nudge ) $ctx .= "\nStyle nudge for THIS draft (so it differs from previous replies): {$nudge}";
+	// Standing "how we handle bad reviews" guidance — only present for low-rated reviews (≤3 stars).
+	if ( '' !== $critical_context ) {
+		$ctx .= "\nThis is a critical review ({$rating} of 5). The business's standing guidance for replying to negative reviews — follow it closely (apply what fits this review; don't quote it verbatim or invent specifics beyond it):\n{$critical_context}\n";
+	}
+
+	if ( '' === $guidance ) {
+		// Proportional length: the reply must not be longer than the review. Give the model the actual size.
+		$rev_words = max( 1, str_word_count( $comment ) );
+		$ctx .= "\nLength: keep the reply no longer than the review itself — this review is about {$rev_words} words, so reply in roughly that many words or fewer. A short review gets a short reply.";
+
+		if ( '' !== $nudge ) $ctx .= "\nStyle nudge for THIS draft (so it differs from previous replies): {$nudge}";
+	} else {
+		// The user edited the draft before hitting Regenerate. Treat their version as the PRIMARY instruction
+		// for the final reply — keep their wording, additions, deletions, tone, and any directions — and use
+		// the review above only as context. They may have rewritten it, trimmed it, or left a note about what
+		// to change; honor all of it. Return one polished reply (no preamble, no quotes), roughly matching the
+		// length and structure of their version.
+		$ctx .= "\n\nThe user has revised a draft of this reply — their version is below. Treat it as the"
+			. " PRIMARY instruction for the final reply: preserve their wording, additions, deletions, tone,"
+			. " and any directions they wrote (a line like \"make it warmer\" or \"mention the refund\" is an"
+			. " instruction to follow, not text to echo). The review above is only context. Produce a single"
+			. " polished reply, no preamble or surrounding quotes, roughly matching the length and structure of"
+			. " their version.\n\nThe user's revised draft / instructions:\n\"\"\"\n{$guidance}\n\"\"\"";
+	}
 
 	$system = (string) apply_filters( 'site_pulse_review_reply_prompt', site_pulse_prompt_review_reply( $brand, $voice ), $brand, $voice, $row );
 	$model  = (string) apply_filters( 'site_pulse_review_reply_model', 'claude-sonnet-4-6', $brand );
@@ -908,7 +1314,7 @@ add_action( 'wp_ajax_site_pulse_generate_review_reply', 'site_pulse_ajax_generat
 function site_pulse_ajax_generate_review_reply(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
-	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() ) ) ) {
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( $user_id ) ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 	$review_id = sanitize_text_field( wp_unslash( $_POST['review_id'] ?? '' ) );
@@ -920,8 +1326,238 @@ function site_pulse_ajax_generate_review_reply(): void {
 	), ARRAY_A );
 	if ( ! $row ) wp_send_json_error( [ 'message' => 'Review not found — refresh the list.' ] );
 
-	$reply = sp_reviews_generate_reply( $row );
+	$guidance = sanitize_textarea_field( wp_unslash( $_POST['guidance'] ?? '' ) );
+	$reply    = sp_reviews_generate_reply( $row, $guidance );
 	if ( is_wp_error( $reply ) ) wp_send_json_error( [ 'message' => $reply->get_error_message() ] );
 
 	wp_send_json_success( [ 'reply' => $reply ] );
+}
+
+
+/*--------------------------------------------------------------
+# AI Prompts — keyword-targeted context injected into review replies
+# (Settings → AI Prompts). Each entry = a keyword/keyphrase + details; when the
+# keyphrase appears in a review, its details are added to the reply prompt.
+--------------------------------------------------------------*/
+
+// Stored as a JSON list of { keyword, details } under the 'ai_review_prompts' setting.
+function site_pulse_get_ai_prompts(): array {
+	$raw = site_pulse_get_setting( 'ai_review_prompts', '' );
+	$arr = $raw ? json_decode( $raw, true ) : [];
+	if ( ! is_array( $arr ) ) return [];
+	$out = [];
+	foreach ( $arr as $p ) {
+		if ( ! is_array( $p ) ) continue;
+		$kw = trim( (string) ( $p['keyword'] ?? '' ) );
+		$dt = trim( (string) ( $p['details'] ?? '' ) );
+		if ( '' === $kw || '' === $dt ) continue;
+		$out[] = [ 'brand' => trim( (string) ( $p['brand'] ?? '' ) ), 'keyword' => $kw, 'details' => $dt ];
+	}
+	return $out;
+}
+
+// Return the details (one per matched prompt, as "- …" lines) whose keyword/keyphrase appears in $text.
+// Brand-scoped like the voices: a prompt with a brand only applies when it matches $brand (case-insensitive);
+// a blank brand applies to every brand. The keyword field may hold comma-separated phrases — ANY matches.
+function site_pulse_match_ai_prompts( string $text, string $brand = '' ): string {
+	$text = trim( $text );
+	if ( '' === $text ) return '';
+	$lower    = function_exists( 'mb_strtolower' ) ? 'mb_strtolower' : 'strtolower';
+	$lc       = $lower( $text );
+	$brand_lc = $lower( trim( $brand ) );
+	$lines    = [];
+	foreach ( site_pulse_get_ai_prompts() as $p ) {
+		$pb = $lower( trim( (string) ( $p['brand'] ?? '' ) ) );
+		if ( '' !== $pb && $pb !== $brand_lc ) continue;          // brand-specific prompt for a different brand
+		foreach ( explode( ',', $p['keyword'] ) as $kw ) {
+			$kw = trim( $kw );
+			if ( '' === $kw ) continue;
+			if ( false !== strpos( $lc, $lower( $kw ) ) ) { $lines[] = '- ' . $p['details']; break; }
+		}
+	}
+	return implode( "\n", $lines );
+}
+
+/*--------------------------------------------------------------
+# Critical Review Prompt — standing guidance injected into EVERY reply draft for a
+# low-rated review (3 stars or less), no keyword needed. Same brand scoping as the
+# keyword prompts (blank brand = every brand). Stored as a JSON list of
+# { brand, details } under 'ai_review_critical'. Set in Settings → AI Prompts.
+--------------------------------------------------------------*/
+
+function site_pulse_get_critical_prompts(): array {
+	$raw = site_pulse_get_setting( 'ai_review_critical', '' );
+	$arr = $raw ? json_decode( $raw, true ) : [];
+	if ( ! is_array( $arr ) ) return [];
+	$out = [];
+	foreach ( $arr as $p ) {
+		if ( ! is_array( $p ) ) continue;
+		$dt = trim( (string) ( $p['details'] ?? '' ) );
+		if ( '' === $dt ) continue;
+		$out[] = [ 'brand' => trim( (string) ( $p['brand'] ?? '' ) ), 'details' => $dt ];
+	}
+	return $out;
+}
+
+// Details ("- …" lines) for every critical-review prompt that applies to $brand (exact brand match, or a
+// blank-brand default). Rating-agnostic — the caller decides WHEN to use it (only for low-rated reviews).
+function site_pulse_match_critical_prompts( string $brand = '' ): string {
+	$lower    = function_exists( 'mb_strtolower' ) ? 'mb_strtolower' : 'strtolower';
+	$brand_lc = $lower( trim( $brand ) );
+	$lines    = [];
+	foreach ( site_pulse_get_critical_prompts() as $p ) {
+		$pb = $lower( trim( (string) ( $p['brand'] ?? '' ) ) );
+		if ( '' !== $pb && $pb !== $brand_lc ) continue;   // brand-specific prompt for a different brand
+		$lines[] = '- ' . $p['details'];
+	}
+	return implode( "\n", $lines );
+}
+
+// Brand/label suggestions for the AI Prompts pickers: distinct review brands on this install + agency
+// client labels when this is the review hub. Sorted, de-duped (case-insensitively).
+function site_pulse_ai_brand_options(): array {
+	$seen = [];   // lowercase => original
+	$add  = function ( $s ) use ( &$seen ) {
+		$s = trim( (string) $s );
+		if ( '' === $s ) return;
+		$k = function_exists( 'mb_strtolower' ) ? mb_strtolower( $s ) : strtolower( $s );
+		if ( ! isset( $seen[ $k ] ) ) $seen[ $k ] = $s;
+	};
+
+	// This site's configured locations (from the hub) — the authoritative brand list for a Site Pulse
+	// install, populated even before any reviews are stored locally (e.g. Babe's / Bubba's on MyRovin).
+	if ( function_exists( 'sp_reviews_locations' ) ) {
+		foreach ( sp_reviews_locations() as $l ) $add( $l['brand'] ?? '' );
+	}
+
+	if ( function_exists( 'sp_reviews_table' ) ) {
+		global $wpdb;
+		$t = sp_reviews_table();
+		foreach ( (array) $wpdb->get_col( "SELECT DISTINCT brand FROM $t WHERE brand IS NOT NULL AND brand <> ''" ) as $b ) $add( $b );
+	}
+
+	if ( class_exists( 'BPGBP_Hub' ) && method_exists( 'BPGBP_Hub', 'get_site_map' ) ) {
+		$map = BPGBP_Hub::get_site_map();
+		if ( is_array( $map ) ) {
+			// Only the site-level `label` per client — that's exactly what the agency reply path matches a
+			// brand against ($cfg['label']). The per-location labels (GBP/Facebook location titles) are NOT
+			// used for matching and would just duplicate each client (one for Google, one for Facebook).
+			foreach ( $map as $cfg ) {
+				if ( is_array( $cfg ) ) $add( $cfg['label'] ?? '' );
+			}
+		}
+	}
+
+	$list = array_values( $seen );
+	natcasesort( $list );
+	return array_values( $list );
+}
+
+/*--------------------------------------------------------------
+# Company Voice — the brand tone the AI writes review replies in (Settings → AI
+# Prompts). Stored as a JSON list of { brand, voice }; feeds the default value of
+# the site_pulse_review_reply_voice filter (a functions-site.php filter can still
+# override). Brand-keyed so a multi-brand company (e.g. Babe's vs Bubba's) can
+# differ; a blank brand is the default voice for any brand.
+--------------------------------------------------------------*/
+
+function site_pulse_get_company_voices(): array {
+	$raw = site_pulse_get_setting( 'ai_company_voices', '' );
+	$arr = $raw ? json_decode( $raw, true ) : [];
+	if ( ! is_array( $arr ) ) return [];
+	$out = [];
+	foreach ( $arr as $v ) {
+		if ( ! is_array( $v ) ) continue;
+		$voice = trim( (string) ( $v['voice'] ?? '' ) );
+		if ( '' === $voice ) continue;
+		$out[] = [ 'brand' => trim( (string) ( $v['brand'] ?? '' ) ), 'voice' => $voice ];
+	}
+	return $out;
+}
+
+// The configured voice for $brand: exact brand match (case-insensitive) wins, else the blank-brand
+// default, else '' (no voice).
+function site_pulse_get_company_voice( string $brand = '' ): string {
+	$lc      = function_exists( 'mb_strtolower' ) ? mb_strtolower( trim( $brand ) ) : strtolower( trim( $brand ) );
+	$default = '';
+	foreach ( site_pulse_get_company_voices() as $v ) {
+		$b = function_exists( 'mb_strtolower' ) ? mb_strtolower( trim( $v['brand'] ) ) : strtolower( trim( $v['brand'] ) );
+		if ( '' === $b ) { if ( '' === $default ) $default = $v['voice']; continue; }
+		if ( '' !== $lc && $b === $lc ) return $v['voice'];
+	}
+	return $default;
+}
+
+add_action( 'wp_ajax_site_pulse_get_ai_prompts', 'site_pulse_ajax_get_ai_prompts' );
+function site_pulse_ajax_get_ai_prompts(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	wp_send_json_success( [
+		'prompts'  => site_pulse_get_ai_prompts(),
+		'voices'   => site_pulse_get_company_voices(),
+		'critical' => site_pulse_get_critical_prompts(),
+		'brands'   => site_pulse_ai_brand_options(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_save_ai_prompts', 'site_pulse_ajax_save_ai_prompts' );
+function site_pulse_ajax_save_ai_prompts(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	// Each section is saved only when its key is present, so a partial save never wipes the other.
+	if ( isset( $_POST['prompts'] ) ) {
+		$raw = json_decode( (string) wp_unslash( $_POST['prompts'] ), true );
+		$out = [];
+		if ( is_array( $raw ) ) {
+			foreach ( $raw as $p ) {
+				if ( ! is_array( $p ) ) continue;
+				$br = trim( sanitize_text_field( (string) ( $p['brand'] ?? '' ) ) );
+				$kw = trim( sanitize_text_field( (string) ( $p['keyword'] ?? '' ) ) );
+				$dt = trim( sanitize_textarea_field( (string) ( $p['details'] ?? '' ) ) );
+				if ( '' === $kw || '' === $dt ) continue;     // keyword + details required (brand optional)
+				$out[] = [ 'brand' => mb_substr( $br, 0, 100 ), 'keyword' => mb_substr( $kw, 0, 200 ), 'details' => mb_substr( $dt, 0, 2000 ) ];
+				if ( count( $out ) >= 100 ) break;            // sane cap
+			}
+		}
+		site_pulse_set_setting( 'ai_review_prompts', wp_json_encode( $out ) );
+	}
+
+	if ( isset( $_POST['voices'] ) ) {
+		$rawV = json_decode( (string) wp_unslash( $_POST['voices'] ), true );
+		$outV = [];
+		if ( is_array( $rawV ) ) {
+			foreach ( $rawV as $v ) {
+				if ( ! is_array( $v ) ) continue;
+				$brand = trim( sanitize_text_field( (string) ( $v['brand'] ?? '' ) ) );
+				$voice = trim( sanitize_textarea_field( (string) ( $v['voice'] ?? '' ) ) );
+				if ( '' === $voice ) continue;                // voice required; brand optional
+				$outV[] = [ 'brand' => mb_substr( $brand, 0, 100 ), 'voice' => mb_substr( $voice, 0, 2000 ) ];
+				if ( count( $outV ) >= 50 ) break;
+			}
+		}
+		site_pulse_set_setting( 'ai_company_voices', wp_json_encode( $outV ) );
+	}
+
+	if ( isset( $_POST['critical'] ) ) {
+		$rawC = json_decode( (string) wp_unslash( $_POST['critical'] ), true );
+		$outC = [];
+		if ( is_array( $rawC ) ) {
+			foreach ( $rawC as $c ) {
+				if ( ! is_array( $c ) ) continue;
+				$brand = trim( sanitize_text_field( (string) ( $c['brand'] ?? '' ) ) );
+				$dt    = trim( sanitize_textarea_field( (string) ( $c['details'] ?? '' ) ) );
+				if ( '' === $dt ) continue;                   // details required; brand optional
+				$outC[] = [ 'brand' => mb_substr( $brand, 0, 100 ), 'details' => mb_substr( $dt, 0, 2000 ) ];
+				if ( count( $outC ) >= 50 ) break;
+			}
+		}
+		site_pulse_set_setting( 'ai_review_critical', wp_json_encode( $outC ) );
+	}
+
+	wp_send_json_success( [
+		'prompts'  => site_pulse_get_ai_prompts(),
+		'voices'   => site_pulse_get_company_voices(),
+		'critical' => site_pulse_get_critical_prompts(),
+	] );
 }

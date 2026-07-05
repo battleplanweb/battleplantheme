@@ -40,14 +40,14 @@ function site_pulse_modules(): array {
 	return [
 		'reports' => [
 			'label'   => 'Reports',
-			'desc'    => 'Bi-weekly GM/Supervisor reports, report templates, and action items.',
+			'desc'    => 'GM/Supervisor reports, report templates, and action items.',
 			'caps'    => [ 'submit_reports', 'view_gm_reports', 'view_supervisor_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_templates' ],
 			'default' => true,
 		],
 		'ai' => [
 			'label'   => 'AI Insights &amp; Analytics',
-			'desc'    => 'Cross-module analytics dashboards and AI-generated insights — fed by reports, reviews, mileage, and more.',
-			'caps'    => [ 'view_analytics', 'view_ai_insights' ],
+			'desc'    => 'Cross-module analytics dashboards, AI-generated insights, and the company-voiced AI Assistant.',
+			'caps'    => [ 'view_analytics', 'view_ai_insights', 'use_ai_assistant' ],
 			'default' => true,
 		],
 		'mileage' => [

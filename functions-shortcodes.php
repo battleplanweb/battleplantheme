@@ -1973,6 +1973,51 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 	return $buildFlex;
 }
 
+// Before / After comparison overlay — [get-before-after before="ID-or-URL" after="ID-or-URL"]
+add_shortcode( 'get-before-after', 'battleplan_getBeforeAfter' );
+function battleplan_getBeforeAfter( $atts, $content = null ) {
+	$a = shortcode_atts( array(
+		'before'       => '',
+		'after'        => '',
+		'before-label' => 'Before',
+		'after-label'  => 'After',
+		'before-alt'   => '',
+		'after-alt'    => '',
+		'size'         => 'large',
+		'align'        => '',
+		'class'        => '',
+	), $atts );
+
+	if ( trim($a['before']) === '' || trim($a['after']) === '' ) return '';
+
+	$size  = esc_attr($a['size']);
+	$class = esc_attr($a['class']) !== '' ? ' ' . esc_attr($a['class']) : '';
+	$align = esc_attr($a['align']) !== '' ? ' align-' . esc_attr($a['align']) : '';
+
+	// Render one side from either an attachment ID or a URL. Root-relative and
+	// local absolute URLs are resolved back to an attachment (for srcset +
+	// width/height); anything unresolved falls back to a plain <img>. When no
+	// alt is passed, the Media Library alt (_wp_attachment_image_alt) is used.
+	$render = function( $ref, $alt ) use ( $size ) {
+		$ref    = trim($ref);
+		$lookup = ( strpos($ref, '//') === false && isset($ref[0]) && $ref[0] === '/' ) ? home_url($ref) : $ref;
+		$id     = ctype_digit($ref) ? (int) $ref : attachment_url_to_postid($lookup);
+		if ( $id ) {
+			if ( $alt === '' ) $alt = (string) get_post_meta( $id, '_wp_attachment_image_alt', true );
+			return wp_get_attachment_image( $id, $size, false, ( $alt !== '' ? array('alt' => esc_attr($alt)) : array() ) );
+		}
+		return '<img src="' . esc_url($ref) . '" alt="' . esc_attr($alt) . '" loading="lazy">';
+	};
+
+	return '<!--no-wpautop--><div class="before-after' . $align . $class . '">'
+		. $render( $a['before'], $a['before-alt'] )
+		. $render( $a['after'],  $a['after-alt'] )
+		. '<div class="ba-overlay">'
+		. '<span class="ba-tab ba-tab-before unique">' . esc_html($a['before-label']) . '</span>'
+		. '<span class="ba-tab ba-tab-after unique">'  . esc_html($a['after-label'])  . '</span>'
+		. '</div></div><!--/no-wpautop-->';
+}
+
 // Make the nonce generated in header.php available to WP pages
 add_shortcode( 'get-nonce', 'battleplan_get_nonce' );
 function battleplan_get_nonce() {

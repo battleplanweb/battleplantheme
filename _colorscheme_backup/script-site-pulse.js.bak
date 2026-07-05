@@ -111,7 +111,7 @@ function spStarSegments(dist) {
 // kind: 'edit' | 'delete'. cls = extra functional class(es); attrs = raw attribute string (data-*, disabled…).
 function iconBtn(kind, cls = '', attrs = '') {
 	const del = kind === 'delete';
-	return `<button type="button" class="unique sp-btn sp-icon-btn ${del ? 'sp-icon-delete' : 'sp-icon-edit'} ${cls}" title="${del ? 'Delete' : 'Edit'}" aria-label="${del ? 'Delete' : 'Edit'}" ${attrs}>${del ? ICON_DELETE : ICON_EDIT}</button>`;
+	return `<button type="button" class="unique sp-icon-btn ${del ? 'sp-icon-delete' : 'sp-icon-edit'} ${cls}" title="${del ? 'Delete' : 'Edit'}" aria-label="${del ? 'Delete' : 'Edit'}" ${attrs}>${del ? ICON_DELETE : ICON_EDIT}</button>`;
 }
 
 // Relative "last active" label from a unix timestamp (seconds, server UTC — comparable to Date.now).
@@ -137,12 +137,12 @@ function reportStatusPill(status) {
 // "View receipt" icon button for an expense row that has a receipt photo. cls = the section's
 // functional class; the row's id is in data-id so the click can look up its receipt_url.
 function receiptIconBtn(cls, id) {
-	return `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-receipt ${cls}" title="View receipt" aria-label="View receipt" data-id="${id}">${ICON_RECEIPT}</button>`;
+	return `<button type="button" class="unique sp-icon-btn sp-icon-receipt ${cls}" title="View receipt" aria-label="View receipt" data-id="${id}">${ICON_RECEIPT}</button>`;
 }
 
 /* Shared stat-card builder (the at-a-glance metric tiles). Reused by any module that shows
    summary numbers — pass a label, a pre-formatted value, an icon key, and an optional tint
-   ('success'|'warning'|'danger'). Styling lives in .sp-stat-tile / .sp-stat-icon (variable-driven). */
+   ('success'|'warning'|'danger'). Styling lives in .sp-stat-card / .sp-stat-icon (variable-driven). */
 const SP_STAT_ICONS = {
 	gauge:   '<path d="M12 13.5 15.5 10"/><path d="M4 18a8 8 0 1 1 16 0"/><circle cx="12" cy="13.8" r="1.1" fill="currentColor" stroke="none"/>',
 	car:     '<path d="M5 17h14M3 13l2-6h14l2 6M5 17a2 2 0 0 0 4 0M15 17a2 2 0 0 0 4 0M3 13v4h18v-4"/>',
@@ -154,7 +154,7 @@ const SP_STAT_ICONS = {
 };
 
 function spStatIcon(key, tint) {
-	const cls = `sp-tile-icon sp-stat-icon${tint ? ' is-' + tint : ''}`;
+	const cls = `sp-stat-icon${tint ? ' is-' + tint : ''}`;
 	// Prefer a framework icon registered via battleplan_icon_map (512-viewBox, fill-based,
 	// inherits color). Fall back to the built-in 24-viewBox stroke set.
 	const fw = D.icons && D.icons[key];
@@ -163,7 +163,7 @@ function spStatIcon(key, tint) {
 }
 
 function spStatCard(label, value, iconKey, tint) {
-	return `<div class="sp-tile sp-stat-tile"><div class="sp-stat-text"><div class="sp-tile-label sp-stat-label">${esc(label)}</div><div class="sp-tile-value sp-stat-value">${value}</div></div>${spStatIcon(iconKey, tint)}</div>`;
+	return `<div class="sp-card sp-stat-card"><div class="sp-stat-text"><div class="sp-stat-label">${esc(label)}</div><div class="sp-stat-value">${value}</div></div>${spStatIcon(iconKey, tint)}</div>`;
 }
 
 // Shared popup shell for the admin add/edit forms, so every "Add" opens a centered modal
@@ -209,105 +209,6 @@ function init() {
 	initSurveys();
 	initNewsSliders();
 	restoreViewState();
-	initClickableTagging();
-}
-
-/* ---- Global clickable tagging ----
-   Add the marker class .sp-button to every clickable element so a single hover rule (.sp-button:hover)
-   can style them all. "Clickable" = matches an interactive selector (button / link / [data-nav] /
-   .sp-btn / [role=button]) OR carries its OWN cursor:pointer (not merely inherited from a clickable
-   ancestor — that keeps the tag on the outer clickable, not every child span). Runs once on load and
-   then on dynamically-rendered content via a MutationObserver, so new markup is covered automatically
-   with no per-element edits. Skips the WordPress admin bar. */
-const SP_CLICK_SELECTOR = 'button, a[href], [role="button"], [data-nav]';
-// Never tag these: real buttons (.sp-btn keep their own hover), and classes that carry a clickable
-// style but aren't actually clickable in every context (e.g. .sp-msg-members is a button in one
-// place and a plain container in another).
-const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer';
-function spTagClickable(el) {
-	if (!el || el.nodeType !== 1 || el.classList.contains('sp-button')) return;
-	if (el.closest('#wpadminbar')) return;
-	if (el.matches(SP_NO_BUTTON_SELECTOR)) return;
-
-	let hit = el.matches(SP_CLICK_SELECTOR);
-	if (!hit) {
-		let cur;
-		try { cur = getComputedStyle(el).cursor; } catch (e) { return; }
-		if (cur === 'pointer') {
-			const p = el.parentElement;
-			let pc = '';
-			try { pc = p ? getComputedStyle(p).cursor : ''; } catch (e) {}
-			hit = pc !== 'pointer'; // own pointer, not inherited from a clickable ancestor
-		}
-	}
-	if (hit) el.classList.add('sp-button');
-}
-function spTagClickables(root) {
-	if (!root || root.nodeType !== 1) return;
-	spTagClickable(root);
-	const els = root.querySelectorAll('*');
-	for (let i = 0; i < els.length; i++) spTagClickable(els[i]);
-}
-/* Tag every direct <div> child of a .sp-card-body as .sp-card-item (skips the transient loading
-   spinner). Handles both a card-body inside the scanned subtree and a div added directly into one. */
-function spTagCardItems(root) {
-	if (!root || root.nodeType !== 1) return;
-	const tagChildren = (body) => {
-		for (let i = 0; i < body.children.length; i++) {
-			const c = body.children[i];
-			if (c.tagName === 'DIV' && !c.classList.contains('sp-loading') && !c.classList.contains('sp-tile')) c.classList.add('sp-card-item');
-		}
-	};
-	if (root.matches && root.matches('.sp-card-body')) tagChildren(root);
-	if (root.querySelectorAll) root.querySelectorAll('.sp-card-body').forEach(tagChildren);
-	if (root.tagName === 'DIV' && !root.classList.contains('sp-loading') && !root.classList.contains('sp-tile') &&
-		root.parentElement && root.parentElement.matches && root.parentElement.matches('.sp-card-body')) {
-		root.classList.add('sp-card-item');
-	}
-}
-/* The report/action-item/message forms reuse .sp-report-form-wrap both as a modal box (inside a
-   .sp-form-modal-backdrop) and inline (the Reports panel). Tag ONLY the modal ones with .sp-modal so
-   they get the standard modal-box styling; the inline form (not in a backdrop) is left alone. */
-function spTagModalBoxes(root) {
-	if (!root || root.nodeType !== 1) return;
-	const tag = (el) => { if (el.closest('.sp-form-modal-backdrop')) el.classList.add('sp-modal'); };
-	if (root.matches && root.matches('.sp-report-form-wrap')) tag(root);
-	if (root.querySelectorAll) root.querySelectorAll('.sp-report-form-wrap').forEach(tag);
-}
-/* Add .checkbox-label / .radio-label to any <label> that directly contains a checkbox/radio, so one
-   shared style can lay out the control + text. Covers .sp-reminder-toggle, .sp-msg-contact-pick, etc. */
-function spTagCheckboxLabels(root) {
-	if (!root || root.nodeType !== 1) return;
-	const tag = (input, cls) => { const p = input.parentElement; if (p && p.tagName === 'LABEL') p.classList.add(cls); };
-	const run = (sel, cls) => {
-		if (root.matches && root.matches(sel)) tag(root, cls);
-		if (root.querySelectorAll) root.querySelectorAll(sel).forEach(el => tag(el, cls));
-	};
-	run('input[type="checkbox"]', 'checkbox-label');
-	run('input[type="radio"]', 'radio-label');
-}
-let _spTagQueue = [], _spTagScheduled = false;
-function spScheduleTag(node) {
-	_spTagQueue.push(node);
-	if (_spTagScheduled) return;
-	_spTagScheduled = true;
-	requestAnimationFrame(() => {
-		const q = _spTagQueue; _spTagQueue = []; _spTagScheduled = false;
-		q.forEach(n => { spTagClickables(n); spTagCardItems(n); spTagModalBoxes(n); spTagCheckboxLabels(n); });
-	});
-}
-function initClickableTagging() {
-	spTagClickables(document.body);
-	spTagCardItems(document.body);
-	spTagModalBoxes(document.body); spTagCheckboxLabels(document.body);
-	const obs = new MutationObserver(muts => {
-		for (const m of muts) {
-			for (let i = 0; i < m.addedNodes.length; i++) {
-				if (m.addedNodes[i].nodeType === 1) spScheduleTag(m.addedNodes[i]);
-			}
-		}
-	});
-	obs.observe(document.body, { childList: true, subtree: true });
 }
 
 // Mouse drag-to-scroll for the horizontal "In the News" slider(s). Touch/trackpad scroll
@@ -1037,14 +938,14 @@ async function loadWidgetFeedback() {
 		if (!res.success) { body.innerHTML = '<div class="sp-widget-empty">—</div>'; return; }
 		const d = res.data || {};
 		const tile = (nav, value, label, alert) =>
-			`<button type="button" class="unique sp-tile sp-feed-tile" data-nav="${nav}"><div class="sp-tile-value sp-feed-value${alert ? ' sp-feed-alert' : ''}">${value}</div><div class="sp-tile-label sp-feed-label">${esc(label)}</div></button>`;
+			`<button type="button" class="unique sp-feed-tile" data-nav="${nav}"><div class="sp-feed-value${alert ? ' sp-feed-alert' : ''}">${value}</div><div class="sp-feed-label">${esc(label)}</div></button>`;
 		const tiles = [];
 		if (d.reviews)  tiles.push(tile('reviews', d.reviews.count ? (d.reviews.avg != null ? Number(d.reviews.avg).toFixed(1) + '★' : spComma(d.reviews.count)) : '—', `Reviews · ${spComma(d.reviews.count || 0)} in 30d`, false));
 		if (d.surveys)  tiles.push(tile('surveys', spComma(d.surveys.count || 0), 'Comment Cards · 30d', false));
 		if (d.messages) tiles.push(tile('customer-messages', spComma(d.messages.unread || 0), 'Unread messages', (d.messages.unread || 0) > 0));
 		if (d.emails)   tiles.push(tile('emails', spComma(d.emails.new || 0), 'New emails', (d.emails.new || 0) > 0));
 		if (!tiles.length) { body.innerHTML = '<div class="sp-widget-empty">No feedback channels.</div>'; return; }
-		body.innerHTML = `<div class="sp-card-grid sp-feed-grid">${tiles.join('')}</div>`;
+		body.innerHTML = `<div class="sp-feed-grid">${tiles.join('')}</div>`;
 		$$('.sp-feed-tile', body).forEach(t => t.addEventListener('click', () => activatePanel(t.dataset.nav)));
 	} catch (e) { body.innerHTML = '<div class="sp-widget-empty">—</div>'; }
 }
@@ -1475,13 +1376,13 @@ function msgBubbleHTML(m, isGroup) {
 	// Every message gets a "create action item" control; own messages also get Edit/Delete. In a
 	// group, others' bubbles show the sender name.
 	let actions = '<div class="sp-msg-bubble-actions">';
-	actions += `<button type="button" class="unique sp-btn sp-msg-reply" title="Reply" aria-label="Reply to message">${ICON_REPLY}</button>`;
+	actions += `<button type="button" class="unique sp-msg-reply" title="Reply" aria-label="Reply to message">${ICON_REPLY}</button>`;
 	actions += m.has_task
-		? `<button type="button" class="unique sp-btn sp-msg-task is-done" title="Action item already created" aria-label="Action item already created from this message" disabled>${ICON_TASK}</button>`
-		: `<button type="button" class="unique sp-btn sp-msg-task" title="Create action item" aria-label="Create action item from this message">${ICON_TASK}</button>`;
+		? `<button type="button" class="unique sp-msg-task is-done" title="Action item already created" aria-label="Action item already created from this message" disabled>${ICON_TASK}</button>`
+		: `<button type="button" class="unique sp-msg-task" title="Create action item" aria-label="Create action item from this message">${ICON_TASK}</button>`;
 	if (m.mine) {
-		actions += `<button type="button" class="unique sp-btn sp-msg-edit" title="Edit" aria-label="Edit message">${ICON_EDIT}</button>`;
-		actions += `<button type="button" class="unique sp-btn sp-msg-del" title="Delete" aria-label="Delete message">${ICON_DELETE}</button>`;
+		actions += `<button type="button" class="unique sp-msg-edit" title="Edit" aria-label="Edit message">${ICON_EDIT}</button>`;
+		actions += `<button type="button" class="unique sp-msg-del" title="Delete" aria-label="Delete message">${ICON_DELETE}</button>`;
 	}
 	actions += '</div>';
 	// In a group, others' bubbles show the sender name (a 1:1 doesn't need it).
@@ -1511,7 +1412,7 @@ function spMsgAttachModal(url, mime, name) {
 	const isPdf = (mime || '') === 'application/pdf' || /\.pdf(\?|$)/i.test(url);
 
 	let html = '<div class="sp-attach-modal">';
-	html += '<div class="sp-card-header sp-header sp-attach-modal-head"><span class="sp-attach-modal-name unique">' + esc(name || 'Attachment') + '</span>'
+	html += '<div class="sp-header sp-attach-modal-head"><span class="sp-attach-modal-name unique">' + esc(name || 'Attachment') + '</span>'
 		+ '<button type="button" class="unique sp-btn sp-btn-secondary sp-attach-close" aria-label="Close">✕</button></div>';
 	if (isImg) {
 		html += '<div class="sp-attach-modal-body"><img src="' + esc(url) + '" alt="' + esc(name || '') + '" class="sp-attach-modal-img"></div>';
@@ -1627,13 +1528,13 @@ async function deleteMsg(id, bubble) {
 // item(s), then the user edits/picks them and chooses whose to-do list(s) to add them to.
 async function spMsgCreateAction(mid) {
 	const backdrop = spFormModal();
-	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div><p class="sp-help-text" style="text-align:center;margin-top:10px;">Reading the conversation…</p></div>';
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div><p class="sp-help-text" style="text-align:center;margin-top:10px;">Reading the conversation…</p></div>';
 
 	let data, res;
 	try { res = await spAjax('site_pulse_messages_action_suggest', { message_id: mid }); } catch (e) {}
 	if (!res || !res.success) {
 		const why = (res && res.data && res.data.message) ? res.data.message : 'Could not reach the action-item generator. Make sure the latest update is deployed.';
-		backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p>${esc(why)}</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Close</button></div></div>`;
+		backdrop.innerHTML = `<div class="sp-report-form-wrap"><p>${esc(why)}</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Close</button></div></div>`;
 		$('.sp-act-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
 		return;
 	}
@@ -1642,8 +1543,8 @@ async function spMsgCreateAction(mid) {
 	const items = (data.items && data.items.length) ? data.items : [{ description: '', priority: 'medium', category: 'Message' }];
 	const others = data.others || [];
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Create Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Cancel</button></div>';
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-header-grid sp-report-form-header"><h3>Create Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Cancel</button></div>';
 	html += data.empty
 		? '<p class="sp-help-text" style="margin:0 0 10px;">The AI didn’t find a clear to-do in these messages — write one below, then choose whose list to add it to.</p>'
 		: '<p class="sp-help-text" style="margin:0 0 10px;">Review what the AI pulled from this message. Edit or uncheck any, then choose whose list to add them to.</p>';
@@ -1696,7 +1597,7 @@ async function spMsgCreateAction(mid) {
 				const tb = document.querySelector(`#sp-msg-bubbles .sp-msg-bubble[data-id="${mid}"] .sp-msg-task`);
 				if (tb) { tb.disabled = true; tb.classList.add('is-done'); tb.title = 'Action item already created'; }
 				const n = res.data.created || 0;
-				backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p style="text-align:center;font-weight:600;margin:8px 0 16px;">✓ Added ${n} action item${n === 1 ? '' : 's'}.</p><div class="sp-report-form-actions" style="justify-content:center;"><button type="button" class="unique sp-btn sp-btn-primary sp-act-cancel">Done</button></div></div>`;
+				backdrop.innerHTML = `<div class="sp-report-form-wrap"><p style="text-align:center;font-weight:600;margin:8px 0 16px;">✓ Added ${n} action item${n === 1 ? '' : 's'}.</p><div class="sp-report-form-actions" style="justify-content:center;"><button type="button" class="unique sp-btn sp-btn-primary sp-act-cancel">Done</button></div></div>`;
 				$('.sp-act-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
 				loadMsgUnread();
 			} else { alert(res.data?.message || 'Could not create the action item.'); if (btn) btn.disabled = false; }
@@ -1848,7 +1749,7 @@ function renderMsgThread(data) {
 	const conv = data.conversation || {};
 	const isGroup = !!conv.is_group;
 	// Name + avatar come from the server (the DM "other person" is resolved there, same as the title).
-	let html = '<div class="sp-card-header sp-header sp-msg-thread-header">';
+	let html = '<div class="sp-header sp-msg-thread-header">';
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-msg-back" title="Back to messages" aria-label="Back to messages">&#8592;</button>';
 	html += isGroup ? spMsgGroupAvatar(conv.members) : spMsgAvatar(conv.title || 'Conversation', conv.avatar || '');
 	html += '<div class="sp-msg-thread-heading">';
@@ -1856,7 +1757,7 @@ function renderMsgThread(data) {
 	html += `<div class="sp-msg-thread-title-wrap"><span class="sp-msg-thread-title">${esc(conv.title || 'Conversation')}</span></div>`;
 	html += '</div>';
 	html += '<span class="sp-msg-thread-actions">';
-	html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-msg-delete" title="Delete this conversation from your list" aria-label="Delete conversation">${ICON_DELETE}</button>`;
+	html += `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-msg-delete" title="Delete this conversation from your list" aria-label="Delete conversation">${ICON_DELETE}</button>`;
 	html += '</span>';
 	html += '</div>';
 	html += '<div class="sp-msg-bubbles" id="sp-msg-bubbles">';
@@ -1864,8 +1765,8 @@ function renderMsgThread(data) {
 	html += spMsgReceiptHTML(data);
 	html += '</div>';
 	html += '<form class="sp-msg-composer" id="sp-msg-composer">'
-		+ '<button type="button" class="sp-btn sp-btn-ghost sp-msg-mic-btn unique" id="sp-msg-mic" title="Dictate a message" aria-label="Dictate a message" hidden>' + ICON_MIC + '</button>'
-		+ '<label class="sp-btn sp-btn-ghost sp-msg-attach-btn unique" title="Attach a file" aria-label="Attach a file">' + ICON_ATTACH + '<input type="file" id="sp-msg-file" hidden></label>'
+		+ '<button type="button" class="sp-msg-mic-btn unique" id="sp-msg-mic" title="Dictate a message" aria-label="Dictate a message" hidden>' + ICON_MIC + '</button>'
+		+ '<label class="sp-msg-attach-btn unique" title="Attach a file" aria-label="Attach a file">' + ICON_ATTACH + '<input type="file" id="sp-msg-file" hidden></label>'
 		+ '<textarea class="sp-msg-input" id="sp-msg-input" rows="1" placeholder="Type a message…"></textarea>'
 		+ '<button type="submit" class="unique sp-btn sp-btn-primary">Send</button></form>';
 	thread.innerHTML = html;
@@ -2009,18 +1910,18 @@ function renderMsgThreadEmpty() {
 // "New Message" — searchable people picker. One person → DM; two or more → a (named) group.
 async function openMsgNew() {
 	const backdrop = spFormModal();
-	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div></div>';
 	let res;
 	try { res = await spAjax('site_pulse_messages_contacts', {}); } catch (e) {}
 	if (!res || !res.success) {
 		const why = (res && res.data && res.data.message) ? ' (' + res.data.message + ')' : ' Make sure the latest update is deployed.';
-		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>Could not load contacts.' + esc(why) + '</p></div>';
+		backdrop.innerHTML = '<div class="sp-report-form-wrap"><p>Could not load contacts.' + esc(why) + '</p></div>';
 		return;
 	}
 	const contacts = res.data.contacts || [];
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>New Message</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-new-cancel">Cancel</button></div>';
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-header-grid sp-report-form-header"><h3>New Message</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-new-cancel">Cancel</button></div>';
 	html += '<p class="sp-help-text" style="margin:0 0 10px;">Pick one person for a direct message, or several for a group.</p>';
 	html += '<input type="text" class="sp-input" id="sp-msg-new-search" placeholder="Search people…" style="margin-bottom:10px;">';
 	html += '<div id="sp-msg-new-grouprow" hidden style="margin-bottom:10px;"><input type="text" class="sp-input" id="sp-msg-new-title" placeholder="Group name (optional)"></div>';
@@ -2078,7 +1979,7 @@ async function openMsgNew() {
 // Group members dialog — view members; the creator can add/remove; anyone can leave.
 async function openGroupManage(conv) {
 	const backdrop = spFormModal();
-	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div></div>';
 	let cres;
 	try { cres = await spAjax('site_pulse_messages_contacts', {}); } catch (e) {}
 	const allContacts = (cres && cres.success) ? (cres.data.contacts || []) : [];
@@ -2086,8 +1987,8 @@ async function openGroupManage(conv) {
 	const isCreator = creatorId === parseInt(D.userId, 10);
 	const memberIds = new Set((conv.participants || []).map(p => p.id));
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(conv.title || 'Group')}</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-manage-cancel">Close</button></div>`;
+	let html = '<div class="sp-report-form-wrap">';
+	html += `<div class="sp-header-grid sp-report-form-header"><h3>${esc(conv.title || 'Group')}</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-manage-cancel">Close</button></div>`;
 	html += '<h4 style="margin:0 0 8px;">Members</h4><div class="sp-msg-members">';
 	(conv.participants || []).forEach(p => {
 		const canRemove = isCreator && p.id !== creatorId;
@@ -2283,15 +2184,15 @@ const REPORTS_PAGE_SIZE = 16;
 
 function reportCardHTML(r) {
 	return `
-		<div class="sp-tile sp-report-tile sp-button" data-report-id="${r.id}">
-			<div class="sp-report-tile-left">
-				<div class="sp-report-tile-title">${esc(r.template_role === 'supervisor' ? (r.author_name || 'Supervisor Report') : (r.location_name || 'Unknown Location'))}</div>
-				<div class="sp-report-tile-meta">
+		<div class="sp-card sp-report-card" data-report-id="${r.id}">
+			<div class="sp-report-card-left">
+				<div class="sp-report-card-title">${esc(r.template_role === 'supervisor' ? (r.author_name || 'Supervisor Report') : (r.location_name || 'Unknown Location'))}</div>
+				<div class="sp-report-card-meta">
 					<span>${formatDate(r.report_period_start)}</span>
 					${(r.template_role !== 'supervisor' && r.author_name) ? `<span aria-hidden="true">&#9642;</span><span>${esc(r.author_name)}</span>` : ''}
 				</div>
 			</div>
-			<div class="sp-report-tile-right">
+			<div class="sp-report-card-right">
 				${reportStatusPill(r.status)}
 			</div>
 		</div>
@@ -2319,7 +2220,7 @@ function renderReportCards(container, reports, onCardClick) {
 		shown += batch.length;
 
 		// Wire only the freshly added cards (already-bound ones are flagged).
-		$$('.sp-report-tile', container).forEach(card => {
+		$$('.sp-report-card', container).forEach(card => {
 			if (card._spBound) return;
 			card._spBound = true;
 			card.addEventListener('click', () => onCardClick(card.dataset.reportId, reports.find(r => String(r.id) === card.dataset.reportId)));
@@ -2421,12 +2322,12 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 	const today = new Date();
 	const reportDate = existingReport?.report_period_start || toDateStr(today);
 
-	let html = '<div class="sp-card-header sp-header-grid sp-report-form-header">';
+	let html = '<div class="sp-header-grid sp-report-form-header">';
 	html += `<h3>${esc(template.name)}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-form-back-btn">Back</button>';
 	html += '</div>';
 
-	html += '<form id="sp-report-form" class="sp-card-body">';
+	html += '<form id="sp-report-form">';
 	html += `<input type="hidden" name="template_id" value="${template.id}">`;
 	html += `<input type="hidden" name="report_id" value="${existingReport?.id || ''}">`;
 	html += `<input type="hidden" name="period_start" value="${reportDate}">`;
@@ -2435,7 +2336,7 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 	// Auto-fill header
 	const headerFields = D.reportHeaderFields || [];
 	const headerCount = headerFields.length + 2;
-	html += `<div class="sp-tile sp-card-grid sp-report-header-grid">`;
+	html += `<div class="sp-report-header-grid" style="display:grid;grid-template-columns:repeat(${headerCount}, 1fr);gap:12px;margin-bottom:20px;padding:16px 20px;background:var(--sp-bg);border-radius:var(--sp-radius);border:1px solid var(--sp-border);">`;
 
 	headerFields.forEach(hf => {
 		const val = calcHeaderValue(hf.calc);
@@ -2652,13 +2553,13 @@ async function showReportDetail(reportId, panelPrefix = '') {
 
 		const { report, answers, fields, location, author, template } = res.data;
 		if (report && template) report.template_role = template.required_role_slug; // supervisor reports hide Location
-		renderReportDetail(detailWrap, report, answers, fields, location, author, panelPrefix, template);
+		renderReportDetail(detailWrap, report, answers, fields, location, author, panelPrefix);
 	} catch (err) {
 		detailWrap.innerHTML = '<p>Error loading report.</p>';
 	}
 }
 
-function renderReportDetail(wrap, report, answers, fields, location, author, panelPrefix, template) {
+function renderReportDetail(wrap, report, answers, fields, location, author, panelPrefix) {
 	const answerMap = {};
 	answers.forEach(a => { answerMap[a.field_key] = a; });
 
@@ -2667,19 +2568,10 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 
 	const showNewBtn = !panelPrefix && D.userCaps?.includes('submit_reports');
 
-	// Title header — matches the report form's header (centered title + Back).
-	let html = '<div class="sp-card-header sp-header-grid sp-report-form-header">';
-	html += `<h3>${esc(template?.name || 'Report')}</h3>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-back-btn">Back</button>';
-	html += '</div>';
-
-	// Everything below the header lives in the card body, so padding/styles apply uniformly
-	// (matches the report form's <form class="sp-card-body">).
-	html += '<div class="sp-card-body">';
-
-	// Navigation / actions bar (Back now lives in the header above)
-	html += '<div class="sp-detail-nav">';
+	// Navigation bar
+	let html = '<div class="sp-detail-nav">';
 	html += '<div class="sp-detail-nav-left">';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-back-btn">&larr; Back to Reports</button>';
 	if (showNewBtn) {
 		html += '<button type="button" class="unique sp-btn sp-btn-primary sp-detail-new-btn">+ New Report</button>';
 	}
@@ -2708,17 +2600,37 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-detail-next"${hasNext ? '' : ' disabled'}>Next &rsaquo;</button>`;
 	html += '</div></div>';
 
-	// Header info — a single bar matching the report form (Period · Week · Date · Location · Submitted By).
+	// Header info — three boxes: timing (header fields + Date), then Location and Submitted By each
+	// in their own box (combining them ran the two values together).
 	const headerFields = D.reportHeaderFields || [];
+	const field = (l, v) => `<div class="sp-report-field"><div class="sp-card-label">${esc(l)}</div><div class="sp-card-value">${v}</div></div>`;
+
+	html += '<div class="sp-report-cards">';
+
+	// Box 1 — period / week / date
+	html += '<div class="sp-card sp-report-card">';
+	headerFields.forEach(hf => {
+		const val = calcHeaderValue(hf.calc, report.report_period_start);
+		html += field(hf.label, esc(val));
+	});
+	html += field('Date', esc(formatDate(report.report_period_start)));
+	html += '</div>';
+
+	// Box 2 — location. Supervisor reports span multiple stores, so they get no location box.
 	const isSupervisorReport = report && report.template_role === 'supervisor';
-	const cell = (l, v) => `<div><div class="sp-card-label">${esc(l)}</div><div class="sp-card-value" style="font-size:16px;">${v}</div></div>`;
-	const cells = [];
-	headerFields.forEach(hf => cells.push(cell(hf.label, esc(calcHeaderValue(hf.calc, report.report_period_start)))));
-	cells.push(cell('Date', esc(formatDate(report.report_period_start))));
-	if (!isSupervisorReport) cells.push(cell('Location', esc(location?.name || '—')));
-	if (author) cells.push(cell('Submitted By', esc(author.name)));
-	html += `<div class="sp-tile sp-card-grid sp-report-header-grid">`;
-	html += cells.join('');
+	if (!isSupervisorReport) {
+		html += '<div class="sp-card sp-report-card sp-report-card-single">';
+		html += field('Location', esc(location?.name || '—'));
+		html += '</div>';
+	}
+
+	// Box 3 — submitted by
+	if (author) {
+		html += '<div class="sp-card sp-report-card sp-report-card-single">';
+		html += field('Submitted By', esc(author.name));
+		html += '</div>';
+	}
+
 	html += '</div>';
 
 	// Answers
@@ -2734,8 +2646,6 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 		html += `<div class="sp-answer-text">${esc(a?.answer_text || '—')}</div>`;
 		html += '</div>';
 	});
-
-	html += '</div>'; // close .sp-card-body
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
@@ -2779,7 +2689,7 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 // Loads every active user so god can pick the correct person when the AI matched the wrong one.
 async function spOpenReassign(report, author, location, panelPrefix) {
 	const backdrop = spFormModal();
-	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div></div>';
 
 	let opts;
 	try {
@@ -2787,7 +2697,7 @@ async function spOpenReassign(report, author, location, panelPrefix) {
 		if (!res.success) throw new Error();
 		opts = res.data;
 	} catch (e) {
-		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>Could not load options.</p></div>';
+		backdrop.innerHTML = '<div class="sp-report-form-wrap"><p>Could not load options.</p></div>';
 		return;
 	}
 
@@ -2795,8 +2705,8 @@ async function spOpenReassign(report, author, location, panelPrefix) {
 	const curLoc  = String(report.location_id || (location && location.id) || '0');
 	const isSup   = report.template_role === 'supervisor'; // supervisor reports aren't store-bound
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Reassign Report</h3>';
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-header-grid sp-report-form-header"><h3>Reassign Report</h3>';
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-reassign-cancel">Cancel</button></div>';
 
 	html += '<div class="sp-form-group"><label>Submitted By</label><select class="sp-select" id="sp-reassign-user">';
@@ -2843,7 +2753,7 @@ async function spOpenReassign(report, author, location, panelPrefix) {
 // AND field values, in one save. Self-contained modal so it works from the GM Reports (review) view.
 async function spGodEditReport(report, panelPrefix) {
 	const backdrop = spFormModal();
-	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div></div>';
 
 	let data, opts;
 	try {
@@ -2855,7 +2765,7 @@ async function spGodEditReport(report, panelPrefix) {
 		data = detRes.data;
 		opts = (optRes && optRes.success) ? optRes.data : { users: [], locations: [] };
 	} catch (e) {
-		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>Could not load the report.</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Close</button></div></div>';
+		backdrop.innerHTML = '<div class="sp-report-form-wrap"><p>Could not load the report.</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Close</button></div></div>';
 		$('.sp-ger-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
 		return;
 	}
@@ -2868,8 +2778,8 @@ async function spGodEditReport(report, panelPrefix) {
 	(data.answers || []).forEach(a => { answerMap[a.field_key] = a.answer_text || ''; });
 	const dateVal = String(rpt.report_period_start || '').split(' ')[0].split('T')[0];
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Report</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Cancel</button></div>';
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-header-grid sp-report-form-header"><h3>Edit Report</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Cancel</button></div>';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Fix the imported report — date, submitter, location, and any field values.</p>';
 
 	// Attribution row: date · submitted by · location.
@@ -3094,7 +3004,7 @@ function renderReportSearch(results) {
 			return `<span class="unique sp-report-chip ${cls}">${esc(c.label)}${c.score ? ' ' + c.score : ''}</span>`;
 		}).join('');
 		return `<div class="sp-report-result" data-report-id="${r.id}">` +
-			`<div class="sp-card-header sp-header sp-report-result-head"><span class="unique sp-report-result-title">${esc(r.location || r.author || 'Report')}</span>` +
+			`<div class="sp-header sp-report-result-head"><span class="unique sp-report-result-title">${esc(r.location || r.author || 'Report')}</span>` +
 			`<span class="unique sp-report-result-meta">${esc(r.type)}${date ? ' · ' + esc(date) : ''}${r.author ? ' · ' + esc(r.author) : ''}</span></div>` +
 			(r.summary ? `<p class="sp-report-result-summary">${esc(r.summary)}</p>` : '') +
 			(chips ? `<div class="sp-report-result-chips">${chips}</div>` : '') +
@@ -3363,7 +3273,7 @@ function renderCategoryChart(data) {
 		const pct = max > 0 ? Math.round((parseInt(d.count) / max) * 100) : 0;
 		html += `<div class="sp-chart-bar-row">`;
 		html += `<span class="unique sp-chart-label">${esc(d.category)}</span>`;
-		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:var(--sp-accent-color)"></div></div>`;
+		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:var(--sp-primary)"></div></div>`;
 		html += `<span class="unique sp-chart-value">${d.count}</span>`;
 		html += '</div>';
 	});
@@ -3389,7 +3299,7 @@ function renderLocationsChart(data) {
 		const pct = max > 0 ? Math.round((parseInt(d.count) / max) * 100) : 0;
 		html += `<div class="sp-chart-bar-row">`;
 		html += `<span class="unique sp-chart-label">${esc(d.name || 'Unknown')}</span>`;
-		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:var(--sp-accent-color)"></div></div>`;
+		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:var(--sp-primary)"></div></div>`;
 		html += `<span class="unique sp-chart-value">${d.count}</span>`;
 		html += '</div>';
 	});
@@ -3573,7 +3483,6 @@ function renderAiRoles() {
 	const wrap = $('#sp-admin-ai-roles-content');
 	if (!wrap) return;
 	let h = '<div class="sp-card sp-ai-assistant-card">';
-	h += '<div class="sp-card-body">';
 	h += '<h3 style="margin:0 0 4px;">AI Assistant</h3>';
 	h += '<p class="sp-help-text" style="margin:0 0 14px;">The company-voiced chat employees use. Name it whatever you like and define the roles they can pick.</p>';
 	h += '<label class="sp-field-label">Assistant name (what employees see)</label>';
@@ -3581,15 +3490,14 @@ function renderAiRoles() {
 	h += '<p class="sp-help-text" style="margin:14px 0 14px">Roles employees pick in the AI Assistant. Each persona steers the AI for that role; the company voice (Settings → AI Prompts) is always applied on top.</p>';
 	h += '<div id="sp-airole-list">';
 	_spAiRoles.forEach((r, i) => {
-		h += `<div class="sp-tile sp-airole" data-i="${i}">`;
-		h += `<div class="sp-airole-top"><input type="text" class="sp-input sp-airole-name" value="${esc(r.name || '')}" placeholder="Role name (e.g. Ad Copy Writer)"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-airole-del" data-i="${i}" title="Remove role" aria-label="Remove role">${ICON_DELETE}</button></div>`;
+		h += `<div class="sp-card sp-airole" data-i="${i}">`;
+		h += `<div class="sp-airole-top"><input type="text" class="sp-input sp-airole-name" value="${esc(r.name || '')}" placeholder="Role name (e.g. Ad Copy Writer)"><button type="button" class="unique sp-btn sp-btn-ghost sp-airole-del" data-i="${i}" title="Remove role">&times;</button></div>`;
 		h += `<textarea class="sp-input sp-airole-persona" rows="3" placeholder="Persona / guidance for this role (how it should write)…">${esc(r.persona || '')}</textarea>`;
 		h += '</div>';
 	});
 	h += '</div>';
 	h += '<button type="button" class="unique sp-btn sp-btn-secondary sp-airole-add">+ Add Role</button>';
 	h += '<span class="sp-help-text sp-airole-status" style="margin-left:10px"></span>';
-	h += '</div>';
 	h += '</div>';
 	wrap.innerHTML = h;
 	markUniqueSpans(wrap);
@@ -3629,10 +3537,9 @@ async function saveAiRoles() {
 
 // State carries a per-row `editing` flag. Rows show a read-only view (with edit + trash icons) until
 // edited; everything auto-saves (debounced) — no Save button.
-let _spAiPrompts  = [];  // [{brand, keyword, details, editing}]
-let _spAiVoices   = [];  // [{brand, voice, editing}]
-let _spAiCritical = [];  // [{brand, details, editing}] — standing guidance injected into ≤3-star replies
-let _spAiBrands   = [];  // brand/label suggestions for the pickers (review brands + agency client labels)
+let _spAiPrompts = [];   // [{brand, keyword, details, editing}]
+let _spAiVoices  = [];   // [{brand, voice, editing}]
+let _spAiBrands  = [];   // brand/label suggestions for the pickers (review brands + agency client labels)
 let _spAiSaveTimer = null;
 
 // Pull the values of any rows currently in edit mode back into state (view rows keep their state). Index
@@ -3649,23 +3556,17 @@ function spAiSync(wrap) {
 		p.keyword = ($('.sp-ai-prompt-kw', row)?.value || '').trim();
 		p.details = ($('.sp-ai-prompt-details', row)?.value || '').trim();
 	});
-	$$('.sp-ai-crit-row.is-editing', wrap).forEach(row => {
-		const c = _spAiCritical[+row.dataset.i]; if (!c) return;
-		c.brand   = ($('.sp-ai-crit-brand', row)?.value || '').trim();
-		c.details = ($('.sp-ai-crit-text', row)?.value || '').trim();
-	});
 }
 
 // Persist both sections from state. No re-render on success, so typing isn't interrupted (like the
 // Notifications matrix). Empty rows are filtered out of what's saved.
 async function saveAiPromptsNow(wrap) {
 	spAiSync(wrap);
-	const prompts  = _spAiPrompts.filter(p => p.keyword && p.details).map(p => ({ brand: p.brand || '', keyword: p.keyword, details: p.details }));
-	const voices   = _spAiVoices.filter(v => v.voice).map(v => ({ brand: v.brand, voice: v.voice }));
-	const critical = _spAiCritical.filter(c => c.details).map(c => ({ brand: c.brand || '', details: c.details }));
+	const prompts = _spAiPrompts.filter(p => p.keyword && p.details).map(p => ({ brand: p.brand || '', keyword: p.keyword, details: p.details }));
+	const voices  = _spAiVoices.filter(v => v.voice).map(v => ({ brand: v.brand, voice: v.voice }));
 	const st = $('#sp-ai-prompts-status', wrap);
 	try {
-		const res = await spAjax('site_pulse_save_ai_prompts', { prompts: JSON.stringify(prompts), voices: JSON.stringify(voices), critical: JSON.stringify(critical) });
+		const res = await spAjax('site_pulse_save_ai_prompts', { prompts: JSON.stringify(prompts), voices: JSON.stringify(voices) });
 		if (st) st.textContent = res.success ? 'Saved.' : (res.data?.message || 'Could not save.');
 	} catch (e) { if (st) st.textContent = 'Could not save.'; }
 }
@@ -3684,10 +3585,9 @@ async function loadAiPrompts() {
 	try {
 		const res = await spAjax('site_pulse_get_ai_prompts', {});
 		if (!res.success) { wrap.innerHTML = '<p>Could not load AI prompts.</p>'; return; }
-		_spAiPrompts  = (res.data.prompts  || []).map(p => ({ brand: p.brand || '', keyword: p.keyword || '', details: p.details || '', editing: false }));
-		_spAiVoices   = (res.data.voices   || []).map(v => ({ brand: v.brand || '', voice: v.voice || '', editing: false }));
-		_spAiCritical = (res.data.critical || []).map(c => ({ brand: c.brand || '', details: c.details || '', editing: false }));
-		_spAiBrands   = res.data.brands || [];
+		_spAiPrompts = (res.data.prompts || []).map(p => ({ brand: p.brand || '', keyword: p.keyword || '', details: p.details || '', editing: false }));
+		_spAiVoices  = (res.data.voices  || []).map(v => ({ brand: v.brand || '', voice: v.voice || '', editing: false }));
+		_spAiBrands  = res.data.brands || [];
 		renderAiPrompts(wrap);
 	} catch (e) { wrap.innerHTML = '<p>Could not load AI prompts.</p>'; }
 }
@@ -3695,28 +3595,28 @@ async function loadAiPrompts() {
 const ICON_AI_DONE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
 function aiVoiceRowHtml(v, i) {
-	const trash = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-ai-voice-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
+	const trash = `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-ai-voice-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
 	if (v.editing) {
-		return `<div class="sp-tile sp-settings-tile sp-ai-voice-row is-editing" data-i="${i}">`
+		return `<div class="sp-card sp-settings-card sp-ai-voice-row is-editing" data-i="${i}">`
 			+ '<div class="sp-form-group"><label>Brand</label>'
 			+ `<input type="text" class="sp-input sp-ai-voice-brand" list="sp-ai-brand-list" value="${esc(v.brand)}" placeholder="Pick or type a brand — leave blank to apply to all" autocomplete="off">`
 			+ '<div class="sp-help-text">Start typing to search your brands/clients. Blank = the default voice for every brand.</div></div>'
 			+ '<div class="sp-form-group"><label>Voice</label>'
 			+ `<textarea class="sp-input sp-ai-voice-text" rows="3" placeholder="How replies should sound — tone, personality, what the brand is about…">${esc(v.voice)}</textarea></div>`
-			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-ai-voice-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
+			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-icon-btn sp-icon-approve sp-ai-voice-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
 			+ '</div>';
 	}
-	return `<div class="sp-tile sp-settings-tile sp-ai-voice-row" data-i="${i}">`
+	return `<div class="sp-card sp-settings-card sp-ai-voice-row" data-i="${i}">`
 		+ `<div class="sp-ai-row-title">${v.brand ? esc(v.brand) : 'All brands'}</div>`
 		+ `<div class="sp-ai-row-text">${esc(v.voice)}</div>`
-		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-ai-voice-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
+		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-icon-btn sp-icon-edit sp-ai-voice-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
 		+ '</div>';
 }
 
 function aiPromptRowHtml(p, i) {
-	const trash = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-ai-prompt-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
+	const trash = `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-ai-prompt-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
 	if (p.editing) {
-		return `<div class="sp-tile sp-settings-tile sp-ai-prompt-row is-editing" data-i="${i}">`
+		return `<div class="sp-card sp-settings-card sp-ai-prompt-row is-editing" data-i="${i}">`
 			+ '<div class="sp-aai-row">'
 			+ '<div class="sp-aai-col"><label class="sp-field-label">Keyword / keyphrase</label>'
 			+ `<input type="text" class="sp-input sp-ai-prompt-kw" value="${esc(p.keyword)}" placeholder="e.g. green beans, green bean"></div>`
@@ -3726,33 +3626,14 @@ function aiPromptRowHtml(p, i) {
 			+ '<div class="sp-help-text" style="margin-top:4px;">Keyword: comma-separate alternates — any match triggers this. Brand: blank applies to every brand/client.</div>'
 			+ '<div class="sp-form-group"><label>Details</label>'
 			+ `<textarea class="sp-input sp-ai-prompt-details" rows="3" placeholder="What's going on / how the reply should address it when this topic comes up…">${esc(p.details)}</textarea></div>`
-			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-ai-prompt-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
+			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-icon-btn sp-icon-approve sp-ai-prompt-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
 			+ '</div>';
 	}
 	const scope = p.brand ? ` <span class="unique sp-ai-row-scope">· ${esc(p.brand)}</span>` : '';
-	return `<div class="sp-tile sp-settings-tile sp-ai-prompt-row" data-i="${i}">`
+	return `<div class="sp-card sp-settings-card sp-ai-prompt-row" data-i="${i}">`
 		+ `<div class="sp-ai-row-title">${esc(p.keyword)}${scope}</div>`
 		+ `<div class="sp-ai-row-text">${esc(p.details)}</div>`
-		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-ai-prompt-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
-		+ '</div>';
-}
-
-function aiCriticalRowHtml(c, i) {
-	const trash = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-ai-crit-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
-	if (c.editing) {
-		return `<div class="sp-tile sp-settings-tile sp-ai-crit-row is-editing" data-i="${i}">`
-			+ '<div class="sp-form-group"><label>Brand</label>'
-			+ `<input type="text" class="sp-input sp-ai-crit-brand" list="sp-ai-brand-list" value="${esc(c.brand)}" placeholder="Pick or type a brand — leave blank to apply to all" autocomplete="off">`
-			+ '<div class="sp-help-text">Blank = the guidance for every brand. Add a row per brand to differ.</div></div>'
-			+ '<div class="sp-form-group"><label>Guidance for bad reviews (3★ or lower)</label>'
-			+ `<textarea class="sp-input sp-ai-crit-text" rows="3" placeholder="How you want negative reviews handled — own the problem, apologize sincerely, offer to make it right, who/how to contact you offline…">${esc(c.details)}</textarea></div>`
-			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-ai-crit-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
-			+ '</div>';
-	}
-	return `<div class="sp-tile sp-settings-tile sp-ai-crit-row" data-i="${i}">`
-		+ `<div class="sp-ai-row-title">${c.brand ? esc(c.brand) : 'All brands'}</div>`
-		+ `<div class="sp-ai-row-text">${esc(c.details)}</div>`
-		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-ai-crit-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
+		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-icon-btn sp-icon-edit sp-ai-prompt-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
 		+ '</div>';
 }
 
@@ -3762,33 +3643,19 @@ function renderAiPrompts(wrap) {
 	html += '<datalist id="sp-ai-brand-list">' + _spAiBrands.map(b => `<option value="${esc(b)}"></option>`).join('') + '</datalist>';
 	// --- Company Voice (own card) ---
 	html += '<div class="sp-card" style="margin-bottom:18px">';
-	html += '<div class="sp-card-body">';
 	html += '<h3 style="margin:0 0 4px;">Company Voice</h3>';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">The tone &amp; personality the AI writes review replies in. Leave <strong>Brand</strong> blank for one voice across the company, or add a row per brand (matched to the review\'s brand) — e.g. Babe\'s vs Bubba\'s.</p>';
 	html += '<div id="sp-ai-voices-list">' + (_spAiVoices.length ? _spAiVoices.map((v, i) => aiVoiceRowHtml(v, i)).join('') : '<p class="sp-help-text">No voice set yet — replies use a neutral default tone.</p>') + '</div>';
 	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-ai-voice-add">+ Add Voice</button></div>';
 	html += '</div>';
-	html += '</div>';
 
 	// --- Review Reply Prompts (own card) ---
 	html += '<div class="sp-card" style="margin-bottom:18px">';
-	html += '<div class="sp-card-body">';
 	html += '<h3 style="margin:0 0 4px;">Review Reply Prompts</h3>';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Extra context to weave into a reply — but <strong>only when the review mentions a topic</strong>. Example: keyword <em>green beans</em> + details explaining a recent recipe change; mentioned → factored in, otherwise ignored.</p>';
 	html += '<div id="sp-ai-prompts-list">' + (_spAiPrompts.length ? _spAiPrompts.map((p, i) => aiPromptRowHtml(p, i)).join('') : '<p class="sp-help-text">No prompts yet. Add one below.</p>') + '</div>';
 	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-ai-prompt-add">+ Add Prompt</button></div>';
 	html += '<div class="sp-report-form-actions"><span class="sp-help-text" id="sp-ai-prompts-status">Changes save automatically.</span></div>';
-	html += '</div>';
-	html += '</div>';
-
-	// --- Critical Review Prompt (own card) ---
-	html += '<div class="sp-card" style="margin-bottom:18px">';
-	html += '<div class="sp-card-body">';
-	html += '<h3 style="margin:0 0 4px;">Critical Review Prompt</h3>';
-	html += '<p class="sp-help-text" style="margin:0 0 12px;">Standing guidance woven into <strong>every reply to a 3★-or-lower review</strong> — no keyword needed. Tell the AI how you want bad reviews handled (own the issue, apologize, offer to make it right, point them to a contact…). Leave <strong>Brand</strong> blank to apply to all, or add a row per brand — e.g. Babe\'s vs Bubba\'s.</p>';
-	html += '<div id="sp-ai-crit-list">' + (_spAiCritical.length ? _spAiCritical.map((c, i) => aiCriticalRowHtml(c, i)).join('') : '<p class="sp-help-text">No critical-review guidance yet — low-rated reviews use the default tone.</p>') + '</div>';
-	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-ai-crit-add">+ Add Critical Prompt</button></div>';
-	html += '</div>';
 	html += '</div>';
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
@@ -3797,7 +3664,6 @@ function renderAiPrompts(wrap) {
 	// don't accumulate across re-renders.
 	$('#sp-ai-voices-list', wrap)?.addEventListener('input', () => scheduleAiSave(wrap));
 	$('#sp-ai-prompts-list', wrap)?.addEventListener('input', () => scheduleAiSave(wrap));
-	$('#sp-ai-crit-list', wrap)?.addEventListener('input', () => scheduleAiSave(wrap));
 
 	// --- Company Voice handlers ---
 	$('#sp-ai-voice-add', wrap)?.addEventListener('click', () => {
@@ -3837,26 +3703,6 @@ function renderAiPrompts(wrap) {
 	$$('.sp-ai-prompt-remove', wrap).forEach(b => b.addEventListener('click', () => {
 		spAiSync(wrap); const i = +b.closest('.sp-ai-prompt-row').dataset.i;
 		_spAiPrompts.splice(i, 1); renderAiPrompts(wrap); saveAiPromptsNow(wrap);
-	}));
-
-	// --- Critical Review Prompt handlers ---
-	$('#sp-ai-crit-add', wrap)?.addEventListener('click', () => {
-		spAiSync(wrap); _spAiCritical.push({ brand: '', details: '', editing: true }); renderAiPrompts(wrap);
-		$(`.sp-ai-crit-row[data-i="${_spAiCritical.length - 1}"] .sp-ai-crit-text`, wrap)?.focus();
-	});
-	$$('.sp-ai-crit-edit', wrap).forEach(b => b.addEventListener('click', () => {
-		spAiSync(wrap); const i = +b.closest('.sp-ai-crit-row').dataset.i;
-		if (_spAiCritical[i]) _spAiCritical[i].editing = true;
-		renderAiPrompts(wrap); $(`.sp-ai-crit-row[data-i="${i}"] .sp-ai-crit-text`, wrap)?.focus();
-	}));
-	$$('.sp-ai-crit-done', wrap).forEach(b => b.addEventListener('click', () => {
-		spAiSync(wrap); const i = +b.closest('.sp-ai-crit-row').dataset.i;
-		if (_spAiCritical[i]) { if (!_spAiCritical[i].details) _spAiCritical.splice(i, 1); else _spAiCritical[i].editing = false; }
-		renderAiPrompts(wrap); saveAiPromptsNow(wrap);
-	}));
-	$$('.sp-ai-crit-remove', wrap).forEach(b => b.addEventListener('click', () => {
-		spAiSync(wrap); const i = +b.closest('.sp-ai-crit-row').dataset.i;
-		_spAiCritical.splice(i, 1); renderAiPrompts(wrap); saveAiPromptsNow(wrap);
 	}));
 }
 
@@ -3906,7 +3752,7 @@ async function loadNotificationSettings() {
 	const firstPeopleCol = colKeys.find(ck => !channelCols.includes(ck));
 	const divCls = ck => (ck === firstPeopleCol ? ' sp-col-divider' : '');
 
-	html += '<div class="sp-card sp-table-card sp-admin-table-wrap"><table class="sp-table sp-notif-table">';
+	html += '<div class="sp-admin-table-wrap"><table class="sp-table sp-notif-table">';
 	html += '<thead class="sp-thead"><tr><th>Situation</th>';
 	colKeys.forEach(ck => { html += `<th class="sp-notif-col${divCls(ck)}">${esc(columns[ck])}</th>`; });
 	html += '</tr></thead><tbody>';
@@ -4024,7 +3870,7 @@ function renderAdminUsers(wrap, data) {
 	}
 
 	html += '<div class="sp-users-toolbar"><input type="search" class="sp-input sp-users-search" placeholder="Search names…" aria-label="Search users"></div>';
-	html += '<div class="sp-card sp-table-card sp-admin-table-wrap"><table class="sp-table sp-admin-table sp-users-table">';
+	html += '<div class="sp-admin-table-wrap"><table class="sp-table sp-admin-table sp-users-table">';
 	html += '<thead class="sp-thead"><tr>'
 		+ '<th class="sp-users-sort" data-sort="display_name">Name</th>'
 		+ '<th class="sp-users-sort" data-sort="user_login">Username</th>'
@@ -4220,8 +4066,8 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 		`<option value="${u.user_id}"${user && String(user.supervisor_id) === String(u.user_id) ? ' selected' : ''}>${esc(u.display_name)}</option>`
 	).join('');
 
-	let html = `<div class="sp-card sp-report-form-wrap" style="margin-top:20px;">`;
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
+	let html = `<div class="sp-report-form-wrap" style="margin-top:20px;">`;
+	html += `<div class="sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
 	// A Save next to the top Cancel lets you save without scrolling to the bottom actions. It's
 	// outside <form>, so it submits the form programmatically (see wiring below).
 	html += '<div class="sp-form-header-actions">';
@@ -4442,7 +4288,7 @@ function renderAdminLocations(wrap, locations) {
 	if (!locations || locations.length === 0) {
 		html += '<div class="sp-empty-state"><p>No locations yet.</p></div>';
 	} else {
-		html += '<div class="sp-card sp-table-card sp-admin-table-wrap"><table class="sp-table sp-admin-table">';
+		html += '<div class="sp-admin-table-wrap"><table class="sp-table sp-admin-table">';
 		html += '<thead class="sp-thead"><tr><th>Name</th><th>Location #</th><th>Brand</th><th>Reports</th><th>City</th><th>State</th><th>Status</th><th></th></tr></thead>';
 		html += '<tbody>';
 		locations.forEach(l => {
@@ -4499,8 +4345,8 @@ function showLocationForm(loc) {
 	const isEdit = !!loc;
 	const title = isEdit ? 'Edit Location' : 'Add Location';
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
+	let html = '<div class="sp-report-form-wrap">';
+	html += `<div class="sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-loc-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-location-form">';
 
@@ -4649,7 +4495,7 @@ function spLabelFieldValue(scope) {
 // linked so completing one closes all).
 async function spAddActionItem() {
 	const backdrop = spFormModal();
-	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+	backdrop.innerHTML = '<div class="sp-report-form-wrap"><div class="sp-loading"></div></div>';
 
 	// Same contacts the New Message picker uses; if it fails or there's no one, we just omit the picker.
 	let contacts = [];
@@ -4657,31 +4503,33 @@ async function spAddActionItem() {
 	const hasPeople = contacts.length > 0;
 
 	const due = spDatePlusDays(14);
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Add Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-header-grid sp-report-form-header"><h3>Add Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
 	html += '<label class="sp-field-label">To-do</label>';
 	html += '<textarea class="sp-input sp-aai-desc" rows="2" placeholder="What needs to get done?"></textarea>';
 
-	// Label (dropdown of common + existing labels), optional "Also assign to" people picker, urgency
-	// and due date — laid out 2-up in a single grid holder.
-	const labelField = '<div><label class="sp-field-label">Label</label>' + spLabelFieldHtml('To-Do') + '</div>';
-	const urgencyField = '<div><label class="sp-field-label">Urgency</label><select class="sp-select sp-aai-pri"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>';
-	const dueField = `<div><label class="sp-field-label">Due date</label><input type="date" class="sp-input sp-aai-due" value="${due}"></div>`;
+	// Label (dropdown of common + existing labels) — paired with the "Also assign to" people picker.
 	if (hasPeople) {
 		const picks = contacts.map(c => `<label class="sp-msg-contact-pick"><input type="checkbox" class="sp-msg-pick sp-aai-people-pick" value="${c.id}" data-name="${esc(c.name)}"><span class="sp-msg-contact-name">${esc(c.name)}</span></label>`).join('');
-		const peopleField = '<div><label class="sp-field-label">Also assign to</label>'
+		html += '<div class="sp-aai-row">';
+		html += '<div class="sp-aai-col"><label class="sp-field-label">Label</label>' + spLabelFieldHtml('To-Do') + '</div>';
+		html += '<div class="sp-aai-col"><label class="sp-field-label">Also assign to</label>'
 			+ '<div class="sp-aai-people" id="sp-aai-people">'
 			+ '<button type="button" class="sp-select sp-aai-people-toggle" id="sp-aai-people-toggle">Just me</button>'
 			+ '<div class="sp-aai-people-panel" id="sp-aai-people-panel" hidden>'
 			+ '<input type="text" class="sp-input sp-aai-people-search" placeholder="Search people…">'
 			+ '<div class="sp-msg-contacts sp-aai-people-list">' + picks + '</div>'
-			+ '</div></div></div>';
-		html += '<div class="sp-aai-grid">' + labelField + peopleField + urgencyField + dueField + '</div>';
+			+ '</div></div>';
+		html += '</div></div>';
 	} else {
-		// No people to assign → Label spans full width above the urgency/due pair.
-		html += labelField;
-		html += '<div class="sp-aai-grid">' + urgencyField + dueField + '</div>';
+		html += '<label class="sp-field-label">Label</label>';
+		html += spLabelFieldHtml('To-Do');
 	}
+
+	html += '<div class="sp-aai-row">';
+	html += '<div class="sp-aai-col"><label class="sp-field-label">Urgency</label><select class="sp-select sp-aai-pri"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>';
+	html += `<div class="sp-aai-col"><label class="sp-field-label">Due date</label><input type="date" class="sp-input sp-aai-due" value="${due}"></div>`;
+	html += '</div>';
 	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-aai-save">Add</button><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
@@ -4732,8 +4580,8 @@ async function spAddActionItem() {
 function spEditActionItem(item) {
 	const backdrop = spFormModal();
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button></div>';
+	let html = '<div class="sp-report-form-wrap">';
+	html += '<div class="sp-header-grid sp-report-form-header"><h3>Edit Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button></div>';
 	html += '<label class="sp-field-label">To-do</label>';
 	html += `<textarea class="sp-input sp-aae-desc" rows="2" placeholder="What needs to get done?">${esc(item.description || '')}</textarea>`;
 	html += '<label class="sp-field-label">Label</label>';
@@ -4995,8 +4843,8 @@ function renderActionItemCard(item, mode) {
 	if (isPending) {
 		// Review controls on the LEFT so they line up down the list: checkmark approves, trash rejects.
 		html += '<div class="sp-action-review-actions">';
-		html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-review-approve-btn" data-item-id="${item.id}" title="Approve" aria-label="Approve">${ICON_CHECK}</button>`;
-		html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-review-reject-btn" data-item-id="${item.id}" title="Reject" aria-label="Reject">${ICON_DELETE}</button>`;
+		html += `<button type="button" class="unique sp-icon-btn sp-icon-approve sp-review-approve-btn" data-item-id="${item.id}" title="Approve" aria-label="Approve">${ICON_CHECK}</button>`;
+		html += `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-review-reject-btn" data-item-id="${item.id}" title="Reject" aria-label="Reject">${ICON_DELETE}</button>`;
 		html += '</div>';
 	}
 	html += '<div class="sp-action-item-content">';
@@ -5282,16 +5130,16 @@ async function loadAdminSettings() {
 function renderColorScheme(wrap, data) {
 	spColorState = { vars: null, dirty: false };
 
-	// Two MAIN colors + an ACCENT (slot 3). The engine makes the darker main color the dark UI tone
-	// (primary) and the lighter one the light backgrounds (secondary); the accent is the pop.
+	// Three fixed brand slots, seeded from the last-saved colors else sensible starters.
 	const SP_BRAND_SLOTS = [
-		{ label: 'Main color 1', hint: '' },
-		{ label: 'Main color 2', hint: '' },
-		{ label: 'Accent color', hint: 'Tertiary pop — buttons, links & highlights' },
+		{ label: 'Dominant',  hint: 'Your main brand color — drives primary buttons, links and key accents.' },
+		{ label: 'Secondary', hint: 'Supporting color — typically the navigation sidebar.' },
+		{ label: 'Accent',    hint: 'A pop color for small highlights and details.' },
 	];
-	const brandSeed = ['#474c54', '#cfe8d6', '#ec9a3c'];
+	const brandSeed = ['#2b5fa8', '#474c54', '#ec9a3c'];
 	const savedBrand = Array.isArray(data.brand) ? data.brand.map(spSanitizeHex).filter(Boolean) : [];
 	let brandColors = SP_BRAND_SLOTS.map((s, i) => savedBrand[i] || brandSeed[i]);
+	const savedMood = data.mood || '';
 
 	// App icon — the installed-app / push-notification icon. Paste a Media Library URL.
 	let html = '<div class="sp-card sp-settings-card">';
@@ -5315,14 +5163,17 @@ function renderColorScheme(wrap, data) {
 
 	html += '<div class="sp-card sp-settings-card">';
 	html += '<h3 style="margin:0 0 4px;">Color Scheme</h3>';
-	html += '<p class="sp-help-text" style="margin:0 0 18px;">Pick two main colors plus an accent and the app themes everything — backgrounds, text, menus, buttons and hovers — keeping it all legible. The darker of your two main colors becomes the dark UI tone (sidebar, headings); the lighter becomes light backgrounds; the accent drives buttons and highlights. The preview updates instantly; click Save to keep it.</p>';
+	html += '<p class="sp-help-text" style="margin:0 0 18px;">Set your three brand colors and a mood, and AI themes the entire app — backgrounds, text, menus, buttons and hovers — choosing complementary colors and keeping everything legible. The preview updates instantly; click Save to keep it.</p>';
 
 	html += '<div class="sp-ai-colors">';
-	html += '<h4 class="sp-ai-colors-title">Your company colors</h4>';
-	html += '<p class="sp-help-text" style="margin:4px 0 12px;">Click a swatch for the color wheel, or type / paste a hex code. The app builds a full light→dark range from each. Your primary (dark) tone stays as dark as the color you pick.</p>';
+	html += '<h4 class="sp-ai-colors-title">Your brand colors</h4>';
+	html += '<p class="sp-help-text" style="margin:4px 0 12px;">Set your Dominant, Secondary and Accent colors. Click a swatch for the color wheel, or type / paste a hex code. AI tunes a highlight + shadow for each.</p>';
 	html += '<div class="sp-brand-rows" id="sp-brand-rows"></div>';
+	html += '<div class="sp-brand-controls">';
+	html += `<input type="text" id="sp-ai-note" class="sp-input" value="${esc(savedMood)}" placeholder="Mood / feel — e.g. professional &amp; calm, bold &amp; energetic, warm">`;
+	html += '</div>';
 	html += '<div class="sp-brand-controls" style="margin-top:12px;">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-ai-generate">Generate color scheme</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-ai-generate">✨ Generate color scheme</button>';
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-color-save" disabled>Save</button>';
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-color-reset">Reset to Default</button>';
 	html += '<span class="sp-color-status" id="sp-color-status"></span>';
@@ -5431,14 +5282,15 @@ function renderColorScheme(wrap, data) {
 	const genBtn = $('#sp-ai-generate', wrap);
 	if (genBtn) genBtn.addEventListener('click', async () => {
 		const valid = brandColors.map(spSanitizeHex).filter(Boolean);
-		if (!valid.length) { alert('Enter at least one company color.'); return; }
+		if (!valid.length) { alert('Enter at least one brand color.'); return; }
+		const note = ($('#sp-ai-note', wrap)?.value || '').trim();
 		const rat = $('#sp-ai-rationale', wrap);
 		genBtn.disabled = true;
 		const orig = genBtn.textContent;
 		genBtn.textContent = 'Generating…';
 		if (rat) { rat.hidden = false; rat.textContent = 'Asking AI for a balanced, legible scheme…'; }
 		try {
-			const res = await spAjax('site_pulse_admin_generate_color_scheme', { brand_colors: JSON.stringify(valid) });
+			const res = await spAjax('site_pulse_admin_ai_color_scheme', { brand_colors: JSON.stringify(valid), note });
 			if (res.success && res.data.vars) {
 				spColorState.vars = res.data.vars;
 				spColorState.dirty = true;
@@ -5463,10 +5315,12 @@ function renderColorScheme(wrap, data) {
 		saveBtn.disabled = true;
 		if (status) status.textContent = 'Saving…';
 		const brand = brandColors.map(spSanitizeHex).filter(Boolean);
+		const mood = ($('#sp-ai-note', wrap)?.value || '').trim();
 		try {
 			const res = await spAjax('site_pulse_admin_save_color_scheme', {
-				vars: JSON.stringify(spColorState.vars || {}),
+				vars: JSON.stringify(spColorState.vars),
 				brand_colors: JSON.stringify(brand),
+				mood,
 			});
 			if (res.success) { if (status) status.textContent = '✓ Saved'; spColorState.dirty = false; }
 			else { if (status) status.textContent = res.data?.message || 'Error saving.'; saveBtn.disabled = false; }
@@ -5615,7 +5469,7 @@ function renderAdminTiers(wrap) {
 			html += '</div>';
 
 			html += '<div class="sp-tier-card-foot">';
-			html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-tier-delete"${n ? ' disabled title="Reassign members first"' : ' title="Delete" aria-label="Delete"'}>${ICON_DELETE}</button>`;
+			html += `<button type="button" class="unique sp-icon-btn sp-icon-delete sp-tier-delete"${n ? ' disabled title="Reassign members first"' : ' title="Delete" aria-label="Delete"'}>${ICON_DELETE}</button>`;
 			html += '</div>';
 			html += '</div>';
 		});
@@ -5805,12 +5659,11 @@ function renderReviewSettings() {
 	const wrap = $('#sp-review-settings-content');
 	if (!wrap) return;
 	let html = '<div class="sp-card" style="max-width:760px">';
-	html += '<div class="sp-card-body">';
 	html += '<h3 style="margin:0 0 6px">Review Categories</h3>';
 	html += '<p class="sp-help-text" style="margin:0 0 14px">The “super categories” reviews are ranked into. Each can have sub-categories that guide the AI (e.g. <em>Quality</em> → Food, Ingredients, Presentation). Saving re-analyzes all reviews under the new categories.</p>';
 	html += '<div id="sp-rc-list">';
 	_spReviewCats.forEach((c, ci) => {
-		html += `<div class="sp-rc-cat sp-tile" data-ci="${ci}" style="border:1px solid var(--sp-border);border-radius:8px;padding:12px;margin-bottom:12px">`;
+		html += `<div class="sp-rc-cat" data-ci="${ci}" style="border:1px solid var(--sp-border);border-radius:8px;padding:12px;margin-bottom:12px">`;
 		html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
 		html += `<input type="text" class="sp-input sp-rc-name" value="${esc(c.name || '')}" placeholder="Category (e.g. Quality)" style="font-weight:600">`;
 		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-rc-del-cat" data-ci="${ci}" title="Remove category">&times;</button>`;
@@ -5828,7 +5681,6 @@ function renderReviewSettings() {
 	html += '</div>';
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-rc-add-cat">+ Add Category</button>';
 	html += '<span class="sp-help-text sp-rc-status" style="margin-left:10px"></span>';
-	html += '</div>';
 	html += '</div>';
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
@@ -6245,12 +6097,10 @@ function spReportScheduleCardHtml() {
 			`<div class="sp-form-group" style="margin:0"><label>First due date</label><input type="date" class="sp-input sp-rsched-anchor" data-key="${key}" value="${esc(anchor || '')}"></div>` +
 		'</div>';
 	return '<div class="sp-card" id="sp-report-schedule" style="margin-bottom:20px">' +
-		'<div class="sp-card-body">' +
-			'<h3 style="margin:0 0 6px">Report Frequency</h3>' +
-			'<p class="sp-help-text" style="margin:0 0 12px">How often each report is required and its first due date — this sets the cadence shown across the app. To get a “report due today” alert on each due date, enable it in <strong>Settings → Notifications</strong>.</p>' +
-			row('gm', 'GM report', s.gm_frequency, s.gm_anchor) +
-			row('supervisor', 'Supervisor report', s.supervisor_frequency, s.supervisor_anchor) +
-		'</div>' +
+		'<h3 style="margin:0 0 6px">Report Frequency</h3>' +
+		'<p class="sp-help-text" style="margin:0 0 12px">How often each report is required and its first due date — this sets the cadence shown across the app. To get a “report due today” alert on each due date, enable it in <strong>Settings → Notifications</strong>.</p>' +
+		row('gm', 'GM report', s.gm_frequency, s.gm_anchor) +
+		row('supervisor', 'Supervisor report', s.supervisor_frequency, s.supervisor_anchor) +
 	'</div>';
 }
 
@@ -6432,8 +6282,8 @@ function showTemplateForm(tpl) {
 	const isEdit = !!tpl;
 	const title = isEdit ? 'Edit Template' : 'Add Template';
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
+	let html = '<div class="sp-report-form-wrap">';
+	html += `<div class="sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-tpl-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-template-form">';
 	if (isEdit) html += `<input type="hidden" name="id" value="${tpl.id}">`;
@@ -6501,8 +6351,8 @@ function showFieldForm(field, templateId) {
 	const isEdit = !!field;
 	const title = isEdit ? 'Edit Field' : 'Add Field';
 
-	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
+	let html = '<div class="sp-report-form-wrap">';
+	html += `<div class="sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-field-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-field-form">';
 	if (isEdit) html += `<input type="hidden" name="id" value="${field.id}">`;
@@ -6714,9 +6564,8 @@ function dirCard(e) {
 	const sub = [dirLabel('positions', e.position), dirLabel('brands', e.brand), dirLabel('locations', e.location)].filter(Boolean).join(' &middot; ');
 	const contact = dirContactsHtml(e);
 	const inactive = e.status === 'inactive' ? '<span class="unique sp-status-badge sp-status-draft">Inactive</span>' : '';
-	const editBtn = _spDirCanManage ? `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-dir-edit" data-id="${e.id}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>` : '';
+	const editBtn = _spDirCanManage ? `<button type="button" class="unique sp-icon-btn sp-icon-edit sp-dir-edit" data-id="${e.id}" title="Edit" aria-label="Edit">${ICON_EDIT}</button>` : '';
 	return `<div class="sp-card sp-dir-card${e.status === 'inactive' ? ' is-inactive' : ''}" data-id="${e.id}">
-		<div class="sp-card-body">
 		${photo}
 		<div class="sp-dir-body">
 			<div class="sp-dir-name-row"><span class="unique sp-dir-name">${esc(name)}</span>${inactive}</div>
@@ -6724,7 +6573,6 @@ function dirCard(e) {
 			<div class="sp-dir-contacts">${contact}</div>
 		</div>
 		${editBtn}
-		</div>
 	</div>`;
 }
 
@@ -6906,7 +6754,7 @@ function openDirForm(emp) {
 			<div class="sp-modal-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dirf-save">${isEdit ? 'Save' : 'Add'}</button>
 				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-dirf-cancel">Cancel</button>
-				${isEdit ? `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete" id="sp-dirf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
+				${isEdit ? `<button type="button" class="unique sp-icon-btn sp-icon-delete" id="sp-dirf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
 			</div>
 		</div>`;
 	document.body.appendChild(modal);
@@ -7065,21 +6913,19 @@ function emailCard(m) {
 	if (_spEmailsCanManage) {
 		actions = '<div class="unique sp-email-actions">' +
 			`<button type="button" class="unique sp-btn sp-btn-ghost sp-email-toggle" data-id="${m.id}" data-status="${m.status === 'handled' ? 'new' : 'handled'}">${m.status === 'handled' ? 'Mark new' : 'Mark handled'}</button>` +
-			`<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-email-delete" data-id="${m.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>` +
+			`<button type="button" class="unique sp-icon-btn sp-icon-delete sp-email-delete" data-id="${m.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>` +
 		'</div>';
 	}
 	return `<div class="sp-card sp-email-card${m.status === 'handled' ? ' is-handled' : ''}">
-		<div class="sp-card-header sp-header sp-email-head">
+		<div class="sp-header sp-email-head">
 			<div class="sp-email-who"><span class="unique sp-email-name">${esc(m.customer_name || 'Anonymous')}</span>${cat}${handled}</div>
 			<span class="unique sp-email-date">${esc(date)}</span>
 		</div>
-		<div class="sp-card-body">
 		${where ? `<div class="unique sp-email-where">${esc(where)}</div>` : ''}
 		${m.message ? `<p class="unique sp-email-message">${esc(m.message)}</p>` : ''}
 		<div class="sp-email-foot">
 			<div class="sp-email-contacts">${contact}</div>
 			${actions}
-		</div>
 		</div>
 	</div>`;
 }
@@ -7160,7 +7006,7 @@ function renderCmThread(data) {
 	if (!thread) return;
 	const c = data.conversation || {};
 	const plat = c.platform === 'instagram' ? 'Instagram' : 'Facebook';
-	let html = '<div class="sp-card-header sp-header sp-msg-thread-header">';
+	let html = '<div class="sp-header sp-msg-thread-header">';
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-msg-back sp-cm-back" aria-label="Back to messages">&#8592;</button>';
 	html += `<span class="sp-msg-thread-title">${esc(c.customer_name)} <span class="unique sp-cm-tag sp-cm-${c.platform}">${plat}</span></span>`;
 	html += `<span class="sp-msg-thread-actions" style="color:var(--sp-text-secondary);font-size:12px">${esc(c.page_name || '')}</span>`;
@@ -7426,13 +7272,13 @@ function renderReviewStats(d) {
 	const cards = [];
 	// Count tile — clicking it clears any topic filter (shows all reviews again).
 	cards.push(
-		'<div class="sp-tile sp-feedback-stat-tile sp-tile-clickable" data-topic="">' +
+		'<div class="sp-survey-stat-card sp-stat-clickable" data-topic="">' +
 			`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Reviews</div><div class="sp-survey-stat-value">${esc(spComma(d.count || 0))}</div></div>` +
 		'</div>'
 	);
 	// Average rating tile with a 5→1 star distribution (not a topic filter).
 	cards.push(
-		'<div class="sp-tile sp-feedback-stat-tile">' +
+		'<div class="sp-survey-stat-card">' +
 			`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Avg Rating</div><div class="sp-survey-stat-value">${d.avg != null ? esc(Number(d.avg).toFixed(1)) : '—'}</div></div>` +
 			spStarDistBars(d.stardist) +
 		'</div>'
@@ -7442,7 +7288,7 @@ function renderReviewStats(d) {
 		// Headline is the category's average 1-5 rating (the "ranking"); mention count shown in parens.
 		const avg = (t.avg_score != null) ? Number(t.avg_score).toFixed(1) : '—';
 		cards.push(
-			`<div class="sp-tile sp-feedback-stat-tile sp-tile-clickable" data-topic="${esc(t.label)}">` +
+			`<div class="sp-survey-stat-card sp-stat-clickable" data-topic="${esc(t.label)}">` +
 				'<div class="sp-survey-stat-left">' +
 					`<div class="sp-survey-stat-label">${esc(t.label)} <span style="font-weight:400;color:var(--sp-text-light)">(${esc(spComma(t.mentions))})</span></div>` +
 					`<div class="sp-survey-stat-value">${avg}<span style="font-size:.6em;color:var(--sp-text-light)"> / 5</span></div>` +
@@ -7478,15 +7324,15 @@ function renderReviewStats(d) {
 
 // Highlight the topic card matching the active filter (the "Reviews"/all card is never highlighted).
 function spMarkActiveStatCard() {
-	$$('#sp-reviews-stats .sp-tile-clickable').forEach(c => {
+	$$('#sp-reviews-stats .sp-stat-clickable').forEach(c => {
 		const topic = c.getAttribute('data-topic') || '';
-		c.classList.toggle('sp-tile-active', !!topic && topic === spReviewTopicFilter);
+		c.classList.toggle('sp-stat-active', !!topic && topic === spReviewTopicFilter);
 	});
 }
 
 // Click a stat card → filter the list to that topic (toggle off if it's already active; the count card clears).
 function onReviewStatClick(e) {
-	const card = e.target.closest('.sp-tile-clickable');
+	const card = e.target.closest('.sp-stat-clickable');
 	if (!card) return;
 	const topic = card.getAttribute('data-topic') || '';
 	spReviewTopicFilter = (topic && spReviewTopicFilter === topic) ? '' : topic;
@@ -7748,7 +7594,7 @@ function renderReviewCard(r) {
 					: `<button type="button" class="unique sp-btn sp-btn-ghost sp-review-import-btn" data-id="${id}">Add as testimonial</button>`) +
 			'</div>';
 		form =
-			`<div class="unique sp-review-reply-form ${r.reply ? 'sp-review-reply-edit' : 'sp-review-reply-new'}" data-id="${id}" hidden>` +
+			`<div class="unique sp-review-reply-form" data-id="${id}" hidden>` +
 				`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
 				'<div class="unique sp-review-reply-formbtns">' +
 					`<button type="button" class="unique sp-btn sp-btn-primary sp-review-reply-save" data-id="${id}">Post reply</button>` +
@@ -7764,19 +7610,19 @@ function renderReviewCard(r) {
 
 	return (
 		`<div class="unique sp-card sp-review-card" data-id="${id}">` +
-			'<div class="unique sp-review-head sp-card-body">' +
+			'<div class="unique sp-review-head">' +
 				photo +
 				// Right block comes before the main column in source so the body can float-wrap around it
 				// on small screens (≤1024px); desktop keeps the visual order via grid-template-areas.
 				'<div class="unique sp-review-headright">' +
 					`<span class="unique sp-review-rating">${SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
 					store +
-					tags +
 					actions +
 				'</div>' +
 				'<div class="unique sp-review-headmain">' +
 					'<div class="unique sp-review-topline">' +
 						`<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(r.reviewer)}</span><span class="unique sp-review-date">${esc(date)}</span></div>` +
+						tags +
 					'</div>' +
 					body +
 				'</div>' +
@@ -8153,7 +7999,7 @@ function renderAgencyReviewCard(c, r) {
 			'</div>';
 
 	const form = isFb ? '' :
-		`<div class="unique sp-review-reply-form ${r.reply ? 'sp-review-reply-edit' : 'sp-review-reply-new'}" data-site="${sk}" data-id="${id}" hidden>` +
+		`<div class="unique sp-review-reply-form" data-site="${sk}" data-id="${id}" hidden>` +
 			`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
 			'<div class="unique sp-review-reply-formbtns">' +
 				`<button type="button" class="unique sp-btn sp-btn-primary sp-agency-reply-save" data-site="${sk}" data-id="${id}">Post reply</button>` +
@@ -8168,17 +8014,17 @@ function renderAgencyReviewCard(c, r) {
 
 	return (
 		`<div class="unique sp-card sp-review-card" data-site="${sk}" data-id="${id}">` +
-			'<div class="unique sp-review-head sp-card-body">' +
+			'<div class="unique sp-review-head">' +
 				photo +
 				'<div class="unique sp-review-headright">' +
 					`<span class="unique sp-review-rating">${isFb ? SP_FB_ICON : SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
 					store +
-					tags +
 					actions +
 				'</div>' +
 				'<div class="unique sp-review-headmain">' +
 					'<div class="unique sp-review-topline">' +
 						`<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(r.reviewer)}</span><span class="unique sp-review-date">${esc(date)}</span></div>` +
+						tags +
 					'</div>' +
 					body +
 				'</div>' +
@@ -8529,7 +8375,7 @@ function renderSurveysSummary(s) {
 
 // Plain count tile — left-justified label + value, no bars.
 function surveyCountCard(count) {
-	return `<div class="sp-tile sp-feedback-stat-tile">` +
+	return `<div class="sp-survey-stat-card">` +
 		`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Comment Cards</div><div class="sp-survey-stat-value">${esc(String(count))}</div></div>` +
 	`</div>`;
 }
@@ -8537,7 +8383,7 @@ function surveyCountCard(count) {
 // Rating tile — left-justified label + average, with an Amazon-style distribution bar chart on the right.
 function surveyStatCard(label, avg, dist) {
 	const value = (avg != null) ? Number(avg).toFixed(1) : '—';
-	return `<div class="sp-tile sp-feedback-stat-tile">` +
+	return `<div class="sp-survey-stat-card">` +
 		`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">${esc(label)}</div><div class="sp-survey-stat-value">${esc(value)}</div></div>` +
 		surveyBars(dist) +
 	`</div>`;
@@ -9201,7 +9047,7 @@ function attachPlacesAutocomplete(nameEl, addrEl) {
 				const p = s.placePrediction;
 				const main = ftext(p.mainText) || ftext(p.text);
 				const sub = ftext(p.secondaryText);
-				const bg = i === activeIdx ? 'background:var(--sp-accent-lightest,#fdf0e3);' : '';
+				const bg = i === activeIdx ? 'background:var(--sp-primary-light,#fdf0e3);' : '';
 				return `<div data-i="${i}" style="padding:8px 12px;font-size:14px;line-height:1.3;cursor:pointer;${bg}">`
 					+ `<div style="color:var(--sp-text,#2c2a27);">${esc(main)}</div>`
 					+ (sub ? `<div style="font-size:12px;color:var(--sp-text-light,#8a8580);">${esc(sub)}</div>` : '')
@@ -9538,6 +9384,7 @@ function spBuildPeriodToolbar(prefix, container, onApply, actionsEl) {
 	const periodLabel = (mileagePeriodLength > 0 && mileagePeriodAnchor) ? 'This Period' : 'This Month';
 	container.innerHTML = `
 		<div class="sp-toolbar sp-period-toolbar" id="sp-${prefix}-toolbar">
+			<span class="sp-toolbar-label">Period</span>
 			<div class="sp-mileage-period-controls">
 				<div class="sp-toolbar-group sp-${prefix}-quickranges">
 					<button type="button" class="unique sp-btn sp-btn-secondary sp-${prefix}-range" data-range="period">${periodLabel}</button>
@@ -9721,14 +9568,7 @@ async function loadMileageEntries() {
 					rows += `<td class="sp-num">${dollarInner}</td>`;
 					if (hasTrailer) rows += '<td class="sp-num"></td>';
 					if (hasTolls) rows += `<td class="sp-num">${tollInner}</td>`;
-					// The status + actions live in ONE cell that spans the whole day (every leg + the
-					// Total row), rendered on the first leg so the Pending pill sits at the TOP of the
-					// Status column — aligned with the date/first leg — and the buttons drop to the bottom.
-					if (i === 0) {
-						rows += `<td class="sp-m-status" rowspan="${legs.length + 1}"><div class="sp-m-status-inner">`
-							+ (isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>')
-							+ `<div class="sp-mileage-row-actions">${iconBtn('edit', 'sp-mileage-edit-btn', `data-id="${e.id}"`)}${iconBtn('delete', 'sp-mileage-delete-btn', `data-id="${e.id}"`)}</div></div></td>`;
-					}
+					rows += '<td></td>';
 					rows += '</tr>';
 				});
 
@@ -9738,7 +9578,8 @@ async function loadMileageEntries() {
 				rows += `<td class="sp-num">$${mileageNumFmt(parseFloat(e.reimbursement_amount) || 0)}</td>`;
 				if (hasTrailer) rows += `<td class="sp-num">${trailerD > 0 ? '$' + mileageNumFmt(trailerD) : '—'}</td>`;
 				if (hasTolls) rows += `<td class="sp-num">${tollD > 0 ? '$' + mileageNumFmt(tollD) : '—'}</td>`;
-					// Status cell intentionally omitted - the first leg's rowspan status cell already covers this column for the whole day.
+				rows += `<td class="sp-m-status">${isPending ? '<span class="unique sp-status-badge sp-status-pending">Pending</span>' : '<span class="unique sp-status-badge sp-status-submitted">Final</span>'}`
+					+ `<div class="sp-mileage-row-actions">${iconBtn('edit', 'sp-mileage-edit-btn', `data-id="${e.id}"`)}${iconBtn('delete', 'sp-mileage-delete-btn', `data-id="${e.id}"`)}</div></td>`;
 				rows += '</tr>';
 
 				if (!legs.length) rows = `<tr><td>${formatDate(e.entry_date)}</td><td colspan="${colCount - 1}">—</td></tr>`;
@@ -9883,10 +9724,10 @@ async function showMileageForm(entryId = 0) {
 		endCharge, endToll, endTrailer,
 	} : null;
 
-	let html = '<div class="sp-card-header sp-header-grid sp-report-form-header">';
+	let html = '<div class="sp-header-grid sp-report-form-header">';
 	html += `<h3>${entryId ? 'Edit' : 'New'} Mileage Day</h3>`;
 	html += '</div>';
-	html += '<form id="sp-mileage-form" class="sp-card-body">';
+	html += '<form id="sp-mileage-form">';
 	html += `<input type="hidden" name="entry_id" value="${entryId || ''}">`;
 	html += '<div class="sp-mileage-form-top">';
 	html += '<div class="sp-form-group">';
@@ -9896,7 +9737,7 @@ async function showMileageForm(entryId = 0) {
 	html += '<label>Route</label>';
 	html += '<div class="sp-quickentry">';
 	html += '<input type="text" id="sp-mileage-quick" class="sp-input" placeholder="Quick add — type or speak stops, e.g. Carrollton, Garland, Burleson">';
-	html += '<button type="button" class="sp-btn sp-btn-ghost sp-msg-mic-btn unique" id="sp-mileage-mic" title="Speak stops" aria-label="Speak stops"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg></button>';
+	html += '<button type="button" class="unique sp-icon-btn sp-quickentry-mic" id="sp-mileage-mic" title="Speak stops" aria-label="Speak stops"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4M8 23h8"/></svg></button>';
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-quick-fill">Fill</button>';
 	html += '</div>';
 	html += '<div class="sp-quickentry-note" id="sp-mileage-quick-note" hidden></div>';
@@ -10095,10 +9936,10 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		} else {
 			html += `<input type="text" class="sp-input sp-combo-input sp-mileage-stop-purpose" list="sp-mileage-purpose-list" placeholder="Business purpose" value="${esc(purpose)}">`;
 		}
+		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on this leg — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-stop-trailer"${trailer ? ' checked' : ''}>Trailer</label>`;
 		html += '</div>';
-		html += `<label class="sp-mileage-trailer-toggle" title="Check if a trailer was pulled on this leg — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-stop-trailer"${trailer ? ' checked' : ''}><span class="sp-mileage-toll-name">Trailer</span></label>`;
 		if (stops.length > minMiddle) {
-			html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop" title="Remove stop">${ICON_DELETE}</button>`;
+			html += `<button type="button" class="unique sp-mileage-stop-remove" data-idx="${idx}" aria-label="Remove stop" title="Remove stop">&times;</button>`;
 		}
 		// Per-stop note on its own line beneath the row — e.g. who you met with. Hidden until the
 		// chosen purpose is flagged "Requires note" in settings (or an existing note is present).
@@ -10122,8 +9963,8 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		// The drive home is also charged to a store — required, same as the stops above.
 		html += `<select class="sp-select sp-mileage-charge sp-mileage-end-charge${endCharge === '' ? ' sp-charge-empty' : ''}" title="Charge the drive home to a store">${mileageChargeOptionsHtml(endCharge)}</select>`;
 		html += '<div class="sp-mileage-stop-purpose-cell sp-mileage-end-extras">';
+		html += `<label class="sp-mileage-toll-toggle unique" title="Check if a trailer was pulled on the drive home — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-end-trailer"${endTrailer ? ' checked' : ''}>Trailer</label>`;
 		html += '</div>';
-		html += `<label class="sp-mileage-trailer-toggle" title="Check if a trailer was pulled on the drive home — the extra trailer rate per mile is added."><input type="checkbox" class="sp-mileage-end-trailer"${endTrailer ? ' checked' : ''}><span class="sp-mileage-toll-name">Trailer</span></label>`;
 		html += '</div>';
 	}
 
@@ -10533,7 +10374,7 @@ function showEditLocationModal(loc, onSaved) {
 			<div class="sp-modal-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-editloc-save">Save</button>
 				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-editloc-cancel">Cancel</button>
-				<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete" id="sp-editloc-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>
+				<button type="button" class="unique sp-icon-btn sp-icon-delete" id="sp-editloc-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>
 			</div>
 		</div>
 	`;
@@ -11956,31 +11797,26 @@ function showVexpForm(x) {
 
 	wrap.innerHTML = `
 		<div class="sp-card sp-vexp-form">
-			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Vehicle Expense</h3></div>
-			<div class="sp-card-body">
-			<div class="sp-receipt-row sp-card-item">
+			<h3 style="margin:0 0 12px;">${x ? 'Edit' : 'Add'} Vehicle Expense</h3>
+			<div class="sp-receipt-row">
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
-					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-vexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-					<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'B', x ? x.category : 'fuel')}</select></div>
-					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-vexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
-				</div>
-				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-vexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Shell — fuel"></div>
+			<div class="sp-vexp-form-grid">
+				<div class="sp-form-group"><label>Date</label><input type="date" id="sp-vexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
+				<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'B', x ? x.category : 'fuel')}</select></div>
+				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-vexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
+			<div class="sp-form-group"><label>Description</label><input type="text" id="sp-vexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Shell — fuel"></div>
+			<div class="sp-vexp-form-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-vexp-save">Save</button>
 				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-vexp-cancel">Cancel</button>
 			</div>
-			</div>
 		</div>`;
 	wrap.hidden = false;
-	setExpenseChrome('vexp', true);
 	markUniqueSpans(wrap);
 
 	// Receipt scan → fill the fields (reusable across expense modules).
@@ -12000,17 +11836,7 @@ function showVexpForm(x) {
 function hideVexpForm() {
 	const wrap = $('#sp-vexp-form-wrap');
 	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
-	setExpenseChrome('vexp', false);
 	_spVexp.editId = 0;
-}
-
-/* Show the add/edit expense form as its own screen (like the Mileage "Add a Day" flow) by hiding the
-   panel's list chrome — summary, period toolbar, intro, list and the Add button — while the form is
-   open, then restoring them on close. Same id pattern across vexp / meal / shop / oexp panels. */
-function setExpenseChrome(prefix, hidden) {
-	['#sp-' + prefix + '-add-btn', '#sp-' + prefix + '-summary', '#sp-' + prefix + '-toolbar-wrap', '#sp-' + prefix + '-content']
-		.forEach(sel => $(sel)?.classList.toggle('sp-hidden', hidden));
-	$('.sp-' + prefix + '-intro')?.closest('.sp-meta-bar')?.classList.toggle('sp-hidden', hidden);
 }
 
 async function saveVexp() {
@@ -12139,34 +11965,29 @@ function showMealForm(x) {
 
 	wrap.innerHTML = `
 		<div class="sp-card sp-vexp-form">
-			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Business Meal</h3></div>
-			<div class="sp-card-body">
-			<div class="sp-receipt-row sp-card-item">
+			<h3 style="margin:0 0 12px;">${x ? 'Edit' : 'Add'} Business Meal</h3>
+			<div class="sp-receipt-row">
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
-					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-meal-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-					<div class="sp-form-group"><label>Place</label><input type="text" id="sp-meal-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / venue"></div>
-					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-meal-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
-				</div>
-				<div class="sp-form-group"><label>Category</label><select id="sp-meal-move" class="sp-select">${spExpDestOptions(x ? x.section : 'C', x ? x.category : 'meals')}</select></div>
-				<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
-				<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended"></div>
-				<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-meal-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+			<div class="sp-vexp-form-grid">
+				<div class="sp-form-group"><label>Date</label><input type="date" id="sp-meal-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
+				<div class="sp-form-group"><label>Place</label><input type="text" id="sp-meal-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / venue"></div>
+				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-meal-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
+			<div class="sp-form-group"><label>Category</label><select id="sp-meal-move" class="sp-select">${spExpDestOptions(x ? x.section : 'C', x ? x.category : 'meals')}</select></div>
+					<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
+			<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended"></div>
+			<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-meal-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+			<div class="sp-vexp-form-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-meal-save">Save</button>
 				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-meal-cancel">Cancel</button>
 			</div>
-			</div>
 		</div>`;
 	wrap.hidden = false;
-	setExpenseChrome('meal', true);
 	markUniqueSpans(wrap);
 
 	// Receipt scan → fills Date, Amount and Place (restaurant). Purpose + attendees stay manual.
@@ -12185,7 +12006,6 @@ function showMealForm(x) {
 function hideMealForm() {
 	const wrap = $('#sp-meal-form-wrap');
 	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
-	setExpenseChrome('meal', false);
 	_spMeal.editId = 0;
 }
 
@@ -12318,33 +12138,28 @@ function showShopForm(x) {
 
 	wrap.innerHTML = `
 		<div class="sp-card sp-vexp-form">
-			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Competitive Shopping Visit</h3></div>
-			<div class="sp-card-body">
-			<div class="sp-receipt-row sp-card-item">
+			<h3 style="margin:0 0 12px;">${x ? 'Edit' : 'Add'} Competitive Shopping Visit</h3>
+			<div class="sp-receipt-row">
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
-					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-shop-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-					<div class="sp-form-group"><label>Place</label><input type="text" id="sp-shop-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / place shopped"></div>
-					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-shop-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
-				</div>
-				<div class="sp-form-group"><label>Category</label><select id="sp-shop-move" class="sp-select">${spExpDestOptions(x ? x.section : 'D', x ? x.category : 'shopping')}</select></div>
-				<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-shop-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Menu/pricing research"></div>
-				<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-shop-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+			<div class="sp-vexp-form-grid">
+				<div class="sp-form-group"><label>Date</label><input type="date" id="sp-shop-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
+				<div class="sp-form-group"><label>Place</label><input type="text" id="sp-shop-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / place shopped"></div>
+				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-shop-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
+			<div class="sp-form-group"><label>Category</label><select id="sp-shop-move" class="sp-select">${spExpDestOptions(x ? x.section : 'D', x ? x.category : 'shopping')}</select></div>
+					<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-shop-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Menu/pricing research"></div>
+			<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-shop-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+			<div class="sp-vexp-form-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-shop-save">Save</button>
 				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-shop-cancel">Cancel</button>
 			</div>
-			</div>
 		</div>`;
 	wrap.hidden = false;
-	setExpenseChrome('shop', true);
 	markUniqueSpans(wrap);
 
 	// Receipt scan → fills Date, Amount and Place. Business purpose stays manual.
@@ -12363,7 +12178,6 @@ function showShopForm(x) {
 function hideShopForm() {
 	const wrap = $('#sp-shop-form-wrap');
 	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
-	setExpenseChrome('shop', false);
 	_spShop.editId = 0;
 }
 
@@ -12496,33 +12310,28 @@ function showOexpForm(x) {
 
 	wrap.innerHTML = `
 		<div class="sp-card sp-vexp-form">
-			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Other Expense</h3></div>
-			<div class="sp-card-body">
-			<div class="sp-receipt-row sp-card-item">
+			<h3 style="margin:0 0 12px;">${x ? 'Edit' : 'Add'} Other Expense</h3>
+			<div class="sp-receipt-row">
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
-					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-oexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-					<div class="sp-form-group"><label>Account</label><input type="text" id="sp-oexp-account" class="sp-input" value="${esc(x ? (x.account_code || '') : '')}" placeholder="GL account #"></div>
-					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-oexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
-				</div>
-				<div class="sp-form-group"><label>Category</label><select id="sp-oexp-move" class="sp-select">${spExpDestOptions(x ? x.section : 'E', x ? x.category : '')}</select></div>
-				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
-				<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-oexp-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+			<div class="sp-vexp-form-grid">
+				<div class="sp-form-group"><label>Date</label><input type="date" id="sp-oexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
+				<div class="sp-form-group"><label>Account</label><input type="text" id="sp-oexp-account" class="sp-input" value="${esc(x ? (x.account_code || '') : '')}" placeholder="GL account #"></div>
+				<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-oexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
+			<div class="sp-form-group"><label>Category</label><select id="sp-oexp-move" class="sp-select">${spExpDestOptions(x ? x.section : 'E', x ? x.category : '')}</select></div>
+				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
+			<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-oexp-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+			<div class="sp-vexp-form-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-oexp-save">Save</button>
 				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-oexp-cancel">Cancel</button>
 			</div>
-			</div>
 		</div>`;
 	wrap.hidden = false;
-	setExpenseChrome('oexp', true);
 	markUniqueSpans(wrap);
 
 	// Receipt scan → fills Date, Amount and Description. The GL account stays manual.
@@ -12541,7 +12350,6 @@ function showOexpForm(x) {
 function hideOexpForm() {
 	const wrap = $('#sp-oexp-form-wrap');
 	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
-	setExpenseChrome('oexp', false);
 	_spOexp.editId = 0;
 }
 
@@ -12643,7 +12451,7 @@ function renderExpenseReport(data) {
 	let html = '';
 
 	// --- Report header (Payee / Period / Week Ending / Home Base) ---
-	const headField = (l, v) => `<div class="sp-tile sp-rep-field"><div class="sp-rep-text"><div class="sp-tile-label sp-rep-field-label">${l}</div><div class="sp-tile-value sp-rep-field-value">${esc(v || '—')}</div></div></div>`;
+	const headField = (l, v) => `<div class="sp-rep-field"><span class="sp-rep-field-label">${l}</span><span class="sp-rep-field-val">${esc(v || '—')}</span></div>`;
 	html += '<div class="sp-rep-head">';
 	html += `<div class="sp-rep-head-title">${esc(data.company_name || data.app_name || 'Expense Report')}</div>`;
 	html += '<div class="sp-rep-head-grid">';
@@ -13300,7 +13108,7 @@ async function loadAdminMileage() {
 		const approved = locs.filter(l => l.status === 'approved');
 
 		// Each settings segment sits in its own card (matches the report-template cards).
-		const card = (title, actions = '') => `<div class="sp-card sp-settings-card"><div class="sp-card-header sp-header sp-settings-card-header"><h3>${title}</h3>${actions ? `<div class="sp-settings-card-actions">${actions}</div>` : ''}</div><div class="sp-settings-card-body">`;
+		const card = (title, actions = '') => `<div class="sp-card sp-settings-card"><div class="sp-header sp-settings-card-header"><h3>${title}</h3>${actions ? `<div class="sp-settings-card-actions">${actions}</div>` : ''}</div><div class="sp-settings-card-body">`;
 		const cardEnd = '</div></div>';
 
 		// Each settings segment is built into its own variable, then assembled in the admin's

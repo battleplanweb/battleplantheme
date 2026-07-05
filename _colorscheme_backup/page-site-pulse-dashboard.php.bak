@@ -473,8 +473,8 @@ $sp_l_hidden = ( is_array( $sp_layout ) && ! empty( $sp_layout['hidden'] ) ) ? a
 // Shared widget header: drag handle + title + optional "View All" + remove button.
 $sp_widget_head = function ( $title, $link_btn, $id, $icon = '' ) use ( $svg, $icons ) {
 	$icon_html = ( $icon && isset( $icons[ $icon ] ) ) ? $svg( $icons[ $icon ] ) : '';
-	return '<div class="sp-card-header sp-widget-header">'
-		. '<span class="sp-card-drag sp-widget-drag" title="Drag to reorder" aria-label="Drag to reorder">&#9776;</span>'
+	return '<div class="sp-widget-header">'
+		. '<span class="sp-widget-drag" title="Drag to reorder" aria-label="Drag to reorder">&#9776;</span>'
 		. '<h3>' . $icon_html . esc_html( $title ) . '</h3>'
 		. '<div class="sp-widget-head-actions">'
 		. $link_btn
@@ -499,7 +499,7 @@ if ( $sp_news_on && $sp_alert_kw !== '' ) {
 		'title' => 'In the News',
 		'full'  => true,
 		'html'  => $sp_widget_head( 'In the News', '', 'alerts', 'chart' )
-			. '<div class="sp-card-body sp-widget-body sp-alert-feed-body">' . $sp_alert_body . '</div>',
+			. '<div class="sp-widget-body sp-alert-feed-body">' . $sp_alert_body . '</div>',
 	];
 }
 
@@ -507,14 +507,14 @@ if ( $sp_news_on && $sp_alert_kw !== '' ) {
 $sp_widgets['chat'] = [
 	'title' => 'Chat',
 	'html'  => $sp_widget_head( 'Chat', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="messages">View All &rarr;</button>', 'chat', 'chat' )
-		. '<div class="sp-card-body sp-widget-body" id="sp-widget-chat-body"><div class="sp-loading"></div></div>',
+		. '<div class="sp-widget-body" id="sp-widget-chat-body"><div class="sp-loading"></div></div>',
 ];
 
 // My Action Items — the viewer's own OPEN items. Always (matches the Action Items tab, shown to everyone).
 $sp_widgets['actions'] = [
 	'title' => 'My Action Items',
 	'html'  => $sp_widget_head( 'My Action Items', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="action-items">View All &rarr;</button>', 'actions', 'tasks' )
-		. '<div class="sp-card-body sp-widget-body" id="sp-widget-actions-body"><div class="sp-loading"></div></div>',
+		. '<div class="sp-widget-body" id="sp-widget-actions-body"><div class="sp-loading"></div></div>',
 ];
 
 // My Recent Reports — the viewer's own reports. Needs reports access; off by default for anyone who
@@ -524,7 +524,7 @@ if ( $cap_reports_access ) {
 		'title'          => 'My Recent Reports',
 		'default_hidden' => ! in_array( 'submit_reports', $caps, true ),
 		'html'           => $sp_widget_head( 'My Recent Reports', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="reports-my">View All &rarr;</button>', 'reports', 'file' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-reports-body"><div class="sp-loading"></div></div>',
+			. '<div class="sp-widget-body" id="sp-widget-reports-body"><div class="sp-loading"></div></div>',
 	];
 }
 
@@ -536,7 +536,7 @@ if ( site_pulse_user_sees_pastdue_widget( site_pulse_effective_user_id() ) ) {
 		'title'          => 'Past-Due Reports',
 		'default_hidden' => true,
 		'html'           => $sp_widget_head( 'Past-Due Reports', '', 'pastdue', 'clipboard' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-pastdue-body"><div class="sp-loading"></div></div>',
+			. '<div class="sp-widget-body" id="sp-widget-pastdue-body"><div class="sp-loading"></div></div>',
 	];
 }
 
@@ -545,7 +545,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$sp_widgets['mileage'] = [
 		'title' => 'My Mileage This Month',
 		'html'  => $sp_widget_head( 'My Mileage This Month', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="mileage">View All &rarr;</button>', 'mileage', 'car' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-mileage-body"><div class="sp-loading"></div></div>',
+			. '<div class="sp-widget-body" id="sp-widget-mileage-body"><div class="sp-loading"></div></div>',
 	];
 }
 
@@ -556,7 +556,7 @@ if ( $cap_reviews_area || $cap_surveys_area || $cap_cm_area || $cap_emails_area 
 		'title'          => 'Customer Feedback',
 		'default_hidden' => true,
 		'html'           => $sp_widget_head( 'Customer Feedback', '', 'feedback', 'star' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-feedback-body"><div class="sp-loading"></div></div>',
+			. '<div class="sp-widget-body" id="sp-widget-feedback-body"><div class="sp-loading"></div></div>',
 	];
 }
 
@@ -567,7 +567,7 @@ if ( $cap_directory ) {
 		'title'          => 'Company Directory',
 		'default_hidden' => true,
 		'html'           => $sp_widget_head( 'Company Directory', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="directory">Open &rarr;</button>', 'directory', 'users' )
-			. '<div class="sp-card-body sp-widget-body">'
+			. '<div class="sp-widget-body">'
 			.   '<div class="sp-widgetdir-filters">'
 			.     '<select id="sp-dashw-dir-brand" class="sp-select"><option value="">All brands</option></select>'
 			.     '<select id="sp-dashw-dir-location" class="sp-select"><option value="">All locations</option></select>'
@@ -603,7 +603,7 @@ foreach ( $sp_order as $id ) {
 	// widgets — and future ones — start in the "Add" picker rather than on the dashboard).
 	$is_hidden = in_array( $id, $sp_l_hidden, true )
 		|| ( ! empty( $w['default_hidden'] ) && ! in_array( $id, $sp_l_order, true ) );
-	$printPage .= '<div class="sp-card sp-widget' . ( $is_full ? ' sp-widget-full' : '' ) . '" id="sp-widget-' . esc_attr( $id ) . '" data-widget="' . esc_attr( $id ) . '"' . ( $is_hidden ? ' hidden' : '' ) . '>';
+	$printPage .= '<div class="sp-widget' . ( $is_full ? ' sp-widget-full' : '' ) . '" id="sp-widget-' . esc_attr( $id ) . '" data-widget="' . esc_attr( $id ) . '"' . ( $is_hidden ? ' hidden' : '' ) . '>';
 	$printPage .=   $w['html'];
 	$printPage .= '</div>';
 }
@@ -616,8 +616,8 @@ $printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Chat</h2>';
 $printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-btn">+ New Message</button>';
 $printPage .=   '</div>';
 $printPage .=   '<div class="sp-messenger" id="sp-messenger">';
-$printPage .=     '<div class="sp-card sp-msg-list" id="sp-msg-list"></div>';
-$printPage .=     '<div class="sp-card sp-msg-thread" id="sp-msg-thread"></div>';
+$printPage .=     '<div class="sp-msg-list" id="sp-msg-list"></div>';
+$printPage .=     '<div class="sp-msg-thread" id="sp-msg-thread"></div>';
 $printPage .=   '</div>';
 $printPage .= '</section>';
 
@@ -636,8 +636,8 @@ if ( in_array( 'submit_reports', $caps ) ) {
 	$printPage .=     '<input type="date" id="sp-filter-date-end" class="sp-input" placeholder="To"></div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-reports-list" id="sp-reports-list"></div>';
-	$printPage .=   '<div class="sp-card sp-report-form-wrap" id="sp-report-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-card sp-report-detail-wrap" id="sp-report-detail-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-report-form-wrap" id="sp-report-form-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-report-detail-wrap" id="sp-report-detail-wrap" hidden></div>';
 	$printPage .= '</section>';
 }
 
@@ -651,7 +651,7 @@ if ( $cap_view_other_reports ) {
 	$printPage .=     '<input type="date" id="sp-review-filter-end" class="sp-input" placeholder="To"></div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-reports-list" id="sp-review-list"></div>';
-	$printPage .=   '<div class="sp-card sp-report-detail-wrap" id="sp-review-detail-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-report-detail-wrap" id="sp-review-detail-wrap" hidden></div>';
 	$printPage .= '</section>';
 }
 
@@ -773,7 +773,7 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	// each with a 1-5 distribution bar chart; the dropdown toggles which question is shown.
 	if ( in_array( 'view_surveys', $caps ) ) {
 		$printPage .=   '<div class="sp-card sp-analytics-card" id="sp-analytics-surveys">';
-		$printPage .=     '<div class="sp-card-header sp-header sp-analytics-card-head">';
+		$printPage .=     '<div class="sp-header sp-analytics-card-head">';
 		$printPage .=       '<h4>Comment Card Results by Location</h4>';
 		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-analytics-survey-link">View Comment Cards</button>';
 		$printPage .=     '</div>';
@@ -842,6 +842,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-mileage-summary" id="sp-mileage-summary"></div>';
 	$printPage .=   '<div class="sp-toolbar sp-period-toolbar" id="sp-mileage-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Period</span>';
 	$printPage .=     '<div class="sp-mileage-period-controls">';
 	$printPage .=       '<div class="sp-toolbar-group sp-mileage-quickranges">';
 	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-range" data-range="period" id="sp-mileage-range-period">This Period</button>';
@@ -863,9 +864,9 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-btn">+ Add a Day</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-mileage-intro">Log each day\'s business trips — your route &amp; miles are calculated for you. These feed Section A of your expense report.</div></div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-mileage-intro">Log each day\'s business trips — your route, miles and tolls are calculated for you. These feed Section A of your expense report.</div></div>';
 	$printPage .=   '<div class="sp-mileage-list" id="sp-mileage-list"></div>';
-	$printPage .=   '<div class="sp-card sp-mileage-form-wrap" id="sp-mileage-form-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-mileage-form-wrap" id="sp-mileage-form-wrap" hidden></div>';
 	$printPage .= '</section>';
 }
 
@@ -891,6 +892,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-map">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Mileage Map' ) . '</div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-mileage-map-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
 	$printPage .=       '<select id="sp-mileage-map-category" class="sp-select"><option value="">All categories</option></select>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-map-fit">Fit All</button>';
@@ -997,6 +999,7 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-reviews-stats" id="sp-reviews-stats"></div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-reviews-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
 	$printPage .=       '<select id="sp-reviews-filter-stars" class="sp-select">';
 	$printPage .=         '<option value="">All ratings</option>';
@@ -1051,6 +1054,7 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-agency-reviews-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
 	$printPage .=       '<input type="search" id="sp-agency-client-search" class="sp-input" list="sp-agency-client-list" placeholder="Search company…" autocomplete="off">';
 	$printPage .=       '<datalist id="sp-agency-client-list"></datalist>';
@@ -1096,6 +1100,7 @@ if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) 
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-survey-summary" id="sp-survey-summary"></div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-survey-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
 	$printPage .=       '<input type="search" id="sp-survey-search" class="sp-input sp-survey-search" placeholder="Search name, phone, or address…">';
 	$printPage .=       '<select id="sp-survey-filter-location" class="sp-select"><option value="">All locations</option></select>';
@@ -1117,15 +1122,14 @@ if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) 
 if ( $cap_emails_area ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-emails">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Emails' ) . '</div>';
-	$printPage .=   '<div class="sp-toolbar sp-emails-toolbar">';
+	$printPage .=   '<div class="sp-toolbar">';
+	$printPage .=     '<span class="sp-toolbar-label">Filter</span>';
 	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-emails-search" class="sp-input" placeholder="Search name, email, phone, or message…">';
 	$printPage .=       '<select id="sp-emails-filter-status" class="sp-select"><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
 	$printPage .=       '<select id="sp-emails-filter-category" class="sp-select"><option value="">All types</option></select>';
 	$printPage .=       '<select id="sp-emails-filter-brand" class="sp-select"><option value="">All brands</option></select>';
 	$printPage .=       '<select id="sp-emails-filter-location" class="sp-select"><option value="">All locations</option></select>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group sp-emails-search-group">';
-	$printPage .=       '<input type="search" id="sp-emails-search" class="sp-input" placeholder="Search name, email, phone, or message…">';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-emails-count" id="sp-emails-count"></div>';
@@ -1139,8 +1143,8 @@ if ( $cap_cm_area ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-customer-messages">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Direct Messages' ) . '</div>';
 	$printPage .=   '<div class="sp-messenger" id="sp-cm-messenger">';
-	$printPage .=     '<div class="sp-card sp-msg-list" id="sp-cm-list"><div class="sp-loading"></div></div>';
-	$printPage .=     '<div class="sp-card sp-msg-thread" id="sp-cm-thread"></div>';
+	$printPage .=     '<div class="sp-msg-list" id="sp-cm-list"><div class="sp-loading"></div></div>';
+	$printPage .=     '<div class="sp-msg-thread" id="sp-cm-thread"></div>';
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -1163,7 +1167,7 @@ if ( $cap_directory ) {
 	$printPage .=     '<h2>Directory</h2>';
 	if ( $cap_directory_manage ) {
 		$printPage .=   '<div class="sp-reviews-actions">';
-		$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dir-add-btn">+ Add Employee</button>';
+		$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dir-add-btn">Add Employee</button>';
 		$printPage .=   '</div>';
 	}
 	$printPage .=   '</div>';

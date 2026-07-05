@@ -95,5 +95,30 @@ function battleplan_clear_wpe_cache_ajax() {
 		$results[] = 'CF: not configured';
 	}
 
+	// Compiled CSS — wipe the child theme's /dist folder so style-site.css recompiles
+	// fresh on the next front-end pageload (rebuild is content-hash-gated via dist/*.sig).
+	$dist = get_stylesheet_directory() . '/dist';
+	if ( is_dir( $dist ) ) {
+		$removed = bp_rrmdir( $dist );
+		$results[] = $removed ? 'dist: deleted' : 'dist: delete failed';
+	} else {
+		$results[] = 'dist: none';
+	}
+
 	wp_send_json_success( array( 'message' => implode( ' · ', $results ) ) );
-} 
+}
+
+// Recursively delete a directory and everything inside it. Returns true on full removal.
+function bp_rrmdir( $dir ) {
+	if ( ! is_dir( $dir ) ) return false;
+	$items = array_diff( scandir( $dir ), array( '.', '..' ) );
+	foreach ( $items as $item ) {
+		$path = $dir . DIRECTORY_SEPARATOR . $item;
+		if ( is_dir( $path ) && ! is_link( $path ) ) {
+			bp_rrmdir( $path );
+		} else {
+			@unlink( $path );
+		}
+	}
+	return @rmdir( $dir );
+}

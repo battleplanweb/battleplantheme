@@ -122,6 +122,11 @@ function battleplan_admin_menu() {
 		add_submenu_page( 'index.php',	'Site Audit',          		'Audit <div class="admin-note">'.$auditTime.'</div>',        	'manage_options', 	 'site-audit',      		 'battleplan_site_audit' );
 		add_submenu_page( 'index.php',	'⚙️ Run Audit',       		'&nbsp;└&nbsp;Run Audit',      										'manage_options', 	'run-audit',         		'battleplan_force_run_audit' );
 	endif;
+
+	// Site Pulse — link straight to the front-end dashboard, only when the module is installed on this site
+	if ( bp_module_on( get_option('site_pulse') ) ) {
+		add_menu_page( 'Site Pulse', 'Site Pulse', 'read', esc_url( home_url('/site-pulse-dashboard/') ), '', 'dashicons-chart-line', 3 );
+	}
 }
 
 // Menu registration

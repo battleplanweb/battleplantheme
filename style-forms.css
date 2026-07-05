@@ -36,7 +36,7 @@ fieldset.hidden-fields-container {
 .bp-form form .flex,
 .bp-form form > .form-input {
 	grid-column:                                               1 / -1;
-	gap:                                                       var(--measure-base);
+	gap:                                                       14px;
 	padding:                                                   0 !important;
 }
 
@@ -68,6 +68,7 @@ label {
 	font-family:                                               var(--font-text);
 	font-weight:                                               bold;
 	text-align:                                                right;
+	font-size:                                                 calc(var(--font-size-text) * 0.9);
 }
 
 #secondary .bp-form form.width-full {
@@ -111,6 +112,57 @@ body.form-stacked .bp-form form label,
 	align-self:                                                start;
 }
 
+
+/*--------------------------------------------------------------
+# Floating labels — THE DEFAULT
+# Labels sit INSIDE the field (placeholder-style), then float up
+# above it on focus / when filled. Modern "material" look.
+# To revert a form to old-style labels OUTSIDE the field, add the
+# `form-label-outside` class on the body, the .bp-form wrapper, or
+# an individual .form-input — float simply won't apply there, so the
+# base grid + formLabelWidth() JS produce the classic aligned labels.
+--------------------------------------------------------------*/
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) {
+	position:                                                  relative;
+	grid-template-columns:                                     1fr !important;   /* override the inline label column set by formLabelWidth() */
+}
+
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) > label {
+	position:                                                  absolute;
+	top:                                                       0.5em;
+	left:                                                      0.55em;
+	right:                                                     0.85em;
+	margin:                                                    0;
+	padding:                                                   0 0.3em;
+	font-weight:                                               bold;
+	text-align:                                                left !important;
+	color:                                                     var(--input-color);
+	background:                                                transparent;
+	white-space:                                               nowrap;
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+	pointer-events:                                            none;
+	transform-origin:                                          left center;
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+	font-size:                                                 calc(var(--font-size-text) * 0.8);
+}
+
+/* Float up: on focus, when the field holds a value, or for selects (always) */
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):focus-within > label,
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(.bp-control:not(:placeholder-shown)) > label,
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(select) > label {
+	top:                                                       0;
+	transform:                                                 translateY(-50%) scale(0.8);
+	color:                                                     var(--input-color-focus);
+	background:                                                var(--input-background-focus);
+	width:                                                     max-content;
+	border-radius:                                             4px;
+	max-width:                                                 calc(100% - 1em);
+}
+
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) :is(input, textarea) {
+	--input-padding:                                           6px 7px 0px;
+}
 
 /*--------------------------------------------------------------
 # Inputs — Private Custom Properties
@@ -378,8 +430,7 @@ input[type=number] {
 	font-family:                                               var(--font-text);
 	font-size:                                                 14px;
 	color:                                                     var(--warning);
-	margin-left:                                               5px;
-	transform:                                                 translateY(-35%);
+	transform:                                                 translate(3px, -5px);
 }
 
 .width-none .required::after {

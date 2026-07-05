@@ -475,12 +475,36 @@ function bp_reviews_send_daily_digest() {
 	];
 	$note = $notes[ array_rand($notes) ];
 
-	$subject = sprintf( 'You got %d new %s on your website!', $count, _n('review','reviews',$count) );
+	// Opening line — randomized greeting + section + phrasing so every email reads a little differently.
+	$greetings = [ 'Good morning!', 'Hello!', 'Hey there!', 'Good news!' ];
+	$sections  = [ '&ldquo;What Our Customers Say&rdquo; scroller', 'reviews section', 'Testimonials page' ];
+	$greeting  = $greetings[ array_rand($greetings) ];
+	$section   = $sections[ array_rand($sections) ];
+
+	$one = ( $count === 1 );
+	$intros = [
+		$greeting . ' We have added ' . ( $one ? 'a recent review' : 'some recent reviews' ) . ' to the ' . $section . ' on your website.',
+		$greeting . ' Found ' . ( $one ? 'a new customer review, and we&rsquo;ve added it' : 'some new customer reviews, and we&rsquo;ve added them' ) . ' to the ' . $section . ' of your website.',
+		$greeting . ' Some new customer feedback is in. We added the following to the ' . $section . ' of your website.',
+	];
+	$intro = $intros[ array_rand($intros) ];
+
+	// Subject — randomized + count-aware, same spirit as the body.
+	$reviews_word = _n('review','reviews',$count);
+	$subjects = [
+		sprintf( 'You got %d new %s on your website!', $count, $reviews_word ),
+		sprintf( '%d new customer %s just went live!', $count, $reviews_word ),
+		sprintf( '%s on your website', $one ? 'A fresh review is up' : $count . ' fresh reviews are up' ),
+		sprintf( '%s for your business', $one ? 'New customer feedback' : $count . ' new customer reviews' ),
+		$one ? 'A happy customer left you a review!' : sprintf( '%d happy customers left you reviews!', $count ),
+	];
+	$subject = $subjects[ array_rand($subjects) ];
 
 	$message  = '<div style="max-width:600px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;">';
-	$message .= '<p style="font-size:16px;">We\'ve added the following ' . _n('review','reviews',$count) . ' to your website!</p>';
+	$message .= '<p style="font-size:16px;">' . $intro . '</p>';
+	// Encouragement sits ABOVE the cards so it isn't missed if the reader never scrolls down.
+	$message .= '<p style="font-size:15px;font-weight:bold;color:#1a7f37;margin:0 0 22px;">' . $note . '</p>';
 	$message .= $cards;
-	$message .= '<p style="font-size:15px;font-weight:bold;color:#1a7f37;margin-top:22px;">' . $note . '</p>';
 	$message .= '</div>';
 
 	$headers   = [];

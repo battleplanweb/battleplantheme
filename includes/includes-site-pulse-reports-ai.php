@@ -67,7 +67,8 @@ function sp_reports_build_text( array $report ): string {
 		: '';
 	$author = get_userdata( (int) $report['user_id'] );
 
-	$out  = "Report type: {$type} bi-weekly\n";
+	$freq_lbl = function_exists( 'site_pulse_frequency_label' ) ? site_pulse_frequency_label( site_pulse_get_setting( $type . '_report_frequency', '' ) ) : '';
+	$out  = 'Report type: ' . $type . ( $freq_lbl !== '' ? ' (' . strtolower( $freq_lbl ) . ')' : '' ) . "\n";
 	if ( $loc )    $out .= "Location: {$loc}\n";
 	if ( $author ) $out .= 'Author: ' . $author->display_name . "\n";
 	$out .= 'Period: ' . $report['report_period_start'] . ' to ' . $report['report_period_end'] . "\n\n";
@@ -209,7 +210,7 @@ function sp_reports_digest_cron(): void {
 add_action( 'wp_ajax_site_pulse_reports_digest_batch', 'site_pulse_ajax_reports_digest_batch' );
 function site_pulse_ajax_reports_digest_batch(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_is_god( get_current_user_id() ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	$res = sp_reports_digest_batch( 20 );
 	if ( $res['error'] && 0 === $res['done'] ) wp_send_json_error( [ 'message' => $res['error'] ] );
@@ -224,7 +225,7 @@ function site_pulse_ajax_reports_digest_batch(): void {
 add_action( 'wp_ajax_site_pulse_reports_search', 'site_pulse_ajax_reports_search' );
 function site_pulse_ajax_reports_search(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_is_god( get_current_user_id() ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	global $wpdb;
 	$rt = sp_reports_table();
@@ -326,7 +327,7 @@ function sp_reports_digest_block( array $row ): string {
 add_action( 'wp_ajax_site_pulse_reports_ask', 'site_pulse_ajax_reports_ask' );
 function site_pulse_ajax_reports_ask(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_is_god( get_current_user_id() ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	if ( ! site_pulse_get_api_key() ) wp_send_json_error( [ 'message' => 'No AI API key configured.' ] );
 
 	$question = trim( sanitize_textarea_field( wp_unslash( $_POST['q'] ?? '' ) ) );

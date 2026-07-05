@@ -30,7 +30,8 @@ function sp_agency_is_hub(): bool {
 
 function sp_agency_can_manage(): bool {
 	$user_id = site_pulse_effective_user_id();
-	return site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( get_current_user_id() );
+	// Effective-user god check so "view as" a non-manage role correctly drops agency manage access.
+	return site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( $user_id );
 }
 
 /* per-location cache lives in the SP config table, keyed by the Google location string */
@@ -242,7 +243,8 @@ function site_pulse_ajax_agency_generate_reply(): void {
 		'store'       => $label,
 	];
 
-	$reply = sp_reviews_generate_reply( $row );
+	$guidance = sanitize_textarea_field( wp_unslash( $_POST['guidance'] ?? '' ) );
+	$reply    = sp_reviews_generate_reply( $row, $guidance );
 	if ( is_wp_error( $reply ) ) wp_send_json_error( [ 'message' => $reply->get_error_message() ] );
 
 	wp_send_json_success( [ 'reply' => $reply ] );

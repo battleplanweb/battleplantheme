@@ -181,6 +181,18 @@ class BPGBP_Hub {
 			)
 		);
 
+		// Client sites read their own Facebook Page follower count (resolved from the site's registry
+		// facebook_page_id, fetched via the FB hub on this same install). Same per-site HMAC.
+		register_rest_route(
+			self::NS,
+			'/followers',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'handle_followers' ),
+				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
+			)
+		);
+
 		// Client sites read their own location's reviews. Per-site HMAC; a GET has an
 		// empty body, so the client signs hash_hmac(sha256, timestamp . '.' . '', secret).
 		register_rest_route(
@@ -363,6 +375,20 @@ class BPGBP_Hub {
 			),
 			200
 		);
+	}
+
+	/* ───────────────────────── GET bpgbp/v1/followers ─────────────────────────
+	 * The calling site's Facebook Page follower count, resolved from its registry facebook_page_id and
+	 * fetched via the FB hub (BPFB_Hub) on this same install. Returns null when the site has no Page mapped
+	 * or the FB hub isn't active — the client then just shows the plain "Follow us on Facebook" copy. */
+	public static function handle_followers( WP_REST_Request $request ) {
+		$sites    = self::get_sites();
+		$site_key = $request->get_param( '_bpgbp_site_key' );
+		$page_id  = (string) ( $sites[ $site_key ]['facebook_page_id'] ?? '' );
+
+		$count = ( '' !== $page_id && class_exists( 'BPFB_Hub' ) ) ? BPFB_Hub::followers_count( $page_id ) : null;
+
+		return new WP_REST_Response( array( 'ok' => true, 'followers_count' => $count ), 200 );
 	}
 
 	/* ───────────────────────── GET bpgbp/v1/reviews ───────────────────────── */
@@ -959,9 +985,24 @@ function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
 		}
 	}
 
-	$file   = array( 'name' => 'review-' . $post_id . '.' . $final_ext, 'tmp_name' => $final_path );
-	$att_id = media_handle_sideload( $file, $post_id, '' );
+	// Name the file + attachment after the reviewer (the testimonial's title), so the Media Library shows a
+	// real name instead of an untitled placeholder, and the alt text is meaningful. Raw post_title (no filters).
+	$reviewer = trim( (string) get_post_field( 'post_title', $post_id ) );
+	$basename = '' !== $reviewer ? sanitize_title( $reviewer ) : ( 'review-' . $post_id );
+
+	$file   = array( 'name' => $basename . '.' . $final_ext, 'tmp_name' => $final_path );
+	$att_id = media_handle_sideload(
+		$file,
+		$post_id,
+		null,                                                        // let the title come from post_data, not $desc
+		'' !== $reviewer ? array( 'post_title' => $reviewer ) : array()
+	);
 	if ( is_wp_error( $att_id ) ) { @unlink( $final_path ); return 'error-sideload'; }
+
+	if ( '' !== $reviewer ) update_post_meta( (int) $att_id, '_wp_attachment_image_alt', $reviewer );
+
+	// File it under the "Testimonial" media category (image-categories taxonomy), like Jobsite GEO photos.
+	wp_set_object_terms( (int) $att_id, 'Testimonial', 'image-categories', true );
 
 	set_post_thumbnail( $post_id, (int) $att_id );
 	return 'set';

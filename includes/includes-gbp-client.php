@@ -34,6 +34,7 @@ const BPGBP_CLIENT_CRON_HOOK     = 'bpgbp_client_publish_event'; // per-post blo
 const BPGBP_CLIENT_GEO_DAILY     = 'bpgbp_client_geo_daily';     // recurring daily jobsite-geo drainer
 const BPGBP_CLIENT_GEO_SOON      = 'bpgbp_client_geo_soon';      // ad-hoc drain shortly after a publish
 const BPGBP_CLIENT_PHOTOS_HOOK   = 'bpgbp_client_photos_event';  // upload a jobsite's photos to the GBP gallery
+const BPGBP_CLIENT_FB_HOOK       = 'bpgbp_client_fb_followers_event'; // nightly Facebook follower-count sync
 const BPGBP_CLIENT_POSTED_META   = '_bpgbp_posted';   // stores the Google localPost name once posted
 const BPGBP_CLIENT_LOG_META      = '_bpgbp_post_log';  // last attempt result (for debugging)
 const BPGBP_CLIENT_ATTEMPTS_META = '_bpgbp_post_attempts'; // failed-send count (queue give-up guard)
@@ -70,6 +71,16 @@ if ( bpgbp_client_is_configured() && ! ( defined( 'BPGBP_AUTOPOST' ) && ! BPGBP_
 	add_action( 'wp_ajax_bpgbp_client_status', 'bpgbp_client_ajax_status' );
 	// Manual "Post to GBP now" trigger from that line (runs the send immediately, bypassing wp-cron).
 	add_action( 'wp_ajax_bpgbp_client_post_now', 'bpgbp_client_ajax_post_now' );
+}
+
+// Facebook follower-count sync (independent of the posting kill-switch): runs daily, stores the count in
+// the bp_fb_follower_count option that the blog "Follow us on Facebook" button reads. Needs hub creds
+// (to call the hub); the hub returns null unless this site has a Facebook Page mapped in the registry.
+if ( bpgbp_client_is_configured() ) {
+	add_action( BPGBP_CLIENT_FB_HOOK, 'bpgbp_client_sync_fb_followers' );
+	if ( ! wp_next_scheduled( BPGBP_CLIENT_FB_HOOK ) ) {
+		wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', BPGBP_CLIENT_FB_HOOK );
+	}
 }
 
 /**
@@ -574,6 +585,65 @@ function bpgbp_client_log( int $post_id, string $status, string $detail ) {
 	if ( 'error' === $status ) {
 		error_log( sprintf( 'BPGBP client post #%d failed: %s', $post_id, $detail ) );
 	}
+}
+
+/* ─────────────────── Facebook follower-count sync ─────────────────── */
+
+/**
+ * Signed GET to the hub — per-site HMAC over `timestamp . '.'` (an empty body). The read-only counterpart
+ * to bpgbp_client_send(). Returns the decoded response array, or a WP_Error.
+ */
+function bpgbp_client_get( string $path ) {
+	$hub_url     = bpgbp_cfg( 'HUB_URL' );
+	$site_key    = bpgbp_cfg( 'SITE_KEY' );
+	$site_secret = bpgbp_cfg( 'SITE_SECRET' );
+	if ( '' === $hub_url || '' === $site_key || '' === $site_secret ) {
+		return new WP_Error( 'bpgbp_client_unconfigured', 'This site is not paired with a GBP hub.' );
+	}
+
+	$url       = rtrim( $hub_url, '/' ) . '/?rest_route=/bpgbp/v1/' . ltrim( $path, '/' );
+	$timestamp = (string) time();
+	$signature = hash_hmac( 'sha256', $timestamp . '.', $site_secret ); // GET body is empty
+	$url      .= '&_cb=' . rawurlencode( $timestamp . (string) wp_rand( 1000, 9999 ) );
+
+	$response = wp_remote_get( $url, array(
+		'timeout' => 20,
+		'headers' => array(
+			'X-BPGBP-Site'      => $site_key,
+			'X-BPGBP-Timestamp' => $timestamp,
+			'X-BPGBP-Signature' => $signature,
+			'Cache-Control'     => 'no-cache',
+		),
+	) );
+	if ( is_wp_error( $response ) ) return $response;
+
+	$code = wp_remote_retrieve_response_code( $response );
+	$data = json_decode( wp_remote_retrieve_body( $response ), true );
+	if ( $code < 200 || $code >= 300 ) {
+		return new WP_Error( 'bpgbp_client_hub', 'Hub returned ' . $code, array( 'status' => $code ) );
+	}
+	return is_array( $data ) ? $data : array();
+}
+
+/**
+ * Nightly: fetch this site's Facebook Page follower count from the hub and cache it in `bp_fb_follower_count`
+ * (read by the blog "Follow us on Facebook" button). No-ops if the site has no Facebook URL. A null/zero
+ * result (no Page mapped, or a Graph error) leaves the last known value in place rather than blanking it.
+ */
+function bpgbp_client_sync_fb_followers() {
+	if ( ! bpgbp_client_is_configured() ) return;
+
+	$ci = function_exists( 'customer_info' ) ? customer_info() : array();
+	if ( empty( $ci['facebook'] ) ) return; // no Page → the button won't render anyway
+
+	$res = bpgbp_client_get( 'followers' );
+	if ( is_wp_error( $res ) ) {
+		error_log( 'bpgbp_client_sync_fb_followers: ' . $res->get_error_message() );
+		return;
+	}
+
+	$count = isset( $res['followers_count'] ) ? (int) $res['followers_count'] : 0;
+	if ( $count > 0 ) update_option( 'bp_fb_follower_count', $count, false );
 }
 
 /* ─────────────────── Publish-box status line (under the date) ─────────────────── */

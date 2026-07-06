@@ -701,17 +701,25 @@ function bp_kw_cadence_for_record(array $record, ?int $last_seen_rank = null): a
 	elseif ($last_seen_rank <= 50) $depth = 50;
 	else $depth = 100;
 
-	// Cadence — by source × heat × is_primary
+	// Cadence — jobsites by heat (no primary/secondary: jobsite pages are never the home page);
+	// everything else RANK-TIERED (better-ranking keywords refresh faster, since those are the ones
+	// clients watch and the ones most likely to move).
+	$rank    = (int) $last_seen_rank; // 0 / null = unranked
 	$source  = $record['source']  ?? 'base';
 	$heat    = $record['heat']    ?? '';
-	$primary = !empty($record['is_primary']);
 
 	if ($source === 'jobsite') {
-		if ($heat === 'hot')        $cadence = 14;                    // biweekly
-		elseif ($heat === 'warm')   $cadence = $primary ? 30 : 90;    // monthly / quarterly
-		else                        $cadence = 90;                    // cold — quarterly
+		if ($heat === 'hot')        $cadence = 7;                     // weekly
+		elseif ($heat === 'warm')   $cadence = 30;                    // monthly
+		else                        $cadence = 60;                    // cold — bimonthly
 	} elseif ($source === 'brand')  $cadence = 365;                   // annual sanity check
-	else                            $cadence = $primary ? 30 : 90;    // base, service_area
+	else {                                                           // base, service_area — rank-tiered
+		if      ($rank >= 1  && $rank <= 3)  $cadence = 7;            // top 3 — weekly
+		elseif  ($rank >= 4  && $rank <= 10) $cadence = 10;
+		elseif  ($rank >= 11 && $rank <= 20) $cadence = 14;
+		elseif  ($rank >= 21 && $rank <= 50) $cadence = 30;
+		else                                 $cadence = 60;           // 51–100 / unranked
+	}
 
 	return ['endpoint' => $endpoint, 'depth' => $depth, 'cadence_days' => $cadence];
 }
@@ -1176,7 +1184,7 @@ function bp_kw_apply_serp_secondary(array &$entry, array $result, string $today)
 // with no last_check yet) prioritizes primary device only and skips secondary spot-check;
 // once everything has at least one reading, secondary kicks in on later runs.
 // Returns counts so the admin handler can show progress and tell the user when to click again.
-function bp_kw_run_serp_chron(bool $force = false): array {
+function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): array {
 	$out = ['primary' => 0, 'secondary' => 0, 'remaining' => 0, 'bootstrapping' => false];
 	$creds = bp_kw_api_creds();
 	if (!$creds['login'] || !$creds['password']) return $out;
@@ -1308,13 +1316,21 @@ function bp_kw_run_serp_chron(bool $force = false): array {
 	// waste API calls re-querying it just because the user clicked Fetch Now again.
 	foreach ($tracked as $kw_key => $entry) {
 		if (!isset($entry['source'])) continue;
-		$next_check  = $entry['next_check'] ?? $today;
-		$primary_due = $next_check <= $today;
 
+		$next_check     = $entry['next_check'] ?? $today;
 		$last_secondary = $entry['last_secondary_check'] ?? '';
-		$secondary_due  = !$last_secondary || strtotime($last_secondary) < strtotime('-90 days');
 
-		if (!$primary_due && !$secondary_due) continue;
+		if ($selector) {
+			// Forced selection (e.g. the "Fetch Rankings Now" top-20 refresh): ignore the per-keyword
+			// cadence and re-check every matching keyword now. Primary device only — no secondary spot-check.
+			if (!$selector($kw_key, $entry)) continue;
+			$primary_due   = true;
+			$secondary_due = false;
+		} else {
+			$primary_due   = $next_check <= $today;
+			$secondary_due = !$last_secondary || strtotime($last_secondary) < strtotime('-90 days');
+			if (!$primary_due && !$secondary_due) continue;
+		}
 
 		$cadence   = bp_kw_cadence_for_record($entry, (int) ($entry['last_rank'] ?? 0));
 		$batch_rec = $entry + [
@@ -1837,6 +1853,27 @@ function bp_kw_render_admin_page(): void {
 			}
 		}
 
+		if ($action === 'refresh_top20') {
+			// Force-refresh every keyword currently ranking in the top 20, ignoring cadence — for
+			// pulling accurate numbers right before showing a client. SERP only (no Labs discovery).
+			$result    = bp_kw_run_serp_chron(true, function ($kw_key, $entry) {
+				$r = (int) ($entry['last_rank'] ?? 0);
+				return $r >= 1 && $r <= 20;
+			});
+			$primary   = (int) ($result['primary']   ?? 0);
+			$remaining = (int) ($result['remaining'] ?? 0);
+			$msg       = "Top-20 refresh complete — <strong>{$primary}</strong> keyword(s) re-checked live.";
+			if ($remaining > 0) {
+				$msg .= " <strong>{$remaining}</strong> still pending — click <em>Fetch Rankings Now</em> again to finish.";
+			}
+			$diag_lines = (array) get_option('bp_kw_last_run_diags', []);
+			if ($diag_lines) {
+				$msg .= '<br><strong>Batch diagnostics:</strong><br><code style="font-size:11px;display:block;background:#f0f0f0;padding:6px;margin-top:4px;">' . esc_html(implode("\n", $diag_lines)) . '</code>';
+			}
+			$class = $remaining > 0 ? 'notice-warning' : 'notice-success';
+			echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . $msg . '</p></div>';
+		}
+
 		if ($action === 'fetch_now') {
 			$result   = bp_kw_run_chron(true);
 			$tracked  = bp_kw_tracked();
@@ -1846,7 +1883,7 @@ function bp_kw_render_admin_page(): void {
 			$bootstrap= !empty($result['bootstrapping']);
 			$msg      = "Run complete — <strong>{$primary}</strong> primary + <strong>{$secondary}</strong> secondary keywords checked.";
 			if ($remaining > 0) {
-				$msg .= " <strong>{$remaining}</strong> still due — click <em>Fetch Rankings Now</em> again to continue.";
+				$msg .= " <strong>{$remaining}</strong> still due — click <em>Fetch Due Rankings</em> again to continue.";
 			}
 			if ($bootstrap) {
 				$msg .= ' <em>(Bootstrap mode — primary device only; secondary spot-check resumes once every keyword has been checked at least once.)</em>';
@@ -1886,8 +1923,10 @@ function bp_kw_render_admin_page(): void {
 
 	// Cost estimate — walk target_records and sum per-record annual SERP cost based on
 	// cadence (source × heat × is_primary) + quarterly secondary-device spot-check.
-	// Live Regular at ~$0.0006/call for all queries (map pack tracking is deferred —
-	// see bp_kw_cadence_for_record() for the rationale).
+	// Rankings are pulled via the DataForSEO LIVE endpoints (see bp_kw_run_serp_batch),
+	// priced at $0.002 per SERP + $0.0015 per additional 100-result page of depth — NOT
+	// the $0.0006 Standard/queued rate. NOTE: this covers targeted SERP checks only; it
+	// excludes the periodic Labs discovery calls that populate Labs-sourced tracked keywords.
 	$cost_records = bp_kw_target_records();
 	$kw_count     = count($cost_records);
 	$cost_annual  = 0.0;
@@ -1895,22 +1934,16 @@ function bp_kw_render_admin_page(): void {
 	$heat_counts  = ['cold' => 0, 'warm' => 0, 'hot' => 0];
 
 	foreach ($cost_records as $r) {
-		$rate       = 0.0006;
-		$src        = $r['source']  ?? 'base';
-		$heat       = $r['heat']    ?? '';
-		$is_primary = !empty($r['is_primary']);
+		// Rate AND frequency both come from the same cadence function the runner uses, so the estimate
+		// can't drift from actual behavior. Live SERP: $0.002 base + $0.0015 per extra 100-result page.
+		$cad              = bp_kw_cadence_for_record($r, (int) ($r['last_rank'] ?? 0));
+		$pages            = max(1, (int) ceil(((int) ($cad['depth'] ?? 100)) / 100));
+		$rate             = 0.002 + ($pages - 1) * 0.0015;
+		$primary_per_year = 365 / max(1, (int) $cad['cadence_days']);
+		$cost_annual     += ($primary_per_year + 4) * $rate;  // +4 = quarterly secondary-device spot-check
 
-		if ($src === 'jobsite') {
-			if      ($heat === 'hot')  $primary_per_year = 26;                  // biweekly
-			elseif  ($heat === 'warm') $primary_per_year = $is_primary ? 12 : 4; // monthly / quarterly
-			else                       $primary_per_year = 4;                    // cold — quarterly
-		} elseif ($src === 'brand') {
-			$primary_per_year = 1;                                                // annual sanity check
-		} else {
-			$primary_per_year = $is_primary ? 12 : 4;
-		}
-		$cost_annual += ($primary_per_year + 4) * $rate;  // +4 = quarterly secondary-device spot-check
-
+		$src  = $r['source'] ?? 'base';
+		$heat = $r['heat']   ?? '';
 		if (isset($src_counts[$src])) $src_counts[$src]++;
 		if ($src === 'jobsite' && isset($heat_counts[$heat])) $heat_counts[$heat]++;
 	}
@@ -1972,8 +2005,15 @@ function bp_kw_render_admin_page(): void {
 
 	<form method="post" style="display:inline-block;margin-right:8px;">
 		<?php wp_nonce_field('bp_kw_manage'); ?>
+		<input type="hidden" name="bp_kw_action" value="refresh_top20">
+		<input type="submit" class="button button-primary" value="&#9654; Fetch Rankings Now"
+			title="Live re-check of every keyword currently ranking in the top 20 — ignores the normal schedule. Use right before showing a client their rankings.">
+	</form>
+	<form method="post" style="display:inline-block;margin-right:8px;">
+		<?php wp_nonce_field('bp_kw_manage'); ?>
 		<input type="hidden" name="bp_kw_action" value="fetch_now">
-		<input type="submit" class="button button-primary" value="&#9654; Fetch Rankings Now">
+		<input type="submit" class="button" value="Fetch Due Rankings"
+			title="Runs the normal scheduled fetch now — checks only the keywords that are currently due per their cadence. Does nothing if none are due.">
 	</form>
 	<form method="post" style="display:inline-block;margin-right:8px;" onsubmit="return confirm('Compact history to weekly resolution? Drops intra-week duplicates but keeps the first, weekly anchors, and most recent entry.');">
 		<?php wp_nonce_field('bp_kw_manage'); ?>
@@ -1991,6 +2031,7 @@ function bp_kw_render_admin_page(): void {
 		Tracked: <strong><?php echo count($tracked); ?></strong> · Targeted: <strong><?php echo (int) $kw_count; ?></strong>
 		<?php if ($kw_count) : ?>
 		&nbsp;·&nbsp; Est. cost: <strong>$<?php echo number_format($cost_monthly, 2); ?>/mo</strong> &nbsp;·&nbsp; <strong>$<?php echo number_format($cost_annual, 2); ?>/yr</strong>
+			<span style="color:#888;">(live SERP checks only; excludes Labs discovery)</span>
 		<?php endif; ?>
 	</p>
 

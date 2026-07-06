@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v43.14
+Version: v43.15
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -963,13 +963,40 @@ p + .thumb-left .section .switch-thumb .align-right {
 }
 
 img.noFX,
-.noFX img,
-.follow_us_on_fb iframe {
+.noFX img {
 	border:                                                    none !important;
 	background:                                                none !important;
 	box-shadow:                                                none !important;
 	outline:                                                   none !important;
 	filter:                                                    none !important;
+}
+
+/* "Follow us on Facebook" post button. Replaced the retired FB Like social plugin (killed 2026-02-10). */
+.follow_us_on_fb {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       0.6em;
+	padding:                                                   0.6em 1em;
+	margin:                                                    0.5em 0;
+	background:                                                #1877f2;
+	color:                                                     #fff !important;
+	border-radius:                                             6px;
+	text-decoration:                                           none;
+	font-weight:                                               600;
+	line-height:                                               1.2;
+	transition:                                                background 0.2s ease;
+}
+.follow_us_on_fb:hover,
+.follow_us_on_fb.active,
+.follow_us_on_fb.tab-focus {
+	background:                                                #0c5dd4;
+	color:                                                     #fff !important;
+}
+.follow_us_on_fb .fb-glyph {
+	width:                                                     1.5em;
+	height:                                                    1.5em;
+	fill:                                                      currentColor;
+	flex:                                                      0 0 auto;
 }
 
 .inset-shadow {

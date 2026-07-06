@@ -74,9 +74,23 @@ get_header(); ?>
 					$tags = "list"; // list / button
 					$navigation = "true";
 					$relatedPosts = "0"; // 0 or number you want to display
-					$facebookBtn = "false"; // display Facebook like/share button
-					$facebookBtnPos = "both"; // above article, below article, both
-					$facebookBtnCode = '<div class="follow_us_on_fb"><div class="iframe"><iframe src="https://www.facebook.com/plugins/like.php?href='.customer_info()['facebook'].'&width=85&layout=box_count&action=like&size=large&share=false&height=60&appId=630963613764335" width="85" height="60" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div><div class="text">Follow us on Facebook for more!</div></div>';
+					$facebookBtn = "false"; // display Facebook follow button
+					$facebookBtnPos = "below"; // above article, below article, both — bottom-only by default
+					// Facebook killed the external Like/Share social plugins on 2026-02-10 (they now render as an
+					// invisible 0x0 iframe), so the old plugins/like.php embed is dead. Render a real clickable
+					// button to the Page instead — with the live follower count when one has been synced (option
+					// bp_fb_follower_count, populated nightly via the FB hub / Graph API; falls back to plain copy).
+					$fbUrl   = customer_info()['facebook'] ?? '';
+					$fbCount = (int) get_option( 'bp_fb_follower_count', 0 );
+					$fbText  = $fbCount > 0
+						? 'Join our '.number_format_i18n( $fbCount ).' followers on Facebook!'
+						: 'Follow us on Facebook for more!';
+					$fbGlyph = '<svg class="fb-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z"/></svg>';
+					$facebookBtnCode = $fbUrl
+						? '<a class="follow_us_on_fb" href="'.esc_url( $fbUrl ).'" target="_blank" rel="noopener" aria-label="Follow us on Facebook">'
+							.$fbGlyph.'<span class="text">'.esc_html( $fbText ).'</span>'
+						.'</a>'
+						: '';
 				endif;
 
 			if ( function_exists( 'overrideSingle' ) ) { overrideSingle( get_post_type() ); }

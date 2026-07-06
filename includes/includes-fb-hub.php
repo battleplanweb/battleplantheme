@@ -75,6 +75,24 @@ class BPFB_Hub {
 		return '';
 	}
 
+	/**
+	 * Current follower count for a Page — `followers_count`, falling back to the legacy `fan_count` (likes).
+	 * Returns null on no token / Graph error / zero, so callers can leave the last known value untouched.
+	 */
+	public static function followers_count( $page_id ) {
+		$page_id = (string) $page_id;
+		$token   = self::page_token( $page_id );
+		if ( '' === $page_id || '' === $token ) return null;
+		try {
+			$data = self::graph_get( $page_id, array( 'fields' => 'followers_count,fan_count' ), $token );
+		} catch ( Exception $e ) {
+			error_log( 'BPFB followers_count (' . $page_id . '): ' . $e->getMessage() );
+			return null;
+		}
+		$n = (int) ( $data['followers_count'] ?? $data['fan_count'] ?? 0 );
+		return $n > 0 ? $n : null;
+	}
+
 	/* ─────────────── Graph helper ─────────────── */
 
 	/**

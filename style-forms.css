@@ -136,7 +136,7 @@ body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input
 	padding:                                                   0 0.3em;
 	font-weight:                                               bold;
 	text-align:                                                left !important;
-	color:                                                     var(--input-color);
+	color:                                                     var(--label-color);
 	background:                                                transparent;
 	white-space:                                               nowrap;
 	overflow:                                                  hidden;
@@ -152,9 +152,9 @@ body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(.bp-control:not(:placeholder-shown)) > label,
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(select) > label {
 	top:                                                       0;
-	transform:                                                 translateY(-50%) scale(0.8);
-	color:                                                     var(--input-color-focus);
-	background:                                                var(--input-background-focus);
+	transform:                                                 translateY(-60%) scale(0.8);
+	color:                                                     var(--label-color-focus);
+	background:                                                var(--label-background-focus);
 	width:                                                     max-content;
 	border-radius:                                             4px;
 	max-width:                                                 calc(100% - 1em);
@@ -162,6 +162,7 @@ body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input
 
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) :is(input, textarea) {
 	--input-padding:                                           6px 7px 0px;
+	--input-padding-focus:                                     6px 7px 0px;
 }
 
 /*--------------------------------------------------------------

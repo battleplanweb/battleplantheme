@@ -445,29 +445,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	};
 
 
-	//Find translateY or translateX of element
-	window.getTranslate = function (elementSel, XorY = 'Y') {
-		const style = window.getComputedStyle(getObject(elementSel));
-		const transform = style.transform || style.webkitTransform || style.mozTransform;
-
-		if (!transform || transform === 'none') {
-			return 0;
-		}
-
-		let matrixValues = transform.match(/matrix3d\((.+)\)/) || transform.match(/matrix\((.+)\)/);
-		if (matrixValues) {
-			matrixValues = matrixValues[1].split(',').map(s => s.trim());
-			if (XorY.toUpperCase() === 'X') {
-				return parseFloat(matrixValues.length === 16 ? matrixValues[12] : matrixValues[4]);
-			} else if (XorY.toUpperCase() === 'Y') {
-				return parseFloat(matrixValues.length === 16 ? matrixValues[13] : matrixValues[5]);
-			}
-		}
-
-		return 0;
-	};
-
-
 	// Filter archive page based on parameters, tags, URL variable, etc.  // Mill Pond Retrievers
 	window.filterArchives = function (field = "", elementSel = ".section.archive-content", column = ".col-archive", speed = 300) {
 		getObjects(elementSel).forEach(element => {
@@ -594,24 +571,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		}, delay);
 	};
 
-
-
-	// Button to reveal a hidden div
-	window.btnRevealDiv = function (buttonSel, elementSel, top = 0) {
-		//top += mobileMenuBarH();
-		const elementObj = getObject(elementSel);
-		const origDisplay = getComputedStyle(elementObj).display;
-		elementObj.style.display = 'none';
-
-		const button = getObject(buttonSel);
-		if (!button || !elementObj) return;
-
-		button.addEventListener('click', () => {
-			elementObj.style.display = origDisplay;
-			animateScroll(elementSel, top);
-		});
-	};
-
 	/*--------------------------------------------------------------
    # Automated processes
    --------------------------------------------------------------*/
@@ -626,19 +585,18 @@ document.addEventListener("DOMContentLoaded", function () {
 		el.classList.add('secondary-box');
 	});
 
-	// Set up American Standard logo to link to American Standard website
-	getObjects('img').forEach(img => {
-		if (img.src.includes('hvac-american-standard/american-standard')) {
-			const anchor = document.createElement('a');
-			setAttributes(anchor, {
-				'href': 'https://www.americanstandardair.com/',
-				'target': '_blank',
-				'rel': 'noreferrer'
-			});
+	// Set up American Standard logo to link to American Standard website.
+	// Scoped selector lets the browser filter — no full scan of every <img> on the page.
+	getObjects('img[src*="hvac-american-standard/american-standard"]').forEach(img => {
+		const anchor = document.createElement('a');
+		setAttributes(anchor, {
+			'href': 'https://www.americanstandardair.com/',
+			'target': '_blank',
+			'rel': 'noreferrer'
+		});
 
-			img.parentNode.insertBefore(anchor, img);
-			anchor.appendChild(img);
-		}
+		img.parentNode.insertBefore(anchor, img);
+		anchor.appendChild(img);
 	});
 
 
@@ -684,59 +642,7 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 
-	// This Contact Form 7 script blocked by Content Security Policy
-	var ak_js = document.getElementById('ak_js'), el, destinations = [];
-
-	if (!ak_js) {
-		ak_js = document.createElement('input');
-		ak_js.type = 'hidden';
-		ak_js.name = ak_js.id = 'ak_js';
-	} else {
-		ak_js.parentNode.removeChild(ak_js);
-	}
-
-	ak_js.value = (new Date()).getTime();
-
-	if (el = document.getElementById('commentform')) { destinations.push(el); }
-	if ((el = document.getElementById('replyrow')) && (el = el.getElementsByTagName('td'))) { destinations.push(el.item(0)); }
-	for (var i = 0, j = destinations.length; i < j; i++) { destinations[i].appendChild(ak_js); }
-
-
-	// Keep functions from causing errors if not defined in other parts of the code
-	const functions = ["parallaxBG", "parallaxDiv", "magicMenu", "splitMenu", "addMenuLogo", "addMenuIcon", "desktopSidebar"];
-	functions.forEach(func => {
-		if (typeof window[func] !== 'function') {
-			window[func] = function () { };
-		}
-	});
-
-
-	/* Deprecated 4/22/2024 - moves search bar up to top of mobile menu, and makes regular menu disappear --- not sure what the reason is, so removing it for now
-	// Control animation for menu search box
-	   setTimeout(function() {
-		   $('div.menu-search-box a.menu-search-bar').each(function() {
-			   var searchBar = $(this), inputBox = searchBar.find('input[type="search"]'), inputW = searchBar.outerWidth(), magW = (searchBar.find('i.fa').outerWidth()) * 1.3;
-			   if ( $(this).hasClass('reveal-click')) {
-				   searchBar.css({ "width": magW+"px" });
-				   searchBar.click(function() {
-					   searchBar.animate( { "width":inputW+'px' }, 150, function() { if ( typeof centerSubNav === 'function' ) { setTimeout(function() {centerSubNav();}, 300); } });
-				   });
-			   }
-			   if ( !isApple() ) {
-				   inputBox.focus(function() {
-					   var inputPos = -(getPosition(searchBar, 'top') - mobileMenuBarH() - 25);
-					   $('#mobile-navigation > #mobile-menu').css({"position":"relative"}).animate({ "margin-top": inputPos + "px" }, 300);
-				   });
-				   inputBox.blur(function() {
-					   $('#mobile-navigation > #mobile-menu').css({"position":"relative"}).animate({ "margin-top": "0px)" }, 300);
-				   });
-			   }
-		   });
-	   }, 300);
-   */
-
-
-	/*--------------------------------------------------------------
+/*--------------------------------------------------------------
    # DOM level functions
    --------------------------------------------------------------*/
 
@@ -1014,81 +920,6 @@ document.addEventListener("DOMContentLoaded", function () {
    --------------------------------------------------------------*/
 	window.setupSidebar = function (compensate = 0, sidebarScroll = true) {
 
-		// Add classes for first, last, even and odd widgets
-		window.mobileWidgets = function () {
-			/*
-		   const uniqueId = (() => {
-			   let id = 0;
-			   return () => `placeholder-${id++}`;
-		   })();
-
-		   const createPlaceholder = () => {
-			   const div    = document.createElement('div');
-				    div.id = uniqueId();
-			   return div;
-		   };
-
-		   const insertPlaceholders = () => {
-			   const paragraphs = getObjects('p');
-
-			   paragraphs.forEach((p) => {
-				   const nextElem = p.nextElementSibling;
-				   if (nextElem && (nextElem.tagName === 'H2' || nextElem.tagName === 'H3')) {
-					   p.insertAdjacentElement('afterend', createPlaceholder());
-				   }
-			   });
-
-			   paragraphs.forEach((p) => {
-				   const nextElem = p.nextElementSibling;
-				   if (nextElem && nextElem.tagName === 'P') {
-					   p.insertAdjacentElement('afterend', createPlaceholder());
-				   }
-			   });
-		   };
-
-		   const integrateWidgets = () => {
-			   let placeholders = Array.from(getObjects('div[id^="placeholder-"]'));
-
-			   const excludeClasses = ['widget-schedule-appointment', 'widget-request-a-quote', 'widget-hours-of-operation', 'widget-credit-cards', 'widget-symptom-checker'];
-
-			   const widgets = Array.from(getObjects('.widget')).filter(widget => !excludeClasses.some(cls => widget.classList.contains(cls))).sort((a, b) => {
-				   const getPriority = el => +el.className.match(/priority-(\d)/)[1];
-				   return getPriority(b) - getPriority(a);
-			   });
-
-			   const widgetCount      = widgets.length;
-			   let   placeholderCount = placeholders.length;
-
-			   if (placeholderCount > 2) {
-
-				   if (placeholderCount > widgetCount) {
-					   placeholders.shift();
-					   placeholderCount--;
-
-					   if (placeholderCount > widgetCount) {
-						   placeholders.shift();
-						   placeholderCount--;
-					   }
-				   }
-
-				   const step = Math.max(1, Math.floor(placeholderCount / widgetCount));
-
-				   let widgetIndex = 0;
-				   for (let i = 0; i < placeholderCount && widgetIndex < widgetCount; i += step) {
-					   const placeholder = placeholders[i];
-					   if (placeholder) {
-						   placeholder.replaceWith(widgets[widgetIndex]);
-						   widgetIndex++;
-					   }
-				   }
-			   }
-		   };
-
-		   insertPlaceholders();
-		   integrateWidgets();
-		   */
-		};
-
 		// Shuffle array elements
 		window.shuffleElements = function (nodeList) {
 			let elements = Array.from(nodeList);
@@ -1132,10 +963,10 @@ document.addEventListener("DOMContentLoaded", function () {
 			});
 		});
 
-		// Check screen type and apply labels
-		if (document.body.classList.contains('screen-mobile')) {
-			mobileWidgets();
-		} else {
+		// Desktop sidebar setup. The old mobile branch called mobileWidgets(), which was an empty
+		// shell — the mobile widget order already comes from the shuffle above — so there's nothing
+		// to do on mobile and we just run the desktop setup otherwise.
+		if (!document.body.classList.contains('screen-mobile')) {
 			desktopSidebar(compensate, sidebarScroll);
 		}
 	};
@@ -1377,7 +1208,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		elementObj.classList.add('animation-delayed');
 
 		const animating = () => {
-			elementObj.style.willChange = 'transform, opacity';
 			elementObj.classList.remove('animation-queued');
 			elementObj.classList.remove('animation-delayed');
 			elementObj.classList.add('animation-in-progress');
@@ -1385,7 +1215,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		};
 
 		const animated = () => {
-			elementObj.style.willChange = '';
 			elementObj.classList.remove('animation-in-progress');
 			elementObj.classList.add('animation-complete');
 			elementObj.removeEventListener('animationend', animated);
@@ -1395,13 +1224,13 @@ document.addEventListener("DOMContentLoaded", function () {
 		elementObj.addEventListener('animationstart', animating);
 		elementObj.addEventListener('animationend', animated);
 
-		elementObj.style.animationName = 'none';
-
-		requestAnimationFrame(() => {
-			elementObj.style.animationName = animationName;
-		});
-
-		// re-apply everything explicitly
+		// Start the animation. Two things were removed here (identical visual output, less layer-tree
+		// churn): (1) the hand-toggled will-change — the browser already auto-promotes an element to a
+		// compositor layer for the duration of a transform/opacity animation and tears it down when it
+		// ends, and the old code set will-change on animationstart, i.e. AFTER promotion already
+		// happened, so it was redundant; (2) the animationName='none' → rAF → reset dance — the
+		// synchronous reset immediately below overwrote the 'none' in the same tick, so it never
+		// actually restarted anything (and this function only runs on not-yet-animated elements anyway).
 		elementObj.style.animationName = animationName;
 		elementObj.style.animationDuration = elementObj.style.animationDuration || '1s';
 		elementObj.style.animationTimingFunction = elementObj.style.animationTimingFunction || 'ease';
@@ -1744,29 +1573,13 @@ document.addEventListener("DOMContentLoaded", function () {
 		});
 	};
 
-
-	// Move User Switching bar to top
-	moveDiv('#user_switching_switch_on', '#page', 'before');
-
-
-	// Add "active" & "hover" classes to menu items, assign roles for ADA compliance
-	getObjects(".main-navigation ul.main-menu, .widget-navigation ul.menu").forEach(menu => {
-		setAttributes(menu, {
-			'role': 'menubar',
-			'aria-label': 'Main Menu'
-		});
-	});
-
-	getObjects(".main-navigation ul.sub-menu, .widget-navigation ul.sub-menu").forEach(subMenu => {
-		subMenu.setAttribute('role', 'menu');
-	});
-
-	getObjects(".main-navigation li, .widget-navigation li").forEach(li => {
-		li.setAttribute('role', 'menuitem');
-	});
-
-	getObjects(".main-navigation a[href], .widget-navigation a[href]").forEach(link => {
-		link.setAttribute('role', 'none');
+	// Site navigation is a landmark of plain links, NOT an application menubar.
+	// Label the <nav> landmark and keep native <ul>/<li>/<a> semantics. We do NOT
+	// apply menubar/menuitem/none roles: role="none" on the links makes them
+	// presentational, which conflicts with them being focusable (tabindex="0") and
+	// carrying aria-current="page" — the exact contradiction Lighthouse flags.
+	getObjects(".main-navigation, .widget-navigation").forEach(nav => {
+		if ( !nav.getAttribute('aria-label') ) nav.setAttribute('aria-label', 'Main Menu');
 	});
 
 	// Handle active states and hover effects
@@ -1813,10 +1626,14 @@ document.addEventListener("DOMContentLoaded", function () {
 		a.parentNode.setAttribute('aria-label', a.textContent);
 	});
 
-	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 50);
-	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 1000);
+	// Give any image still missing an alt an empty one (decorative) so it passes a11y checks. A single
+	// pass on `load` covers both server-rendered images and any inserted by scripts during load —
+	// replacing the old dual 50 ms / 1000 ms full-document scans with one.
+	window.addEventListener('load', () => {
+		getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', ''));
+	});
 
-	getObjects('[role="menubar"]').forEach(menu => {
+	getObjects('.main-navigation ul.main-menu, .widget-navigation ul.menu').forEach(menu => {
 		menu.addEventListener('focus', ev => {
 			const targetElement = ev.target.closest('[aria-haspopup="true"]');
 			if (targetElement) {
@@ -1848,7 +1665,7 @@ document.addEventListener("DOMContentLoaded", function () {
 		}, true);
 	});
 
-	getObjects('[role="menubar"] a').forEach(a => a.setAttribute('tabindex', '0'));
+	getObjects('.main-navigation ul.main-menu a, .widget-navigation ul.menu a').forEach(a => a.setAttribute('tabindex', '0'));
 	getObjects('li[aria-haspopup="true"]').forEach(li => li.setAttribute('tabindex', '-1'));
 
 	const currents = getObjects(".main-navigation ul.main-menu > li.current-menu-item, .main-navigation ul.main-menu > li.current_page_item, .main-navigation ul.main-menu > li.current-menu-parent, .main-navigation ul.main-menu > li.current_page_parent, .main-navigation ul.main-menu > li.current-menu-ancestor, .widget-navigation ul.menu > li.current-menu-item, .widget-navigation ul.menu > li.current_page_item, .widget-navigation ul.menu > li.current-menu-parent, .widget-navigation ul.menu > li.current_page_parent, .widget-navigation ul.menu > li.current-menu-ancestor");
@@ -1860,19 +1677,22 @@ document.addEventListener("DOMContentLoaded", function () {
 	manageHover(".main-navigation ul.sub-menu > li, .widget-navigation ul.sub-menu > li", subCurrents)
 
 
-	// Animate scrolling when pressing a button with #hash as link
+	// Animate scrolling when pressing a button with #hash as link.
+	// Keep the real href intact (crawlable + valid) and just preventDefault on click —
+	// don't strip it to data-target, which left skip-links / scroll-to-top with no href.
 	getObjects('a[href^="#"]:not(.carousel-control-next):not(.carousel-control-prev)').forEach(link => {
-		link.setAttribute('data-target', link.getAttribute('href'));
-		link.removeAttribute('href');
-		link.addEventListener('click', () => {
-			const target = link.getAttribute('data-target');
+		const target = link.getAttribute('href');
+		link.setAttribute('data-target', target);   // retained: the one-page-nav observers below read data-target
+		link.addEventListener('click', (ev) => {
 			const targetObj = getObject(target);
 			const compensate = Number(targetObj?.getAttribute('data-hash')) || 0;
 
 			// if target #hash is on this page, scroll to it, otherwise link to the correct page
 			if (targetObj) {
+				ev.preventDefault();
 				setTimeout(() => animateScroll(target, compensate), 25);
 			} else {
+				ev.preventDefault();
 				window.location.href = "/" + target;
 			}
 		});
@@ -2067,37 +1887,17 @@ document.addEventListener("DOMContentLoaded", function () {
 		}
 	}
 
-	// Gracefully start to fade out the pre-loader
-	window.fadeOutLoader = function (targetOpacity) {
-		const loader = getObject("#loader");
-		if (!loader) return;
-
-		let opacity = parseFloat(getComputedStyle(loader).opacity);
-		const stepReduce = targetOpacity === 0 ? 0.05 : 0.01;
-		const color = getComputedStyle(loader).backgroundColor;
-		if (!color || !color.includes('rgb')) return;
-		const [r, g, b] = color.match(/\d+/g).map(Number);
-
-		const fadeInterval = setInterval(() => {
-			opacity -= stepReduce;
-			loader.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-
-			if (opacity <= targetOpacity) {
-				clearInterval(fadeInterval);
-				if (targetOpacity === 0) {
-					loader.style.display = 'none';
-				}
-			}
-		}, 10);
-
-		getObjects('#mobile-menu-bar .mm-bar-btn').forEach(el => el.style.opacity = '1');
-	};
 
 
-	// Set up mobile menu animation
+	// Set up mobile menu animation.
+	// Parent items keep their real href (crawlable); the first tap is intercepted with
+	// preventDefault (below) to open the submenu instead of navigating. A grouping parent
+	// with no URL of its own inherits its first child's link so it still points somewhere.
 	getObjects('#mobile-navigation li.menu-item-has-children > a').forEach(link => {
-		link.setAttribute('data-href', link.getAttribute('href'));
-		link.href = 'javascript:void(0)';
+		if ( !link.getAttribute('href') ) {
+			const firstChild = getObject('ul.sub-menu a[href]', link.parentElement);
+			if (firstChild) link.setAttribute('href', firstChild.getAttribute('href'));
+		}
 	});
 
 	const activateBtn = getObject("#mobile-menu-bar .activate-btn");
@@ -2146,7 +1946,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.closeSubMenu = function (subMenu) {
 		subMenu.classList.remove("active");
 		subMenu.style.height = "0";
-		subMenu.previousElementSibling.href = 'javascript:void(0)';
 	};
 
 	window.openSubMenu = function (subMenu, subH) {
@@ -2160,20 +1959,11 @@ document.addEventListener("DOMContentLoaded", function () {
 			subMenu.style.height = "0";
 		}
 
-		const children = getObjects('#mobile-navigation li.menu-item-has-children > a');
-		if (children) {
-			children.forEach(a => {
-				a.href = 'javascript:void(0)';
-			});
-		}
 		subMenu.classList.add("active");
 		// Measure the height live (scrollHeight = full content height even while collapsed) so the
 		// open height is always correct. The passed subH is cached at page load — before a
 		// swap-loaded heading font finishes — so it can be a few px short and clip the last item.
 		subMenu.style.height = `${subMenu.scrollHeight || subH}px`;
-		setTimeout(() => {
-			subMenu.previousElementSibling.href = subMenu.previousElementSibling.getAttribute('data-href');
-		}, 500);
 	};
 
 	if (activateBtn) {
@@ -2190,6 +1980,12 @@ document.addEventListener("DOMContentLoaded", function () {
 		const subHeights = subMenu.map(sub => sub.offsetHeight); // all reads first
 		subMenu.forEach((sub, i) => {
 			closeSubMenu(sub); // writes
+			// First tap on a closed parent opens its submenu instead of navigating;
+			// once open, a second tap follows the (still-present) real href.
+			const parentLink = sub.previousElementSibling;
+			if (parentLink) parentLink.addEventListener('click', (ev) => {
+				if (!sub.classList.contains("active")) ev.preventDefault();
+			});
 			sub.parentElement.addEventListener('click', () => {
 				if (!sub.classList.contains("active")) {
 					openSubMenu(sub, subHeights[i]);
@@ -2534,52 +2330,6 @@ document.addEventListener("DOMContentLoaded", function () {
 	/*--------------------------------------------------------------
    # ADA compliance
    --------------------------------------------------------------*/
-	// Add aria-labels to landmarks, sections and titles
-	getObjects('h3 a[aria-hidden="true"]').forEach(a => {
-		a.parentNode.setAttribute('aria-label', a.textContent);
-	});
-
-	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 50);
-	setTimeout(() => { getObjects('img:not([alt])').forEach(img => img.setAttribute('alt', '')); }, 1000);
-
-	getObjects('[role="menubar"]').forEach(menu => {
-		menu.addEventListener('focus', ev => {
-			const targetElement = ev.target.closest('[aria-haspopup="true"]');
-			if (targetElement) {
-				targetElement.classList.add('menu-item-expanded');
-				targetElement.setAttribute('aria-expanded', true);
-			}
-		}, true);
-
-		menu.addEventListener('mouseenter', ev => {
-			const targetElement = ev.target.closest('[aria-haspopup="true"]');
-			if (targetElement) {
-				targetElement.classList.add('menu-item-expanded');
-				targetElement.setAttribute('aria-expanded', true);
-			}
-		}, true);
-		menu.addEventListener('blur', ev => {
-			const targetElement = ev.target.closest('[aria-haspopup="true"]');
-			if (targetElement) {
-				targetElement.classList.remove('menu-item-expanded');
-				targetElement.setAttribute('aria-expanded', false);
-			}
-		}, true);
-		menu.addEventListener('mouseleave', ev => {
-
-
-			const targetElement = ev.target.closest('[aria-haspopup="true"]');
-			if (targetElement) {
-				targetElement.classList.remove('menu-item-expanded');
-				targetElement.setAttribute('aria-expanded', false);
-			}
-		}, true);
-	});
-
-	getObjects('[role="menubar"] a').forEach(a => a.setAttribute('tabindex', '0'));
-	getObjects('li[aria-haspopup="true"]').forEach(li => li.setAttribute('tabindex', '-1'));
-
-
 	// Update ids for labels & inputs in #request-quote-modal for ADA compliance
 	getObjects('#request-quote-modal div.form-input').forEach(formInput => {
 		const label = getObject('label', formInput);

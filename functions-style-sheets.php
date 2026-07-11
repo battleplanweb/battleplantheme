@@ -239,18 +239,33 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('battleplan-deferred', $url, [], _BP_VERSION . '.' . filemtime($path));
 }, 10);
 
-add_action('wp_enqueue_scripts', function () {
+// The compiled site CSS holds all the above-the-fold hero styling — the :root font/color
+// variables, the hero/.headline layout + font-size, and the site @font-face rules. Loading it
+// async (media=print/onload, as it used to be) meant the hero could not paint styled until the
+// file landed, so on a throttled mobile connection the LCP headline restyled seconds after FCP
+// (unstyled → big Blu headline). Inline it in the head — exactly like core-critical above — so
+// first paint is already fully styled: no async restyle, no extra render-path request.
+// Emitted at priority 11, AFTER the async core-deferred link prints (~9), so site rules still
+// win the cascade over the deferred component styles (matching their original enqueue order).
+add_action('wp_head', function() {
+    if (is_admin()) return;
+
+    // Modules can suppress the inline site CSS on their own screens (e.g. Site Pulse, which is
+    // internal staff tooling that shouldn't inherit the client site's branding). This replaces the
+    // old wp_dequeue_style('battleplan-site') hook, which no longer works now the CSS is inlined.
+    if (!apply_filters('bp_inline_site_css', true)) return;
+
     $file = _USER_LOGIN === 'battleplanweb' ? 'site.css' : 'site.min.css';
     $path = get_stylesheet_directory() . '/dist/' . $file;
-    $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
+
     if (!file_exists($path)) return;
-    //wp_enqueue_style('battleplan-site', $url, ['battleplan-core'], _BP_VERSION);
-    wp_enqueue_style('battleplan-site', $url, [], _BP_VERSION . '.' . filemtime($path));
-}, 20);
+
+    echo '<style id="battleplan-site-inline">' . file_get_contents($path) . '</style>' . "\n";
+}, 11);
 
 add_filter('style_loader_tag', function($tag, $handle, $src) {
     if ( is_admin() ) return $tag;
-    if ( $handle !== 'battleplan-deferred' && $handle !== 'battleplan-site' ) return $tag;
+    if ( $handle !== 'battleplan-deferred' ) return $tag;
 
     $html = str_replace(' />', '>', $tag);
     $html = str_replace("media='all'", "media='print' onload=\"this.onload=null;this.media='all'\"", $html);
@@ -307,7 +322,10 @@ function bp_enqueue_script( $handle, $base, $deps = [], $args = [] ) {
     foreach ($files as $file) {
         $path = $dir . $file;
         if (file_exists($path)) {
-            wp_enqueue_script( $handle, $uri . $file, $deps, _BP_VERSION, $args );
+            // Cache-bust on the file's own mtime (like the CSS build does), so an updated
+            // .min.js gets a new ?ver on every deploy — otherwise browsers + Cloudflare keep
+            // serving the old file even after a purge, because the URL never changed.
+            wp_enqueue_script( $handle, $uri . $file, $deps, _BP_VERSION . '.' . filemtime($path), $args );
             return;
         }
     }

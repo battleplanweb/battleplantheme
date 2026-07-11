@@ -4,25 +4,42 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-mitsubishi-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="mitsubishi ductless-systems"]
+
+[product-overview type="american standard air handlers"]
+
+[product-overview type="american standard heat pumps"]
+
+[product-overview type="american standard furnaces"]
+
+[product-overview type="american standard packaged units"]
+
+[product-overview type="american standard thermostats"]
+*/
+
 add_action( 'wp_loaded', 'add_mitsubishi_products', 10 );
 function add_mitsubishi_products() {
 
 	$brand = "mitsubishi"; // lowercase
-	$productImgAlt = "Mitsubishi Heating & Cooling Product"; 
+	$productImgAlt = "Mitsubishi Heating & Cooling Product";
 
 
 	/*
 	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
 	*/
-	
-	
 
-	$addProducts = array (		
-	
+
+
+	$addProducts = array (
+
 	// Ductless Systems
 array ( 'post_title'	=>	'MSZ-GL Wall-Mounted Indoor Unit',
 	   	'post_content' 	=>	'<span class="descriptionText">The MSZ-GL Wall-mounted Indoor Unit offers a wide range of sizes providing the most application solutions.</span>
@@ -36,16 +53,16 @@ array ( 'post_title'	=>	'MSZ-GL Wall-Mounted Indoor Unit',
 	<li>HSPF: up to 12.8</li>
 	<li>COP: up to 4.44</li>
 	<li>ENERGY STAR®: Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Offers a wide range of sizes providing the most application solutions.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2000,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-01.jpg'		
+		'image_name'	=>	'Mitsubishi-01.jpg'
 ),
-			
-				
+
+
 array ( 'post_title'	=>	'MSZ-GS Large Capacity Wall-Mounted Indoor Unit',
 	   	'post_content' 	=>	'<span class="descriptionText">The MSZ-GS Large Capacity Wall-mounted Indoor Unit has wide airflow capabilities to ensure conditioned supply air reaches every corner of a room.</span>
 
@@ -58,16 +75,16 @@ array ( 'post_title'	=>	'MSZ-GS Large Capacity Wall-Mounted Indoor Unit',
 	<li>HSPF: up to 10.0</li>
 	<li>COP: up to 2.86</li>
 	<li>ENERGY STAR®: No</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Wide airflow capabilities to ensure conditioned supply air reaches every corner of a room.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2010,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-02.jpg'		
+		'image_name'	=>	'Mitsubishi-02.jpg'
 ),
-			
-				
+
+
 array ( 'post_title'	=>	'MSZ-WR 16 SEER Wall-Mounted Indoor Unit',
 	   	'post_content' 	=>	'<span class="descriptionText">The MSZ-WR 16 SEER Wall-mounted Indoor Unit pairs with a single-zone heat pump outdoor unit. </span>
 
@@ -80,16 +97,16 @@ array ( 'post_title'	=>	'MSZ-WR 16 SEER Wall-Mounted Indoor Unit',
 	<li>HSPF: up to 8.5</li>
 	<li>COP: up to 3.28</li>
 	<li>ENERGY STAR®: No</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Pairs with a single-zone heat pump outdoor unit.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2020,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-03.jpg'		
+		'image_name'	=>	'Mitsubishi-03.jpg'
 ),
-			
-				
+
+
 array ( 'post_title'	=>	'SLZ Four-Way Ceiling Cassette',
 	   	'post_content' 	=>	'<span class="descriptionText">The SLZ Four-way Ceiling Cassette features customizable airflow and an optional 3D i-see Sensor®. </span>
 
@@ -102,16 +119,16 @@ array ( 'post_title'	=>	'SLZ Four-Way Ceiling Cassette',
 	<li>HSPF: up to 12.2</li>
 	<li>COP: up to 3.9</li>
 	<li>ENERGY STAR®: Most Systems</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Features customizable airflow and an optional 3D i-see Sensor®. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2100,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-04.jpg'		
+		'image_name'	=>	'Mitsubishi-04.jpg'
 ),
-			
-				
+
+
 array ( 'post_title'	=>	'MUZ-GL Wall-Mounted Single-Zone Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">The MUY-GL Air Conditioner pairs with the MSY-GL Wall-mounted Indoor Unit to create a single-zone cooling-only system.</span>
 
@@ -122,16 +139,16 @@ array ( 'post_title'	=>	'MUZ-GL Wall-Mounted Single-Zone Heat Pump',
 	<li>Sound: as low as 51 dB(A)</li>
 	<li>SEER: up to 24.6</li>
 	<li>ENERGY STAR®: Some Systems</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Creates a single-zone cooling-only system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2200,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-05.jpg'		
+		'image_name'	=>	'Mitsubishi-05.jpg'
 ),
-			
-				
+
+
 array ( 'post_title'	=>	'MUZ-GS Large Capacity Wall-Mounted Single-Zone Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">The MUY-GS Air Conditioner pairs with the MSY-GS Wall-mounted Indoor Unit to create a single-zone cooling-only system.</span>
 
@@ -142,16 +159,16 @@ array ( 'post_title'	=>	'MUZ-GS Large Capacity Wall-Mounted Single-Zone Heat Pum
 	<li>Sound: as low as 48 dB(A)</li>
 	<li>SEER: up to 18.1</li>
 	<li>ENERGY STAR®: No</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Creates a single-zone cooling-only system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2210,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-06.jpg'		
+		'image_name'	=>	'Mitsubishi-06.jpg'
 ),
-			
-				
+
+
 array ( 'post_title'	=>	'MUZ-WR 16 SEER Wall-Mounted Single-Zone Heat Pump',
 	   	'post_content' 	=>	'<span class="descriptionText">The MUZ-WR 16 SEER Heat Pump pairs with the MSZ-WR 16 SEER Wall-mounted Indoor Unit to create a single-zone heating and cooling system.</span>
 
@@ -164,15 +181,15 @@ array ( 'post_title'	=>	'MUZ-WR 16 SEER Wall-Mounted Single-Zone Heat Pump',
 	<li>HSPF: up to 8.5</li>
 	<li>COP: up to 3.28</li>
 	<li>ENERGY STAR®: No</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Created a single-zone heating and cooling system.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2220,
 		'tax_input'		=>  array('product-brand'=>'mitsubishi', 'product-type'=>'ductless-systems', 'product-class'=>''),
 		'meta_input'	=>	array('brochure'=>'https://www.mitsubishicomfort.com/themes/custom/MitsubishiMegaSite/src/img/productPDFs/Consumer%20Brochure%202021.pdf'),
-		'image_name'	=>	'Mitsubishi-05.jpg'		
-),			
-			
+		'image_name'	=>	'Mitsubishi-05.jpg'
+),
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

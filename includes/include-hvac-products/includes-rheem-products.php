@@ -4,15 +4,28 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-rheem-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="rheem air conditioners"]
+
+[product-overview type="rheem air handlers"]
+
+[product-overview type="rheem heat pumps"]
+
+[product-overview type="rheem furnaces"]
+*/
+
 add_action( 'wp_loaded', 'add_rheem_products', 10 );
 function add_rheem_products() {
 
 	$brand = "rheem"; // lowercase
-	$productImgAlt = "Rheem Heating & Cooling Product"; 
+	$productImgAlt = "Rheem Heating & Cooling Product";
 
 
 	/*
@@ -21,9 +34,9 @@ function add_rheem_products() {
 
 
 	$addProducts = array (
-	
+
 	// Air Conditioners
-		array ( 
+		array (
 			'post_title'	=>	'Prestige Series Air Conditioner (RA20)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -38,17 +51,17 @@ function add_rheem_products() {
  <li>High and low pressure standard on all models.</li>
  <li><b>Product Warranty:</b> 10 Years</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'This variable speed unit is EcoNet enabled and offers a cooling efficiency of 20.5 SEER.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1000,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/49383578-127B-411E-9348-C5FA254C2B19.pdf'),
-			'image_name'	=>	'rheem-ac-01.jpg'		
+			'image_name'	=>	'rheem-ac-01.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Classic Series Air Conditioner (RA17)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -61,17 +74,17 @@ function add_rheem_products() {
  <li>High and low pressure standard on all models</li>
  <li><b>Product Warranty:</b> 10 Years</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'This two-stage unit is EcoNet enabled and offers a cooling efficiency of 17 SEER.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1010,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/1031A120-08CA-45D2-A6AC-4D7FA64D3DC0.pdf'),
-			'image_name'	=>	'rheem-ac-02.jpg'		
+			'image_name'	=>	'rheem-ac-02.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Classic Series Air Conditioner (RA16)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -86,17 +99,17 @@ function add_rheem_products() {
  <li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire.</li>
  <li><b>Product Warranty:</b> 10 Years</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'The Scroll compressor allows for efficiencies of up to 16 SEER, while composite base pan makes for quieter operation.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1020,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/476AACE1-70EA-41AF-B245-2DC47B69F7DC.pdf'),
-			'image_name'	=>	'rheem-ac-03.jpg'		
+			'image_name'	=>	'rheem-ac-03.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Select Series Air Conditioner (WA14)',
 			'post_content' 	=>	'<span class="descriptionText">These units offer comfort and dependability for single, multi-family and light commercial applications.</span>
 <ul>
@@ -105,18 +118,18 @@ function add_rheem_products() {
  <li>Condenser coils constructed with copper tubing and enhanced aluminum fins</li>
  <li>Grille/Motor mount for quiet fan operation</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'These units offer comfort and dependability for single, multi-family and light commercial applications.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1030,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/61B7CC7B-0E80-4098-BF8C-D9D7F2A82B1E.pdf'),
-			'image_name'	=>	'rheem-ac-04.jpg'		
+			'image_name'	=>	'rheem-ac-04.jpg'
 		),
-		
-	
+
+
 	// Heat Pumps
-		array ( 
+		array (
 			'post_title'	=>	'Prestige Series Heat Pump (RP20)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -138,17 +151,17 @@ function add_rheem_products() {
  <li>High and low pressure standard on all models.</li>
  <li><b>Product Warranty:</b> 10 Years</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'This variable speed unit is EcoNet enabled and offers a cooling efficiency of 21.95 SEER.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/0A46666E-215B-407B-8807-83AE12BB1E73.pdf'),
-			'image_name'	=>	'rheem-hp-01.jpg'		
+			'image_name'	=>	'rheem-hp-01.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Classic Series Heat Pump (RP16)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -167,17 +180,17 @@ function add_rheem_products() {
  <li>Fan motor harness with extra-long wires allows unit top to be removed without disconnecting fan wire.</li>
  <li><b>Product Warranty:</b> 10 Years</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'Utilizing a two-stage scroll compressor, this unit offers a cooling efficiency of 16 SEER.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1110,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/8C6C7C5D-B8F8-4253-9719-BC81C952D361.pdf'),
-			'image_name'	=>	'rheem-hp-02.jpg'		
+			'image_name'	=>	'rheem-hp-02.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Classic Series Heat Pump (RP14)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -191,18 +204,18 @@ function add_rheem_products() {
  <li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire.</li>
  <li><b>Product Warranty:</b> 10 Years</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'With a scroll compressor and composite base pan for quieter operation, this unit produces efficiencies of up to 15 SEER.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1120,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/1326AAD6-C9FD-49EA-8B7A-5A7A321D59BF.pdf'),
-			'image_name'	=>	'rheem-hp-03.jpg'		
+			'image_name'	=>	'rheem-hp-03.jpg'
 		),
-		
-	
+
+
 	// Furnaces
-		array ( 
+		array (
 			'post_title'	=>	'Prestige Series Gas Furnace (R97V)',
 			'post_content' 	=>	'<span class="descriptionText">Industry-first patented features and 360+1 engineering make the Rheem R97V Prestige Series Gas Furnace a smart option. From top to bottom, inside and out, and every angle in between, weve thought of everything to bring you efficient and reliable indoor
 comfort.</span>
@@ -221,18 +234,18 @@ comfort.</span>
 
  <li><b>Energy Savings</b> are a welcome bonus to any heating system. Maximum airflow and a patented heat exchange design mean the Rheem Prestige Series Gas Furnace uses fuel efficiently and economically. It gets an ENERGY STAR rating for maintaining comfortable temperatures while reducing energy consumption and lowering utility bills.</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'EcoNet Enabled gas furnace with ECM Motor and Rheem-Exclusive PlusOne Ignition System.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1200,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'furnaces', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/5178A6B8-64EC-4F87-9E78-D624A684BDB2.pdf'),
-			'image_name'	=>	'rheem-f-01.jpg'		
+			'image_name'	=>	'rheem-f-01.jpg'
 		),
-		
-		
 
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Prestige Series Gas Furnace (R96V)',
 			'post_content' 	=>	'<span class="descriptionText">Industry-first patented features and 360+1 engineering make the Rheem R96V Prestige Series Gas Furnace a smart option. From top to bottom, inside and out, and every angle in between, weve thought of everything to bring you efficient and reliable indoor
 comfort.</span>
@@ -251,17 +264,17 @@ comfort.</span>
 
  <li><b>Energy Savings</b> are a welcome bonus to any heating system. Maximum airflow and a patented heat exchange design mean the Rheem Prestige Series Gas Furnace uses fuel efficiently and economically. It gets an ENERGY STAR rating for maintaining comfortable temperatures while reducing energy consumption and lowering utility bills.</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'Industry-first patented features and 360+1 engineering make the Rheem R96V Prestige Series Gas Furnace a smart option.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1210,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'furnaces', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/RheemPublic/PublicDocuments/7556874A-7D7D-4C89-AC67-AB49701A0A67.pdf'),
-			'image_name'	=>	'rheem-f-02.jpg'		
-		),		
-		
-		
-		array ( 
+			'image_name'	=>	'rheem-f-02.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'Classic Series Gas Furnace (R802T)',
 			'post_content' 	=>	'<span class="descriptionText">Industry-first patented features and 360+1 engineering make the Rheem R96V Prestige Series Gas Furnace a smart option. From top to bottom, inside and out, and every angle in between, weve thought of everything to bring you efficient and reliable indoor
 comfort.</span>
@@ -275,17 +288,17 @@ comfort.</span>
  <li>Solid doors provide quiet operation</li>
  <li>Integrated Control board features dip switches for easy system set up</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'This gas furnace has three way multi-poise design, constant torque motor and is CSA certified.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1220,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'furnaces', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/5D88FD66-A74E-4753-9FA6-E97C1B82E9ED.pdf'),
-			'image_name'	=>	'rheem-f-03.jpg'		
-		),		
-		
-		
-		array ( 
+			'image_name'	=>	'rheem-f-03.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'Classic Series Oil Furnace (ROLA-070E)',
 			'post_content' 	=>	'<span class="descriptionText">The Rheem Classic Series upflow oil furnace is for installation in properly ventilated utility rooms, closets or alcoves. </span>
 
@@ -297,18 +310,18 @@ comfort.</span>
  <li>ECM blower assemblies for heating and air conditioning applications</li>
  <li>ECM controls set for 2-stage air conditioning, 2-stage heat pump back up</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'This upflow oil furnace is for installation in properly ventilated utility rooms, closets or alcoves. ',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1230,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'furnaces', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://globalimageserver.com/FetchDocument.aspx?ID=4cda6dea-1397-4671-9a1a-82b6d419b531'),
-			'image_name'	=>	'rheem-f-04.jpg'		
-		),	
-		
-		
+			'image_name'	=>	'rheem-f-04.jpg'
+		),
+
+
 		// Air Handlers
-		array ( 
+		array (
 			'post_title'	=>	'Hydronic Air Handler (RW1T)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -319,17 +332,17 @@ comfort.</span>
  <li>Variety of cooling coils and plenums designed to use with the Hydronic Air Handler are available as optional accessories for air conditioning models</li>
  <li>Stainless steel water pump</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'Integrated Heating utilizing a Hydronic heating coil and constant torque motor.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1300,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-handlers', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=F2CC23D7-F96C-4A5F-A1B6-1B87740A39C3'),
-			'image_name'	=>	'rheem-ah-01.jpg'		
+			'image_name'	=>	'rheem-ah-01.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'High Efficiency Air Handler (RH2V)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -341,17 +354,17 @@ comfort.</span>
  <li>External filter required.</li>
  <li>Evaporator coil is constructed of aluminum fins bonded to internally grooved aluminum tubing.</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'High Efficiency, constant CFM two-stage air flow with up to 18 SEER performance.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1310,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-handlers', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=DB3BF827-58EA-4924-A950-950E9C8BE57E'),
-			'image_name'	=>	'rheem-ah-02.jpg'		
+			'image_name'	=>	'rheem-ah-02.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Front or Bottom Return Air Handler (RF1P)',
 			'post_content' 	=>	'<span class="descriptionText"></span>
 <ul>
@@ -362,15 +375,15 @@ comfort.</span>
  <li>Dual Voltage Direct Drive Blower with multi-speed motor</li>
  <li>Optional Factory Installed Condensate Float Switch which shuts off the outdoor unit in event the condensate pan becomes clogged</li>
 </ul>
-<span class="disclaimerText"></span>', 
+<span class="disclaimerText"></span>',
 			'post_excerpt'	=>	'All aluminum coil provides PSC single-stage airflow, resulting in efficiencies up to 15.5 SEER.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1320,
 			'tax_input'		=>  array('product-brand'=>'rheem', 'product-type'=>'air-handlers', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=89ED6C81-3D16-49B0-81D9-B49B631FB141'),
-			'image_name'	=>	'rheem-ah-03.jpg'		
-),		
-			
+			'image_name'	=>	'rheem-ah-03.jpg'
+),
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

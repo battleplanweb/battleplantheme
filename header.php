@@ -81,12 +81,28 @@
 				if ( $key !== 'site-bg' ) $has_parallax = true;
 			endforeach;
 
-			$first = true;
+			$first          = true;
+			$pruned         = false;
+			$upload_basedir = wp_upload_dir()['basedir'];
 			foreach ( $preload_images[$preload_key] as $key => $entry ) :
 				$file          = is_array($entry) ? $entry['file'] : $entry;
-				$attachment_id = is_array($entry) ? $entry['attachment_id'] : 0;
+				$attachment_id = is_array($entry) ? ( $entry['attachment_id'] ?? 0 ) : 0;
 				$url           = $base_url . ltrim($file, '/');
-				$srcset        = ( !is_mobile() && $attachment_id ) ? wp_get_attachment_image_srcset($attachment_id, 'full') : '';
+
+				// bp_preload_images is an accumulate-only cache: an image later deleted or renamed
+				// leaves a ghost entry that would preload a 404. Skip AND drop any entry whose file
+				// no longer exists on disk (self-heals the option on the next uncached render).
+				if ( ! is_file( $upload_basedir . '/' . ltrim($file, '/') ) ) :
+					unset( $preload_images[$preload_key][$key] );
+					$pruned = true;
+					continue;
+				endif;
+
+				$density       = ( is_mobile() && is_array($entry) && !empty($entry['srcset']) );
+					$srcset        = $density ? $entry['srcset'] : ( ( !is_mobile() && $attachment_id ) ? wp_get_attachment_image_srcset($attachment_id, 'full') : '' );
+				// Drop candidates whose files are missing (e.g. a removed image crop still
+				// listed in attachment metadata) so we never preload a 404'd LCP image.
+				if ( $srcset ) $srcset = bp_prune_missing_srcset( $srcset );
 
 				if ( $key === 'site-bg' ) :
 					$priority = $has_parallax ? 'low' : 'high';
@@ -100,10 +116,13 @@
 					as="image"
 					href="<?php echo esc_url($url); ?>"
 					<?php echo $srcset ? 'imagesrcset="' . esc_attr($srcset) . '"' : ''; ?>
-					<?php echo $srcset ? 'imagesizes="100vw"' : ''; ?>
+					<?php echo ( $srcset && ! $density ) ? 'imagesizes="100vw"' : ''; ?>
 					fetchpriority="<?php echo $priority; ?>">
 				<?php
 			endforeach;
+
+			// Persist the ghost-entry cleanup once (only when something was actually dropped).
+			if ( $pruned ) update_option( 'bp_preload_images', $preload_images, true );
 		endif;
 
 	?>
@@ -118,6 +137,27 @@
 <body id="<?php echo get_the_ID(); ?>" <?php body_class( battleplan_getUserRole() ); ?>>
 
 <?php bp_loader(); ?>
+
+<?php // Loader dismissal: hold the loader until the WHOLE page has painted (hero + grunge
+      // textures + fonts + entrance reveals), so it masks any pop-in / reflow while the page
+      // settles. The loader sits ON TOP of the server-rendered hero, which paints beneath it
+      // on its own, so how long the loader stays up does NOT affect the measured LCP — zero
+      // LCP cost to holding it through the jank. Pure-CSS fade; a hard cap guarantees it can
+      // never hang. The mobile-bar buttons hidden above are revealed here too, so this runs
+      // even when a site has no #loader (the loader fade is simply skipped in that case). ?>
+<style>#loader{transition:opacity .45s ease}#loader.bp-done{opacity:0;pointer-events:none}</style>
+<script nonce="<?php echo esc_attr(_BP_NONCE); ?>">(function(){
+	var loader=document.getElementById('loader');
+	var done=false;
+	function hide(){ if(done)return; done=true;
+		// reveal the mobile-bar buttons (hidden at opacity:0 above to avoid a pre-JS flash)
+		document.querySelectorAll('#mobile-menu-bar .mm-bar-btn').forEach(function(el){ el.style.opacity='1'; });
+		if(loader){ loader.classList.add('bp-done'); setTimeout(function(){ loader.style.display='none'; },600); }
+	}
+	setTimeout(hide,4000); // safety cap: never hang the loader / never leave the buttons hidden
+	if(document.readyState==='complete'){ hide(); }
+	else{ window.addEventListener('load',hide); }
+})();</script>
 
 <?php wp_body_open(); ?>
 

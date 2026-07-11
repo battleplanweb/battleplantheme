@@ -73,6 +73,20 @@ function sp_agency_find_review( array $reviews, string $review_id ) {
 	return null;
 }
 
+/**
+ * The oldest cache timestamp across a client's sources (Google location + Facebook page), or 0 if
+ * either source has never been fetched. Drives stalest-first ordering of the live refresh so repeated
+ * Refreshes spread the work across every client instead of always re-pulling the first few.
+ */
+function sp_agency_client_fetched_at( array $cfg, array $cache ): int {
+	$t   = PHP_INT_MAX;
+	$loc = (string) ( $cfg['location'] ?? '' );
+	if ( '' !== $loc ) $t = min( $t, (int) ( $cache[ $loc ]['fetched_at'] ?? 0 ) );
+	$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
+	if ( '' !== $fbid ) $t = min( $t, (int) ( $cache[ 'fb:' . $fbid ]['fetched_at'] ?? 0 ) );
+	return PHP_INT_MAX === $t ? 0 : $t;
+}
+
 
 /*--------------------------------------------------------------
 # AJAX — all clients' reviews, grouped by client
@@ -89,48 +103,83 @@ function site_pulse_ajax_get_agency_reviews(): void {
 	$cache     = sp_agency_cache();
 	$dismissed = sp_agency_dismissed();
 	$now       = time();
-	$out       = [];
 
+	// A live refresh fans out one blocking Google (+Facebook) fetch per client. A single slow or hung
+	// upstream (a dead FB token stalls its full 20s HTTP timeout, etc.) stacks past WP Engine's ~60s
+	// request cap and 502s the whole tab — and the old single save-at-the-end meant a timeout discarded
+	// every client fetched before it, so it never recovered. Three guards fix that:
+	//  1. Wall-clock budget: once spent, remaining clients fall back to their cached data this request.
+	//  2. Incremental save after each client, so partial progress always persists.
+	//  3. Stalest-first order, with the timestamp advanced even on failure, so each Refresh covers a
+	//     different slice and one permanently-broken client can't hog the budget and starve the rest.
+	if ( function_exists( 'set_time_limit' ) ) @set_time_limit( 60 );
+	$deadline = microtime( true ) + 40.0; // headroom under WPE's 60s for the final encode + response
+	$partial  = false;
+
+	// Agency clients only (entries without "agency": true are client-managed — they show on that
+	// client's OWN dashboard, not here). Keep the map order for display; refresh in stalest-first order.
+	$agency = [];
+	$order  = 0;
 	foreach ( $sites as $site_key => $cfg ) {
-		// Only businesses YOU manage show on the agency dashboard. Entries without "agency": true
-		// are client-managed — they appear on that client's OWN Site Pulse dashboard, not here.
 		if ( empty( $cfg['agency'] ) ) continue;
+		$agency[] = [ 'key' => (string) $site_key, 'cfg' => $cfg, 'order' => $order++ ];
+	}
+	if ( $force ) {
+		usort( $agency, function ( $a, $b ) use ( $cache ) {
+			return sp_agency_client_fetched_at( $a['cfg'], $cache ) <=> sp_agency_client_fetched_at( $b['cfg'], $cache );
+		} );
+	}
 
-		$location = $cfg['location'] ?? '';
+	$out = [];
+	foreach ( $agency as $item ) {
+		$site_key = $item['key'];
+		$cfg      = $item['cfg'];
+		$location = (string) ( $cfg['location'] ?? '' );
 		$entry    = [
-			'site_key'         => (string) $site_key,
+			'site_key'         => $site_key,
 			'label'            => (string) ( $cfg['label'] ?? $site_key ),
 			'site_url'         => ! empty( $cfg['site_url'] ) ? (string) $cfg['site_url'] : '',
 			'averageRating'    => null,
 			'totalReviewCount' => null,
 			'reviews'          => [],
 			'error'            => null,
+			'_order'           => $item['order'],
 		];
 
 		$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
 		if ( '' === $location && '' === $fbid ) { $entry['error'] = 'No Google location or Facebook Page set — add one in Tools → Client Reviews.'; $out[] = $entry; continue; }
 
-		$reviews = [];
+		$reviews  = [];
+		$did_live = false;
 
 		// ── Google reviews ──
 		if ( '' !== $location ) {
-			$cached = $cache[ $location ] ?? null;
-			// Only the Refresh button re-polls (live Google fetch); opening the panel serves cache instantly.
-			if ( $force ) {
+			// Only the Refresh button re-polls, and only while the budget lasts; otherwise serve cache.
+			$do_google = $force && microtime( true ) < $deadline;
+			if ( $force && ! $do_google ) $partial = true;
+			if ( $do_google ) {
+				$did_live = true;
 				try {
-					$data   = BPGBP_Hub::fetch_reviews_for_location( $location, '', 200, sp_agency_reviews_since() );
-					$cached = [
+					// One page (50) is plenty — the agency view only shows reviews since the cutoff — and it
+					// caps each Google fetch at a single HTTP call, so a slow location can't multi-page past
+					// the budget.
+					$data               = BPGBP_Hub::fetch_reviews_for_location( $location, '', 50, sp_agency_reviews_since() );
+					$cache[ $location ] = [
 						'fetched_at'       => $now,
 						'averageRating'    => $data['averageRating'],
 						'totalReviewCount' => $data['totalReviewCount'],
 						'reviews'          => array_values( $data['reviews'] ),
 					];
-					$cache[ $location ] = $cached;
 				} catch ( Exception $e ) {
-					if ( empty( $cached['reviews'] ) ) { $entry['error'] = $e->getMessage(); }
+					// Advance the timestamp even on failure so a broken location rotates to the back of the
+					// stalest-first queue instead of eating the budget on every Refresh.
+					if ( ! isset( $cache[ $location ] ) || ! is_array( $cache[ $location ] ) ) $cache[ $location ] = [ 'reviews' => [] ];
+					$cache[ $location ]['fetched_at'] = $now;
+					if ( empty( $cache[ $location ]['reviews'] ) ) { $entry['error'] = $e->getMessage(); }
 					else { $entry['error'] = 'Showing saved reviews — ' . $e->getMessage(); }
 				}
 			}
+			$cached = $cache[ $location ] ?? null;
 			$entry['averageRating']    = $cached['averageRating']    ?? null;
 			$entry['totalReviewCount'] = $cached['totalReviewCount'] ?? null;
 			$greviews = $cached['reviews'] ?? [];
@@ -148,9 +197,10 @@ function site_pulse_ajax_get_agency_reviews(): void {
 		// ── Facebook recommendations (own cache bucket 'fb:<pageId>'; positive=5★, negative=1★) ──
 		if ( '' !== $fbid && class_exists( 'BPFB_Hub' ) ) {
 			$fbkey  = 'fb:' . $fbid;
-			$fbc    = $cache[ $fbkey ] ?? null;
-			// Only the Refresh button re-polls (live FB fetch); opening the panel serves cache instantly.
-			if ( $force ) {
+			$do_fb  = $force && microtime( true ) < $deadline;
+			if ( $force && ! $do_fb ) $partial = true;
+			if ( $do_fb ) {
+				$did_live = true;
 				try {
 					$fbrev = [];
 					foreach ( BPFB_Hub::fetch_reviews( $fbid, 100 ) as $r ) {
@@ -165,14 +215,16 @@ function site_pulse_ajax_get_agency_reviews(): void {
 							'source'     => 'facebook',
 						];
 					}
-					$fbc = [ 'fetched_at' => $now, 'reviews' => $fbrev ];
-					$cache[ $fbkey ] = $fbc;
+					$cache[ $fbkey ] = [ 'fetched_at' => $now, 'reviews' => $fbrev ];
 				} catch ( Exception $e ) {
-					// Surface the FB fetch problem (token/mapping/deprecation) so it isn't an invisible blank.
+					// Advance the timestamp even on failure (same rotation logic as Google above) and
+					// surface the FB problem (token/mapping/deprecation) so it isn't an invisible blank.
+					if ( ! isset( $cache[ $fbkey ] ) || ! is_array( $cache[ $fbkey ] ) ) $cache[ $fbkey ] = [ 'reviews' => [] ];
+					$cache[ $fbkey ]['fetched_at'] = $now;
 					$entry['fb_error'] = $e->getMessage();
 				}
 			}
-			$fbreviews = $fbc['reviews'] ?? [];
+			$fbreviews = $cache[ $fbkey ]['reviews'] ?? [];
 			$fdis = $dismissed[ $fbkey ] ?? [];
 			if ( $fdis && $fbreviews ) {
 				$fbreviews = array_values( array_filter( $fbreviews, function ( $r ) use ( $fdis ) {
@@ -184,10 +236,20 @@ function site_pulse_ajax_get_agency_reviews(): void {
 
 		$entry['reviews'] = $reviews;
 		$out[] = $entry;
+
+		// Persist after every client that hit the network, so a later timeout never throws away the
+		// clients already refreshed this request (the request self-heals across successive Refreshes).
+		if ( $did_live ) sp_agency_cache_save( $cache );
 	}
 
 	sp_agency_cache_save( $cache );
-	wp_send_json_success( [ 'clients' => $out ] );
+
+	// Restore map order for display (we refreshed in stalest-first order), then drop the sort key.
+	usort( $out, function ( $a, $b ) { return $a['_order'] <=> $b['_order']; } );
+	foreach ( $out as &$e ) unset( $e['_order'] );
+	unset( $e );
+
+	wp_send_json_success( [ 'clients' => $out, 'partial' => $partial ] );
 }
 
 

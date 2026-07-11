@@ -4,15 +4,29 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-york-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
+
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="york air conditioners"]
+
+[product-overview type="york air handlers"]
+
+[product-overview type="york heat pumps"]
+
+[product-overview type="york furnaces"]
+*/
+
 add_action( 'wp_loaded', 'add_york_products', 10 );
 function add_york_products() {
 
 	$brand = "york"; // lowercase
-	$productImgAlt = "York Heating & Cooling Product"; 
+	$productImgAlt = "York Heating & Cooling Product";
 
 
 	/*
@@ -20,8 +34,8 @@ function add_york_products() {
 	*/
 
 
-	$addProducts = array (		
-	
+	$addProducts = array (
+
 	// Air Conditioners
 array ( 'post_title'	=>	'YXV 20 SEER2 Variable Capacity Air Conditioner',
 	   	'post_content' 	=>	'<span class="descriptionText">Premium Comfort with Lower Energy Use</span>
@@ -36,13 +50,13 @@ array ( 'post_title'	=>	'YXV 20 SEER2 Variable Capacity Air Conditioner',
 	<li>Climate Set™ maximizes overall efficiency and provides improved comfort by fine-tuning the system to the indoor and outdoor environment</li>
 	<li>Integrates with the Hx™3 Communicating Zoning System</li>
 	<li>Durable Finish – A high quality powder paint finish rated at 1000 hrs. salt spray provides the ultimate protection from corrosion and harmful UV rays, ensuring a long-lasting, high quality appearance.</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Our most efficient, most advanced air conditioner. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1000,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/york%20brochure_print.pdf'),
-		'image_name'	=>	'York-AC-01.jpg'		
+		'image_name'	=>	'York-AC-01.jpg'
 ),
 
 array ( 'post_title'	=>	'YCG 17 SEER Single Stage Air Conditioner',
@@ -59,13 +73,13 @@ array ( 'post_title'	=>	'YCG 17 SEER Single Stage Air Conditioner',
 	<li>Long-lasting, powder-coat paint provides a durable, automative-quality finish</li>
 	<li>Environmentally Friendly - CFC-free R-410A refrigerant delivers environmentally friendly performance with zero ozone depletion.</li>
 	<li>Low Operating Sound Levels - Specific sound and vibration development tests provide a design sound performance of 74 dBA or lower. Swept-wing fan blades are featured on units 2.5-Tons and higher.</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'More performance in less space.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1010,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'air-conditioners', 'product-class'=>'great'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/publ-7693-d-0916.pdf'),
-		'image_name'	=>	'York-AC-02.jpg'		
+		'image_name'	=>	'York-AC-02.jpg'
 ),
 
 array ( 'post_title'	=>	'YC2F 15.2 SEER2 Air Conditioner',
@@ -78,23 +92,23 @@ array ( 'post_title'	=>	'YC2F 15.2 SEER2 Air Conditioner',
 	<li>Durable, steel-extruded louver coil guards provide protection against coil damage</li>
 	<li>Uses R-410A refrigerant to prevent ozone depletion</li>
 	<li>Long-lasting, powder-coat paint provides a durable, automative-quality finish</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Our most efficient, most advanced air conditioner. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1020,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/dx2209001ssy_yc2f_15.2%20seer2%20ac%20sell%20sheets_standard_york_digital.pdf'),
-		'image_name'	=>	'York-AC-02.jpg'		
+		'image_name'	=>	'York-AC-02.jpg'
 ),
-		
-		
-		
-		
-	
+
+
+
+
+
 	// Heat Pumps
 array ( 'post_title'	=>	'YHM 16 SEER Modulating Heat Pump',
 		'post_content' 	=>	'<span class="descriptionText">A Higher Level of Comfort</span>
-			
+
 <p>Maximize your comfort while minimizing energy bills with the YORK® LX Series YHM 16 SEER Modulating Heat Pump. This split-system heat pump will automatically adjust capacity and airflow to precisely match the ever-changing comfort requirements of your home, maximizing comfort while minimizing energy bills. Pair it with YORK® variable-speed furnaces or air handlers to maximize year-round comfort and performance. </p>
 <ul>
 	<li>Advanced control system Demand Defrost minimizes defrost cycles, reducing energy costs while maintaining comfort</li>
@@ -104,18 +118,18 @@ array ( 'post_title'	=>	'YHM 16 SEER Modulating Heat Pump',
     <li>Automotive-grade, powder-paint finish is 1,000-hours salt spray rated to provide years of corrosion-free performance</li>
     <li>Protected Compressor - Compressors are protected by the system high and low pressure switches. The liquid line filter-drier is factory installed to protect the system against moisture and contaminates.</li>
     <li>Top Discharge - Warm air is blown up, away from the structure and any landscaping and allows compact location on multi-unit applications.</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'High-Efficiency Split System Heat Pump',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1100,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/publ-7696-d-0916.pdf'),
-		'image_name'	=>	'York-HP-01.jpg'		
-),		
-		
+		'image_name'	=>	'York-HP-01.jpg'
+),
+
 array ( 'post_title'	=>	'YH2F 15.2 SEER2 1 & 2-Stage Heat Pump',
 		'post_content' 	=>	'<span class="descriptionText">Reliable, All Season Performance. Year Round Energy Savings. </span>
-			
+
 <p>The YORK® LX Series YH2F meets Energy Star/CEE Tier 1 efficiency requirements and is eligible for tax and rebate incentives through the Inflation Reduction Act (IRA). Designed to deliver year-round comfort, the ENERGY STAR® qualifying 15.2 SEER2 efficiency means you will spend less on energy bills. Backed by the Good Housekeeping Seal, this split-system heat pump is specifically designed to be matched with YORK® indoor coils, furnaces and air handlers for a complete system solution. </p>
 <ul>
 	<li>Automotive-grade, powder-paint finish is 1,000-hours salt spray rated to provide years of corrosion-free performance</li>
@@ -123,18 +137,18 @@ array ( 'post_title'	=>	'YH2F 15.2 SEER2 1 & 2-Stage Heat Pump',
     <li>Single- and three-phase models available</li>
     <li>Unit can be matched with a YORK® residential gas furnace to create a dual-fuel comfort system that automatically switches between heat sources based on energy costs or capacity</li>
     <li>Two-stage (except 1.5 Ton) scroll compressor is a robust, time-tested design that can stand up to the rigors presented while comfort conditioning a home</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Efficient, dependable, year-round comfort',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1110,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'heat-pumps', 'product-class'=>'great'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/dx2207002ay_res_guide_york_1_digital.pdf'),
-		'image_name'	=>	'York-HP-01.jpg'		
-),		
+		'image_name'	=>	'York-HP-01.jpg'
+),
 
 array ( 'post_title'	=>	'YH2E 14.3 SEER2 Single-Stage Heat Pump',
 		'post_content' 	=>	'<span class="descriptionText">Dependable, Efficient Performance </span>
-			
+
 <p>Get the next generation of efficiency and energy savings with the proven performance of the YORK® YH2E 14.3 SEER2 1-2-Stage Heat Pump. This efficient heat pump meets 2023 Department of Energy (DOE) minimums with 14.3 SEER2 cooling, and 8.0 HSPF2 heating efficiency requirements to keep your family cool in summer and warm in winter. The YORK® YH2E reduces your energy bills replacing older, less efficient equipment. The YORK® YH2E offers dependable performance, energy efficiency and operating economy – all backed by the Good Housekeeping Seal. </p>
 <ul>
 	<li>Automotive-grade, powder-paint finish is 1,000-hours salt spray rated to provide years of corrosion-free performance</li>
@@ -145,19 +159,19 @@ array ( 'post_title'	=>	'YH2E 14.3 SEER2 Single-Stage Heat Pump',
     <li>All models will have a two-stage compressor with the exception of the 1.5 ton model which will have a single-stage compressor</li>
     <li>Environmentally Friendly - CFC-free R-410A refrigerant delivers environmentally friendly performance with zero ozone depletion.</li>
     <li>Low Operating Sound Levels - Developed using CFD and FEA tools, the sturdy cabinet and top design provides sound performance of 76 dBA or lower. Compatible accessories for further sound reduction are also available.</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Efficient, dependable, year-round comfort. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1120,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>''),
-		'image_name'	=>	'York-AC-02.jpg'		
-),		
-		
-		
-		
-		
-	
+		'image_name'	=>	'York-AC-02.jpg'
+),
+
+
+
+
+
 	// Furnaces
 array ( 'post_title'	=>	'YP9C 98% Modulating Gas Furnace',
 		'post_content' 	=>	'<span class="descriptionText">A Higher Standard for Efficiency </span>
@@ -172,13 +186,13 @@ array ( 'post_title'	=>	'YP9C 98% Modulating Gas Furnace',
     <li>Unit design engineered for natural gas or propane applications</li>
     <li>Integrates with the Hx™3 Communicating Zoning System</li>
     <li>Fully-Gasketed, Independent Access Doors W/View Ports, Retail Appearance.</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'The most advanced, most efficient furnace we offer. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1200,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'furnaces', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/publ-6210-f-0817.pdf'),
-		'image_name'	=>	'York-F-01.jpg'		
+		'image_name'	=>	'York-F-01.jpg'
 ),
 
 
@@ -195,13 +209,13 @@ array ( 'post_title'	=>	'TM9V 96% AFUE Two Stage Variable Speed Furnace',
     <li>Unit design engineered for natural gas or propane applications</li>
     <li>Integrates with the Hx™3 Communicating Zoning System</li>
     <li>Electronic Hot Surface Ignition saves fuel cost with increased dependability and reliability.</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'ENERGY STAR® qualifying efficiency in a compact design. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1210,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'furnaces', 'product-class'=>'great'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/yorklxgasfurn-bro.pdf'),
-		'image_name'	=>	'York-F-02.jpg'		
+		'image_name'	=>	'York-F-02.jpg'
 ),
 
 array ( 'post_title'	=>	'TL8E 80% AFUE Single Stage, Ultra-Low NOx Furnace',
@@ -215,19 +229,19 @@ array ( 'post_title'	=>	'TL8E 80% AFUE Single Stage, Ultra-Low NOx Furnace',
     <li>Single-stage burner and standard high-efficiency ECM fan motor ensure comfort</li>
     <li>Complements both single-stage and two-stage outdoor equipment</li>
     <li>Fully insulated cabinet design</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'High efficiency and ultra-low emissions. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1220,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'furnaces', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/dx2301005b_res_buying_guide_yk_digital.pdf'),
-		'image_name'	=>	'York-F-01.jpg'		
+		'image_name'	=>	'York-F-01.jpg'
 ),
 
-		
-		
-		
-	
+
+
+
+
 	// Air Handlers
 array ( 'post_title'	=>	'AVV Communicating, Constant CFM Air Handler',
 		'post_content' 	=>	'<span class="descriptionText">Dynamic Control for Maximum Comfort</span>
@@ -239,13 +253,13 @@ array ( 'post_title'	=>	'AVV Communicating, Constant CFM Air Handler',
     <li>MaxAlloy™ coil features advanced corrosion-resistant design for long life</li>
     <li>Built-in filter rack accepts 1.0" disposable and cleanable air filters</li>
     <li>Integrates with the Hx™3 Communicating Zoning System</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Superior year-round comfort control.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1300,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'air-handlers', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/york%20brochure_print.pdf'),
-		'image_name'	=>	'York-AH-01.jpg'		
+		'image_name'	=>	'York-AH-01.jpg'
 ),
 
 array ( 'post_title'	=>	'JHVT Variable Speed Air Handler',
@@ -259,13 +273,13 @@ array ( 'post_title'	=>	'JHVT Variable Speed Air Handler',
     <li>Less than 2% air leakages at 1.0" esp. ensures only conditioned air moves through your home and unconditioned air isn\'t introduced into the system</li>
     <li>MaxAlloy™ “A” coil is built to deliver lasting performance, efficient refrigerant flow and reliability</li>
     <li>Built-in filter rack accepts 1.0” disposable and cleanable air filters and features sliding latch design for quick and easy access</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Superior year-round comfort control.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1310,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'air-handlers', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/jciy12211-york-airhandler%E2%80%93sellsheet-d23i-lowresviewonly.pdf'),
-		'image_name'	=>	'York-AH-02.jpg'		
+		'image_name'	=>	'York-AH-02.jpg'
 ),
 
 array ( 'post_title'	=>	'AP Fixed Speed Multi Position Air Handler',
@@ -279,15 +293,15 @@ array ( 'post_title'	=>	'AP Fixed Speed Multi Position Air Handler',
     <li>Robust design is rigorously tested well beyond industry standards to ensure long-lasting performance</li>
     <li>Less than 2% air leakages at 1.0" esp. ensures only conditioned air moves through your home and unconditioned air isn\'t introduced into the system</li>
     <li>MaxAlloy™ coil features advanced corrosion-resistant design for long life</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Provides reliable, economical comfort. ',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1320,
 		'tax_input'		=>  array('product-brand'=>'york', 'product-type'=>'air-handlers', 'product-class'=>'good'),
 		'meta_input'	=>	array('brochure'=>'https://files.hvacnavigator.com/p/publ-7701-a-0715.pdf'),
-		'image_name'	=>	'York-AH-01.jpg'		
+		'image_name'	=>	'York-AH-01.jpg'
 ),
-			
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

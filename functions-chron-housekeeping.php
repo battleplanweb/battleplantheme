@@ -278,6 +278,11 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		bp_run_companycam_sync();
 	}
 
+	// Workiz jobs -> jobsite_geo (same nightly window as Company Cam).
+	if ($jobsite && ($jobsite['fsm_brand'] ?? '') == 'Workiz' && function_exists('bp_run_workiz_sync')) {
+		bp_run_workiz_sync();
+	}
+
 	// Reconciliation: ingested jobs (Housecall Pro / Company Cam) publish without an
 	// AI rewrite, so they have no service-type/service term and never become a
 	// /service/ page. Seed any published jobsite_geo posts still missing a rewrite —

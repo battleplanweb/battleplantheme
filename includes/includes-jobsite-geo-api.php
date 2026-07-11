@@ -7,6 +7,7 @@
 # API Framework Helpers
 # Housecall Pro
 # Company Cam
+# Workiz
 --------------------------------------------------------------*/
 
 
@@ -49,8 +50,9 @@ function bp_ingest_jobsite(array $job) {
 	// Photos (exact driver behavior)
 	if (!empty($job['photos']) && is_array($job['photos']) && !empty($job['photo_driver'])) {
 		$driver = $job['photo_driver'];
-		$driver === 'hcp' ? bp_sync_jobsite_photos_hcp($post_id, $job['photos']) : null;
-		$driver === 'cc'  ? bp_sync_jobsite_photos_companycam($post_id, $job['photos']) : null;
+		$driver === 'hcp'    ? bp_sync_jobsite_photos_hcp($post_id, $job['photos']) : null;
+		$driver === 'cc'     ? bp_sync_jobsite_photos_companycam($post_id, $job['photos']) : null;
+		$driver === 'workiz' ? bp_sync_jobsite_photos_workiz($post_id, $job['photos']) : null;
 	}
 
 	// Finalize (exact)
@@ -871,4 +873,327 @@ function bp_sync_jobsite_photos_companycam($post_id, array $photos) {
 	}
 
 	update_post_meta($post_id, '_companycam_photo_ids', array_unique($saved_ids));
+}
+
+
+/*--------------------------------------------------------------
+# Workiz
+--------------------------------------------------------------*/
+
+// Pull-based importer, structured exactly like bp_run_companycam_sync: a nightly
+// cron pages through Workiz jobs and upserts the qualifying ones as jobsite_geo
+// posts via the shared bp_ingest_jobsite(). Gated (in housekeeping) on
+// jobsite_geo.fsm_brand == 'Workiz'. Shares the ***note*** editorial gate with
+// HCP/Company Cam: a job is published only if its notes contain text wrapped in
+// two-or-more stars, AND the job has reached a completed status.
+//
+// Credentials come from the `workiz` option via the shared client in
+// includes-workiz.php. That file is loaded when the `workiz` module is on; if a
+// site enabled the jobsite pull without it, we bail loudly rather than fatal.
+function bp_run_workiz_sync() {
+
+	if ( ! function_exists('bp_workiz_get') ) {
+		error_log('bp_run_workiz_sync: the `workiz` module is not loaded (install the `workiz` option with credentials); aborting sync.');
+		return;
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	$jobsite = get_option('jobsite_geo');
+
+	// How far back to scan each night. We de-dupe by job id + an updated-watermark,
+	// so re-scanning a wide window is cheap (only changed/new jobs do real work).
+	$lookback = (int) ($jobsite['workiz_lookback_days'] ?? 365);
+	$start    = date('Y-m-d', time() - $lookback * DAY_IN_SECONDS);
+
+	// Which Workiz statuses count as "completed enough to publish". Workiz statuses
+	// vary by account; default to the common done-states and let a site override.
+	// The ***note*** gate is the primary control, so this is a soft secondary filter.
+	$done_statuses = apply_filters('bp_workiz_done_statuses', ['done', 'completed', 'submitted']);
+	$done_statuses = array_map('strtolower', (array) $done_statuses);
+
+	// Page through job/all (records maxes at 100). Offset-based: stop on a short page.
+	$records = 100;
+	$offset  = 0;
+	$jobs    = [];
+	do {
+		$resp = bp_workiz_get('job/all/', [
+			'start_date' => $start,
+			'offset'     => $offset,
+			'records'    => $records,
+			'only_open'  => 'false',   // we want completed jobs, not open ones
+		]);
+
+		if ( is_wp_error($resp) ) {
+			error_log('bp_run_workiz_sync: ' . $resp->get_error_message());
+			break;
+		}
+
+		$batch = $resp['data'] ?? ( is_array($resp) && isset($resp[0]) ? $resp : [] );
+		if ( empty($batch) ) break;
+
+		$jobs    = array_merge($jobs, $batch);
+		$offset += $records;
+	} while ( count($batch) === $records && $offset <= 5000 ); // safety cap
+
+	// On the first run (or when debugging) dump one raw job so we can confirm the
+	// exact Workiz field names for this account and tighten the mapping below.
+	if ( $jobs && defined('WP_DEBUG') && WP_DEBUG ) {
+		file_put_contents(WP_CONTENT_DIR . '/workiz-last-payload.txt', print_r($jobs[0], true));
+	}
+
+	foreach ($jobs as $j) {
+		$j = (array) $j;
+
+		$job_id = bp_workiz_val($j, ['UUID', 'uuid', 'JobUUID', 'SerialId', 'id']);
+		if ($job_id === '') continue;
+
+		// Completed-status gate (soft). Skip if we can read a status and it's not done.
+		$status = strtolower((string) bp_workiz_val($j, ['Status', 'status', 'SubStatus']));
+		if ($status !== '' && ! in_array($status, $done_statuses, true)) continue;
+
+		// ***note*** editorial gate — the publishable description lives between stars.
+		$notes = trim((string) bp_workiz_val($j, ['JobNotes', 'Notes', 'Comments', 'JobDescription']));
+		if ( ! preg_match('/\*{2,}([\s\S]*?)\*{2,}/', $notes, $m) ) continue;
+		$jobsite_desc = trim($m[1]);
+		if ($jobsite_desc === '') continue;
+
+		// De-dupe + updated-watermark: skip only if already synced AND unchanged since.
+		$found    = get_posts([
+			'post_type'   => 'jobsite_geo',
+			'meta_key'    => '_workiz_job_id',
+			'meta_value'  => $job_id,
+			'numberposts' => 1,
+		]);
+		$existing = $found[0] ?? null;
+
+		$updated_raw = (string) bp_workiz_val($j, ['LastUpdated', 'LastStatusUpdate', 'JobDateTime', 'Created']);
+		$updated_ts  = $updated_raw ? (int) strtotime($updated_raw) : 0;
+
+		if ($existing) {
+			$last_synced = (int) get_post_meta($existing->ID, '_workiz_synced_updated_at', true);
+			if ($last_synced && $updated_ts && $updated_ts <= $last_synced) continue;
+		}
+
+		// Did the publishable text itself change? If not (e.g. only status moved),
+		// keep the AI-written page copy and don't clobber it with the raw note.
+		$desc_hash    = md5($jobsite_desc);
+		$desc_changed = ! $existing
+			|| ((string) get_post_meta($existing->ID, '_workiz_notes_hash', true) !== $desc_hash);
+
+		$first = (string) bp_workiz_val($j, ['FirstName', 'first_name']);
+		$last  = (string) bp_workiz_val($j, ['LastName', 'last_name']);
+		$title = trim($first . ' ' . $last);
+		if ($title === '') $title = 'Workiz Job ' . $job_id;
+
+		$zip_raw = (string) bp_workiz_val($j, ['PostalCode', 'Zip', 'zipcode']);
+		$date_raw = (string) bp_workiz_val($j, ['JobDateTime', 'JobDate', 'Created']);
+
+		$photos = bp_workiz_extract_photos($j);
+
+		$post_id = bp_ingest_jobsite([
+			'source'            => 'Workiz',
+			'external_id'       => $job_id,
+			'external_meta_key' => '_workiz_job_id',
+
+			// Match Company Cam behavior: title fallback + force publish on update.
+			'title_fallback' => true,
+			'force_publish'  => true,
+
+			'title'       => $title,
+			'description' => $jobsite_desc,
+
+			'update_content' => $desc_changed,
+			'desc_changed'   => $desc_changed,
+
+			// Uses ACF field NAMES (like HCP), which bp_ingest_jobsite writes via update_field().
+			'acf_fields' => [
+				'address'       => (string) bp_workiz_val($j, ['Address', 'address']),
+				'city'          => (string) bp_workiz_val($j, ['City', 'city']),
+				'state'         => (string) bp_workiz_val($j, ['State', 'state']),
+				'zip'           => $zip_raw !== '' ? preg_replace('/^(\d{5}).*/', '$1', $zip_raw) : '',
+				'job_date'      => $date_raw ? date('Y-m-d', strtotime($date_raw)) : '',
+				'customer_name' => $title,
+			],
+
+			'post_meta' => [
+				'_workiz_job_id'           => $job_id,
+				'_workiz_notes_hash'       => $desc_hash,
+				// Watermark: next run skips this job unless its updated time climbs past this.
+				'_workiz_synced_updated_at'=> $updated_ts ?: time(),
+			],
+
+			'photo_driver' => 'workiz',
+			'photos'        => $photos,
+		]);
+	}
+}
+
+/**
+ * Read the first present key from a Workiz job record (field names vary by
+ * account / API version), returning '' if none match. Keeps the mapping above
+ * resilient without a live payload in hand.
+ */
+function bp_workiz_val(array $row, array $keys) {
+	foreach ($keys as $k) {
+		if (isset($row[$k]) && $row[$k] !== null && $row[$k] !== '') return $row[$k];
+	}
+	return '';
+}
+
+/**
+ * Best-effort extraction of captioned photos from a Workiz job. The public API's
+ * media shape isn't guaranteed, so we probe the common containers and return a
+ * normalized [ id, url, caption ] list (max 4). No recognizable media -> [] and
+ * the jobsite publishes as a text page (still valid, just a lower score).
+ *
+ * Only captioned photos are kept, matching HCP/Company Cam (the caption becomes
+ * the ACF alt text). Once we see a real payload (workiz-last-payload.txt), tighten
+ * the field names here.
+ */
+function bp_workiz_extract_photos(array $j) {
+
+	$candidates = $j['Photos'] ?? $j['photos'] ?? $j['Attachments'] ?? $j['attachments'] ?? $j['Media'] ?? $j['media'] ?? [];
+	if ( empty($candidates) || ! is_array($candidates) ) return [];
+
+	$photos = [];
+	foreach ($candidates as $c) {
+		$c = (array) $c;
+
+		$url = (string) bp_workiz_val($c, ['url', 'Url', 'link', 'Link', 'file_url', 'FileUrl', 'src']);
+		if ($url === '') continue;
+
+		// Only images.
+		$ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION));
+		if ($ext && ! in_array($ext, ['jpg','jpeg','png','gif','webp','heic','avif'], true)) continue;
+
+		$caption = (string) bp_workiz_val($c, ['caption', 'Caption', 'description', 'Description', 'note', 'Note', 'name', 'Name']);
+		if (trim($caption) === '') continue;   // captioned only
+
+		$photos[] = [
+			'id'      => (string) bp_workiz_val($c, ['id', 'Id', 'uuid', 'UUID']) ?: md5($url),
+			'url'     => $url,
+			'caption' => trim($caption),
+		];
+		if (count($photos) >= 4) break;
+	}
+	return $photos;
+}
+
+/**
+ * Save Workiz job photos onto the jobsite post. Mirrors the Company Cam driver
+ * (hash de-dupe, per-photo lock, ACF slot + alt) but keys its own meta so a
+ * hash-reused attachment isn't confused with a Company Cam / HCP one.
+ */
+function bp_sync_jobsite_photos_workiz($post_id, array $photos) {
+
+	$saved_ids = [];
+	$acf_slot  = 1;
+
+	foreach ($photos as $photo) {
+
+		if ($acf_slot > 4) break;
+
+		$caption = wp_strip_all_tags($photo['caption'] ?? '');
+		if ($caption === '') continue;
+
+		$web_uri = $photo['url'] ?? null;
+		if (!$web_uri) continue;
+
+		$wk_photo_id = $photo['id'] ?? null;
+		if (!$wk_photo_id) continue;
+
+		$lock_key = 'wk_photo_lock_' . md5((string) $wk_photo_id);
+		if (get_transient($lock_key)) continue;
+		set_transient($lock_key, time(), 5 * MINUTE_IN_SECONDS);
+
+		$attachment_title = sprintf(
+			'Jobsite GEO [%d] %s -- %s',
+			$post_id,
+			wp_strip_all_tags(get_the_title($post_id)),
+			$wk_photo_id
+		);
+
+		$existing_attachment = get_posts([
+			'post_type'   => 'attachment',
+			'meta_key'    => '_workiz_photo_id',
+			'meta_value'  => $wk_photo_id,
+			'fields'      => 'ids',
+			'numberposts' => 1,
+		]);
+
+		if ($existing_attachment) {
+
+			$aid = (int) $existing_attachment[0];
+
+			if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
+				wp_update_post(['ID' => $aid, 'post_parent' => $post_id]);
+			}
+			wp_update_post(['ID' => $aid, 'post_title' => $attachment_title]);
+
+		} else {
+
+			$tmp = download_url($web_uri);
+			if (is_wp_error($tmp)) { delete_transient($lock_key); continue; }
+
+			// Reuse an identical file already in the library (hash), but only if it
+			// isn't a different source photo wearing the same hash.
+			$existing_aid = bp_find_existing_attachment_by_hash($tmp);
+			if ($existing_aid) {
+				$existing_wk_id = get_post_meta($existing_aid, '_workiz_photo_id', true);
+				if ($existing_wk_id && (string) $existing_wk_id !== (string) $wk_photo_id) {
+					$existing_aid = 0;
+				}
+			}
+
+			if ($existing_aid) {
+
+				@unlink($tmp);
+				$aid = $existing_aid;
+				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
+				if ((int) get_post_field('post_parent', $aid) !== (int) $post_id) {
+					wp_update_post(['ID' => $aid, 'post_parent' => $post_id]);
+				}
+
+			} else {
+
+				$ext = pathinfo(parse_url($web_uri, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+
+				$file = [
+					'name'     => "jobsite-geo-{$post_id}-{$wk_photo_id}.{$ext}",
+					'tmp_name' => $tmp,
+					'error'    => 0,
+					'size'     => filesize($tmp),
+				];
+
+				$mv = wp_handle_sideload($file, ['test_form' => false]);
+				if (empty($mv['file'])) { delete_transient($lock_key); continue; }
+
+				$aid = wp_insert_attachment([
+					'post_mime_type' => mime_content_type($mv['file']),
+					'post_title'     => $attachment_title,
+					'post_status'    => 'inherit',
+				], $mv['file'], $post_id);
+
+				wp_update_attachment_metadata($aid, wp_generate_attachment_metadata($aid, $mv['file']));
+
+				update_post_meta($aid, '_bp_file_hash', md5_file(get_attached_file($aid)));
+				update_post_meta($aid, '_workiz_photo_id', $wk_photo_id);
+				$saved_ids[] = $wk_photo_id;
+			}
+		}
+
+		update_field("jobsite_photo_{$acf_slot}", $aid, $post_id);
+		update_field("jobsite_photo_{$acf_slot}_alt", $caption, $post_id);
+
+		update_post_meta($aid, '_wp_attachment_image_alt', $caption);
+		wp_update_post(['ID' => $aid, 'post_excerpt' => $caption]);
+
+		delete_transient($lock_key);
+		$acf_slot++;
+	}
+
+	update_post_meta($post_id, '_workiz_photo_ids', array_unique($saved_ids));
 }

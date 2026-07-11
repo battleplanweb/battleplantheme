@@ -123,6 +123,11 @@ function battleplan_admin_menu() {
 		add_submenu_page( 'index.php',	'⚙️ Run Audit',       		'&nbsp;└&nbsp;Run Audit',      										'manage_options', 	'run-audit',         		'battleplan_force_run_audit' );
 	endif;
 
+	// Analytics dashboard — client-facing (stats viewers + admins), not just battleplanweb
+	if ( _USER_LOGIN === 'battleplanweb' || in_array( 'bp_view_stats', (array) _USER_ROLES ) || current_user_can( 'manage_options' ) ) {
+		add_submenu_page( 'index.php', 'Analytics', 'Analytics', 'read', 'bp-analytics', 'bp_analytics_page' );
+	}
+
 	// Site Pulse — link straight to the front-end dashboard, only when the module is installed on this site
 	if ( bp_module_on( get_option('site_pulse') ) ) {
 		add_menu_page( 'Site Pulse', 'Site Pulse', 'read', esc_url( home_url('/site-pulse-dashboard/') ), '', 'dashicons-chart-line', 3 );
@@ -132,6 +137,264 @@ function battleplan_admin_menu() {
 // Menu registration
 function battleplan_addSitePage() {
 	echo '<h1>Admin Page</h1>';
+}
+
+
+/*
+ * Analytics dashboard — per-channel trends over time from bp_ga4_channel_history.
+ * Framing: "your work" (Organic Search + GBP) is paid-proof; Paid is quarantined;
+ * Direct is shown but flagged noisy (it inflates during ad campaigns).
+ */
+function bp_an_delta( $pct, string $label ): string {
+	if ( $pct === null ) return '<span class="bp-an-delta none">' . esc_html( $label ) . ' —</span>';
+	$dir   = $pct > 0 ? 'up' : ( $pct < 0 ? 'down' : 'flat' );
+	$arrow = $pct > 0 ? '▲'  : ( $pct < 0 ? '▼'  : '–' );
+	return '<span class="bp-an-delta ' . $dir . '">' . esc_html( $label ) . ' ' . $arrow . ' ' . abs( (int) $pct ) . '%</span>';
+}
+
+function bp_analytics_page() {
+
+	if ( ! ( _USER_LOGIN === 'battleplanweb' || in_array( 'bp_view_stats', (array) _USER_ROLES ) || current_user_can( 'manage_options' ) ) ) {
+		wp_die( 'You do not have permission to view analytics.' );
+	}
+
+	$historyM = get_option( 'bp_ga4_channel_history' );
+	$historyW = get_option( 'bp_ga4_channel_history_weekly' );
+	$historyD = get_option( 'bp_ga4_channel_history_daily' );
+
+	echo '<div class="wrap bp-analytics">';
+	echo '<h1>Analytics <span class="bp-an-sub">Channel &amp; visitor trends</span></h1>';
+
+	if ( ! is_array( $historyM ) || ! $historyM ) {
+		echo '<p>No channel history yet — it builds on the nightly analytics run, or '
+		   . '<a href="' . esc_url( admin_url( 'index.php?page=chron-analytics' ) ) . '">refresh stats now</a>.</p></div>';
+		return;
+	}
+
+	krsort( $historyM ); // newest month first
+	$monthKeys = array_keys( $historyM );
+
+	$CLEAN  = [ 'Organic Search', 'GBP' ];
+	$PAID   = [ 'Paid Search', 'Paid Social', 'Paid Other' ];
+	$DIRECT = [ 'Direct' ];
+	$OTHER  = [ 'Organic Social', 'Referral', 'Email', 'Unassigned' ];
+
+	$sum = function ( $ym, $channels, $metric ) use ( $historyM ) {
+		$t = 0.0;
+		foreach ( $channels as $ch ) $t += (float) ( $historyM[ $ym ][ $ch ][ $metric ] ?? 0 );
+		return $t;
+	};
+
+	// Hero tiles — shells only; JS fills the numbers so they FOLLOW the active range
+	// control (30d/60d/… /custom), with "vs prev" (previous equal window) and YoY deltas.
+	$tiles = [
+		[ 'Your Work', 'Organic Search + GBP',   'Organic Search,GBP', 'good' ],
+		[ 'Paid',      'Ad-driven',               'Paid',               'paid' ],
+		[ 'Direct',    'Noisy · paid-influenced', 'Direct',             'muted' ],
+	];
+
+	echo '<div class="bp-an-tiles">';
+	foreach ( $tiles as [ $label, $subLabel, $chs, $tone ] ) {
+		echo '<div class="bp-an-tile tone-' . esc_attr( $tone ) . '" data-chs="' . esc_attr( $chs ) . '">';
+		echo   '<div class="bp-an-tile-label">' . esc_html( $label ) . '</div>';
+		echo   '<div class="bp-an-tile-sub">' . esc_html( $subLabel ) . '</div>';
+		echo   '<div class="bp-an-tile-value"></div>';
+		echo   '<div class="bp-an-tile-deltas"></div>';
+		echo '</div>';
+	}
+	echo '</div>';
+	echo '<p class="bp-an-period" id="bp-an-period-lbl"></p>';
+
+	// Both-grain payload for the charts (weekly + monthly). One shared <script> element.
+	$buildGrain = function ( $hist, $limit ) use ( $PAID, $DIRECT, $OTHER ) {
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		krsort( $hist );
+		$keys = array_reverse( array_slice( array_keys( $hist ), 0, $limit ) ); // ascending
+		$chanSessions = function ( $channels ) use ( $keys, $hist ) {
+			$o = [];
+			foreach ( $keys as $k ) {
+				$t = 0.0;
+				foreach ( $channels as $ch ) $t += (float) ( $hist[ $k ][ $ch ]['sessions'] ?? 0 );
+				$o[] = $t;
+			}
+			return $o;
+		};
+		$siteMetric = function ( $metric ) use ( $keys, $hist ) {
+			$o = [];
+			foreach ( $keys as $k ) {
+				$t = 0.0;
+				if ( isset( $hist[ $k ] ) && is_array( $hist[ $k ] ) ) foreach ( $hist[ $k ] as $mm ) $t += (float) ( $mm[ $metric ] ?? 0 );
+				$o[] = $t;
+			}
+			return $o;
+		};
+		return [
+			'periods'  => array_map( 'strval', $keys ),
+			'channels' => [
+				'Organic Search' => $chanSessions( [ 'Organic Search' ] ),
+				'GBP'            => $chanSessions( [ 'GBP' ] ),
+				'Paid'           => $chanSessions( $PAID ),
+				'Direct'         => $chanSessions( $DIRECT ),
+				'Other'          => $chanSessions( $OTHER ),
+			],
+			'site' => [
+				'sessions'        => $siteMetric( 'sessions' ),
+				'users'           => $siteMetric( 'users' ),
+				'newUsers'        => $siteMetric( 'newUsers' ),
+				'engagedSessions' => $siteMetric( 'engagedSessions' ),
+				'pageviews'       => $siteMetric( 'pageviews' ),
+				'duration'        => $siteMetric( 'duration' ),
+			],
+		];
+	};
+
+	// Tech breakdowns (browsers / devices / screen widths) — per-window snapshots (7/30/90/180/365d),
+	// top N + "Other", for the pie row. These are rolling snapshots, not a time series.
+	$techPie = function ( $optKey, $topN ) {
+		$data = get_option( $optKey );
+		$out  = [];
+		if ( ! is_array( $data ) ) return $out;
+		foreach ( [ 7, 30, 90, 180, 365 ] as $w ) {
+			$items = [];
+			foreach ( $data as $name => $metrics ) {
+				if ( ! is_array( $metrics ) ) continue;
+				$v = (int) ( $metrics[ "sessions-{$w}" ] ?? 0 );
+				if ( $v > 0 ) $items[ (string) $name ] = $v;
+			}
+			arsort( $items );
+			$slices = []; $i = 0; $other = 0;
+			foreach ( $items as $name => $v ) {
+				if ( $i < $topN ) $slices[] = [ 'l' => $name, 'v' => $v ];
+				else              $other  += $v;
+				$i++;
+			}
+			if ( $other > 0 ) $slices[] = [ 'l' => 'Other', 'v' => $other ];
+			$out[ $w ] = $slices;
+		}
+		return $out;
+	};
+
+	// Bands are the site's own CSS breakpoints (min-width), so each slice names the LAYOUT that
+	// serves that width — not the device. Device type is the donut title (from GA4 deviceCategory);
+	// the label answers "which breakpoint applies here." Keep in sync with style-site.css breakpoints.
+	$deviceWidthBands = [
+		[    0,  400, '< 400px'                     ],
+		[  400,  768, 'Phones (400–767)'            ],
+		[  768, 1024, 'Tablets (768–1023)'          ],
+		[ 1024, 1280, 'Tablet landscape (1024–1279)' ],
+		[ 1280, 1440, 'Laptop (1280–1439)'          ],
+		[ 1440, 1680, 'Large laptop (1440–1679)'    ],
+		[ 1680, 1920, 'Desktop (1680–1919)'         ],
+		[ 1920, 2560, 'Large desktop (1920–2559)'   ],
+		[ 2560, PHP_INT_MAX, 'Ultrawide (2560px+)'  ],
+	];
+	// Mobile-only: GA4 logs many Android phones' PHYSICAL panel resolution (FHD 1080, QHD 1440),
+	// not the CSS width they render at (~360-412). Anything the phone reports ≥768 (the tablet
+	// breakpoint) is a hi-res panel, not a real tablet-width phone — collapse it into one slice.
+	$mobileWidthBands = [
+		[    0,  400, '< 400px'          ],
+		[  400,  768, 'Phones (400–767)' ],
+		[  768, PHP_INT_MAX, 'Hi-res panels (768px+)' ],
+	];
+	// Width distribution WITHIN one GA4 device category, from the device|WxH cross-tab.
+	$techDeviceWidth = function ( $device, $bands ) {
+		$data = get_option( 'bp_ga4_device_width_clean' );
+		$out  = [];
+		if ( ! is_array( $data ) ) return $out;
+		foreach ( [ 7, 30, 90, 180, 365 ] as $w ) {
+			$totals = array_fill( 0, count( $bands ), 0 );
+			foreach ( $data as $key => $metrics ) {
+				if ( ! is_array( $metrics ) ) continue;
+				$parts = explode( '|', $key, 2 );
+				if ( count( $parts ) !== 2 || $parts[0] !== $device ) continue;
+				$width = (int) explode( 'x', $parts[1] )[0];
+				$v = (int) ( $metrics[ "sessions-{$w}" ] ?? 0 );
+				if ( $v <= 0 ) continue;
+				foreach ( $bands as $bi => $b ) {
+					if ( $width >= $b[0] && $width < $b[1] ) { $totals[ $bi ] += $v; break; }
+				}
+			}
+			$slices = [];
+			foreach ( $bands as $bi => $b ) {
+				if ( $totals[ $bi ] > 0 ) $slices[] = [ 'l' => $b[2], 'v' => $totals[ $bi ] ];
+			}
+			usort( $slices, function ( $a, $b ) { return $b['v'] - $a['v']; } );  // largest % first
+			$out[ $w ] = $slices;
+		}
+		return $out;
+	};
+
+	$hasWeekly = is_array( $historyW ) && $historyW;
+	$hasDaily  = is_array( $historyD ) && $historyD;
+	$payload   = [
+		'daily'   => $buildGrain( $hasDaily  ? $historyD : [], 520 ),
+		'weekly'  => $buildGrain( $hasWeekly ? $historyW : [], 260 ),
+		'monthly' => $buildGrain( $historyM, 72 ),
+		'tech'    => [
+			'browsers'   => $techPie( 'bp_ga4_browsers_clean', 6 ),
+			'devices'    => $techPie( 'bp_ga4_devices_clean',  4 ),
+			'wMobile'    => $techDeviceWidth( 'mobile',  $mobileWidthBands ),
+			'wTablet'    => $techDeviceWidth( 'tablet',  $deviceWidthBands ),
+			'wDesktop'   => $techDeviceWidth( 'desktop', $deviceWidthBands ),
+		],
+	];
+
+	echo '<script type="application/json" id="bp-an-payload">' . wp_json_encode( $payload ) . '</script>';
+
+	// Controls (shared by both charts): granularity · range presets · custom date picker.
+	echo '<div class="bp-an-controls">';
+	echo   '<div class="bp-an-ctrl-grp"><span class="bp-an-ctrl-lbl">View</span>'
+	     .   '<a href="#" class="bp-an-gbtn' . ( $hasDaily  ? '' : ' disabled' ) . '" data-grain="daily">Daily</a>'
+	     .   '<a href="#" class="bp-an-gbtn' . ( $hasWeekly ? '' : ' disabled' ) . '" data-grain="weekly">Weekly</a>'
+	     .   '<a href="#" class="bp-an-gbtn active" data-grain="monthly">Monthly</a>'
+	     . '</div>';
+	echo   '<div class="bp-an-ctrl-grp"><span class="bp-an-ctrl-lbl">Range</span>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="30">30d</a>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="60">60d</a>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="90">90d</a>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="365">1y</a>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="730">2y</a>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="1095">3y</a>'
+	     .   '<a href="#" class="bp-an-rbtn active" data-days="all">All</a>'
+	     . '</div>';
+	echo   '<div class="bp-an-ctrl-grp"><input type="date" class="bp-an-date" id="bp-an-start" aria-label="Start date">'
+	     .   '<span class="bp-an-dash">–</span>'
+	     .   '<input type="date" class="bp-an-date" id="bp-an-end" aria-label="End date"></div>';
+	echo '</div>';
+
+	// Chart 1 — traffic by channel.
+	echo '<div class="bp-an-card">';
+	echo   '<h2 class="bp-an-h2">Traffic by channel</h2>';
+	echo   '<div class="bp-an-cardnote">Your work (Organic Search + GBP) vs paid &amp; direct. Click a channel in the legend to isolate it. Click a y-axis number to cap the scale (again to reset) — handy when a spike flattens everything else.</div>';
+	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-chart"></div><div class="bp-analytics-pie" data-pie="channel"></div></div>';
+	echo '</div>';
+
+	// Chart 2 — visitor behavior.
+	echo '<div class="bp-an-card">';
+	echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Visitor behavior</h2><div class="bp-an-metric-btns">'
+	     .   '<a href="#" class="bp-an-mbtn active" data-metric="sessions_users">Sessions · Users</a>'
+	     .   '<a href="#" class="bp-an-mbtn" data-metric="new_returning">New · Returning</a>'
+	     .   '<a href="#" class="bp-an-mbtn" data-metric="engaged">Engaged · Non-engaged</a>'
+	     .   '<a href="#" class="bp-an-mbtn" data-metric="pageviews">Pageviews</a>'
+	     .   '<a href="#" class="bp-an-mbtn" data-metric="duration">Duration</a>'
+	     . '</div></div>';
+	echo   '<div class="bp-an-cardnote">Click a y-axis number to cap the scale (again to reset) — handy when a spike flattens everything else.</div>';
+	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-behavior"></div><div class="bp-analytics-pie" data-pie="behavior"></div></div>';
+	echo '</div>';
+
+	// Tech row — browser / device / screen-width breakdowns (nearest snapshot to the range).
+	echo '<div class="bp-an-card">';
+	echo   '<h2 class="bp-an-h2">Audience tech</h2>';
+	echo   '<div class="bp-an-cardnote">Browser, device &amp; screen width for the closest available window to your selected range.</div>';
+	echo   '<div class="bp-an-techrow">';
+	foreach ( [ 'browsers' => 'Browsers', 'devices' => 'Devices', 'wDesktop' => 'Desktop widths', 'wMobile' => 'Mobile widths', 'wTablet' => 'Tablet widths' ] as $key => $title ) {
+		echo '<div class="bp-an-techcol"><div class="bp-an-techtitle">' . esc_html( $title ) . '</div>'
+		   . '<div class="bp-analytics-pie" data-pie="tech" data-tech="' . esc_attr( $key ) . '"></div></div>';
+	}
+	echo   '</div>';
+	echo '</div>';
+
+	echo '</div>';
 }
 
 // Replace WordPress copyright message at bottom of admin page
@@ -1012,6 +1275,135 @@ function battleplan_chron_analytics_status() {
     bp_run_chron_analytics(true);
     wp_safe_redirect(admin_url());
     exit;
+}
+
+
+/*
+ * TEMP diagnostic: per-channel monthly history readout (battleplanweb only).
+ * Verifies the new bp_ga4_channel_history time series before the Analytics page
+ * is built. Hidden unless the URL carries ?bp_ga4_channels=1. Remove once the
+ * real Analytics page ships.
+ */
+add_action('admin_notices', 'bp_ga4_channel_history_debug');
+function bp_ga4_channel_history_debug() {
+
+    if (!defined('_USER_LOGIN') || _USER_LOGIN !== 'battleplanweb') return;
+    if (!isset($_GET['bp_ga4_channels'])) return;
+
+    // Optional: run JUST the channel collector (faster than the full Stats re-collect).
+    if (isset($_GET['run']) && check_admin_referer('bp_ga4_channels_run')) {
+        require_once get_template_directory() . '/functions-chron-analytics.php';
+        $ga4 = function_exists('bp_ga4_client') ? bp_ga4_client() : null;
+        $ok  = $ga4 ? bp_ga4_collect_channel_history($ga4['client'], $ga4['property']) : false;
+        echo '<div class="notice notice-' . ($ok ? 'success' : 'error') . '"><p>Channel collection: '
+           . ($ok ? 'OK' : 'FAILED (no client or no data)') . '</p></div>';
+    }
+
+    $history = get_option('bp_ga4_channel_history');
+    $runUrl  = wp_nonce_url(add_query_arg(['bp_ga4_channels' => 1, 'run' => 1]), 'bp_ga4_channels_run');
+    $diagUrl = add_query_arg(['bp_ga4_channels' => 1, 'diag' => 1]);
+
+    echo '<div class="notice notice-info"><p><strong>GA4 Channel History (debug)</strong> &nbsp; '
+       . '<a class="button button-small" href="' . esc_url($runUrl) . '">Run channel collection now</a> &nbsp; '
+       . '<a class="button button-small" href="' . esc_url($diagUrl) . '">Diagnose (query matrix)</a></p>';
+
+    // Diagnostic matrix — pinpoints whether the channel dimension, yearMonth, or the
+    // geo filter is suppressing rows (and whether GA4 thresholding is the cause).
+    if (isset($_GET['diag'])) {
+        require_once get_template_directory() . '/functions-chron-analytics.php';
+        $diag = function_exists('bp_ga4_channel_diagnose') ? bp_ga4_channel_diagnose() : ['error' => 'fn missing'];
+        echo '<pre style="font-size:11px;background:#fff;border:1px solid #ccd;padding:8px;overflow:auto;max-height:420px">'
+           . esc_html(print_r($diag, true)) . '</pre>';
+    }
+
+    if (!is_array($history) || !$history) {
+        echo '<p>No channel history stored yet — click “Run channel collection now”, or Dashboard → Stats.</p></div>';
+        return;
+    }
+
+    // Channel columns ordered by total sessions across all months.
+    $totals = [];
+    foreach ($history as $channels) {
+        if (!is_array($channels)) continue;
+        foreach ($channels as $ch => $m) $totals[$ch] = ($totals[$ch] ?? 0) + (int)($m['sessions'] ?? 0);
+    }
+    arsort($totals);
+    $cols = array_keys($totals);
+
+    krsort($history);
+    $months = array_slice(array_keys($history), 0, 36);
+
+    $render = function ($metric, $title) use ($history, $cols, $months) {
+        echo '<p style="margin:10px 0 2px"><strong>' . esc_html($title) . '</strong></p>';
+        echo '<table class="widefat striped" style="max-width:100%;font-size:11px"><thead><tr><th>Month</th>';
+        foreach ($cols as $ch) echo '<th>' . esc_html($ch) . '</th>';
+        echo '</tr></thead><tbody>';
+        foreach ($months as $ym) {
+            echo '<tr><td>' . esc_html(substr($ym, 0, 4) . '-' . substr($ym, 4, 2)) . '</td>';
+            foreach ($cols as $ch) {
+                $v = $history[$ym][$ch][$metric] ?? 0;
+                echo '<td>' . ($v ? number_format((float)$v, $metric === 'conversions' ? 1 : 0) : '·') . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    };
+
+    echo '<p style="margin:6px 0"><em>' . count($history) . ' months, ' . count($cols) . ' channels stored.</em></p>';
+
+    $meta = get_option('bp_ga4_channel_history_meta');
+    if (is_array($meta)) {
+        echo '<p style="margin:6px 0;font-size:11px;color:#666"><em>Last run — '
+           . 'years=' . esc_html((string)($meta['years'] ?? '?'))
+           . ', core rows=' . esc_html((string)($meta['core_rows'] ?? '?'))
+           . ', conv rows=' . esc_html((string)($meta['conv_rows'] ?? '?'))
+           . ' (' . esc_html((string)($meta['conv_metric'] ?? '—')) . ')'
+           . ', months built=' . esc_html((string)($meta['months'] ?? '?'))
+           . '<br>ranges: ' . esc_html(implode('   ', (array)($meta['ranges'] ?? [])))
+           . '</em></p>';
+    }
+
+    $render('sessions', 'Sessions by channel');
+    $render('conversions', 'Conversions (key events) by channel');
+
+    // Quality signals — is a Direct spike junk (bots / lost attribution: low engagement,
+    // high new%) or real ad-driven return traffic (normal engagement)? Computed from the
+    // already-stored history — no GA4 call. Compare Direct against clean channels.
+    $quality = function ($m) {
+        $s = (int) ($m['sessions'] ?? 0);
+        $u = (int) ($m['users'] ?? 0);
+        return [
+            's'   => $s,
+            'new' => $u ? round(((int) ($m['newUsers'] ?? 0)        / $u) * 100) : 0,
+            'eng' => $s ? round(((int) ($m['engagedSessions'] ?? 0) / $s) * 100) : 0,
+            'dur' => $s ? round((float) ($m['duration'] ?? 0)       / $s)        : 0,
+        ];
+    };
+
+    echo '<p style="margin:14px 0 2px"><strong>Quality signals — Direct vs clean channels</strong><br>'
+       . '<span style="font-size:11px;color:#666">Junk / bot / lost-attribution traffic = <b>low eng%</b> + <b>low avg&nbsp;s</b> + <b>high new%</b>. '
+       . 'Real return visits engage normally. Watch Direct during the ad months vs Organic Search / GBP.</span></p>';
+    echo '<table class="widefat striped" style="max-width:100%;font-size:11px"><thead><tr>'
+       . '<th>Month</th><th>Direct sess</th><th>Direct new%</th><th>Direct eng%</th><th>Direct avg&nbsp;s</th>'
+       . '<th>Organic eng%</th><th>Organic avg&nbsp;s</th><th>GBP eng%</th><th>GBP avg&nbsp;s</th></tr></thead><tbody>';
+    foreach ($months as $ym) {
+        $d = isset($history[$ym]['Direct'])         ? $quality($history[$ym]['Direct'])         : null;
+        $o = isset($history[$ym]['Organic Search']) ? $quality($history[$ym]['Organic Search']) : null;
+        $g = isset($history[$ym]['GBP'])            ? $quality($history[$ym]['GBP'])             : null;
+        echo '<tr><td>' . esc_html(substr($ym, 0, 4) . '-' . substr($ym, 4, 2)) . '</td>'
+           . '<td>' . ($d ? number_format($d['s']) : '·') . '</td>'
+           . '<td>' . ($d ? $d['new'] . '%' : '·') . '</td>'
+           . '<td>' . ($d ? $d['eng'] . '%' : '·') . '</td>'
+           . '<td>' . ($d ? $d['dur'] : '·') . '</td>'
+           . '<td>' . ($o ? $o['eng'] . '%' : '·') . '</td>'
+           . '<td>' . ($o ? $o['dur'] : '·') . '</td>'
+           . '<td>' . ($g ? $g['eng'] . '%' : '·') . '</td>'
+           . '<td>' . ($g ? $g['dur'] : '·') . '</td>'
+           . '</tr>';
+    }
+    echo '</tbody></table>';
+
+    echo '</div>';
 }
 
 

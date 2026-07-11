@@ -71,7 +71,7 @@ if (is_array($ga4_achievementId_data)) {
 //https://fullpath.zendesk.com/hc/en-us/articles/360039889971-Facebook-Google-Bot-Traffic
 
 // Set up Visitor Trends widget on dashboard
-function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
+function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd, $showChart = false) {
     $daily = get_option('bp_ga4_daily_clean');
 
     if (!$daily || !is_array($daily)) {
@@ -85,6 +85,14 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
 
     $col = $row = 1;
 
+    // Chart data collected alongside the table: one line per year-column (YoY overlay),
+    // capped at the 3 most-recent years. $chartAxis maps period position -> date label.
+    $chartData = array();
+    $chartAxis = array();
+
+    // Buffer the table markup so the chart/toggle can be emitted above it.
+    ob_start();
+
     echo "<table class='trends trends-{$time} trends-col-{$col}'>
             <tr>
                 <td class='header'>" . ucfirst($time) . "</td>
@@ -92,12 +100,23 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
             </tr>";
 
     // Helper to output the metric rows for a period
-    $outputRows = function($label, $sessions, $users, $newUsers, $engaged, $pageviews, $duration) {
+    $outputRows = function($label, $sessions, $users, $newUsers, $engaged, $pageviews, $duration) use (&$chartData, &$chartAxis, &$col, &$row) {
         $engagementPct      = $sessions > 0 ? round(($engaged  / $sessions) * 100, 1) : 0;
         $pagesPerSession    = $sessions > 0 ? round($pageviews  / $sessions, 1)        : 0;
         $avgSessionDuration = $sessions > 0 ? round($duration   / $sessions)           : 0;
         $avgEngagedDuration = $engaged  > 0 ? round($duration   / $engaged)            : 0;
         $newUserPct         = $users    > 0 ? round(($newUsers  / $users)    * 100, 1) : 0;
+
+        // Collect chart points. Only the 3 most-recent year-columns overlay cleanly for YoY.
+        if ($col <= 3) {
+            $pos = (int) $row; // period position within this year-column (1 = most recent)
+            $chartData['sessions'][$col][]   = array('i' => $pos, 'l' => $label, 'v' => (int) $sessions,           'v2' => (int) $users);
+            $chartData['new'][$col][]        = array('i' => $pos, 'l' => $label, 'v' => (int) $newUsers,           'v2' => (float) $newUserPct);
+            $chartData['engagement'][$col][] = array('i' => $pos, 'l' => $label, 'v' => (int) $engaged,            'v2' => (float) $engagementPct);
+            $chartData['pageviews'][$col][]  = array('i' => $pos, 'l' => $label, 'v' => (int) $pageviews,          'v2' => (float) $pagesPerSession);
+            $chartData['duration'][$col][]   = array('i' => $pos, 'l' => $label, 'v' => (int) $avgEngagedDuration, 'v2' => (int) $avgSessionDuration);
+            if ($col === 1) { $chartAxis[$pos] = $label; }
+        }
 
         echo "<tr class='coloration trends sessions active' data-count='{$sessions}'>
                 <td>{$label}</td><td><b>" . number_format($sessions) . "</b></td><td><b>" . number_format($users) . "</b></td>
@@ -180,6 +199,25 @@ function battleplan_visitor_trends($time, $daysPerPeriod, $colEnd) {
     }
 
     echo "</table>";
+
+    $tablesHtml = ob_get_clean();
+
+    if ($showChart && !empty($chartData)) {
+        $payload = wp_json_encode(array(
+            'time'   => $time,
+            'colEnd' => $colEnd,
+            'axis'   => $chartAxis,
+            'series' => $chartData,
+        ));
+
+        echo "<div class='bp-viz-toggle'>"
+           .     "<a href='#' class='bp-viz-btn active' data-view='chart'>Chart</a>"
+           .     "<a href='#' class='bp-viz-btn' data-view='table'>Table</a>"
+           . "</div>";
+        echo "<div class='bp-trend-chart' data-chart='" . esc_attr($payload) . "'></div>";
+    }
+
+    echo $tablesHtml;
 }
 
 function battleplan_admin_daily_stats() {
@@ -221,7 +259,7 @@ function battleplan_admin_daily_stats() {
 }
 
 function battleplan_admin_weekly_stats() {
-    battleplan_visitor_trends('weekly', 7, 52);
+    battleplan_visitor_trends('weekly', 7, 52, true);
 }
 
 function battleplan_admin_monthly_stats() {

@@ -4,27 +4,40 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-trane-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="trane air conditioners"]
+
+[product-overview type="trane heat pumps"]
+
+[product-overview type="trane furnaces"]
+
+[product-overview type="trane thermostats"]
+*/
+
 add_action( 'wp_loaded', 'add_trane_products', 10 );
 function add_trane_products() {
 
 	$brand = "trane"; // lowercase
-	$productImgAlt = "Trane Heating & Cooling Product"; 
+	$productImgAlt = "Trane Heating & Cooling Product";
 
 
-	
+
 	$removeProducts = array('xl18i-air-conditioner', 'xr17-air-conditioner', 'xl16i-air-conditioner', 'xr14-air-conditioner', 'xl18i-heat-pump', 'xr17-heat-pump', 'xl16i-heat-pump', 'xr14-heat-pump', 'xr15-heat-pump');
-	
+
 
 
 	$addProducts = array (
-	
+
 
 	// Air Conditioners
-		array ( 
+		array (
 			'post_title'	=>	'XV20i TruComfort™ Variable Speed Air Conditioner',
 			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency. </span>
 <ul>
@@ -39,17 +52,17 @@ function add_trane_products() {
 	<li>Variable-speed fan motor</li>
 	<li>Quick-Sess cabinet with full coil protection</li>
 	<li>Low sound with advanced fan system and sound insulators on compressors (on select models)</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1000,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
-			'image_name'	=>	'Trane-AC-01.jpg'		
+			'image_name'	=>	'Trane-AC-01.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'XV18 TruComfort™ Variable Speed Air Conditioner',
 			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency.</span>
 <ul>
@@ -61,17 +74,17 @@ function add_trane_products() {
 	<li>Unique DuraTuff™ non-corrosive base pan</li>
 	<li>Quick-Sess cabinet with full coil protection</li>
 	<li>Sound insulator on the compressor (select models)</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The 18.0 SEER rating makes this air conditioner energy-efficient while providing home comfort.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1010,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
-			'image_name'	=>	'Trane-AC-02.jpg'		
+			'image_name'	=>	'Trane-AC-02.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'XL17i Air Conditioner',
 			'post_content' 	=>	'<span class="descriptionText">Single-stage systems provides powerful cooling to your entire home. The fan in your air conditioner turns on when your home’s temperature rises a degree or two, and automatically cools your living space back down to your comfort level. Every Trane Air Conditioner is packed with high quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL16i Air Conditioner includes:</span>
 <ul>
@@ -86,18 +99,18 @@ function add_trane_products() {
 	<li>Variable-speed fan motor</li>
 	<li>Quick-Sess cabinet with full coil protection</li>
 	<li>Low sound with advanced fan system and sound insulators on compressors (on select models)</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The 17.2 SEER2 rating makes this air conditioner energy-efficient while providing home comfort.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1020,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'air-conditioners', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1208-35_TR_AC-Brochure_SV.pdf'),
-			'image_name'	=>	'Trane-AC-01.jpg'		
+			'image_name'	=>	'Trane-AC-01.jpg'
 		),
-		
-	
+
+
 	// Heat Pumps
-		array ( 
+		array (
 			'post_title'	=>	'XV20i Variable Speed Heat Pump',
 			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency. </span>
 <ul>
@@ -112,17 +125,17 @@ function add_trane_products() {
 	<li>Variable-speed fan motor</li>
 	<li>Low-resistance airflow</li>
 	<li>Sound insulator on the compressor (select models)</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The XV20i offers up to 20.5 SEER2 and 8.7 HSPF2 ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-brochure-heat-pumps-032624.pdf'),
-			'image_name'	=>	'Trane-HP-01.jpg'		
+			'image_name'	=>	'Trane-HP-01.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'XV18 Variable Speed Heat Pump',
 			'post_content' 	=>	'<span class="descriptionText">Variable Speed units continuously communicate with each other and your Trane thermostat to provide optimal efficiency. </span>
 <ul>
@@ -137,17 +150,17 @@ function add_trane_products() {
 	<li>Variable-speed fan motor</li>
 	<li>Low-resistance airflow</li>
 	<li>Sound insulator on the compressor (select models)</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The XV20i offers up to 18 SEER2 and 8.5 HSPF2 ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-brochure-heat-pumps-032624.pdf'),
-			'image_name'	=>	'Trane-HP-01.jpg'		
+			'image_name'	=>	'Trane-HP-01.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'XL17i Heat Pump',
 			'post_content' 	=>	'<span class="descriptionText">Enjoy comfort you can count with a two-speed system. Every Trane home heat pump is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The XL17i two-stage heat pump includes:</span>
 <ul>
@@ -162,18 +175,18 @@ function add_trane_products() {
 	<li>Variable-speed fan motor</li>
 	<li>Low-resistance airflow</li>
 	<li>Sound insulator on the compressor (select models)</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The XL17i offers up to 17.2 SEER2 and 8.1 HSPF2 ratings make this unit a great choice for saving energy and lowering your monthly energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'heat-pumps', 'product-class'=>'Good'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1209-31_Heat-Pump-Brochure_Trane_SV.pdf'),
-			'image_name'	=>	'Trane-HP-01.jpg'		
+			'image_name'	=>	'Trane-HP-01.jpg'
 		),
-		
-	
+
+
 	// Furnaces
-		array ( 
+		array (
 			'post_title'	=>	'S8X2 Gas Furnace',
 			'post_content' 	=>	'<span class="descriptionText">These gas furnaces pair energy efficiency with budget-friendly prices to help you find the perfect furnace for your home. Every Trane furnace is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The S8X2 includes:</span>
 <ul>
@@ -186,17 +199,17 @@ function add_trane_products() {
 	<li>Tubular steel heat exchanger</li>
 	<li>Pre-painted galvanized steel cabinet</li>
 	<li>Insulated cabinet for quiet operation</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The S8X2 carries an 80% AFUE rating — a clear sign that this furnace uses most of its fuel for heating.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1200,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'Best'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1215-26_TR_80-Gas-Furnaces-Trane_SV_072021.pdf'),
-			'image_name'	=>	'Trane-F-01.jpg'		
-		),		
-		
-		
-		array ( 
+			'image_name'	=>	'Trane-F-01.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'S8X1 Gas Furnace',
 			'post_content' 	=>	'<span class="descriptionText">These gas furnaces pair energy efficiency with budget-friendly prices to help you find the perfect furnace for your home. Every Trane furnace is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The S8X1 furnace includes:</span>
 <ul>
@@ -208,17 +221,17 @@ function add_trane_products() {
 	<li>Tubular steel heat exchanger</li>
 	<li>Pre-painted galvanized steel cabinet</li>
 	<li>Insulated cabinet for quiet operation</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'With an AFUE rating of 80%, the S8X1 can help reduce monthly energy bills while supplying you with the heat you need at the coldest times of the year.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1210,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'Better'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1215-26_TR_80-Gas-Furnaces-Trane_SV_072021.pdf'),
-			'image_name'	=>	'Trane-F-02.jpg'		
-		),	
-		
-		
-		array ( 
+			'image_name'	=>	'Trane-F-02.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'S8B1 Gas Furnace',
 			'post_content' 	=>	'<span class="descriptionText">These gas furnaces pair energy efficiency with budget-friendly prices to help you find the perfect furnace for your home. Every Trane furnace is packed with high-quality components. Each helps ensure that time after time, your unit will provide total comfort your family can rely on. The S8B1 furnace includes:</span>
 <ul>
@@ -227,19 +240,19 @@ function add_trane_products() {
 	<li>Pre-painted galvanized steel cabinet</li>
 	<li>Tubular steel heat exchanger</li>
 	<li>Patented Vortica™ II blower design</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'The S8B1 is rated up to 80% AFUE, meaning it’s designed to use less energy to warm your home. For you, that means more comfort and lower energy use.',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1220,
 			'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'furnaces', 'product-class'=>'Good'),
 			'meta_input'	=>	array('brochure'=>'https://www.trane.com/pdf/TT_72-1215-26_TR_80-Gas-Furnaces-Trane_SV_072021.pdf'),
-			'image_name'	=>	'Trane-F-02.jpg'		
-),	
-		
-		
-		
-	
-	
+			'image_name'	=>	'Trane-F-02.jpg'
+),
+
+
+
+
+
 	// Thermostats
 array ( 'post_title'	=>	'ComfortLink® II XL850 Thermostat',
 		'post_content' 	=>	'<span class="descriptionText">Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.</span>
@@ -257,15 +270,15 @@ array ( 'post_title'	=>	'ComfortLink® II XL850 Thermostat',
 	<li><b>Screen:</b> 4.3" color touchscreen</li>
 	<li><b>Diagnostics:</b> Yes</li>
 	<li><b>Programmable:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1500,
 		'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'Thermostats', 'product-class'=>'Best'),
 		'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'Trane-Thermostat-01.webp'		
+		'image_name'	=>	'Trane-Thermostat-01.webp'
 ),
-		
+
 array ( 'post_title'	=>	'XL824 Thermostat',
 		'post_content' 	=>	'<span class="descriptionText">Programing capabilities on this thermostat make temperature control a breeze.</span>
 
@@ -282,15 +295,15 @@ array ( 'post_title'	=>	'XL824 Thermostat',
 	<li><b>Screen:</b> 4.3" color touchscreen</li>
 	<li><b>Diagnostics:</b> Yes</li>
 	<li><b>Programmable:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Programing capabilities on this thermostat make temperature control a breeze.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1510,
 		'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'Thermostats', 'product-class'=>'Better'),
 		'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'Trane-Thermostat-01.webp'		
+		'image_name'	=>	'Trane-Thermostat-01.webp'
 ),
-		
+
 array ( 'post_title'	=>	'XR724 Thermostat',
 		'post_content' 	=>	'<span class="descriptionText">Temperature control you can trust to make your home comfortable.</span>
 
@@ -305,15 +318,15 @@ array ( 'post_title'	=>	'XR724 Thermostat',
 	<li><b>Screen:</b> 4.3" color touchscreen</li>
 	<li><b>Diagnostics:</b> Yes</li>
 	<li><b>Programmable:</b> Yes</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Temperature control you can trust to make your home comfortable.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1520,
 		'tax_input'		=>  array('product-brand'=>'Trane', 'product-type'=>'Thermostats', 'product-class'=>'Good'),
 		'meta_input'	=>	array('brochure'=>'https://www.trane.com/residential/en/assets/product-brochures/trane-tstat-smart-brochure-01-02-23.pdf'),
-		'image_name'	=>	'Trane-Thermostat-02.webp'		
-),	
-			
+		'image_name'	=>	'Trane-Thermostat-02.webp'
+),
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

@@ -1598,6 +1598,10 @@ if ( bp_module_on($jobsite_geo) ) {
 	require_once get_template_directory().'/includes/includes-jobsite-geo.php';
 	require_once get_template_directory() . '/includes/includes-jobsite-geo-api.php';
 }
+$workiz = get_option('workiz');
+if ( bp_module_on($workiz) ) {
+	require_once get_template_directory().'/includes/includes-workiz.php';
+}
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
 $schedules = get_option('schedules');
@@ -1633,7 +1637,10 @@ require_once get_template_directory().'/includes/includes-gbp-hub.php';
 require_once get_template_directory().'/includes/includes-gbp-hub-registry.php';
 // GBP posting client: auto-posts blog + jobsite-geo publishes to this site's GBP listing via the hub.
 // Loaded everywhere but dormant unless the site is a configured hub client (bpgbp_cfg credentials).
-require_once get_template_directory().'/includes/includes-gbp-client.php';
+// Guarded with file_exists so a partial deploy (new file not yet synced) degrades to "feature off"
+// instead of white-screening the whole site with a fatal require error.
+$bpgbp_client_file = get_template_directory().'/includes/includes-gbp-client.php';
+if ( file_exists( $bpgbp_client_file ) ) require_once $bpgbp_client_file;
 // Facebook (Meta) hub — OAuth + Page reviews. Like the GBP hub, it only activates on the install whose
 // wp-config defines BP_FB_APP_ID / BP_FB_APP_SECRET; dormant everywhere else.
 require_once get_template_directory().'/includes/includes-fb-hub.php';
@@ -1644,6 +1651,7 @@ require_once get_template_directory() . '/functions-chron.php';
 
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if ( is_admin() ) require_once get_template_directory().'/functions-media-replace.php';
+if ( is_admin() ) require_once get_template_directory().'/functions-search-replace.php';
 require_once get_template_directory().'/functions-ai-alt.php';
 if (!empty( get_site_option('bp_rovin_secret')) || !empty( get_site_option('bp_rovin_survey_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }
 
@@ -2842,12 +2850,14 @@ function battleplan_load_tag_manager() {
 	}
 
 	$nonce = esc_attr(_BP_NONCE);
-	$rest  = esc_url( rest_url('bp/v1/geo') );
+	// Pre-WP endpoint: reads Cloudflare headers WITHOUT booting WordPress, so it
+	// answers in ~tens of ms instead of ~1s (keeps it off the critical request chain).
+	$rest  = esc_url( get_template_directory_uri() . '/_prewp/geo.php' );
 
 	// Tracking is injected by a cache-safe JS bootstrapper rather than printed
 	// directly. The HTML below is identical for every anonymous visitor (so it
-	// EverCaches cleanly); a per-request call to /wp-json/bp/v1/geo (Cloudflare
-	// location headers, uncached) then decides whether to actually load GA4 +
+	// EverCaches cleanly); a per-request call to the pre-WP _prewp/geo.php endpoint
+	// (Cloudflare location headers, uncached) then decides whether to actually load GA4 +
 	// Clarity. US — or unknown, fail-open — loads tracking; non-US never does.
 	// The gtag config queue is built up front so event ordering stays correct;
 	// only the senders (gtag.js + Clarity) are gated. The same call sets the
@@ -2887,7 +2897,19 @@ gtag("js", new Date());
 			y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 		})(window, document, "clarity", "script", CLARITY_ID);
 	}
-	function boot(){ loadGtag(); loadClarity(); }
+	var booted = false;
+	function loadTracking(){ if (booted) return; booted = true; loadGtag(); loadClarity(); }
+	function boot(){
+		// Defer the heavy GTM + Clarity scripts off the LCP critical path: load them on the
+		// visitor's FIRST interaction, or a 3s fallback — whichever comes first. The dataLayer +
+		// gtag config queue above already ran, so ordering/attribution is preserved; we only delay
+		// the 160KB script fetch+eval. Fires exactly ONCE (booted guard), and the timer guarantees
+		// no-interaction (bounce) visitors are still counted — the classic deferral pitfall.
+		var evs = ["pointerdown", "keydown", "touchstart", "scroll"];
+		function go(){ evs.forEach(function(e){ window.removeEventListener(e, go); }); loadTracking(); }
+		evs.forEach(function(e){ window.addEventListener(e, go, { passive: true }); });
+		setTimeout(go, 3000);
+	}
 
 	// Returning visitor this session — geo already decided, skip the fetch
 	var known = readGeo("user-country");
@@ -2949,49 +2971,16 @@ add_action('rest_api_init', function() {
 function bp_rest_geo( WP_REST_Request $request ) {
 	nocache_headers();
 
-	$grab = function($key) {
-		return isset($_SERVER[$key]) ? sanitize_text_field( wp_unslash($_SERVER[$key]) ) : '';
-	};
+	// Single source of truth: the pre-WP endpoint file defines bp_prewp_geo_data().
+	// Requiring it here (ABSPATH is defined, so it will NOT self-emit) keeps the WP REST
+	// route /wp-json/bp/v1/geo working for back-compat without duplicating the logic.
+	require_once get_template_directory() . '/_prewp/geo.php';
 
-	$country = strtoupper( $grab('HTTP_CF_IPCOUNTRY') );
-	// CF sends XX (unknown) and T1/T2 (Tor) — blank these so the client fails open
-	if ( in_array($country, ['XX', 'T1', 'T2'], true) ) $country = '';
+	$geo = function_exists('bp_prewp_geo_data')
+		? bp_prewp_geo_data()
+		: [ 'country' => '', 'city' => '', 'region' => '', 'zip' => '' ];
 
-	$city   = $grab('HTTP_CF_IPCITY');
-	$region = strtoupper( $grab('HTTP_CF_REGION_CODE') );
-	$zip    = $grab('HTTP_CF_POSTAL_CODE');
-
-	// Non-Cloudflare sites (~1%) have no CF headers, so $country is blank. Fall
-	// back to a single server-side ipapi.co lookup so the form country-block and
-	// "serving your city" personalization keep working there. Cloudflare sites
-	// always have CF-IPCountry and never reach this branch.
-	if ( $country === '' ) {
-		$ip = $grab('HTTP_CF_CONNECTING_IP');
-		if ( $ip === '' && ( $fwd = $grab('HTTP_X_FORWARDED_FOR') ) !== '' ) {
-			$ip = trim( explode(',', $fwd)[0] );
-		}
-		if ( $ip === '' ) $ip = $grab('REMOTE_ADDR');
-
-		if ( $ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) ) {
-			$r = wp_remote_get( 'https://ipapi.co/' . rawurlencode($ip) . '/json/', ['timeout' => 3] );
-			if ( ! is_wp_error($r) && wp_remote_retrieve_response_code($r) === 200 ) {
-				$d = json_decode( wp_remote_retrieve_body($r), true );
-				if ( is_array($d) ) {
-					$country = strtoupper( sanitize_text_field( $d['country'] ?? '' ) ); // ipapi 'country' = ISO code
-					if ( $city   === '' ) $city   = sanitize_text_field( $d['city'] ?? '' );
-					if ( $region === '' ) $region = strtoupper( sanitize_text_field( $d['region_code'] ?? '' ) );
-					if ( $zip    === '' ) $zip    = sanitize_text_field( $d['postal'] ?? '' );
-				}
-			}
-		}
-	}
-
-	$resp = new WP_REST_Response([
-		'country' => $country,
-		'city'    => $city,
-		'region'  => $region,
-		'zip'     => $zip,
-	]);
+	$resp = new WP_REST_Response( $geo );
 	$resp->header('Cache-Control', 'private, no-store, max-age=0');
 	return $resp;
 }
@@ -3094,7 +3083,7 @@ function battleplan_printOpenBanner() {
 // Display #wrapper-top
 add_action('bp_wrapper_top', 'battleplan_printWrapperTop', 20);
 function battleplan_printWrapperTop() {
-	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );	
+	$current_page = sanitize_post( $GLOBALS['wp_the_query']->get_queried_object() );
 	if ( ! $current_page ) return;
 	$textarea = get_post_meta( $current_page->ID, 'page-top_text', true );
  	if ( $textarea != "" ) echo "<section id='wrapper-top'>".apply_filters('the_content', $textarea)."</section><!-- #wrapper-top -->";

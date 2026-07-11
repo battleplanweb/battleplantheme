@@ -8,6 +8,22 @@ if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
 endif;
 */
 
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="comfortmaker air conditioners"]
+
+[product-overview type="comfortmaker air handlers"]
+
+[product-overview type="comfortmaker heat pumps"]
+
+[product-overview type="comfortmaker furnaces"]
+
+*/
+
+
+
 add_action( 'wp_loaded', 'add_comfortmaker_products', 10 );
 function add_comfortmaker_products() {
 

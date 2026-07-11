@@ -402,6 +402,19 @@ function battleplan_buildButton( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;
 	}
 	$ada = esc_attr($a['ada']) !== '' ? ' <span class="screen-reader-text">'.esc_attr($a['ada']).'</span>' : '';
+
+	// Auto-describe generic buttons ("Learn More", "Read More", …) that have no explicit
+	// ada text, so screen readers + crawlers know where the link goes. The visible label is
+	// unchanged; we append screen-reader-only context AFTER it (WCAG 2.5.3 "Label in Name" —
+	// the visible words stay at the start of the accessible name). Skips if the builder set ada.
+	if ( $ada === '' && $link !== '' ) {
+		$visibleText = strtolower( trim( wp_strip_all_tags( strip_shortcodes( $content ) ) ) );
+		$genericBtnText = array( 'learn more', 'read more', 'more', 'more info', 'details', 'view details', 'see details', 'view more', 'see more', 'click here', 'get started', 'find out more', 'discover more', 'shop now', 'explore' );
+		if ( in_array( $visibleText, $genericBtnText, true ) ) {
+			$destName = bp_btn_link_label( $link );
+			if ( $destName !== '' ) $ada = ' <span class="screen-reader-text">: '.esc_html($destName).'</span>';
+		}
+	}
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
 	$onclick = esc_attr($a['onclick']);
@@ -421,6 +434,65 @@ function battleplan_buildButton( $atts, $content = null ) {
 	'';
 
 	return $script.'<div class="block block-button span-'.$size.$class.$align.'"'.$tracking.$style.'><a id="'.$inlineBtnID.'" '.$target.' href="'.$link.'" class="button'.$class.'">'.do_shortcode($content).$ada.'</a></div>';
+}
+
+// Resolve a button link to a human-readable destination name for the auto-ada label on
+// generic buttons. Internal links use the target page's real title (keeps acronyms like
+// "HVAC"/"AC" correct); anything unresolved falls back to the title-cased last path segment.
+// Same-request static cache so repeated links (e.g. a row of "Learn More"s) resolve once.
+function bp_btn_link_label( $link ) {
+	static $cache = array();
+	$link = trim( $link );
+	if ( $link === '' ) return '';
+	if ( isset( $cache[$link] ) ) return $cache[$link];
+
+	foreach ( array( '#', 'tel:', 'mailto:', 'javascript:' ) as $skip ) {
+		if ( stripos( $link, $skip ) === 0 ) return $cache[$link] = '';
+	}
+
+	$abs = ( stripos( $link, 'http' ) === 0 ) ? $link : home_url( '/' . ltrim( $link, '/' ) );
+
+	// Internal page? Use its real title.
+	$id = url_to_postid( $abs );
+	if ( $id ) {
+		$title = get_the_title( $id );
+		if ( $title !== '' ) return $cache[$link] = $title;
+	}
+
+	// Fallback: title-case the last path segment of the slug.
+	$path = wp_parse_url( $abs, PHP_URL_PATH );
+	$seg  = $path ? basename( trim( $path, '/' ) ) : '';
+	$seg  = str_replace( array( '-', '_' ), ' ', $seg );
+
+	return $cache[$link] = ( $seg !== '' ? ucwords( $seg ) : '' );
+}
+
+// Strip srcset candidates whose physical files don't exist, so a stale size still listed in an
+// image's attachment metadata (e.g. a crop from a removed add_image_size) never gets advertised
+// in a <link rel="preload"> imagesrcset and 404s — wasting a high-priority fetch. Maps each
+// candidate URL back to its filesystem path (handles year/month upload subdirs) and keeps only
+// files that exist. Cheap: only runs on the handful of LCP/hero preload images per pageload.
+function bp_prune_missing_srcset( $srcset ) {
+	if ( ! is_string($srcset) || $srcset === '' ) return '';
+
+	$up      = wp_upload_dir();
+	$basedir = $up['basedir'];
+	$baseurl = $up['baseurl'];
+	$kept    = array();
+
+	foreach ( explode( ',', $srcset ) as $cand ) {
+		$cand = trim( $cand );
+		if ( $cand === '' ) continue;
+
+		$url  = preg_split( '/\s+/', $cand )[0];   // "https://…/img-640x296.webp 640w" → the URL
+		$path = ( strpos( $url, $baseurl ) === 0 )
+			? $basedir . substr( $url, strlen( $baseurl ) )
+			: $basedir . '/' . basename( wp_parse_url( $url, PHP_URL_PATH ) );
+
+		if ( is_file( $path ) ) $kept[] = $cand;
+	}
+
+	return implode( ', ', $kept );
 }
 
 // Accordion Block
@@ -520,27 +592,40 @@ function battleplan_buildParallax( $atts, $content = null ) {
 			$imgBase   = implode('.', $mobileSrc);
 			$imgBase   = preg_replace('/-\d+x\d+$/', '', $imgBase);
 			$imgBase   = ltrim(basename($imgBase), '/');
-			$mobileW   = 640;
+			$upload_dir = wp_upload_dir();
 
-			if ( true || !isset($preload_images['mobile'][$image]) ) :
-				$upload_dir = wp_upload_dir();
-				$globPattern = $upload_dir['basedir'] . '/' . $imgBase . '-' . $mobileW . 'x*.' . $imgExt;
-				//error_log('glob pattern: ' . $globPattern);
-				//error_log('imgBase: ' . $imgBase);
-				//error_log('imgExt: ' . $imgExt);
-				//error_log('image: ' . $image);
-				$matches = glob($globPattern);
-				//error_log('matches: ' . print_r($matches, true));
-				$preload_images['mobile'][$image] = !empty($matches) ? basename($matches[0]) : '';
-				update_option('bp_preload_images', $preload_images, true);
-			 endif;
+			// Resolve a WordPress-generated size by width → ['file'=>basename, 'h'=>height] or null.
+			$bpFindSize = function( $w ) use ( $upload_dir, $imgBase, $imgExt ) {
+				$m = glob( $upload_dir['basedir'] . '/' . $imgBase . '-' . $w . 'x*.' . $imgExt );
+				if ( empty($m) ) return null;
+				$file = basename($m[0]);
+				preg_match( '/-' . $w . 'x(\d+)\./', $file, $d );
+				return array( 'file' => $file, 'h' => !empty($d[1]) ? (int)$d[1] : 0 );
+			};
 
-			$mobileImgUrl = '/wp-content/uploads/' . $preload_images['mobile'][$image];
-			preg_match('/-640x(\d+)\./', $mobileImgUrl, $dim);
-			$initialH = !empty($dim[1]) ? (int)$dim[1] : 0;
+			// is_mobile() is UA-based (phones + tablets). The old fixed 640 upscaled badly on
+			// modern phones. A single 1280-wide image is sharp on every portrait phone — even a
+			// DPR-3 iPhone Pro Max needs only ~1290px — while staying light for LCP. Retina tablets
+			// go slightly soft; that's an accepted trade (≈no tablet traffic). Fall back 1280→640→original.
+			$s640  = $bpFindSize(640);
+			$s1280 = $bpFindSize(1280);
+			$one   = $s1280 ?: ( $s640 ?: null );
+			$small = $s640  ?: $one;                        // legacy proportions for the height proxy
+
+			$oneUrl   = $one ? '/wp-content/uploads/' . $one['file'] : $image;
+			$initialH = $small ? $small['h'] : 0;
+
+			// Record the FIRST hero image as the page's LCP image for the cache-safe head preload
+			// (bp_register_hero_preload / the ob injector below). This is what actually lands the
+			// preload in the head; the bp_preload_images accumulator can't (header runs before body).
+			bp_register_hero_preload( $oneUrl );
+
+			// Preload the exact file we paint (single size → plain href, no srcset needed).
+			$preload_images['mobile'][$image] = basename($oneUrl);
+			update_option('bp_preload_images', $preload_images, true);
 
 			$hasContent = trim($content) !== '';
-			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ( $mobileImgUrl ? ' background-image:url(' . $mobileImgUrl . '); background-size:cover; background-position:center ' . $posX . ';' : '' );
+			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ' background-image:url(' . $oneUrl . ');background-size:cover;background-position:center ' . $posX . ';';
 		} else {
 			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;';
 		}
@@ -552,6 +637,9 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 	} else {
 		if ( $hasImage ) {
+			// Record the FIRST hero image as the page's LCP image for the cache-safe head preload.
+			bp_register_hero_preload( $image );
+
 			$desktopSrc = explode('.', $image);
 			$desktopExt = array_pop($desktopSrc);
 			$desktopBase = preg_replace('/-\d+x\d+$/', '', implode('.', $desktopSrc));
@@ -566,14 +654,49 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 			$dataAttrs     = ' data-parallax="scroll" data-img-width="' . $imgW . '" data-img-height="' . $imgH . '" data-holder-height="'.$height.'" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '" data-fixed="' . $fixed . '" data-image-src="' . $image . '" data-img-base="' . $desktopBase . '" data-img-ext="' . $desktopExt . '"';
 			$parallaxClass = ' ' . $type . '-parallax';
+
+				// Server-render the hero background inline (the ORIGINAL image, which is exactly what
+				// the preload targets) so the LCP image paints on first byte — instead of waiting for the
+				// load-bg-img JS to apply it after DOMContentLoaded. The parallax scroll effect still runs
+				// on top and only nudges background-position on scroll; it no longer gates first paint.
+				$bgStyle       = ' background-image:url(' . $image . '); background-size:cover; background-position:center ' . $posX . ';';
 		} else {
 			$dataAttrs     = '';
 			$parallaxClass = '';
+				$bgStyle       = '';
 		}
 
-		return do_shortcode( '<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . ( $hasImage ? ' load-bg-img' : '' ) . $class . '"' . $tracking . ' style="height:' . $height . '"' . $dataAttrs . '>' . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
+		return do_shortcode( '<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . ( $hasImage ? ' load-bg-img' : '' ) . $class . '"' . $tracking . ' style="height:' . $height . ';' . $bgStyle . '"' . $dataAttrs . '>' . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
 
 	}
+}
+
+/*--------------------------------------------------------------
+# Cache-safe LCP hero preload
+--------------------------------------------------------------*/
+// The hero's exact image URL is only known when the [parallax]/[section] hero renders in the BODY —
+// which is AFTER header.php has already emitted the <head>. So the bp_preload_images accumulator can
+// never get the hero image into the <head> on a first (cacheable) render, and under full-page cache
+// (EverCache) the hero is therefore never preloaded — it starts late, at default priority, and on a
+// throttled mobile connection it becomes the slow LCP. Fix: the first hero records its URL here, and
+// the framework's existing whole-page `final_output` filter (functions.php) injects a high-priority
+// <link rel=preload> right after <head> — so it lands in the cached HTML, discovered before anything.
+function bp_register_hero_preload( $url ) {
+	if ( empty($GLOBALS['bp_hero_preload']) && ! empty($url) ) {
+		$GLOBALS['bp_hero_preload'] = $url;
+	}
+}
+
+add_filter('final_output', 'bp_inject_hero_preload', 5);
+function bp_inject_hero_preload( $html ) {
+	if ( empty($GLOBALS['bp_hero_preload']) || ! is_string($html) || stripos($html, '</head>') === false ) return $html;
+	$link = '<link rel="preload" as="image" href="' . esc_url($GLOBALS['bp_hero_preload']) . '" fetchpriority="high">' . "\n";
+	// Inject at the END of <head>, AFTER the self-hosted font preloads — not before them. The preload
+	// scanner still issues it during head parse (position doesn't gate discovery), but keeping it after
+	// the fonts lets Blu/Open Sans keep their priority on the throttled pipe. A hero preload placed
+	// ahead of the fonts delays the heading font past first paint, and the late font swap reflows the
+	// (vertically-centered) hero copy — a CLS source. Fonts first, hero right after.
+	return str_ireplace('</head>', $link . '</head>', $html);
 }
 
 // Locked Section

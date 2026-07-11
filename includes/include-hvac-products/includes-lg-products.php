@@ -4,15 +4,24 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-lg-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
+
+
+
+/* PRODUCT OVERVIEW
+
+[product-overview type="lg mini-split-systems"]
+
+*/
+
 add_action( 'wp_loaded', 'add_lg_products', 10 );
 function add_lg_products() {
 
 	$brand = "lg"; // lowercase
-	$productImgAlt = "LG Heating & Cooling Product"; 
+	$productImgAlt = "LG Heating & Cooling Product";
 
 
 	/*
@@ -20,8 +29,8 @@ function add_lg_products() {
 	*/
 
 
-	$addProducts = array (		
-	
+	$addProducts = array (
+
 	// Ductless Mini Splits
 array ( 'post_title'	=>	'LS-HSV5 Single Zone High Efficiency',
 	   	'post_content' 	=>	'<span class="descriptionText">LG\'s most energy-efficient line of heat pump duct-free products.</span>
@@ -35,15 +44,15 @@ array ( 'post_title'	=>	'LS-HSV5 Single Zone High Efficiency',
 	<li>Heating: -4°F WB to 65°F WB</li>
 	<li>Inverter driven precision load matching - maximizes compressor efficiency, minimizing power consumption</li>
 	<li>* Optional Low Ambient Wind Baffle Kit allows operation down to 0°F in Cooling</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Single Zone High Efficiency Wall Mounted',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2000,
 		'tax_input'		=>  array('product-brand'=>'lg', 'product-type'=>'mini-split-systems', 'product-class'=>'best'),
 		'meta_input'	=>	array('brochure'=>''),
-		'image_name'	=>	'LG-LS240HFV3.webp'		
+		'image_name'	=>	'LG-LS240HFV3.webp'
 ),
-				
+
 array ( 'post_title'	=>	'LS-HFV3 Single Zone Standard Efficiency',
 	   	'post_content' 	=>	'<span class="descriptionText">LG\'s new line of heat pump duct-free split products.</span>
 
@@ -64,15 +73,15 @@ array ( 'post_title'	=>	'LS-HFV3 Single Zone Standard Efficiency',
 	<li>Inverter (variable speed compressor)</li>
 	<li>Condensate sensor connection</li>
 	<li>Temp display on indoor unit</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Single Zone Standard Efficiency Wall Mounted',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2010,
 		'tax_input'		=>  array('product-brand'=>'lg', 'product-type'=>'mini-split-systems', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>''),
-		'image_name'	=>	'LG-LS240HFV3.webp'		
+		'image_name'	=>	'LG-LS240HFV3.webp'
 ),
-				
+
 array ( 'post_title'	=>	'LH-HV1 Mid Static Ducted',
 	   	'post_content' 	=>	'<span class="descriptionText">Mid static ducted indoor units for ceiling-concealed installation.</span>
 
@@ -82,15 +91,15 @@ array ( 'post_title'	=>	'LH-HV1 Mid Static Ducted',
 	<li>Convertible bottom return and rear return</li>
 	<li>Horizontal and vertical installation available </li>
 	<li>Higher E.S.P. capability up to 0.59 in. wg</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Mid static ducted indoor units for ceiling-concealed installation.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2020,
 		'tax_input'		=>  array('product-brand'=>'lg', 'product-type'=>'mini-split-systems', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>''),
-		'image_name'	=>	'LG-LH188HV1.webp'		
-),	
-				
+		'image_name'	=>	'LG-LH188HV1.webp'
+),
+
 array ( 'post_title'	=>	'LV-HCV Vertical AHU',
 	   	'post_content' 	=>	'<span class="descriptionText">Air handlers with convertible vertical upflow or horizontal left air distribution.</span>
 
@@ -102,15 +111,15 @@ array ( 'post_title'	=>	'LV-HCV Vertical AHU',
 	<li>Features an Electronically commutated motor (ECM) motor making it eligible for a number of rebates</li>
 	<li>Wi-Fi capable enabling effortless control using the SmartThinQ app</li>
 	<li>Built-in LG Dry Contact allows for easy integration of 3rd party thermostats</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Air handlers with convertible vertical upflow or horizontal left air distribution.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2030,
 		'tax_input'		=>  array('product-brand'=>'lg', 'product-type'=>'mini-split-systems', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>''),
-		'image_name'	=>	'LG-LV181HV.webp'		
-),		
-				
+		'image_name'	=>	'LG-LV181HV.webp'
+),
+
 array ( 'post_title'	=>	'LC-HV 4-Way Cassette',
 	   	'post_content' 	=>	'<span class="descriptionText">Four-way air-flow ceiling-cassette indoor units.</span>
 
@@ -126,15 +135,15 @@ array ( 'post_title'	=>	'LC-HV 4-Way Cassette',
 	<li>Operates down to 5°F in cooling mode</li>
 	<li>Allows refrigerant piping lengths up to 164 or 246 feet (depending on the model), and elevation difference of 98 feet
 	<li>R410A refrigerant</li>
-</ul>', 
+</ul>',
 		'post_excerpt'	=>	'Four-way air-flow ceiling-cassette indoor units.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  2040,
 		'tax_input'		=>  array('product-brand'=>'lg', 'product-type'=>'mini-split-systems', 'product-class'=>'better'),
 		'meta_input'	=>	array('brochure'=>''),
-		'image_name'	=>	'LG-LC188HV.webp'		
-),		
-			
+		'image_name'	=>	'LG-LC188HV.webp'
+),
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

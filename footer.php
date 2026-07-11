@@ -51,7 +51,7 @@
 				echo do_shortcode($buildFooter);
 			} ?>
 
-			<a class="bot-trap" href="/wp-content/themes/battleplantheme/_bot/tripwire.php" rel="nofollow" aria-hidden="true">Press Kit</a>
+			<a class="bot-trap" href="/wp-content/themes/battleplantheme/_bot/tripwire.php" rel="nofollow" aria-hidden="true" tabindex="-1">Press Kit</a>
 
 		</section><!-- .site-info -->
 	</footer><!-- #colophon -->

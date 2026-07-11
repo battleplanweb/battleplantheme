@@ -783,3 +783,64 @@ function bp_mr_fix_img_dimensions($html, $dim_map) {
 		return $tag;
 	}, $html);
 }
+
+
+/*--------------------------------------------------------------
+# Bulk "Regenerate Thumbnails" (Media Library list view, no plugin)
+--------------------------------------------------------------*/
+/*
+ Adds "Regenerate Thumbnails" to the Media Library LIST-view Bulk Actions dropdown
+ (Media → switch to list mode → check one or more images → Bulk actions → Apply).
+ Rebuilds each selected image's sizes + metadata from its original file against the
+ CURRENTLY registered sizes. Because the fresh metadata only contains current sizes,
+ this also drops stale entries (e.g. a removed crop like an old 640x296) — so srcset
+ and LCP preloads stop advertising derivative files that no longer exist. No plugin.
+*/
+
+add_filter('bulk_actions-upload', 'bp_mr_add_regen_bulk_action');
+function bp_mr_add_regen_bulk_action($actions) {
+	$actions['bp_regen_thumbs'] = __('Regenerate Thumbnails', 'battleplan');
+	return $actions;
+}
+
+add_filter('handle_bulk_actions-upload', 'bp_mr_handle_regen_bulk_action', 10, 3);
+function bp_mr_handle_regen_bulk_action($redirect, $doaction, $ids) {
+	if ($doaction !== 'bp_regen_thumbs') return $redirect;
+
+	// Core verifies the bulk-action nonce before this fires; still gate on capability.
+	if (!current_user_can('upload_files')) return $redirect;
+
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	if (function_exists('set_time_limit')) @set_time_limit(0);
+
+	$done = 0;
+	$failed = 0;
+
+	foreach (array_map('intval', (array) $ids) as $id) {
+		if (!$id || !wp_attachment_is_image($id) || !current_user_can('edit_post', $id)) { $failed++; continue; }
+
+		$file = get_attached_file($id);   // original (or -scaled) source WP regenerates from
+		if (!$file || !file_exists($file)) { $failed++; continue; }
+
+		$meta = wp_generate_attachment_metadata($id, $file);
+		if (is_wp_error($meta) || empty($meta)) { $failed++; continue; }
+
+		wp_update_attachment_metadata($id, $meta);
+		$done++;
+	}
+
+	return add_query_arg(array('bp_regen_done' => $done, 'bp_regen_failed' => $failed), $redirect);
+}
+
+add_action('admin_notices', 'bp_mr_regen_bulk_notice');
+function bp_mr_regen_bulk_notice() {
+	if (!isset($_GET['bp_regen_done'])) return;
+
+	$done   = max(0, (int) $_GET['bp_regen_done']);
+	$failed = isset($_GET['bp_regen_failed']) ? max(0, (int) $_GET['bp_regen_failed']) : 0;
+
+	$msg = sprintf(_n('%d image regenerated.', '%d images regenerated.', $done, 'battleplan'), $done);
+	if ($failed) $msg .= ' ' . sprintf(_n('%d item skipped (not an image or file missing).', '%d items skipped (not images or files missing).', $failed, 'battleplan'), $failed);
+
+	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html($msg) . '</p></div>';
+}

@@ -1074,8 +1074,8 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .=         '<option value="replied">Replied</option>';
 	$printPage .=       '</select>';
 	$printPage .=       '<select id="sp-agency-filter-sort" class="sp-select">';
+	$printPage .=         '<option value="oldest" selected>Oldest first</option>';
 	$printPage .=         '<option value="newest">Newest first</option>';
-	$printPage .=         '<option value="oldest">Oldest first</option>';
 	$printPage .=       '</select>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';

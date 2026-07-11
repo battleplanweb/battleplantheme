@@ -1275,9 +1275,17 @@ add_action( 'wp_enqueue_scripts', 'site_pulse_enqueue_assets' );
 add_action( 'wp_enqueue_scripts', function() {
 	global $post;
 	if ( ! $post || strpos( (string) $post->post_name, 'site-pulse' ) !== 0 ) return;
-	wp_dequeue_style(  'battleplan-site' );        // dist/site.min.css (compiled style-site.css)
+	wp_dequeue_style(  'battleplan-site' );        // dist/site.min.css (compiled style-site.css) — legacy no-op now it's inlined
 	wp_dequeue_script( 'battleplan-script-site' ); // script-site.js
 }, 99999 );
+
+// The site CSS is now inlined in wp_head (not enqueued), so the dequeue above can't strip it.
+// Suppress the inline on Site Pulse pages instead, keeping this staff tooling free of client branding.
+add_filter( 'bp_inline_site_css', function( $inline ) {
+	global $post;
+	if ( $post && strpos( (string) $post->post_name, 'site-pulse' ) === 0 ) return false;
+	return $inline;
+} );
 
 function site_pulse_enqueue_assets(): void {
 	$sp_slugs = [ 'site-pulse-login', 'site-pulse-dashboard' ];

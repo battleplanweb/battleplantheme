@@ -449,6 +449,15 @@ Do **not** hand-build the row as `<div class="features"><div class="feature">[ge
 [get-menu]
 ```
 
+### [footer-menu] — Plain list of the main menu (for footer "Quick Links")
+```
+[footer-menu]                          → <ul><li><a> of the MAIN menu's top-level items
+[footer-menu location="footer-menu"]   → pull from a specific registered menu location instead
+[footer-menu depth="2"]                → include sub-items (default 1 = top-level only)
+[footer-menu class="two-col"]          → extra class(es) on the <ul>
+```
+Emits a lean `<ul class="footer-menu">` (no walker/container), so a footer column stays in sync with **Appearance → Menus** automatically. Auto-detects the primary menu the same way the header does: `widget-menu` > `top-menu` > `header-menu` (last assigned wins). Use `[get-menu]` for the full styled nav; use this for footer/quick-links lists.
+
 ### [add-search-btn] — Add search button to menu or other areas
 ```
 [add-search-btn]
@@ -1088,6 +1097,25 @@ Only **database** references are rewritten (where ~all content lives, including 
 
 ---
 
+## Database Search & Replace (`functions-search-replace.php`)
+
+An in-dashboard, serialize-safe **Search & Replace** across the whole database — rename a company, swap an old phone number, move a domain, everywhere it appears in one pass, without SSH or a plugin. Admin-only, capability-gated (`manage_options`), no settings, no module toggle — an always-available agency tool loaded from `functions.php` right after Media Replace (`if ( is_admin() )`). Lives at **Tools → Search & Replace** (`tools.php?page=bp-search-replace`).
+
+### Why it's not just a SQL `REPLACE()`
+`wp_options` / `wp_postmeta` (ACF, Site Pulse settings, widgets) hold PHP-serialized strings whose byte-length is encoded inline (`s:11:"Acme Paving";`). A raw SQL `REPLACE()` changes the text but not the length prefix and **silently corrupts the row**. So this tool does **not** run SQL replace — it **reuses the framework's own serialize/JSON-aware recursive replacer, `bp_mr_replace_content()`** (from `functions-media-replace.php`), which unserializes, replaces inside the live structure, and re-serializes safely. (Same engine the media link-rewriter uses — reuse, don't rebuild.)
+
+### Safety model (baked in)
+- **Dry-run first.** "Preview Changes" scans and reports match counts per table + before/after snippets, and **writes nothing**.
+- **Commit is a separate, nonced step behind a confirmation checkbox**, and re-scans authoritatively (it does not trust the preview's numbers).
+- **Case-sensitive, exact-substring** match (correct for names/domains). Search term must be ≥ `BP_SR_MIN_LEN` (2) chars; search === replace is rejected.
+- **Table picker.** Safe core-content targets are checked by default (`posts` content/title/excerpt incl. Elements, `postmeta`, `options`, term names + descriptions). Comments/users/meta are opt-in. **Custom (non-core) tables are auto-discovered** from the schema (`SHOW TABLES` prefix-matched, single-PK, text columns only) and listed opt-in — so the Site Pulse custom tables can be included when needed.
+- Every table/column identifier is whitelisted against the real DB (never user-supplied); every value is `LIKE`-filtered and `prepare()`d; commits bust the right caches (`clean_post_cache`, `alloptions`, `clean_term_cache`).
+
+### Caveat
+**Database only** — a string hardcoded in child-theme files (`style-site.css`, `functions-site.php`) is on the filesystem and is not touched (same caveat as Media Replace). For a one-off with SSH access, `wp search-replace --dry-run` does the same job from WP-CLI.
+
+---
+
 ## Alt Text — AI generation + content sync (`functions-ai-alt.php`)
 
 Loaded **unconditionally** (front-end + cron), because alt can be generated in the background.
@@ -1180,6 +1208,39 @@ Content pasted into the editor / Page Top / Page Bottom / Elements is shortcode 
 Key CSS variable groups (defined in `:root` in `style-site.css`):
 - `--font-primary`, `--font-secondary`, `--font-tertiary`, `--font-text`
 - Color palette: `--main-red`, `--main-blue`, `--black`, `--white`, `--light-grey`, etc.
+
+### Custom brand headline fonts — ALWAYS ship a metric-matched fallback
+
+A heavy/wide display font (e.g. Rammetto One) used for headlines will, before it loads, fall back to a plain system font at the same `font-size` — which renders **small, thin, and re-wrapped**. That's an ugly flash *and* a large CLS when the real font finally swaps in (the headline re-wraps, changing its height). `font-display: block` doesn't fix it (invisible text, then the same shift); `optional` fixes CLS but shows the wrong-sized fallback on every cold/throttled load (which is exactly what PSI-mobile lab tests). The real fix is a companion fallback `@font-face` that scales a **local** system font to the brand font's exact box:
+
+- Keep the brand `@font-face` on **`font-display: swap`** (not `block`/`optional`).
+- Add a `'<Brand> Fallback'` face using `local('Arial')` + `size-adjust` / `ascent-override` / `descent-override` / `line-gap-override`, and put it in the stack **right after** the brand font:
+  `--font-primary: '<Brand>', '<Brand> Fallback', Helvetica, Arial, sans-serif;`
+- The fallback now occupies the identical box → the swap is shift-free (**~0 CLS**) and the cold-load fallback is already the right size/width. Brand font still appears the instant it loads, on every visit.
+
+**Easiest — run the ready-made generator** (handles caps-vs-mixed + serif-vs-sans automatically):
+```
+node "00 - Battle Plan Assets/tools/font-fallback/font-fallback.mjs" "<path to the site or its style-site.css>"
+```
+It prints the `@font-face` to paste, the `font-display: swap` reminder, and the `--font-primary` line. Point it at a raw font file with `--mixed` / `--serif` / `--name` to override detection. (See that folder's README.)
+
+**Or by hand with Capsize — never eyeball them:**
+```
+npm i @capsizecss/core @capsizecss/metrics
+createFontStack([brand, arial]).fontFaces   // brand from @capsizecss/metrics/<fontCamelCase>, or unpack the woff2
+```
+
+**GOTCHA — all-caps headlines need a caps-measured `size-adjust`.** Capsize's `size-adjust` comes from `xWidthAvg`, a **lowercase**-frequency-weighted average. Our brand headlines are almost always **all-caps**, and display fonts often have caps whose width differs wildly from their lowercase (Blu Collar's "Ron" font: caps are **65%** of Arial, but Capsize said 92% off the lowercase avg → the fallback rendered ~40% too wide). When the headline is uppercase, compute `size-adjust` from actual **caps** advances instead, then rescale the vertical overrides by the same factor:
+```
+import * as fontkit from 'fontkit';                       // npm i fontkit
+const norm = (f, s) => f.layout(s).advanceWidth / f.unitsPerEm;
+const brand = fontkit.openSync('<brand>.ttf'), arial = fontkit.openSync('C:/Windows/Fonts/arial.ttf');
+const sa = norm(brand, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') / norm(arial, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+// size-adjust = sa; ascent-override = brand.ascent/brand.unitsPerEm/sa; descent = |descent|/em/sa; line-gap = lineGap/em/sa
+```
+Verify by blocking the woff2 in DevTools (Network → Block request URL) — the fallback headline should match the real one's width.
+
+Worked example (Blu Collar → Arial, caps-measured: `size-adjust: 65.0412%`) lives in that site's `style-site.css`.
 
 ### Every `:hover` rule must also style `.active` and `.tab-focus` (ADA)
 

@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			if (typeof widgetInit === 'function') { widgetInit(); }		
 			if (typeof centerSubNav === 'function') { centerSubNav(); }	
 			if (typeof formLabelWidth === 'function') { formLabelWidth(); }	
-			if (typeof screenResize === 'function') { screenResize(); }	
+			if (typeof screenResize === 'function') { screenResize(); }
 			if (typeof buildAccordion === 'function') { buildAccordion(); }	
 			if (typeof areWeOpenBanner === 'function') { areWeOpenBanner(0); }				
 			if (typeof setMagicMenu === 'function') { setMagicMenu(); }				
@@ -31,18 +31,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		};
 		
 		const loadFunc = () => {
-			if (typeof fadeOutLoader === 'function') { fadeOutLoader(0); }	
-			
-			resizeFunc();	
+			resizeFunc();
 		};
 
 		window.addEventListener('scroll', () => { scrollFunc(); });	
 
 		window.addEventListener('resize', () => { resizeFunc(); });	
 
-		window.addEventListener('pageshow', () => { loadFunc();	});			
-		
-		document.addEventListener('DOMContentLoaded', () => { fadeOutLoader(0.5); });		
+		window.addEventListener('pageshow', () => { loadFunc();	});
+
 
 		window.fireOffInit = true;
 	}

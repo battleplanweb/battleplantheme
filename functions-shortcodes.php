@@ -72,7 +72,7 @@ function battleplan_getBizInfo($atts, $content = null) {
 
 		return strpos($data, '-notrack') !== false
 			? '<a class="phone-link" href="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>'
-			: '<a href="#" class="phone-link track-clicks" data-action="phone-call" data-url="tel:1-'.$phoneBasic.'">'.$icon.$phoneFormat.'</a>';
+			: '<a href="tel:1-'.$phoneBasic.'" class="phone-link track-clicks" data-action="phone-call">'.$icon.$phoneFormat.'</a>';
 	}
 
 	/*--------------------------------------------------------------

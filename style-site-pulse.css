@@ -41,11 +41,11 @@
 
 
 	--font-size-text:                                          14px;
-	--font-size-x-small:                                       calc(var(--font-size-text) * 0.72);
-	--font-size-small:                                         calc(var(--font-size-text) * 0.857);
-	--font-size-medium:                                        calc(var(--font-size-text) * 1.15);
-	--font-size-large:                                         calc(var(--font-size-text) * 1.29);
-	--font-size-x-large:                                       calc(var(--font-size-text) * 1.72);
+	--font-size-xs:                                            calc(var(--font-size-text) * 0.72);
+	--font-size-sm:                                            calc(var(--font-size-text) * 0.857);
+	--font-size-md:                                            calc(var(--font-size-text) * 1.15);
+	--font-size-lg:                                            calc(var(--font-size-text) * 1.29);
+	--font-size-xl:                                            calc(var(--font-size-text) * 1.72);
 
 	--sp-checkbox-size:                                        20px;
 
@@ -99,8 +99,8 @@
 	--sp-button-shadow:                                        1px 1px 3px transparent;
 	--sp-button-shadow-hover:                                  1px 1px 3px rgba(0, 0, 0, 0.20);
 
-	--sp-shadow-small:                                         0 1px 2px rgba(0,0,0,0.05);
-	--sp-shadow-large:                                         0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+	--sp-shadow-sm:                                            0 1px 2px rgba(0,0,0,0.05);
+	--sp-shadow-lg:                                            0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
 
 
 	--sp-transition:                                           0.2s ease;
@@ -111,7 +111,7 @@
 
 	--input-padding:                                           8px 15px;
 	--input-font-size:                                         14px;
-	--input-border-radius:                                     var(--sp-radius-small);
+	--input-border-radius:                                     var(--sp-radius-sm);
 	--input-color:                                             var(--sp-text);
 	--input-background:                                        var(--white);
 	--input-border:                                            1px solid var(--sp-secondary-color);
@@ -196,7 +196,7 @@ body.sp-has-god-bar .sp-god-bar { display: grid; }
 }
 
 .sp-login-header h1 {
-	font-size:                                                 var(--font-size-x-large);
+	font-size:                                                 var(--font-size-xl);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 	margin:                                                    0 0 4px;
@@ -410,12 +410,12 @@ input[type="radio"] {
 	background:                                                var(--sp-white);
 	border:                                                    1px solid var(--sp-secondary-color);
 	border-radius:                                             24px;
-	box-shadow:                                                var(--sp-button-small);
+	box-shadow:                                                var(--sp-button-shadow);
 	margin-bottom:                                             20px;
 }
 
 .sp-meta-bar .sp-card-value {
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 }
 
 .sp-toolbar {
@@ -525,7 +525,7 @@ input[type="radio"] {
 }
 
 .sp-sidebar-title {
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	font-weight:                                               700;
 	color:                                                     var(--white);
 	letter-spacing:                                            -0.01em;
@@ -754,7 +754,7 @@ input[type="radio"] {
 	border-radius:                                             var(--sp-radius-xs);
 	background:                                                var(--sp-danger, #e02424);
 	color:                                                     var(--white);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	line-height:                                               18px;
 	text-align:                                                center;
@@ -778,7 +778,7 @@ input[type="radio"] {
 	padding:                                                   0 7px;
 	background:                                                var(--sp-warning);
 	color:                                                     var(--white);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	border-radius:                                             var(--sp-radius-pill);
 	line-height:                                               1;
@@ -863,7 +863,7 @@ input[type="radio"] {
 }
 
 .sp-mobile-title {
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	font-weight:                                               700;
 }
 
@@ -1090,7 +1090,7 @@ input[type="radio"] {
 
 .sp-chart-toggle {
 	display:                                                   inline-flex;
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	overflow:                                                  hidden;
 	border:                                                    1px solid var(--sp-secondary-color);
 }
@@ -1138,7 +1138,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   16px 20px;
-	box-shadow:                                                var(--sp-shadow-small);
+	box-shadow:                                                var(--sp-shadow-sm);
 }
 
 .sp-modal.sp-dir-detail {
@@ -1225,7 +1225,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	color:                                                     var(--sp-secondary-darkest);
 	user-select:                                               none;
 	-webkit-user-select:                                       none;
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	line-height:                                               1;
 }
 
@@ -1237,11 +1237,12 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	padding:                                                   10px;
 	margin:                                                    5px 0;
 	border:                                                    1px solid transparent;
-	box-shadow:                                                var(--sp-box-shadow);
+	box-shadow:                                                var(--sp-shadow-sm);
 }
 
 .sp-card-body .sp-button {
 	cursor:                                                    pointer;
+	border-radius:                                             var(--sp-radius-sm);
 	transition:                                                all var(--sp-transition);
 }
 
@@ -1249,7 +1250,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-card-body .sp-button.active,
 .sp-card-body .sp-button.tab-focus {
 	border:                                                    1px solid var(--sp-secondary-color);
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	box-shadow:                                                var(--sp-button-shadow-hover);
 	transform:                                                 none;
 }
@@ -1278,9 +1279,9 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 
 .sp-tile {
 	background:                                                var(--sp-secondary-lightest);
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	padding:                                                   10px 20px;
-	box-shadow:                                                var(--box-shadow);
+	box-shadow:                                                var(--sp-shadow-sm);
 	border:                                                    1px solid var(--sp-secondary-dark);
 	text-align:                                                left;
 }
@@ -1416,8 +1417,8 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-card-body .sp-button.sp-review-tag.tab-focus {
 	display:                                                   inline-block;
 	padding:                                                   4px 10px;
-	border-radius:                                             var(--sp-radius-x-small);
-	font-size:                                                 var(--font-size-small);
+	border-radius:                                             var(--sp-radius-xs);
+	font-size:                                                 var(--font-size-sm);
 	font-weight:                                               600;
 	line-height:                                               1.5;
 	color:                                                     var(--white);
@@ -1460,7 +1461,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-field-drag {
 	cursor:                                                    grab;
 	color:                                                     var(--sp-text-light);
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 }
 
 /*
@@ -1525,7 +1526,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	width:                                                     90%;
 	padding:                                                   0;
 	padding-left:                                              calc(var(--sp-checkbox-size) + (8px * 2));
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	cursor:                                                    pointer;
 	position:                                                  relative;
 }
@@ -1586,7 +1587,7 @@ textarea:focus,
 }
 
 .sp-select option {
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 }
 
 .sp-combo-input::-webkit-calendar-picker-indicator {
@@ -1606,7 +1607,7 @@ textarea:focus,
 }
 
 .sp-form-section-title {
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 	margin:                                                    0 0 16px;
@@ -1689,7 +1690,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 }
 
 .sp-stat-value {
-	font-size:                                                 var(--font-size-x-large);
+	font-size:                                                 var(--font-size-xl);
 	font-weight:                                               bold;
 	line-height:                                               1.1;
 	color:                                                     var(--sp-text);
@@ -1784,7 +1785,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   12px 14px;
-	box-shadow:                                                var(--sp-shadow-small);
+	box-shadow:                                                var(--sp-shadow-sm);
 	cursor:                                                    pointer;
 	transition:                                                border-color var(--sp-transition);
 }
@@ -1813,7 +1814,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	display:                                                   inline-block;
 	padding:                                                   1px 8px;
 	border-radius:                                             var(--sp-radius-xs);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               600;
 	color:                                                     var(--white);
 }
@@ -1857,7 +1858,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 }
 
 .sp-rep-head-title {
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 	margin-bottom:                                             12px;
@@ -1873,7 +1874,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 .sp-form-group label {
 	position:                                                  relative;
 	display:                                                   block;
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 	text-transform:                                            uppercase;
@@ -1886,7 +1887,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 }
 
 .sp-report-tile-title {
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	font-weight:                                               bold;
 	color:                                                     var(--sp-text);
 }
@@ -1960,7 +1961,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 }
 
 .sp-answer-label {
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	font-weight:                                               bold;
 	color:                                                     var(--sp-secondary-darkest);
 	text-transform:                                            uppercase;
@@ -1987,7 +1988,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 
 .sp-rep-field-value {
 	color:                                                     var(--sp-text);
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 }
 
 .sp-rep-content .sp-rep-section-title {
@@ -2001,7 +2002,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 .sp-rep-summary .sp-rep-total td,
 .sp-rep-content .sp-table-card .sp-rep-total-line {
 	font-weight:                                               800;
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	background:                                                var(--sp-secondary-lightest);
 	color:                                                     var(--sp-text);
 	border-top:                                                1px solid var(--sp-secondary-light);
@@ -2082,7 +2083,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 
 .sp-mileage-stop-num,
 .sp-mileage-bookend-label {
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	font-weight:                                               700;
 	letter-spacing:                                            0.04em;
 	color:                                                     var(--sp-text);
@@ -2096,7 +2097,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	padding:                                                   0 24px;
 	background:                                                var(--sp-secondary-lightest);
 	border:                                                    1px solid var(--sp-secondary-light);
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	font-weight:                                               600;
 }
 
@@ -2220,7 +2221,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 
 .sp-toll-day-date {
 	font-weight:                                               700;
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 }
 
 .sp-toll-day-head .sp-btn {
@@ -2564,7 +2565,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 
 .sp-review-reply-label {
 	display:                                                   block;
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.04em;
@@ -2622,7 +2623,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-reviews-stat-num {
-	font-size:                                                 var(--font-size-x-large);
+	font-size:                                                 var(--font-size-xl);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 }
@@ -2767,7 +2768,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	min-width:                                                 0;
 	overflow:                                                  hidden;
 	white-space:                                               nowrap;
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	color:                                                     var(--white);        /* defined after .sp-rate-* so white wins over the rate color */
 }
@@ -2776,7 +2777,7 @@ input[type="file"].sp-input::file-selector-button:hover {
    Wider label cell so "Pos/Neu/Neg" fits (compound selector beats .sp-survey-bar-star regardless of order). */
 .sp-survey-bar-star.sp-rev-bar-lbl {
 	width:                                                     22px;
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 }
 
 /* Brighter green/red for the star-distribution charts (bars + pie), to match the vivid sentiment
@@ -2805,7 +2806,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-survey-stat-label {
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.04em;
@@ -2813,7 +2814,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-survey-stat-value {
-	font-size:                                                 var(--font-size-x-large);
+	font-size:                                                 var(--font-size-xl);
 	font-weight:                                               700;
 	line-height:                                               1.1;
 	color:                                                     var(--sp-text);
@@ -2832,7 +2833,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	display:                                                   flex;
 	align-items:                                               center;
 	gap:                                                       8px;
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	line-height:                                               1;
 }
 
@@ -2890,7 +2891,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-survey-loc {
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 }
@@ -2922,7 +2923,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	align-items:                                               center;
 	justify-content:                                           space-between;
 	gap:                                                       14px;
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 }
 
 .sp-survey-rate-label {
@@ -2933,7 +2934,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	min-height:                                                30px;
 	border-radius:                                             var(--sp-radius-pill);
 	font-weight:                                               700;
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	color:                                                     var(--white);
 	text-align:                                                center;
 	aspect-ratio:                                              1 / 1;
@@ -3250,7 +3251,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	background:                                                var(--white);
 	border:                                                    1px solid var(--sp-secondary-light);
 	padding:                                                   14px;
-	box-shadow:                                                var(--sp-shadow-small);
+	box-shadow:                                                var(--sp-shadow-sm);
 }
 
 .sp-trend-table th:hover { color: var(--sp-accent-color); }
@@ -3437,7 +3438,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-lg);
-	box-shadow:                                                var(--sp-shadow-small);
+	box-shadow:                                                var(--sp-shadow-sm);
 }
 
 .sp-email-card .sp-card-body {
@@ -3460,7 +3461,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 }
 
 .sp-email-cat {
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.03em;
@@ -3480,7 +3481,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-email-date {
 	color:                                                     var(--sp-text-light);
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	white-space:                                               nowrap;
 }
 
@@ -3589,7 +3590,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	border-radius:                                             var(--sp-radius-circle);
 	background:                                                var(--sp-danger, #e02424);
 	color:                                                     var(--white);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	line-height:                                               18px;
 	text-align:                                                center;
@@ -3632,7 +3633,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 /* "Create action item" already used on this message — locked so two people can't make duplicates. */
 /* Group extras. */
 .sp-msg-bubble-sender {
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text-secondary);
 	margin-bottom:                                             2px;
@@ -3655,7 +3656,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 /* Platform chip on Customer Messages (FB/IG DMs). */
 .sp-cm-tag {
 	display:                                                   inline-block;
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	letter-spacing:                                            0.3px;
 	padding:                                                   1px 6px;
@@ -3761,7 +3762,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-msg-group-tag,
 .sp-msg-manage {
 	display:                                                   inline-block;
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.04em;
@@ -3802,7 +3803,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-msg-avatar-mono {
 	color:                                                     var(--white);
 	font-weight:                                               bold;
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	line-height:                                               1;
 }
 
@@ -3827,7 +3828,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 }
 
 .sp-msg-thread-heading {
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 }
 
 .sp-msg-manage {
@@ -3905,10 +3906,10 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	margin-bottom:                                             4px;
 	padding:                                                   2px 6px;
 	border-left:                                               3px solid var(--sp-primary-dark);
-	border-radius:                                             var(--sp-radius-small);
-	font-size:                                                 var(--font-size-small);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-sm);
 	line-height:                                               1.3;
-	max-width:                                                 calc(100% - var(--sp-radius-small));
+	max-width:                                                 calc(100% - var(--sp-radius-sm));
 }
 
 .sp-msg-bubble.mine .sp-msg-reply-quote {
@@ -3917,7 +3918,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-msg-bubble-time {
 	margin-top:                                                3px;
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	color:                                                     var(--sp-secondary-dark);
 }
 
@@ -3928,7 +3929,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-msg-seen {
 	align-self:                                                flex-end;
 	margin-top:                                                2px;
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	font-weight:                                               bold;
 	color:                                                     var(--sp-text-secondary);
 }
@@ -4074,7 +4075,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-lg);
-	box-shadow:                                                var(--sp-shadow-small);
+	box-shadow:                                                var(--sp-shadow-sm);
 	cursor:                                                    pointer;
 	transition:                                                all var(--sp-transition);
 }
@@ -4136,13 +4137,13 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-dir-name {
 	font-weight:                                               700;
-	font-size:                                                 var(--font-size-x-large);
+	font-size:                                                 var(--font-size-xl);
 	color:                                                     var(--sp-text);
 }
 
 .sp-dir-sub {
 	color:                                                     var(--sp-text-secondary);
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	margin-top:                                                3px;
 	text-align:                                                center;
 }
@@ -4232,7 +4233,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-dir-detail-name {
 	font-weight:                                               700;
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	color:                                                     var(--sp-text);
 }
 
@@ -4385,7 +4386,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-action-drag {
 	cursor:                                                    grab;
 	color:                                                     var(--sp-secondary-darkest);
-	font-size:                                                 var(--font-size-large);
+	font-size:                                                 var(--font-size-lg);
 	padding-top:                                               2px;
 	user-select:                                               none;
 	-webkit-user-select:                                       none;
@@ -4410,7 +4411,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-pending-heading {
 	margin:                                                    0 0 4px;
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	font-weight:                                               700;
 	color:                                                     var(--sp-text);
 	display:                                                   flex;
@@ -4500,7 +4501,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 }
 
 .sp-action-item-desc {
-	font-size:                                                 var(--font-size-medium);
+	font-size:                                                 var(--font-size-md);
 	color:                                                     var(--sp-text);
 	line-height:                                               1.5;
 	margin-bottom:                                             12px;
@@ -4563,7 +4564,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	margin-top:                                                20px;
 	padding:                                                   8px;
 	background:                                                var(--sp-secondary-light);
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	border:                                                    1px solid var(--sp-secondary-color);
 	border-left:                                               3px solid var(--sp-secondary-darkest);
 	max-height:                                                30vh;
@@ -4571,7 +4572,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 }
 
 .sp-action-notes-label {
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	font-weight:                                               700;
 	color:                                                     var(--sp-secondary-darkest);
 	margin-bottom:                                             2px;
@@ -4609,7 +4610,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 /*
 
 .sp-action-resolved {
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	color:                                                     var(--sp-success);
 	margin-top:                                                4px;
 }
@@ -4618,7 +4619,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	margin-bottom:                                             12px;
 	padding:                                                   var(--sp-pad-medium);
 	background:                                                var(--sp-secondary-light);
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	border-left:                                               2px solid var(--sp-secondary-dark);
 }
 
@@ -4631,7 +4632,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 }
 
 .sp-action-history-label {
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.04em;
@@ -4734,10 +4735,10 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	position:                                                  relative;
 	z-index:                                                   100;
 	margin:                                                    0 0 -12px;
-	padding:                                                   var(--sp-pad-small);
+	padding:                                                   10px;
 	background:                                                var(--sp-secondary-lightest);
 	border:                                                    1px solid var(--sp-secondary-light);
-	border-radius:                                             var(--sp-radius-small);
+	border-radius:                                             var(--sp-radius-sm);
 	font-size:                                                 var(--font-size-text);
 	color:                                                     var(--sp-secondary-darkest);
 	line-height:                                               1.5;
@@ -5015,7 +5016,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	padding:                                                   0 4px;
 	background:                                                var(--sp-danger);
 	color:                                                     var(--white);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	border-radius:                                             var(--sp-radius-sm);
 	display:                                                   grid;
@@ -5036,7 +5037,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-lg);
-	box-shadow:                                                var(--sp-shadow-large);
+	box-shadow:                                                var(--sp-shadow-lg);
 	z-index:                                                   250;
 	display:                                                   flex;
 	flex-direction:                                            column;
@@ -5102,7 +5103,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-notification-time {
 	color:                                                     var(--sp-text-light);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	white-space:                                               nowrap;
 	align-self:                                                start;
 }
@@ -5755,7 +5756,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	border-radius:                                             var(--sp-radius-pill);
 	background:                                                var(--sp-border);
 	color:                                                     var(--sp-text-secondary);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	vertical-align:                                            middle;
 }
 
@@ -5814,7 +5815,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            0.05em;
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	background:                                                rgba(255,255,255,0.2);
 	padding:                                                   2px 8px;
 	border-radius:                                             var(--sp-radius-xs);
@@ -6281,7 +6282,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 .sp-coming-soon-badge span {
 	background:                                                var(--sp-accent-color);
 	color:                                                     var(--white);
-	font-size:                                                 var(--font-size-x-small);
+	font-size:                                                 var(--font-size-xs);
 	font-weight:                                               700;
 	padding:                                                   3px 10px;
 	border-radius:                                             var(--sp-radius);
@@ -6580,7 +6581,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 }
 
 .sp-help-text {
-	font-size:                                                 var(--font-size-small);
+	font-size:                                                 var(--font-size-sm);
 	color:                                                     var(--sp-text-light);
 	margin-top:                                                4px;
 }

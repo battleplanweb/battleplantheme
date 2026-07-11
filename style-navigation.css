@@ -465,24 +465,24 @@
      }
 
      @keyframes hamburger {
+          /* Was width + margin-left (layout props → a reflow every frame, and it runs infinitely on
+             the mobile menu bar). Converted to transform: scaleX from the default center origin, which
+             reproduces the identical symmetric shrink (left+right edges move inward equally) but runs
+             on the compositor — off the main thread, no reflow. 22/24 = .9167, 20/24 = .8333. */
           0% {
-               width:                                       24px;
-               margin-left:                                 4px;
+               transform:                                   scaleX(1);
           }
 
           5% {
-               width:                                       22px;
-               margin-left:                                 5px;
+               transform:                                   scaleX(0.9167);
           }
 
           10% {
-               width:                                       20px;
-               margin-left:                                 6px;
+               transform:                                   scaleX(0.8333);
           }
 
           20% {
-               width:                                       24px;
-               margin-left:                                 4px;
+               transform:                                   scaleX(1);
           }
      }
 

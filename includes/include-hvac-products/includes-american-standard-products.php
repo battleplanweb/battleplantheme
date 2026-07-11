@@ -8,6 +8,26 @@ if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
 endif;
 */
 
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="american standard air conditioners"]
+
+[product-overview type="american standard air handlers"]
+
+[product-overview type="american standard heat pumps"]
+
+[product-overview type="american standard furnaces"]
+
+[product-overview type="american standard packaged units"]
+
+[product-overview type="american standard thermostats"]
+*/
+
+
+
+
 add_action( 'wp_loaded', 'add_american_standard_products', 10 );
 function add_american_standard_products() {
 

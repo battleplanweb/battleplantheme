@@ -115,7 +115,10 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 					const moveElem = (containerHeight - elementObj.offsetHeight + adjustment) * scrollPct;
 
 					if (containerTop < adjustedWindowBottom && containerBottom > scrollPos) {
-						elementObj.style.marginTop = `${moveElem}px`;
+						// Use transform (not margin-top) so the parallax drift is a COMPOSITED move,
+						// not a layout change — transforms are excluded from CLS, so the hero-copy's
+						// on-load positioning no longer registers as a layout shift. Same visual result.
+						elementObj.style.transform = `translateY(${moveElem}px)`;
 					}
 				}
 			});
@@ -140,11 +143,41 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 --------------------------------------------------------------*/
 
 // Set up Split Menu
+// Splits the menu into a left/right half so a centered logo can sit in the gap.
+// Rebuilds from a cached pristine copy on every call (idempotent), re-runs on
+// resize, and skips splitting while the desktop nav is hidden/unmeasurable
+// (≤1024px) — otherwise a 0-width measurement dumps every item onto one side.
 window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", compensate = 0, override = false) => {
 	const menuObj = getObject(menuSel);
-	const logoWidth = getObject(logoSel).offsetWidth + compensate;
+	if (!menuObj) return;
 	const menuFlex = getObject('.flex', menuObj);
-	const menuUL = getObject('ul.main-menu', menuObj);
+	if (!menuFlex) return;
+
+	// Cache the untouched menu once so every (re)run rebuilds from a clean copy,
+	// and wire up a single debounced resize listener.
+	if (!menuObj._smPristine) {
+		const orig = getObject('ul.main-menu', menuObj);
+		if (!orig) return;
+		menuObj._smPristine = orig.cloneNode(true);
+		let t;
+		window.addEventListener('resize', () => {
+			clearTimeout(t);
+			t = setTimeout(() => splitMenu(menuSel, logoSel, compensate, override), 150);
+		});
+	}
+
+	// Teardown: remove any prior split wrappers + leftover menu, restore a fresh full menu.
+	getObjects('.split-menu-l, .split-menu-r', menuFlex).forEach(el => el.remove());
+	Array.from(menuFlex.children).forEach(el => { if (el.matches('ul.main-menu')) el.remove(); });
+	menuFlex.style.gridColumnGap = '';
+	const menuUL = menuObj._smPristine.cloneNode(true);
+	menuFlex.appendChild(menuUL);
+
+	// Guard: never split while hidden (offsetParent null) or unmeasurable (0 width).
+	if (menuObj.offsetParent === null || menuUL.offsetWidth === 0) return;
+
+	const logoObj = getObject(logoSel);
+	const logoWidth = (logoObj ? logoObj.offsetWidth : 0) + compensate;
 	const menuItems = getObjects('ul.main-menu > li', menuObj);
 	const menuWidth = menuUL.offsetWidth / 2;
 	let currOpt = 0;
@@ -185,7 +218,7 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 
 	const updateIDs = (element) => {
 		const ul = getObject('ul.menu:not(.sub-menu)', element);
-		ul.id = `${ul.id}-${element.className.includes('split-menu-l') ? 'l' : 'r'}`;
+		if (ul) ul.id = `${ul.id}-${element.className.includes('split-menu-l') ? 'l' : 'r'}`;
 	};
 
 	const cloneMenu = menuUL.cloneNode(true);

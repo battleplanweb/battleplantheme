@@ -4,15 +4,30 @@
 /*  ADD TO FUNCTIONS-SITE
 if ( get_option('bp_product_upload_2022_08_11') != "completed" ) :
  	require_once get_template_directory().'/includes/include-hvac-products/includes-ruud-products.php';
-	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );			
-endif; 
+	updateOption( 'bp_product_upload_2022_08_11', 'completed', false );
+endif;
 */
- 
+
+
+
+
+/* PRODUCT OVERVIEW
+[product-overview type="ruud air conditioners"]
+
+[product-overview type="ruud air handlers"]
+
+[product-overview type="ruud heat pumps"]
+
+[product-overview type="ruud furnaces"]
+
+[product-overview type="ruud packaged units"]
+*/
+
 add_action( 'wp_loaded', 'add_ruud_products', 10 );
 function add_ruud_products() {
 
 	$brand = "Ruud";
-	$productImgAlt = "Ruud Heating & Cooling Product"; 
+	$productImgAlt = "Ruud Heating & Cooling Product";
 
 	/*
 	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
@@ -20,9 +35,9 @@ function add_ruud_products() {
 
 
 	$addProducts = array (
-	
+
 	// Air Conditioners
-		array ( 
+		array (
 			'post_title'	=>	'EcoNet™ Enabled Ultra® Series Variable Speed Air Conditioner (UA20)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -66,17 +81,17 @@ function add_ruud_products() {
 
     <li>High and low pressure standard on all models.</li>
 
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Cooling efficiencies up to 20.5 SEER and 14.5 EER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1000,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/BC9DC5E2-3C3C-43B6-A316-2050B0C0F3E0.pdf'),
-			'image_name'	=>	'Ruud-01.jpg'		
+			'image_name'	=>	'Ruud-01.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'EcoNet™ Enabled Achiever Plus® Series Two-Stage Air Conditioner (UA17)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -116,31 +131,31 @@ function add_ruud_products() {
 
 <li>High and low pressure standard on all models.</li>
 
-</ul>	', 
+</ul>	',
 			'post_excerpt'	=>	'Efficiencies up to 17 SEER/13 EER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1010,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/1F01E4BC-1B4D-4070-92E9-4A96BA1629D2.pdf'),
-			'image_name'	=>	'Ruud-01.jpg'		
+			'image_name'	=>	'Ruud-01.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Achiever Series: Single Stage Air Conditioner (RA16)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
-<ul><li>New composite base pan – dampens sound, captures louver panels, eliminates corrosion and reduces number of fasteners needed</li><li> coat paint system – for a long lasting professional finish</li><li>Scroll compressor – uses 70% fewer moving parts for higher efficiency and increased reliability</li><li>Modern cabinet aesthetics – increased curb appeal with visually appealing design</li><li>Curved louver panels – provide ultimate coil protection, enhance cabinet strength, and increased cabinet rigidity</li><li>Optimized fan orifice – optimizes airflow and reduces unit sound</li><li>Rust resistant screws – confirmed through 1500-hour salt spray testing</li><li>PlusOne™ <strong>Expanded Valve Space</strong> – 3"-4"-5" service valve space – provides a minimum working area of 27-square inches for easier access</li><li>PlusOne™ <strong>Triple Service Access</strong> – 15" wide, industry leading corner service access – makes repairs easier and faster. The two fastener removable corner allows optimal access to internal unit components. Individual louver panels come out once fastener is removed, for faster coil cleaning and easier cabinet reassembly</li><li>Diagnostic service window with two-fastener opening – provides access to the high and low pressure</li><li>External gauge port access – allows easy connection of “low-loss” gauge ports</li><li>Single-row condenser coil – makes unit lighter and allows thorough coil cleaning to maintain “out of the box” performance</li><li>35% fewer cabinet fasteners and fastener-free base – allow for faster access to internal components and hassle-free panel removal</li><li>Service trays – hold fasteners or caps during service calls</li><li>QR code – provides technical information on demand for faster service calls</li><li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire</li></ul>	', 
+<ul><li>New composite base pan – dampens sound, captures louver panels, eliminates corrosion and reduces number of fasteners needed</li><li> coat paint system – for a long lasting professional finish</li><li>Scroll compressor – uses 70% fewer moving parts for higher efficiency and increased reliability</li><li>Modern cabinet aesthetics – increased curb appeal with visually appealing design</li><li>Curved louver panels – provide ultimate coil protection, enhance cabinet strength, and increased cabinet rigidity</li><li>Optimized fan orifice – optimizes airflow and reduces unit sound</li><li>Rust resistant screws – confirmed through 1500-hour salt spray testing</li><li>PlusOne™ <strong>Expanded Valve Space</strong> – 3"-4"-5" service valve space – provides a minimum working area of 27-square inches for easier access</li><li>PlusOne™ <strong>Triple Service Access</strong> – 15" wide, industry leading corner service access – makes repairs easier and faster. The two fastener removable corner allows optimal access to internal unit components. Individual louver panels come out once fastener is removed, for faster coil cleaning and easier cabinet reassembly</li><li>Diagnostic service window with two-fastener opening – provides access to the high and low pressure</li><li>External gauge port access – allows easy connection of “low-loss” gauge ports</li><li>Single-row condenser coil – makes unit lighter and allows thorough coil cleaning to maintain “out of the box” performance</li><li>35% fewer cabinet fasteners and fastener-free base – allow for faster access to internal components and hassle-free panel removal</li><li>Service trays – hold fasteners or caps during service calls</li><li>QR code – provides technical information on demand for faster service calls</li><li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire</li></ul>	',
 			'post_excerpt'	=>	'Efficiencies up to 16 SEER/13 EER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1020,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/6C1F8102-EACD-4C84-8239-FB0212B61C58.pdf'),
-			'image_name'	=>	'Ruud-03.jpg'		
+			'image_name'	=>	'Ruud-03.jpg'
 		),
-		
-				
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Achiever Series: Single Stage Air Conditioner (RA14)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -161,19 +176,19 @@ function add_ruud_products() {
 <li>Service trays – hold fasteners or caps during service calls</li>
 <li>QR code – provides technical information on demand for faster service calls</li>
 <li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 15 SEER/12.5 EER ',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1030,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/67EAC91C-7A9B-4F83-8297-5585F19B9643.pdf'),
-			'image_name'	=>	'Ruud-03.jpg'		
+			'image_name'	=>	'Ruud-03.jpg'
 		),
-		
-		
-	
+
+
+
 	// Heat Pumps
-		array ( 
+		array (
 			'post_title'	=>	'EcoNet™ Enabled Ultra® Series Variable Speed Heat Pump (UP20)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -203,17 +218,17 @@ function add_ruud_products() {
 <li>QR code – provides technical information on demand for faster service calls</li>
 <li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire.</li>
 <li>High and low pressure standard on all models.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 21.95 SEER/15.3 EER/11.5 HSPF',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1100,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/79445173-7019-461F-ADA9-99E864B5EB72.pdf'),
-			'image_name'	=>	'Ruud-01.jpg'		
+			'image_name'	=>	'Ruud-01.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'EcoNet™ Enabled Achiever Plus® Series Three-Stage Heat Pump (UP17)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -266,17 +281,17 @@ function add_ruud_products() {
     <li>QR code – provides technical information on demand for faster service calls</li>
     <li>Fan motor harness with extra-long wires – allows unit top to be removed without disconnecting fan wire</li>
 
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 15 SEER/13 EER/9 HSPF',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1110,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/B94BFDDA-FA2E-498B-B2CF-8B92C38F7D37.pdf'),
-			'image_name'	=>	'Ruud-12.jpg'		
+			'image_name'	=>	'Ruud-12.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Achiever Series: Two Stage Heat Pump (RP16)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -284,17 +299,17 @@ function add_ruud_products() {
 
     <li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">New composite base pan – dampens sound, captures louver panels, eliminates corrosion and reduces number of fasteners needed</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Improved tubing design – reduces vibration and stress, making unit quieter and reducing opportunity for leaks</li><li style="padding-left: 0px; transition: background-color 0.75s ease; background-color: transparent; margin-left: 0px; padding-bottom: 1em;">Optimized defrost characteristics - decrease defrosting and provide better home comfort</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Powder coat paint system – for a long lasting professional finish</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Optimized reversing valve sizing – improves shifting performance for quieter unit operation and increased life of the system</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Enhanced mufflers – help to dissipate vibration energy for quieter unit operation</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Scroll compressor – a sound abating feature added to the compressor significantly reduces noise when system transitions in and out of defrost mode</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Modern cabinet aesthetics – increased curb appeal with visually appealing design</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Curved louver panels – provide ultimate coil protection, enhance cabinet strength, and increased cabinet rigidity</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Optimized fan orifice – optimizes airflow and reduces unit sound</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Rust resistant screws – confirmed through 1500-hour salt spray testing</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">PlusOne™ Expanded Valve Space – 3"-4"-5" service valve space – provides a minimum working area of 27-square inches for easier access</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Integrated heat pump lift receptacle – allows standard CPVC stands to be inserted into the base</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">PlusOne™ Triple Service Access – 15" wide, industry leading corner service access – makes repairs easier and faster. The two fastener removable corner allows optimal access to internal unit components. Individual louver panels come out once fastener is removed, for faster coil cleaning and easier cabinet reassembly</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Diagnostic service window with two-fastener opening – provides access to the TXV valves and the heat pump reversing valve before opening the unit</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">External gauge port access – allows easy connection of “low-loss” gauge ports</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Single-row condenser coil – makes unit lighter and allows thorough coil cleaning to maintain “out of the box” performance</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">35% fewer cabinet fasteners and fastener-free base – allow for faster access to internal components and hassle-free panel removal</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Service trays – hold fasteners or caps during service calls</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">QR code – provides technical information on demand for faster service calls</li><li style="padding-left: 0px; transition: background-color 0.75s ease; margin-left: 0px; padding-bottom: 1em;">Fan motor harness with extra-long wires – allows unit top to be removed without disconnecting fan wire</li>
 
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 16 SEER/13 EER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1120,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/48CDF5E4-A60C-4FB1-BB6B-577BDFC2005A.pdf'),
-			'image_name'	=>	'Ruud-03.jpg'		
+			'image_name'	=>	'Ruud-03.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Achiever Series: Single Stage Heat Pump (RP15)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -322,17 +337,17 @@ function add_ruud_products() {
     <li>QR code – provides technical information on demand for faster service calls</li>
     <li>Fan motor harness with extra-long wires – allows unit top to&nbsp;be removed without disconnecting fan wire</li>
 
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 15 SEER/13 EER/9 HSPF',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1130,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/421453C4-3CE5-4F6A-874A-4264FF1B322B.pdf'),
-			'image_name'	=>	'Ruud-13.jpg'		
+			'image_name'	=>	'Ruud-13.jpg'
 		),
-		
-		
-		array ( 
+
+
+		array (
 			'post_title'	=>	'Achiever Series: Single Stage Heat Pump (RP14)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -355,18 +370,18 @@ function add_ruud_products() {
     <li>QR code – provides technical information on demand for faster service calls</li>
     <li>Fan motor harness with extra long wires allows unit top to be removed without disconnecting fan wire.<br></li>
 
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 14 SEER/11.5 EER/9 HSPF',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1140,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/F44F58AE-5FD0-4A4F-AC37-EE3C410340AD.pdf'),
-			'image_name'	=>	'Ruud-03.jpg'		
+			'image_name'	=>	'Ruud-03.jpg'
 		),
-		
-	
+
+
 	// Furnaces
-		array ( 
+		array (
 			'post_title'	=>	'EcoNet™ Enabled Ultra® Series Variable Speed Multi Position Gas Furnace (U96V)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -391,17 +406,17 @@ function add_ruud_products() {
     <li>Self priming condensate trap</li>
     <li>Solid bottom included</li>
     <li>Compatible with single or two stage thermostats. For optimal performance a two stage thermostat is recommended.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'96% residential gas furnace CSA certified',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1200,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/985BE6DB-6E12-4D66-A428-E1F3620EBF58.pdf'),
-			'image_name'	=>	'Ruud-06.jpg'		
-		),		
-		
-		
-		array ( 
+			'image_name'	=>	'Ruud-06.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'Achiever Plus Series: Up to 95% AFUE ECM Motor Multi Position Gas Furnace (R95T)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -441,17 +456,17 @@ function add_ruud_products() {
 
     <li>Solid bottom included</li>
 
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'95% residential gas furnace CSA certified',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1210,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/E7B33437-EF6C-4C10-B8AF-1F39CCF0219E.pdf'),
-			'image_name'	=>	'Ruud-07.jpg'		
-		),	
-		
-		
-		array ( 
+			'image_name'	=>	'Ruud-07.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'Achiever Plus Series Ultra Low NOx 80% AFUE R801T Upflow/Horizontal Gas Furnace',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -484,19 +499,19 @@ function add_ruud_products() {
 
 <p><i>*The R801TA Ultra Low NOx Furnace was the first to be certified, in June 2016, by meeting the SCAQMD Rule 1111, as published in the SCAQMD Advisor, Volume 24 March/April 2017 issue.</i></p>
 
-<p><i>** Refer to http://www.cleanairfurnacerebate.com for complete program and rebate details. </i></p>', 
+<p><i>** Refer to http://www.cleanairfurnacerebate.com for complete program and rebate details. </i></p>',
 			'post_excerpt'	=>	'FIRST CERTIFIED, lowest emission furnace in the industry',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1220,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/E7B33437-EF6C-4C10-B8AF-1F39CCF0219E.pdf'),
-			'image_name'	=>	'Ruud-14.jpg'		
+			'image_name'	=>	'Ruud-14.jpg'
 		),
-			
-	
-	
+
+
+
 	// Air Handlers
-		array ( 
+		array (
 			'post_title'	=>	'High Efficiency Constant Torque (ECM) Motor (RH1T)',
 			'post_content' 	=>	'<b>Features:</b>
 
@@ -510,17 +525,17 @@ function add_ruud_products() {
 <li>Enhanced airflow up to .7" external static pressure.</li>
 <li>Evaporator is constructed of aluminum fins bonded to internally grooved aluminum tubing</li>
 </ul>
-', 
+',
 			'post_excerpt'	=>	'Efficiencies up to 16 SEER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1300,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=5895A634-864D-447C-934A-1C111EB2A715'),
-			'image_name'	=>	'Ruud-11.jpg'		
-		),		
-		
-		
-		array ( 
+			'image_name'	=>	'Ruud-11.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'High Efficiency - Two-Stage ECM Motor (RH2T)',
 			'post_content' 	=>	'<b>Features:</b>
 
@@ -538,17 +553,17 @@ function add_ruud_products() {
 <li>Enhanced airflow up to .7" external static pressure.</li>
 <li>Suitable for application in mobile homes.</li>
 </ul>
-', 
+',
 			'post_excerpt'	=>	'Efficiencies up to 16 SEER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1310,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=C5262978-82FE-4F80-836A-16415625B19E'),
-			'image_name'	=>	'Ruud-11.jpg'		
-		),	
-		
-		
-		array ( 
+			'image_name'	=>	'Ruud-11.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'High Efficiency - ECM Motor (RH1V)',
 			'post_content' 	=>	'<b>Features:</b>
 
@@ -563,16 +578,16 @@ function add_ruud_products() {
 <li>On-demand dehumidification terminal that adjusts airflow to help control humidity for unsurpassed comfort in cooling mode.</li>
 <li>External filter required.</li>
 <li>Evaporator coil is constructed of aluminum fins bonded to internally grooved aluminum tubing.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'FIRST CERTIFIED, lowest emission furnace in the industry',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1320,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'better'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/E7B33437-EF6C-4C10-B8AF-1F39CCF0219E.pdf'),
-			'image_name'	=>	'Ruud-14.jpg'		
+			'image_name'	=>	'Ruud-14.jpg'
 		),
-		
-		array ( 		
+
+		array (
 			'post_title'	=>	'High Efficiency Constant Torque (ECM) Motor (RH1T)',
 			'post_content' 	=>	'<b>Features:</b>
 
@@ -586,16 +601,16 @@ function add_ruud_products() {
 <li>Enhanced airflow up to .7" external static pressure.</li>
 <li>Evaporator is constructed of aluminum fins bonded to internally grooved aluminum tubing</li>
 </ul>
-', 
+',
 			'post_excerpt'	=>	'Efficiencies up to 16 SEER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1340,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=5895A634-864D-447C-934A-1C111EB2A715'),
-			'image_name'	=>	'Ruud-11.jpg'		
-		),		
-			
-		array ( 		
+			'image_name'	=>	'Ruud-11.jpg'
+		),
+
+		array (
 			'post_title'	=>	'EcoNet™ Enabled High Efficiency Modulating with CFM Motor (RHMV)',
 			'post_content' 	=>	'<b>Features & Benefits:</b>
 
@@ -612,19 +627,19 @@ function add_ruud_products() {
 <li>All models meet or exceed 330 to 400 CFM [156 to 189 L/s] per ton at .3 inches [.7 kPa] of external static pressure.</li>
 <li>Enhanced airflow up to .7" external static pressure.</li>
 <li>Suitable for application in mobile homes.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Efficiencies up to 20.5 SEER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1350,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'furnaces', 'product-class'=>'good'),
 			'meta_input'	=>	array('brochure'=>'https://s3.amazonaws.com/WebPartners/ProductDocuments/81D20B8A-D04E-4130-971E-FAE0CD32D6CE.pdf'),
-			'image_name'	=>	'Ruud-11.jpg'		
-		),	
-		
-		
-			
+			'image_name'	=>	'Ruud-11.jpg'
+		),
+
+
+
 	// Packaged Units
-		array ( 
+		array (
 			'post_title'	=>	'RQPM-15 Package Heat Pump',
 			'post_content' 	=>	'<p>The 2-5 ton Ruud 14 SEER RQPM & 15/16 SEER RQRM Dedicated Horizontal Package Heat Pump units feature earth-friendly R-410A refrigerant. This platform provides you with a full line of capacities that are each AHRI-certified. The design is certified by CSA International.</p>
 
@@ -662,17 +677,17 @@ function add_ruud_products() {
 <li>Rugged base rails included for improved installation and handling.</li>
 <li>Low pressure control standard on all models.</li>
 <li>High pressure control standard on all 5ton models.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'Up to 16 SEER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1400,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'packaged-units', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=46C0C310-C119-438E-9DE3-4E58D4953F23'),
-			'image_name'	=>	'Ruud-09.jpg'		
-		),		
-		
-		
-		array ( 
+			'image_name'	=>	'Ruud-09.jpg'
+		),
+
+
+		array (
 			'post_title'	=>	'RQPM-14 Package Heat Pump',
 			'post_content' 	=>	'<p>The 2-5 ton Ruud 14 SEER RQPM & 15/16 SEER RQRM Dedicated Horizontal Package Heat Pump units feature earth-friendly R-410A refrigerant. This platform provides you with a full line of capacities that are each AHRI-certified. The design is certified by CSA International.</p>
 
@@ -711,16 +726,16 @@ function add_ruud_products() {
 <li>Low pressure control standard on all models.</li>
 <li>High pressure control standard on all 5ton models.</li>
 </ul>
-', 
+',
 			'post_excerpt'	=>	'Up to 16 SEER',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1410,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'packaged-units', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=46C0C310-C119-438E-9DE3-4E58D4953F23'),
-			'image_name'	=>	'Ruud-10.jpg'		
-		),	
-		
-				array ( 
+			'image_name'	=>	'Ruud-10.jpg'
+		),
+
+				array (
 			'post_title'	=>	'RGEA16 Gas/ Electric Package',
 			'post_content' 	=>	'<p>All models feature Scroll® compressors for maximum efficiency and quiet operation. 5 Ton RGEA16 models feature UltraTech™ Scroll 2-Stage compressors with Comfort Alert™ diagnostics (see below), high/low pressure switches, and hard start kits.</p>
 
@@ -743,16 +758,16 @@ function add_ruud_products() {
 <li>Rugged baserail included for improved installation and handling</li>
 <li>Complete factory charged, wired and run tested.</li>
 <li>Molded compressor plugs.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1420,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'packaged-units', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=388F66F0-A1B0-4E72-84F1-D97C4C0EF34D'),
-			'image_name'	=>	'Ruud-09.jpg'		
-		),	
-		
-		array ( 
+			'image_name'	=>	'Ruud-09.jpg'
+		),
+
+		array (
 			'post_title'	=>	'RGEA15 Gas/ Electric Package',
 			'post_content' 	=>	'<p>All models feature Scroll® compressors for maximum efficiency and quiet operation. 5 Ton RGEA16 models feature UltraTech™ Scroll 2-Stage compressors with Comfort Alert™ diagnostics (see below), high/low pressure switches, and hard start kits.</p>
 
@@ -776,15 +791,15 @@ function add_ruud_products() {
 <li>Complete factory charged, wired and run tested.</li>
 <li>Molded compressor plugs.</li>
 <li>A double sloped evaporator coil drain pan assures all water is removed from the unit to improve indoor air quality.</li>
-</ul>', 
+</ul>',
 			'post_excerpt'	=>	'',
 			'post_type'     =>	'products',
 			'menu_order'  	=>  1430,
 			'tax_input'		=>  array('product-brand'=>'ruud', 'product-type'=>'packaged-units', 'product-class'=>'best'),
 			'meta_input'	=>	array('brochure'=>'https://cdn.globalimageserver.com/FetchDocument.aspx?ID=F556179D-7CAD-47E9-BBBD-057A7B11FD07'),
-			'image_name'	=>	'Ruud-09.jpg'		
-),		
-			
+			'image_name'	=>	'Ruud-09.jpg'
+),
+
 );
 
 	require_once get_template_directory().'/includes/include-hvac-products/includes-product-uploader.php';

@@ -1602,6 +1602,11 @@ $workiz = get_option('workiz');
 if ( bp_module_on($workiz) ) {
 	require_once get_template_directory().'/includes/includes-workiz.php';
 }
+// Framework-native SEO (replaces Yoast). Loaded on every site — no flag: it is
+// core, not an optional module. It defers entirely while a Yoast plugin is still
+// active and takes over the moment Yoast is deactivated (per-site kill switch:
+// add_filter('bp_seo_enabled','__return_false')). See includes-seo.php header.
+require_once get_template_directory().'/includes/includes-seo.php';
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
 $schedules = get_option('schedules');

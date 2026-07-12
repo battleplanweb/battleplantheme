@@ -789,6 +789,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	var behaviorPies   = document.querySelectorAll('.bp-analytics-pie[data-pie="behavior"]');
 	var tileEls        = document.querySelectorAll('.bp-an-tile[data-chs]');
 	var techPies       = document.querySelectorAll('.bp-analytics-pie[data-pie="tech"]');
+	var widthBars      = document.querySelectorAll('.bp-analytics-widthbars');
+	var speedCharts    = document.querySelectorAll('.bp-analytics-speed');
 	if (!channelCharts.length && !behaviorCharts.length) return;
 
 	var payloadEl = document.getElementById('bp-an-payload');
@@ -801,21 +803,23 @@ document.addEventListener('DOMContentLoaded', function () {
 	var CLIP_SEQ = 0;
 
 	var CH_SERIES = [
-		{ key: 'Organic Search', cls: 'os',     emph: true  },
-		{ key: 'GBP',            cls: 'gbp',    emph: true  },
-		{ key: 'Paid',           cls: 'paid',   emph: false },
-		{ key: 'Direct',         cls: 'direct', emph: false },
-		{ key: 'Other',          cls: 'other',  emph: false }
+		{ key: 'Organic Search', cls: 'red',    emph: true  },
+		{ key: 'GBP',            cls: 'orange', emph: true  },
+		{ key: 'Paid',           cls: 'green',  emph: false },
+		{ key: 'Direct',         cls: 'grey',   emph: false },
+		{ key: 'Social',         cls: 'blue',   emph: false },
+		{ key: 'Referral',       cls: 'yellow', emph: false },
+		{ key: 'Other',          cls: 'violet', emph: false }
 	];
 
 	// Behavior metrics: each = 1-2 lines derived from site totals. Field names beginning
 	// with "_" are derived (see derive()); others read straight from the site object.
 	var BEHAVIOR = {
-		sessions_users: { fmt: 'int', series: [['Sessions','sessions','os'], ['Users','users','gbp']] },
-		new_returning:  { fmt: 'int', pct: true, series: [['New','_new','os'], ['Returning','_ret','paid']] },
-		engaged:        { fmt: 'int', pct: true, series: [['Engaged','_eng','gbp'], ['Non-engaged','_non','direct']] },
-		pageviews:      { fmt: 'int', series: [['Pageviews','pageviews','os']], perUser: true },
-		duration:       { fmt: 'dur', series: [['Engaged avg','_durEng','gbp'], ['Session avg','_durSess','paid']] }
+		sessions_users: { fmt: 'int', series: [['Sessions','sessions','orange'], ['Users','users','purple']] },
+		new_returning:  { fmt: 'int', pct: true, series: [['New','_new','orange'], ['Returning','_ret','purple']] },
+		engaged:        { fmt: 'int', pct: true, series: [['Engaged','_eng','orange'], ['Non-engaged','_non','purple']] },
+		pageviews:      { fmt: 'int', series: [['Pageviews','pageviews','red']], perUser: true },
+		duration:       { fmt: 'dur', series: [['Engaged avg','_durEng','orange'], ['Session avg','_durSess','grey']] }
 	};
 
 	function el(tag, attrs) { var e = document.createElementNS(SVGNS, tag); for (var k in attrs) if (attrs.hasOwnProperty(k)) e.setAttribute(k, attrs[k]); return e; }
@@ -912,8 +916,30 @@ document.addEventListener('DOMContentLoaded', function () {
 		var arr = data[techWindow()] || data[365] || [];
 		var gt = 0; arr.forEach(function (x) { gt += x.v; });
 		arr = arr.filter(function (x) { return gt > 0 && Math.round(x.v / gt * 100) >= 1; });  // drop 0%-rounding bands
-		var slices = arr.map(function (x, i) { return { label: x.l, value: x.v, cls: (x.l === 'Other' ? 'cother' : 'c' + (i % 11)) }; });
+		var slices = arr.map(function (x, i) { return { label: x.l, value: x.v, cls: (x.c ? x.c : (x.l === 'Other' ? 'cother' : 'c' + (i % 11))) }; });
 		drawDonut(pieC, slices);
+	}
+
+	// Ranked horizontal bars of the most-used exact widths — the top bar is the mode.
+	function renderWidthBars(c) {
+		var data = payload.tech && payload.tech.width;
+		var arr = (data && (data[techWindow()] || data[365])) || [];
+		if (!arr.length) { c.innerHTML = '<p class="bp-an-empty">No data.</p>'; return; }
+		var total = 0, max = 0;
+		arr.forEach(function (x) { total += x.v; if (x.v > max) max = x.v; });
+		var html = '<div class="bp-an-bars">';
+		arr.forEach(function (x, i) {
+			var pct = total ? Math.round(x.v / total * 100) : 0;
+			var bw = max ? (x.v / max * 100) : 0;
+			var rc = 'bp-an-bar-row' + (x.o ? ' other' : (x.v === max ? ' mode' : ''));
+			html += '<div class="' + rc + '">'
+			     +    '<span class="bp-an-bar-lbl">' + x.l + '</span>'
+			     +    '<span class="bp-an-bar-track"><span class="bp-an-bar-fill" style="width:' + bw + '%"></span></span>'
+			     +    '<span class="bp-an-bar-val">' + fmtInt(x.v) + ' · ' + pct + '%</span>'
+			     +  '</div>';
+		});
+		html += '</div>';
+		c.innerHTML = html;
 	}
 
 	function renderBehaviorPie(pieC) {
@@ -972,7 +998,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		var lo = new Date(); lo.setDate(lo.getDate() - (+d));
 		return { lo: lo, hi: null };
 	}
-	var PIE_CH  = ['Organic Search','GBP','Paid','Direct','Other'];
+	var PIE_CH  = ['Organic Search','GBP','Paid','Direct','Social','Referral','Other'];
 	var SITE_M  = ['sessions','users','newUsers','engagedSessions','pageviews','duration'];
 	function pad2(n) { return (n < 10 ? '0' : '') + n; }
 	// The grain bucket a day (YYYYMMDD) belongs to. Weekly = Monday-of-week (matches PHP).
@@ -1042,8 +1068,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		var ny = niceMax(capped ? container._yCap : yMax, 4), yTop = capped ? container._yCap : ny.max;
 		function xS(i) { return N <= 1 ? plotL : plotL + (i/(N-1))*plotW; }
 		function yS(v) { return plotB - (v/yTop)*plotH; }
-		function yfmt(v) { return isDur ? (v >= 60 ? Math.round(v/60) + 'm' : Math.round(v) + 's') : fmtInt(v); }
-		function vfmt(v) { return isDur ? fmtDur(v) : fmtInt(v); }
+		function yfmt(v) { return opts.yFmt ? opts.yFmt(v) : (isDur ? (v >= 60 ? Math.round(v/60) + 'm' : Math.round(v) + 's') : fmtInt(v)); }
+		function vfmt(v) { return opts.vFmt ? opts.vFmt(v) : (isDur ? fmtDur(v) : fmtInt(v)); }
 
 		container.innerHTML = '';
 
@@ -1072,6 +1098,13 @@ document.addEventListener('DOMContentLoaded', function () {
 				(function (val) { band.addEventListener('click', function (e) { e.stopPropagation(); container._yCap = (container._yCap && Math.abs(container._yCap - val) < 1e-6) ? null : val; if (opts.rerender) opts.rerender(); }); })(v);
 				svg.appendChild(band);
 			}
+		}
+
+		// Optional reference line (e.g. the "good" speed threshold).
+		if (opts.threshold != null && opts.threshold > 0 && opts.threshold <= yTop) {
+			var ty = yS(opts.threshold);
+			svg.appendChild(el('line', { 'class': 'bp-an-threshold', x1: plotL, y1: ty, x2: plotR, y2: ty }));
+			if (opts.thresholdLabel) { var thl = el('text', { 'class': 'bp-an-threshlab', x: plotR - 3, y: ty - 4, 'text-anchor': 'end' }); thl.textContent = opts.thresholdLabel; svg.appendChild(thl); }
 		}
 
 		var lastX = -999, prevMo = null;
@@ -1176,6 +1209,55 @@ document.addEventListener('DOMContentLoaded', function () {
 		} });
 	}
 
+	// Site-speed chart — lab vs real-user over time (Mobile vs Desktop), its own daily audit history.
+	var SPEED_META = {
+		lcp:    { unit: 's', good: 2.5, dir: 'low'  },
+		load:   { unit: 's', good: 2,   dir: 'low'  },
+		target: { unit: '%', good: 90,  dir: 'high' },
+		score:  { unit: '',  good: 90,  dir: 'high' }
+	};
+	function activeSpeedMetric(container) { var card = container.closest('.bp-an-card'); var b = card && card.querySelector('.bp-an-sbtn.active'); return (b && b.dataset.smetric) || 'load'; }
+	// Speed is an AVERAGE metric (not a sum like sessions), so bucket by grain and take the mean
+	// within each bucket, clipped to the active range — mirrors the View/Range controls.
+	function resampleSpeed(d, grain, r) {
+		var buckets = {}, order = [];
+		d.periods.forEach(function (k, i) {
+			var dt = periodDate('' + k, 'daily');
+			if (r && ((r.lo && dt < r.lo) || (r.hi && dt > r.hi))) return;
+			var bk = bucketKey(k, grain);
+			if (!buckets[bk]) { buckets[bk] = { mS: 0, mN: 0, dS: 0, dN: 0 }; order.push(bk); }
+			var mv = d.mobile[i], dv = d.desktop[i];
+			if (mv > 0) { buckets[bk].mS += mv; buckets[bk].mN++; }
+			if (dv > 0) { buckets[bk].dS += dv; buckets[bk].dN++; }
+		});
+		order.sort();
+		return {
+			periods: order.slice(),
+			mobile:  order.map(function (k) { return buckets[k].mN ? buckets[k].mS / buckets[k].mN : 0; }),
+			desktop: order.map(function (k) { return buckets[k].dN ? buckets[k].dS / buckets[k].dN : 0; })
+		};
+	}
+	function renderSpeed(container) {
+		var sp = payload.speed || {}, metric = activeSpeedMetric(container), d0 = sp[metric];
+		if (!d0 || !d0.periods || !d0.periods.length) { container.innerHTML = '<p class="bp-an-empty">No speed history yet — it fills in as the nightly audit runs.</p>'; return; }
+		var grain = activeGrain(), d = resampleSpeed(d0, grain, activeRange());
+		if (!d.periods.length) { container.innerHTML = '<p class="bp-an-empty">No speed data in this range.</p>'; return; }
+		var meta = SPEED_META[metric] || SPEED_META.lcp, unit = meta.unit;
+		var fmtV = unit === 's' ? function (v) { return (Math.round(v * 10) / 10) + 's'; }
+		         : unit === '%' ? function (v) { return Math.round(v) + '%'; }
+		         :                function (v) { return Math.round(v); };
+		var defs = [
+			{ key: 'Mobile',  label: 'Mobile',  cls: 'green', emph: true, values: d.mobile },
+			{ key: 'Desktop', label: 'Desktop', cls: 'blue',  emph: true, values: d.desktop }
+		];
+		drawLineChart(container, d.periods, defs, {
+			grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true,
+			yFmt: fmtV, vFmt: fmtV,
+			threshold: meta.good, thresholdLabel: fmtV(meta.good) + (meta.dir === 'high' ? ' goal' : ' good'),
+			rerender: function () { renderSpeed(container); }
+		});
+	}
+
 	function renderBehavior(container) {
 		var grain = activeGrain(), g = filterGrain(payload[grain], grain);
 		if (!g || !g.periods.length) { container.innerHTML = '<p class="bp-an-empty">No data for this view/range.</p>'; return; }
@@ -1246,12 +1328,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		Array.prototype.forEach.call(behaviorCharts, renderBehavior);
 		Array.prototype.forEach.call(channelPies, renderChannelPie);
 		Array.prototype.forEach.call(techPies, renderTechPie);
+		Array.prototype.forEach.call(widthBars, renderWidthBars);
+		Array.prototype.forEach.call(speedCharts, renderSpeed);
 	}
 
 	function clearDates() { var s = document.getElementById('bp-an-start'), e = document.getElementById('bp-an-end'); if (s) s.value = ''; if (e) e.value = ''; }
 	function setActive(sel, btn) { document.querySelectorAll(sel).forEach(function (x) { x.classList.remove('active'); }); btn.classList.add('active'); }
 	function clearCaps(nodes) { Array.prototype.forEach.call(nodes, function (c) { c._yCap = null; }); }
-	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); }
+	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); }
 
 	document.addEventListener('click', function (ev) {
 		var gb = ev.target.closest('.bp-an-gbtn');
@@ -1269,6 +1353,17 @@ document.addEventListener('DOMContentLoaded', function () {
 			clearCaps(card.querySelectorAll('.bp-analytics-behavior'));
 			card.querySelectorAll('.bp-analytics-pie').forEach(renderBehaviorPie);   // pie visibility first
 			card.querySelectorAll('.bp-analytics-behavior').forEach(renderBehavior); // then chart at correct width
+			return;
+		}
+
+		var sb = ev.target.closest('.bp-an-sbtn');
+		if (sb) {
+			ev.preventDefault();
+			var scard = sb.closest('.bp-an-card');
+			scard.querySelectorAll('.bp-an-sbtn').forEach(function (x) { x.classList.remove('active'); });
+			sb.classList.add('active');
+			clearCaps(scard.querySelectorAll('.bp-analytics-speed'));
+			scard.querySelectorAll('.bp-analytics-speed').forEach(renderSpeed);
 			return;
 		}
 	});
@@ -1292,7 +1387,9 @@ document.addEventListener('DOMContentLoaded', function () {
 				t._bpPending = true;
 				requestAnimationFrame(function () {
 					t._bpPending = false;
-					if (t.dataset.pie === 'tech') renderTechPie(t);
+					if (t.classList.contains('bp-analytics-widthbars')) renderWidthBars(t);
+					else if (t.classList.contains('bp-analytics-speed')) renderSpeed(t);
+					else if (t.dataset.pie === 'tech') renderTechPie(t);
 					else if (t.dataset.pie === 'channel') renderChannelPie(t);
 					else if (t.dataset.pie === 'behavior') renderBehaviorPie(t);
 					else if (t.classList.contains('bp-analytics-behavior')) renderBehavior(t);
@@ -1300,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				});
 			});
 		});
-		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies].forEach(function (list) {
+		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts].forEach(function (list) {
 			Array.prototype.forEach.call(list, function (c) { ro.observe(c); });
 		});
 		renderTiles(); // tiles aren't observed by RO — render them at init

@@ -787,6 +787,19 @@ function battleplan_formField( $atts, $content = null ) {
 
 	$content = do_shortcode((string)$content);
 
+	// Floating (label-inside-the-field) labels only make sense for text-like
+	// controls that have a placeholder state (text, email, tel, textarea, etc.)
+	// and for selects. Radios, checkboxes and file inputs have no placeholder,
+	// so a floated label would just sit on top of the control (see the
+	// # Floating labels block in style-forms.css). Detect those via the
+	// data-type the field shortcodes emit on span.bp-control-wrap and auto-add
+	// `form-label-outside`, which every :not() in the float CSS already honors —
+	// so radio/checkbox fields revert to classic outside labels with no per-field
+	// class needed. label-pos="after" (single-checkbox layout) is already excluded.
+	if ( $labelPos != 'after' && preg_match('/data-type="(?:radio|checkbox|checkboxes|file)"/', $content) ) {
+		$class .= ' form-label-outside';
+	}
+
 	if ( $label == "button" ) :
 		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';
 	else:

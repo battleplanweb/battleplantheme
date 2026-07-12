@@ -174,10 +174,12 @@ function bp_analytics_page() {
 	krsort( $historyM ); // newest month first
 	$monthKeys = array_keys( $historyM );
 
-	$CLEAN  = [ 'Organic Search', 'GBP' ];
-	$PAID   = [ 'Paid Search', 'Paid Social', 'Paid Other' ];
-	$DIRECT = [ 'Direct' ];
-	$OTHER  = [ 'Organic Social', 'Referral', 'Email', 'Unassigned' ];
+	$CLEAN    = [ 'Organic Search', 'GBP' ];
+	$PAID     = [ 'Paid Search', 'Paid Social', 'Paid Other' ];  // Paid Social stays under Paid
+	$DIRECT   = [ 'Direct' ];
+	$SOCIAL   = [ 'Organic Social' ];
+	$REFERRAL = [ 'Referral' ];
+	$OTHER    = [ 'Email', 'Unassigned' ];
 
 	$sum = function ( $ym, $channels, $metric ) use ( $historyM ) {
 		$t = 0.0;
@@ -206,7 +208,7 @@ function bp_analytics_page() {
 	echo '<p class="bp-an-period" id="bp-an-period-lbl"></p>';
 
 	// Both-grain payload for the charts (weekly + monthly). One shared <script> element.
-	$buildGrain = function ( $hist, $limit ) use ( $PAID, $DIRECT, $OTHER ) {
+	$buildGrain = function ( $hist, $limit ) use ( $PAID, $DIRECT, $SOCIAL, $REFERRAL, $OTHER ) {
 		if ( ! is_array( $hist ) || ! $hist ) return null;
 		krsort( $hist );
 		$keys = array_reverse( array_slice( array_keys( $hist ), 0, $limit ) ); // ascending
@@ -235,6 +237,8 @@ function bp_analytics_page() {
 				'GBP'            => $chanSessions( [ 'GBP' ] ),
 				'Paid'           => $chanSessions( $PAID ),
 				'Direct'         => $chanSessions( $DIRECT ),
+				'Social'         => $chanSessions( $SOCIAL ),
+				'Referral'       => $chanSessions( $REFERRAL ),
 				'Other'          => $chanSessions( $OTHER ),
 			],
 			'site' => [
@@ -250,7 +254,7 @@ function bp_analytics_page() {
 
 	// Tech breakdowns (browsers / devices / screen widths) — per-window snapshots (7/30/90/180/365d),
 	// top N + "Other", for the pie row. These are rolling snapshots, not a time series.
-	$techPie = function ( $optKey, $topN ) {
+	$techPie = function ( $optKey, $topN, $colorMap = [] ) {
 		$data = get_option( $optKey );
 		$out  = [];
 		if ( ! is_array( $data ) ) return $out;
@@ -264,8 +268,13 @@ function bp_analytics_page() {
 			arsort( $items );
 			$slices = []; $i = 0; $other = 0;
 			foreach ( $items as $name => $v ) {
-				if ( $i < $topN ) $slices[] = [ 'l' => $name, 'v' => $v ];
-				else              $other  += $v;
+				if ( $i < $topN ) {
+					$slice = [ 'l' => $name, 'v' => $v ];
+					if ( isset( $colorMap[ $name ] ) ) $slice['c'] = $colorMap[ $name ];  // fixed per-entity color
+					$slices[] = $slice;
+				} else {
+					$other += $v;
+				}
 				$i++;
 			}
 			if ( $other > 0 ) $slices[] = [ 'l' => 'Other', 'v' => $other ];
@@ -274,53 +283,125 @@ function bp_analytics_page() {
 		return $out;
 	};
 
-	// Bands are the site's own CSS breakpoints (min-width), so each slice names the LAYOUT that
-	// serves that width — not the device. Device type is the donut title (from GA4 deviceCategory);
-	// the label answers "which breakpoint applies here." Keep in sync with style-site.css breakpoints.
-	$deviceWidthBands = [
-		[    0,  400, '< 400px'                     ],
-		[  400,  768, 'Phones (400–767)'            ],
-		[  768, 1024, 'Tablets (768–1023)'          ],
-		[ 1024, 1280, 'Tablet landscape (1024–1279)' ],
-		[ 1280, 1440, 'Laptop (1280–1439)'          ],
-		[ 1440, 1680, 'Large laptop (1440–1679)'    ],
-		[ 1680, 1920, 'Desktop (1680–1919)'         ],
-		[ 1920, 2560, 'Large desktop (1920–2559)'   ],
-		[ 2560, PHP_INT_MAX, 'Ultrawide (2560px+)'  ],
+	// GA4 device category, relabeled (mobile → Phone) for the Device-type donut.
+	$deviceTypePie = function () {
+		// fixed order + fixed colors: Desktop=blue, Phone=green, Tablet=orange.
+		$map  = [ 'desktop' => [ 'Desktop', 'blue' ], 'mobile' => [ 'Phone', 'green' ], 'tablet' => [ 'Tablet', 'orange' ] ];
+		$data = get_option( 'bp_ga4_devices_clean' );
+		$out  = [];
+		if ( ! is_array( $data ) ) return $out;
+		foreach ( [ 7, 30, 90, 180, 365 ] as $w ) {
+			$slices = [];
+			foreach ( $map as $cat => $info ) {
+				$v = (int) ( $data[ $cat ][ "sessions-{$w}" ] ?? 0 );
+				if ( $v > 0 ) $slices[] = [ 'l' => $info[0], 'v' => $v, 'c' => $info[1] ];
+			}
+			$out[ $w ] = $slices;
+		}
+		return $out;
+	};
+	// Screen-width donut bands — sessions per band, ALL devices, height ignored. 1920 (FHD) is its
+	// own exact slice; ">1920" is everything above it. Labels are the band's low edge (per request).
+	$widthBands = [
+		[    0,  576, '<576',  'green'   ],  // 575 and smaller
+		[  576,  860, '576',   'teal'    ],  // 576–859
+		[  860, 1024, '860',   'red'     ],  // 860–1023
+		[ 1024, 1280, '1024',  'red'     ],  // 1024–1279
+		[ 1280, 1440, '1280',  'orange'  ],  // 1280–1439
+		[ 1440, 1920, '1440',  'ltblue'  ],  // 1440–1919
+		[ 1920, 1921, '1920',  'blue'    ],  // exactly 1920 (FHD desktops + FHD Android physical panels)
+		[ 1921, PHP_INT_MAX, '>1920', 'dviolet' ],
 	];
-	// Mobile-only: GA4 logs many Android phones' PHYSICAL panel resolution (FHD 1080, QHD 1440),
-	// not the CSS width they render at (~360-412). Anything the phone reports ≥768 (the tablet
-	// breakpoint) is a hi-res panel, not a real tablet-width phone — collapse it into one slice.
-	$mobileWidthBands = [
-		[    0,  400, '< 400px'          ],
-		[  400,  768, 'Phones (400–767)' ],
-		[  768, PHP_INT_MAX, 'Hi-res panels (768px+)' ],
-	];
-	// Width distribution WITHIN one GA4 device category, from the device|WxH cross-tab.
-	$techDeviceWidth = function ( $device, $bands ) {
+	$widthPie = function () use ( $widthBands ) {
 		$data = get_option( 'bp_ga4_device_width_clean' );
 		$out  = [];
 		if ( ! is_array( $data ) ) return $out;
 		foreach ( [ 7, 30, 90, 180, 365 ] as $w ) {
-			$totals = array_fill( 0, count( $bands ), 0 );
+			$totals = array_fill( 0, count( $widthBands ), 0 );
 			foreach ( $data as $key => $metrics ) {
 				if ( ! is_array( $metrics ) ) continue;
 				$parts = explode( '|', $key, 2 );
-				if ( count( $parts ) !== 2 || $parts[0] !== $device ) continue;
+				if ( count( $parts ) !== 2 ) continue;
 				$width = (int) explode( 'x', $parts[1] )[0];
+				if ( $width <= 0 ) continue;
 				$v = (int) ( $metrics[ "sessions-{$w}" ] ?? 0 );
 				if ( $v <= 0 ) continue;
-				foreach ( $bands as $bi => $b ) {
+				foreach ( $widthBands as $bi => $b ) {
 					if ( $width >= $b[0] && $width < $b[1] ) { $totals[ $bi ] += $v; break; }
 				}
 			}
 			$slices = [];
-			foreach ( $bands as $bi => $b ) {
-				if ( $totals[ $bi ] > 0 ) $slices[] = [ 'l' => $b[2], 'v' => $totals[ $bi ] ];
+			foreach ( $widthBands as $bi => $b ) {  // fixed order: smallest → largest viewport
+				if ( $totals[ $bi ] > 0 ) $slices[] = [ 'l' => $b[2], 'v' => $totals[ $bi ], 'c' => $b[3] ];
 			}
-			usort( $slices, function ( $a, $b ) { return $b['v'] - $a['v']; } );  // largest % first
 			$out[ $w ] = $slices;
 		}
+		return $out;
+	};
+
+	// Site-speed time series (each metric: {periods:[YYYYMMDD], mobile:[], desktop:[]}).
+	// REAL-USER (load, %-target) = dense DAILY history from GA4 (bp_ga4_speed_history — our own
+	// tracking, actual devices/networks). LAB (LCP, score) = the site audit's Lighthouse snapshots
+	// (bp_site_audit_details) — a throttled yardstick, only captured ~quarterly, so sparse.
+	$speedSeries = function () {
+		$out = [];
+
+		// --- Real-user: dense daily. Store shape [YYYYMMDD => ml/mt/dl/dt]. ---
+		$rum = get_option( 'bp_ga4_speed_history' );
+		if ( ! is_array( $rum ) ) $rum = [];
+		ksort( $rum );
+		$load = [ 'periods' => [], 'mobile' => [], 'desktop' => [] ];
+		$targ = [ 'periods' => [], 'mobile' => [], 'desktop' => [] ];
+		foreach ( $rum as $ymd => $r ) {
+			$ymd = (string) $ymd;
+			if ( strlen( $ymd ) !== 8 || ! is_array( $r ) ) continue;
+			if ( isset( $r['ml'] ) || isset( $r['dl'] ) ) {
+				$load['periods'][] = $ymd;
+				$load['mobile'][]  = isset( $r['ml'] ) ? (float) $r['ml'] : 0;
+				$load['desktop'][] = isset( $r['dl'] ) ? (float) $r['dl'] : 0;
+			}
+			if ( isset( $r['mt'] ) || isset( $r['dt'] ) ) {
+				$targ['periods'][] = $ymd;
+				$targ['mobile'][]  = isset( $r['mt'] ) ? (float) $r['mt'] : 0;
+				$targ['desktop'][] = isset( $r['dt'] ) ? (float) $r['dt'] : 0;
+			}
+		}
+		$out['load']   = $load;
+		$out['target'] = $targ;
+
+		// --- Lab: sparse Lighthouse snapshots from the audit. "2.5 s"/"150 ms"/92 → float. ---
+		$hist = get_option( 'bp_site_audit_details' );
+		if ( ! is_array( $hist ) ) $hist = [];
+		$toNum = function ( $val, $asSeconds ) {
+			if ( $val === null || $val === '' ) return null;
+			$s = (string) $val;
+			if ( ! preg_match( '/-?\d[\d,]*\.?\d*/', $s, $m ) ) return null;
+			$n = (float) str_replace( ',', '', $m[0] );
+			if ( $asSeconds && stripos( $s, 'ms' ) !== false ) $n = $n / 1000;
+			return $n;
+		};
+		$lab = [
+			'lcp'   => [ 'lighthouse-mobile-lcp',   'lighthouse-desktop-lcp',   true  ],
+			'score' => [ 'lighthouse-mobile-score', 'lighthouse-desktop-score', false ],
+		];
+		$dates = array_keys( $hist );
+		sort( $dates );
+		foreach ( $lab as $key => $cfg ) {
+			list( $mKey, $dKey, $asSeconds ) = $cfg;
+			$periods = []; $mob = []; $desk = [];
+			foreach ( $dates as $date ) {
+				$e = $hist[ $date ];
+				if ( ! is_array( $e ) ) continue;
+				$mv = $toNum( $e[ $mKey ] ?? '', $asSeconds );
+				$dv = $toNum( $e[ $dKey ] ?? '', $asSeconds );
+				if ( $mv === null && $dv === null ) continue;
+				$periods[] = str_replace( '-', '', (string) $date );
+				$mob[]  = $mv === null ? 0 : round( $mv, 2 );
+				$desk[] = $dv === null ? 0 : round( $dv, 2 );
+			}
+			$out[ $key ] = [ 'periods' => $periods, 'mobile' => $mob, 'desktop' => $desk ];
+		}
+
 		return $out;
 	};
 
@@ -330,12 +411,13 @@ function bp_analytics_page() {
 		'daily'   => $buildGrain( $hasDaily  ? $historyD : [], 520 ),
 		'weekly'  => $buildGrain( $hasWeekly ? $historyW : [], 260 ),
 		'monthly' => $buildGrain( $historyM, 72 ),
+		'speed'   => $speedSeries(),
 		'tech'    => [
-			'browsers'   => $techPie( 'bp_ga4_browsers_clean', 6 ),
-			'devices'    => $techPie( 'bp_ga4_devices_clean',  4 ),
-			'wMobile'    => $techDeviceWidth( 'mobile',  $mobileWidthBands ),
-			'wTablet'    => $techDeviceWidth( 'tablet',  $deviceWidthBands ),
-			'wDesktop'   => $techDeviceWidth( 'desktop', $deviceWidthBands ),
+			'browsers'   => $techPie( 'bp_ga4_browsers_clean', 6, [
+				'Chrome' => 'red', 'Safari' => 'blue', 'Safari (in-app)' => 'teal', 'Edge' => 'green', 'Firefox' => 'orange',
+			] ),
+			'width'      => $widthPie(),
+			'deviceType' => $deviceTypePie(),
 		],
 	];
 
@@ -382,12 +464,24 @@ function bp_analytics_page() {
 	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-behavior"></div><div class="bp-analytics-pie" data-pie="behavior"></div></div>';
 	echo '</div>';
 
-	// Tech row — browser / device / screen-width breakdowns (nearest snapshot to the range).
+	// Site speed — lab (Lighthouse) vs real-user (our tracking) over time, Mobile vs Desktop.
+	echo '<div class="bp-an-card">';
+	echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Site speed</h2><div class="bp-an-metric-btns">'
+	     .   '<a href="#" class="bp-an-sbtn active" data-smetric="load">Real-user load</a>'
+	     .   '<a href="#" class="bp-an-sbtn" data-smetric="target">% meeting target</a>'
+	     .   '<a href="#" class="bp-an-sbtn" data-smetric="lcp">LCP (lab)</a>'
+	     .   '<a href="#" class="bp-an-sbtn" data-smetric="score">Score (lab)</a>'
+	     . '</div></div>';
+	echo   '<div class="bp-an-cardnote"><b>Real-user</b> (load &amp; % on-target) = actual visitors\' devices &amp; networks from our own tracking — a daily trend. <b>Lab</b> (LCP &amp; score) = throttled Lighthouse snapshots from the site audit (a fixed regression yardstick), captured only ~quarterly, so those two are sparse. Dashed line = the "good" threshold. Click a y-axis number to cap the scale.</div>';
+	echo   '<div class="bp-analytics-speed"></div>';
+	echo '</div>';
+
+	// Tech row — browser / screen-width / device breakdowns (nearest snapshot to the range).
 	echo '<div class="bp-an-card">';
 	echo   '<h2 class="bp-an-h2">Audience tech</h2>';
-	echo   '<div class="bp-an-cardnote">Browser, device &amp; screen width for the closest available window to your selected range.</div>';
+	echo   '<div class="bp-an-cardnote">Browser, screen width (all devices, height ignored) &amp; device type for the closest available window to your selected range.</div>';
 	echo   '<div class="bp-an-techrow">';
-	foreach ( [ 'browsers' => 'Browsers', 'devices' => 'Devices', 'wDesktop' => 'Desktop widths', 'wMobile' => 'Mobile widths', 'wTablet' => 'Tablet widths' ] as $key => $title ) {
+	foreach ( [ 'browsers' => 'Browsers', 'width' => 'Viewports', 'deviceType' => 'Device type' ] as $key => $title ) {
 		echo '<div class="bp-an-techcol"><div class="bp-an-techtitle">' . esc_html( $title ) . '</div>'
 		   . '<div class="bp-analytics-pie" data-pie="tech" data-tech="' . esc_attr( $key ) . '"></div></div>';
 	}

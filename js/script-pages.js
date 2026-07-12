@@ -2305,7 +2305,13 @@ document.addEventListener("DOMContentLoaded", function () {
 			const w = window.innerWidth;
 			const iw = parseInt(el.dataset.imgWidth);
 			const ih = parseInt(el.dataset.imgHeight);
-			const hh = parseInt(el.dataset.holderHeight);
+			const rawHH = (el.dataset.holderHeight || '').trim();
+			// A holder-height carrying a viewport/relative unit (e.g. "100vh" from height="full")
+			// is used VERBATIM as the min-height. parseInt-ing "100vh" would collapse the hero to
+			// 100px; the pixel-cap logic below is only meaningful for absolute px heights. (The
+			// leading match also tolerates a stray trailing "px" from older cached markup — "100vhpx".)
+			const relHH = rawHH.match(/^([\d.]+(?:vh|svh|lvh|dvh|vw|vmin|vmax|vi|vb|%|em|rem))/i);
+			const hh = parseInt(rawHH);
 			const ratio = iw && ih ? iw / ih : 2;
 			const b = el.dataset.imgBase;
 			const e = el.dataset.imgExt;
@@ -2315,12 +2321,12 @@ document.addEventListener("DOMContentLoaded", function () {
 			const h = Math.round(r / ratio);
 			const src = r >= iw ? `${b}.${e}` : `${b}-${r}x${h}.${e}`;
 
-			const minH = hh > h * 0.8 ? Math.round(h * 0.8) : hh;
+			const minH = relHH ? relHH[1] : `${hh > h * 0.8 ? Math.round(h * 0.8) : hh}px`;
 
 			el.style.backgroundImage = `url(${src})`;
 			el.style.backgroundSize = 'cover';
 			el.style.height = `auto`;
-			el.style.minHeight = `${minH}px`;
+			el.style.minHeight = minH;
 			el.classList.add(`screen-${r}`);
 		 });
 	};

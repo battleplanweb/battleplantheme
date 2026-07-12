@@ -105,7 +105,7 @@ Set via `add_filter('body_class', ...)`. Pick one from each group:
 | Sidebar style | `content-sidebar-box` `sidebar-line` `widget-box` (default) |
 | Content box | `content-box` (default: none) |
 | Accordion | `accordion-box` (default: none) |
-| Forms | **Floating labels inside the field by default** (labels sit inside, float up on focus/fill). Add `form-label-outside` (on body, `.bp-form` wrapper, or a `.form-input`) to revert to labels outside; pair with `form-stacked` to stack those outside labels above their inputs |
+| Forms | **Floating labels inside the field by default** (labels sit inside, float up on focus/fill). Applies to text-like fields (text/email/tel/textarea/number/date) and selects only — **radio, checkbox, checkboxes and file fields auto-revert to outside labels** (the `[seek]` shortcode detects them by `data-type` and adds `form-label-outside` for you, so you never hand-code that on a radio/checkbox field). Add `form-label-outside` yourself (on body, `.bp-form` wrapper, or a `.form-input`) to revert other fields; pair with `form-stacked` to stack those outside labels above their inputs |
 | Post thumbnail | `thumb-left` `thumb-right` + optional `switch-thumb` |
 
 ### battleplan_updateSiteOptions() — All Fields

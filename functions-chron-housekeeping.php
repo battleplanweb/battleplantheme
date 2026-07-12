@@ -76,6 +76,62 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	}
 
 /*--------------------------------------------------------------
+# SEO Migration — one-time cutover from Yoast → Battle Plan SEO
+#
+# Runs ONCE per site (guarded by the bp_seo_migrated option) and only while a
+# Yoast plugin is still active, so it is inherently one-shot. Auto fleet-wide:
+# each site migrates itself on its next nightly housekeeping run. Sequence:
+#   1) import per-post + per-term SEO (copy-only)   2) import Premium redirects
+#   3) deactivate the 3 Yoast plugins               4) flush rewrites  5) email a report
+# The module then takes over automatically (bp_seo_defer() flips false).
+#
+# EMERGENCY BRAKE (halts the whole fleet before a site's next run):
+#   define('BP_SEO_NO_AUTO_MIGRATE', true);   // in wp-config.php
+#   add_filter('bp_seo_auto_migrate','__return_false');
+--------------------------------------------------------------*/
+
+	if ( ! get_option('bp_seo_migrated')
+	     && ( ! defined('BP_SEO_NO_AUTO_MIGRATE') || ! BP_SEO_NO_AUTO_MIGRATE )
+	     && apply_filters('bp_seo_auto_migrate', true)
+	     && function_exists('bp_seo_import_run')
+	     && function_exists('bp_seo_import_yoast_redirects') ) {
+
+		if ( ! function_exists('deactivate_plugins') ) require_once ABSPATH . 'wp-admin/includes/plugin.php';
+
+		$yoast_plugins = [
+			'wordpress-seo-premium/wp-seo-premium.php',
+			'wordpress-seo/wp-seo.php',
+			'wpseo-local/wpseo-local.php',
+		];
+		$yoast_here = array_values( array_filter($yoast_plugins, 'is_plugin_active') );
+
+		if ( ! empty($yoast_here) ) {
+			$report    = bp_seo_import_run(false);                 // 1) copy _yoast_wpseo_* -> _bp_seo_*
+			$redirects = bp_seo_import_yoast_redirects();          // 2) copy Premium redirects
+			deactivate_plugins($yoast_here, true);                 // 3) silent deactivate (no hooks/redirects)
+			flush_rewrite_rules(false);                            // 4) module now owns category base + /search/
+
+			$robots_phys = is_file( ABSPATH . 'robots.txt' );      // physical robots.txt shadows our rules?
+
+			update_option('bp_seo_migrated', gmdate('c'), false);
+			update_option('bp_seo_migration_report', [
+				'when'           => gmdate('c'),
+				'deactivated'    => $yoast_here,
+				'posts_touched'  => $report['posts_touched'] ?? 0,
+				'terms_touched'  => $report['terms_touched'] ?? 0,
+				'fields'         => $report['fields'] ?? [],
+				'unknown_tokens' => $report['unknown_tokens'] ?? [],
+				'redirects'      => $redirects,
+				'robots_physical'=> $robots_phys,
+			], false);
+
+			if ( function_exists('bp_seo_email_migration_report') ) {
+				bp_seo_email_migration_report($report, $redirects, $yoast_here, $robots_phys);
+			}
+		}
+	}
+
+/*--------------------------------------------------------------
 # Yoast SEO Settings
 --------------------------------------------------------------*/
 

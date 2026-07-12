@@ -919,8 +919,10 @@ grid-template-columns:                                      30px 1fr;
 .bp-an-toolbar .bp-an-h2 { margin: 0; }
 .bp-an-hint        { font-size: 11px; color: var(--an-muted); }
 .bp-an-metric-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-.bp-an-mbtn, .bp-an-gbtn, .bp-an-rbtn               { font-size: 12px; padding: 5px 12px; border-radius: 999px; text-decoration: none; color: var(--an-ink2); background: var(--black-lowest); }
-.bp-an-mbtn.active, .bp-an-gbtn.active, .bp-an-rbtn.active { background: var(--k-os); color: #fff; }
+.bp-an-mbtn, .bp-an-gbtn, .bp-an-rbtn, .bp-an-sbtn               { font-size: 12px; padding: 5px 12px; border-radius: 999px; text-decoration: none; color: var(--an-ink2); background: var(--black-lowest); }
+.bp-an-mbtn.active, .bp-an-gbtn.active, .bp-an-rbtn.active, .bp-an-sbtn.active { background: var(--k-os); color: #fff; }
+.bp-analytics .bp-an-threshold { stroke: var(--an-muted); stroke-dasharray: 4 4; opacity: .75; }
+.bp-analytics .bp-an-threshlab { fill: var(--an-muted); font-size: 10px; }
 .bp-an-gbtn.disabled { opacity: .4; pointer-events: none; }
 
 /* Sticky toolbar — locks just under the WP admin bar so the controls follow you down the page */
@@ -936,7 +938,7 @@ grid-template-columns:                                      30px 1fr;
 .bp-an-chartrow      { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
 .bp-analytics-chart,
 .bp-analytics-behavior { position: relative; flex: 1 1 600px; min-width: 0; }
-.bp-analytics-pie    { flex: 0 0 220px; }
+.bp-analytics-pie    { flex: 0 0 220px; padding: 0 25px;}
 .bp-analytics-pie.bp-an-pie-off { display: none; }
 .bp-an-pie-svg       { display: block; margin: 6px auto 8px; }
 .bp-analytics .bp-an-pie-slice { stroke: var(--an-surface); stroke-width: 2; stroke-linejoin: round; }
@@ -967,9 +969,21 @@ grid-template-columns:                                      30px 1fr;
 
 /* grid, not flex: equal auto-fit columns so a 5th donut wraps to a normal-width cell
    instead of a lone full-width stretch */
-.bp-an-techrow   { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 130px; padding-left:45px; padding-right:45px; }
+.bp-an-techrow   { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 130px; }
 .bp-an-techcol   { min-width: 0; }
 .bp-an-techtitle { font-size: 12px; font-weight: 600; color: var(--an-ink2); text-align: center; margin-bottom: 2px; }
+
+/* Most-used screen widths — ranked horizontal bars (mode = top bar) */
+.bp-an-bars      { display: flex; flex-direction: column; gap: 6px; }
+.bp-an-bar-row   { display: grid; grid-template-columns: 68px 1fr auto; align-items: center; gap: 12px; font-size: 12px; }
+.bp-an-bar-lbl   { text-align: right; font-variant-numeric: tabular-nums; color: var(--an-ink); font-weight: 600; }
+.bp-an-bar-track { background: var(--an-grid); border-radius: 4px; height: 15px; overflow: hidden; }
+.bp-an-bar-fill  { display: block; height: 100%; background: #2a78d6; border-radius: 4px; min-width: 2px; }
+.bp-an-bar-val   { font-variant-numeric: tabular-nums; color: var(--an-ink2); white-space: nowrap; }
+.bp-an-bar-row.mode  .bp-an-bar-fill { background: #1769c9; }
+.bp-an-bar-row.mode  .bp-an-bar-val  { color: var(--an-ink); font-weight: 700; }
+.bp-an-bar-row.other .bp-an-bar-fill { background: var(--an-muted); }
+.bp-an-bar-row.other .bp-an-bar-lbl  { font-weight: 400; color: var(--an-ink2); }
 .bp-an-legend       { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--an-ink2); margin: 0 0 6px 54px; }
 .bp-an-leg          { display: inline-flex; align-items: center; gap: 6px; opacity: .7; cursor: pointer; user-select: none; }
 .bp-an-leg.emph     { opacity: 1; font-weight: 600; }
@@ -992,6 +1006,11 @@ grid-template-columns:                                      30px 1fr;
 .bp-analytics .bp-an-dotring { fill: var(--an-surface); }
 .bp-analytics .bp-an-endlab { font-size: 11px; font-weight: 600; }
 .bp-analytics .bp-an-endlab.k-os { fill: var(--k-os); } .bp-analytics .bp-an-endlab.k-gbp { fill: var(--k-gbp); }
+
+/* Fixed semantic palette — color follows the ENTITY, never its rank (used across every analytics chart). */
+.k-blue{background:#2a78d6}.k-green{background:#1baf7a}.k-orange{background:#eb6834}.k-grey{background:#898781}.k-red{background:#e34948}.k-teal{background:#2aa7bd}.k-ltblue{background:#5aa9e6}.k-purple{background:#9b59d0}.k-dviolet{background:#4a3aa7}.k-yellow{background:#d9a400}.k-violet{background:#9085e9}
+.bp-analytics .bp-an-line.k-blue{stroke:#2a78d6}.bp-analytics .bp-an-line.k-green{stroke:#1baf7a}.bp-analytics .bp-an-line.k-orange{stroke:#eb6834}.bp-analytics .bp-an-line.k-grey{stroke:#898781}.bp-analytics .bp-an-line.k-red{stroke:#e34948}.bp-analytics .bp-an-line.k-teal{stroke:#2aa7bd}.bp-analytics .bp-an-line.k-ltblue{stroke:#5aa9e6}.bp-analytics .bp-an-line.k-purple{stroke:#9b59d0}.bp-analytics .bp-an-line.k-dviolet{stroke:#4a3aa7}.bp-analytics .bp-an-line.k-yellow{stroke:#d9a400}.bp-analytics .bp-an-line.k-violet{stroke:#9085e9}
+.bp-analytics .bp-an-pie-slice.k-blue,.bp-analytics .bp-an-dot.k-blue,.bp-analytics .bp-an-endlab.k-blue{fill:#2a78d6}.bp-analytics .bp-an-pie-slice.k-green,.bp-analytics .bp-an-dot.k-green,.bp-analytics .bp-an-endlab.k-green{fill:#1baf7a}.bp-analytics .bp-an-pie-slice.k-orange,.bp-analytics .bp-an-dot.k-orange,.bp-analytics .bp-an-endlab.k-orange{fill:#eb6834}.bp-analytics .bp-an-pie-slice.k-grey,.bp-analytics .bp-an-dot.k-grey,.bp-analytics .bp-an-endlab.k-grey{fill:#898781}.bp-analytics .bp-an-pie-slice.k-red,.bp-analytics .bp-an-dot.k-red,.bp-analytics .bp-an-endlab.k-red{fill:#e34948}.bp-analytics .bp-an-pie-slice.k-teal,.bp-analytics .bp-an-dot.k-teal,.bp-analytics .bp-an-endlab.k-teal{fill:#2aa7bd}.bp-analytics .bp-an-pie-slice.k-ltblue,.bp-analytics .bp-an-dot.k-ltblue,.bp-analytics .bp-an-endlab.k-ltblue{fill:#5aa9e6}.bp-analytics .bp-an-pie-slice.k-purple,.bp-analytics .bp-an-dot.k-purple,.bp-analytics .bp-an-endlab.k-purple{fill:#9b59d0}.bp-analytics .bp-an-pie-slice.k-dviolet,.bp-analytics .bp-an-dot.k-dviolet,.bp-analytics .bp-an-endlab.k-dviolet{fill:#4a3aa7}.bp-analytics .bp-an-pie-slice.k-yellow,.bp-analytics .bp-an-dot.k-yellow,.bp-analytics .bp-an-endlab.k-yellow{fill:#d9a400}.bp-analytics .bp-an-pie-slice.k-violet,.bp-analytics .bp-an-dot.k-violet,.bp-analytics .bp-an-endlab.k-violet{fill:#9085e9}
 .bp-analytics .bp-an-cross { stroke: var(--an-axis); stroke-width: 1; stroke-dasharray: 3 3; }
 .bp-analytics .bp-an-hit { cursor: crosshair; }
 

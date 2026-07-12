@@ -471,6 +471,80 @@ function bp_ga4_collect_channel_history(BetaAnalyticsDataClient $client, $proper
     return true;
 }
 
+/**
+ * Daily REAL-USER speed history (append-only). Our front-end fires a join_group event per visit
+ * tagged "pageID»device«seconds" (seconds = the later of load or LCP). This queries GA4 by
+ * [date, groupId], parses device + speed, and stores a per-day per-device average load + % of
+ * loads meeting target — the dense RUM time series the Site speed chart plots. Backfills over
+ * GA4's event retention so history appears immediately, then accrues nightly.
+ * Store: bp_ga4_speed_history[YYYYMMDD] = ['ml'=>mobile avg s, 'mt'=>mobile %target,
+ *                                          'dl'=>desktop avg s, 'dt'=>desktop %target]. Tablet folds into mobile.
+ */
+function bp_ga4_collect_speed_history(BetaAnalyticsDataClient $client, $propertyId): bool {
+
+    $years   = bp_ga4_years_to_pull();
+    $targets = ['desktop' => 2.0, 'mobile' => 3.0, 'tablet' => 3.0];
+    $cutoff  = date('Ymd', strtotime('-500 days'));
+
+    $acc = [];  // $acc[$ymd][$device] = ['sum'=>float, 'cnt'=>int, 'fast'=>int]
+
+    foreach (bp_ga4_year_ranges($years) as $range) {
+        $rows = bp_ga4_run_report_all_rows($client, [
+            'property'        => 'properties/' . $propertyId,
+            'dateRanges'      => [new DateRange(['start_date' => $range['start'], 'end_date' => $range['end']])],
+            'dimensions'      => [new Dimension(['name' => 'date']), new Dimension(['name' => 'groupId'])],
+            'metrics'         => [new Metric(['name' => 'eventCount'])],
+            'dimensionFilter' => bp_ga4_dimension_filter(),
+        ]);
+        foreach ($rows as $row) {
+            $ymd = trim($row['d'][0]);
+            if (strlen($ymd) !== 8 || $ymd < $cutoff) continue;
+            if (!preg_match('/»(desktop|mobile|tablet)«([\d.]+)$/i', trim($row['d'][1]), $mm)) continue;
+            $device = strtolower($mm[1]);
+            $speed  = (float) $mm[2];
+            if ($speed <= 0 || $speed > 30) continue;
+            $cnt = (int) $row['m'][0];
+            if ($cnt <= 0) continue;
+            if (!isset($acc[$ymd][$device])) $acc[$ymd][$device] = ['sum' => 0.0, 'cnt' => 0, 'fast' => 0];
+            $acc[$ymd][$device]['sum'] += $speed * $cnt;
+            $acc[$ymd][$device]['cnt'] += $cnt;
+            if ($speed <= ($targets[$device] ?? 3.0)) $acc[$ymd][$device]['fast'] += $cnt;
+        }
+    }
+
+    if (empty($acc)) return false;
+
+    $daily = [];
+    foreach ($acc as $ymd => $devs) {
+        $mob = ['sum' => 0.0, 'cnt' => 0, 'fast' => 0];   // mobile + tablet = touch
+        foreach (['mobile', 'tablet'] as $d) {
+            if (isset($devs[$d])) { $mob['sum'] += $devs[$d]['sum']; $mob['cnt'] += $devs[$d]['cnt']; $mob['fast'] += $devs[$d]['fast']; }
+        }
+        $desk = $devs['desktop'] ?? ['sum' => 0.0, 'cnt' => 0, 'fast' => 0];
+        $rec  = [];
+        if ($mob['cnt']  > 0) { $rec['ml'] = round($mob['sum']  / $mob['cnt'],  2); $rec['mt'] = (int) round($mob['fast']  / $mob['cnt']  * 100); }
+        if ($desk['cnt'] > 0) { $rec['dl'] = round($desk['sum'] / $desk['cnt'], 2); $rec['dt'] = (int) round($desk['fast'] / $desk['cnt'] * 100); }
+        if ($rec) $daily[$ymd] = $rec;
+    }
+
+    if (empty($daily)) return false;
+
+    // Merge-guarded append (mirror the channel-history daily merge): don't let a collapsed pull wipe history.
+    $store = get_option('bp_ga4_speed_history');
+    if (!is_array($store)) $store = [];
+    if (count($store) >= 60 && count($daily) < max(20, count($store) * 0.3)) {
+        error_log('GA4 speed history collapsed: ' . count($daily) . ' vs stored ' . count($store) . ' — skipped.');
+        return false;
+    }
+    foreach ($daily as $k => $v) $store[$k] = $v;
+    krsort($store);
+    $cut = date('Ymd', strtotime('-520 days'));
+    foreach (array_keys($store) as $k) if ((string) $k < $cut) unset($store[$k]);
+    update_option('bp_ga4_speed_history', $store, false);
+
+    return true;
+}
+
 /*
  * TEMP diagnostic: isolate why the channel query returns almost no rows. Runs a
  * matrix of last-90-day reports and reports row counts + GA4 response metadata
@@ -754,6 +828,9 @@ function bp_ga4_collect_all_clean(BetaAnalyticsDataClient $client, $propertyId):
 
     // 1b) Per-channel monthly history (append-only source time series)
     bp_ga4_collect_channel_history($client, $propertyId);
+
+    // 1c) Daily real-user speed history (append-only) — dense RUM load & %-target time series.
+    bp_ga4_collect_speed_history($client, $propertyId);
 
     // 2) Dimension widgets across 5 time periods
     $dimensions = [

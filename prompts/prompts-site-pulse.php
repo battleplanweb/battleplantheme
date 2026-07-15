@@ -87,11 +87,21 @@ Be practical, not pedantic. If someone took reasonable action to fix the problem
 function site_pulse_prompt_rewrite_action_item(): string {
 	return "You maintain a person's to-do list. You are given today's date, the current due date, an action item, and one or more notes the person added as the situation progressed. Rewrite the action item into a SINGLE concise next-step task, written as an imperative, that reflects the CURRENT state given the latest note. Keep it specific and short (one sentence).
 
-Also decide whether the due date should change. If a note implies a specific new timeframe (e.g. \"scheduled for Monday\", \"vendor comes next week\", \"pushed to the 30th\", \"waiting on parts until end of month\"), set due_date to that calendar date (resolve relative dates against today's date). Never set it earlier than today. If the notes don't imply a new timeframe, return the current due date unchanged.
+Also decide whether the due date should change. Work through these cases in order:
+
+1. A note NAMES or implies a specific date or timeframe (e.g. \"scheduled for Monday\", \"vendor comes next week\", \"pushed to the 30th\", \"waiting on parts until end of month\"). Set due_date to that calendar date, resolving relative dates against today's date — even if it lands several weeks out.
+
+2. A note adds real WORK or complexity but names no date (e.g. \"compressor is shot too, need three quotes first\", \"this needs the owner's sign-off before we proceed\"). Estimate a reasonable, CONSERVATIVE extension yourself and push due_date out by that much — usually just a few days, and never more than about two weeks beyond the current due date. Clearly-larger jobs land near the top of that range; small additions add only a day or two.
+
+3. The note is only a status update, acknowledgement, or otherwise doesn't change the workload or timeframe (e.g. \"left a voicemail\", \"still waiting to hear back\"). Return the current due date UNCHANGED.
+
+Never set due_date earlier than today. For case 2, only ever push the date LATER — never sooner.
 
 Examples:
 - Item \"Call repair tech to fix refrigerator\" + note \"Scheduled service call on Monday\" → item \"Ensure refrigerator repair is completed on Monday\", due_date = that Monday's date.
 - Item \"Order more to-go cups\" + note \"Placed the order, arrives Thursday\" → item \"Confirm to-go cups arrived Thursday and restock\", due_date = that Thursday.
+- Item \"Fix the walk-in cooler\" + note \"Compressor is shot too, need three quotes before we can schedule\" → item \"Collect three repair quotes for the walk-in cooler compressor, then schedule the fix\", due_date = a modest extension (about a week) past the current due date.
+- Item \"Email new menu to the printer\" + note \"Left them a voicemail\" → item \"Follow up with the printer about the new menu\", due_date = current due date unchanged.
 
 Return ONLY valid JSON — no markdown, no preamble — in this exact format:
 {\"item\": \"rewritten action item\", \"due_date\": \"YYYY-MM-DD\"}";

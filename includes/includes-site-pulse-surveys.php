@@ -371,6 +371,69 @@ function site_pulse_ajax_delete_survey(): void {
 
 
 /*--------------------------------------------------------------
+# AJAX — edit a comment card (manage_surveys — or god)
+--------------------------------------------------------------*/
+
+add_action( 'wp_ajax_site_pulse_update_survey', 'site_pulse_ajax_update_survey' );
+function site_pulse_ajax_update_survey(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	if ( ! site_pulse_user_can( $user_id, 'manage_surveys' ) && ! site_pulse_god_can_override() ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( $id <= 0 ) wp_send_json_error( [ 'message' => 'Missing survey id.' ] );
+
+	global $wpdb;
+	$table = site_pulse_table( 'surveys' );
+	if ( ! (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $table WHERE id = %d", $id ) ) ) {
+		wp_send_json_error( [ 'message' => 'Comment card not found.' ] );
+	}
+
+	// Ratings: { key: 1-5 } — keep only valid values, then recompute the denormalized avg + overall
+	// (overall = the "impression" dimension), matching how sp_survey_store denormalizes on insert.
+	$ratings = json_decode( (string) wp_unslash( $_POST['ratings'] ?? '{}' ), true );
+	$clean   = [];
+	if ( is_array( $ratings ) ) {
+		foreach ( $ratings as $k => $v ) {
+			$key = sanitize_key( $k );
+			$n   = (int) $v;
+			if ( $key !== '' && $n >= 1 && $n <= 5 ) $clean[ $key ] = $n;
+		}
+	}
+	$avg = $clean ? round( array_sum( $clean ) / count( $clean ), 2 ) : null;
+
+	$visit = null;
+	if ( ! empty( $_POST['visit_date'] ) ) {
+		$ts = strtotime( (string) $_POST['visit_date'] );
+		if ( $ts ) $visit = gmdate( 'Y-m-d', $ts );
+	}
+
+	$data = [
+		'location'      => sanitize_text_field( wp_unslash( $_POST['location']   ?? '' ) ) ?: null,
+		'customer_name' => sanitize_text_field( wp_unslash( $_POST['name']       ?? '' ) ) ?: null,
+		'email'         => sanitize_email(      wp_unslash( $_POST['email']      ?? '' ) ) ?: null,
+		'phone'         => sanitize_text_field( wp_unslash( $_POST['phone']      ?? '' ) ) ?: null,
+		'city'          => sanitize_text_field( wp_unslash( $_POST['city']       ?? '' ) ) ?: null,
+		'state'         => sanitize_text_field( wp_unslash( $_POST['state']      ?? '' ) ) ?: null,
+		'experience'    => sanitize_text_field( wp_unslash( $_POST['experience'] ?? '' ) ) ?: null,
+		'referral'      => sanitize_text_field( wp_unslash( $_POST['referral']   ?? '' ) ) ?: null,
+		'visit_date'    => $visit,
+		'comments'      => sanitize_textarea_field( wp_unslash( $_POST['comments'] ?? '' ) ) ?: null,
+		'ratings'       => $clean ? wp_json_encode( $clean ) : null,
+		'avg_rating'    => $avg,
+		'overall'       => isset( $clean['impression'] ) ? $clean['impression'] : null,
+	];
+	$wpdb->update( $table, $data, [ 'id' => $id ] );
+
+	site_pulse_log( 'survey_edited', 'Edited a customer comment card', [ 'survey_id' => $id ] );
+	wp_send_json_success( [ 'id' => $id ] );
+}
+
+
+/*--------------------------------------------------------------
 # AJAX — survey analytics: per-location rating distributions (view_analytics / view_surveys)
 --------------------------------------------------------------*/
 

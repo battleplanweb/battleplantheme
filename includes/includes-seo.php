@@ -424,7 +424,9 @@ function bp_seo_schema_graph() {
 	$ci = customer_info();
 
 	// Organization / LocalBusiness node — reuse the already-built schema, or build live.
+	// Guard against a malformed (non-array) stored schema so it can't fatal the whole page.
 	$org = $ci['schema'] ?? ( function_exists('ci_build_schema') ? ci_build_schema($ci) : [] );
+	if ( ! is_array($org) ) $org = [];
 	if ( ! empty($org) ) {
 		unset($org['@context']);                    // context lives at graph root
 		$org['@id'] = home_url('#organization');
@@ -531,14 +533,26 @@ add_filter('rest_post_dispatch', function($response) {
 	return $response;
 }, 10, 1);
 
-// robots.txt — deny search + wp-json crawling; keep the sitemap reference.
+// robots.txt — deny search + wp-json crawling; keep good bots out of the footer honeypot; keep the
+// sitemap reference. Serving this dynamically means NO physical /robots.txt file is needed — a
+// physical file silently overrides all of this (and would drop the Sitemap: line).
 add_filter('robots_txt', function($output, $public) {
 	if ( ! $public || bp_seo_defer() ) return $output;
 	$lines  = "User-agent: *\n";
+	$lines .= "Disallow: /wp-admin/\n";
+	$lines .= "Allow: /wp-admin/admin-ajax.php\n";
+	$lines .= "Disallow: /wp-login.php\n";
+	$lines .= "Disallow: /xmlrpc.php\n";
 	$lines .= "Disallow: /wp-json/\n";
 	$lines .= "Disallow: /*?s=\n";
 	$lines .= "Disallow: /?s=\n";
 	$lines .= "Disallow: /search/\n";
+	// NB: intentionally NOT blocking /wp-content/themes|plugins/ — Google needs that CSS/JS to
+	// render pages; blocking it (as the old physical template did) can hurt rankings.
+	// Spam honeypot: keep well-behaved crawlers out of the tripwire so only bots that IGNORE
+	// robots.txt trip it. Path derived from the parent theme so it never drifts from footer.php.
+	$bot = wp_parse_url( get_template_directory_uri(), PHP_URL_PATH );
+	if ( $bot ) $lines .= 'Disallow: ' . trailingslashit( $bot ) . "_bot/\n";
 	$lines .= "\nSitemap: " . home_url('/wp-sitemap.xml') . "\n";
 	return $lines;
 }, 10, 2);
@@ -626,7 +640,11 @@ add_filter('wp_sitemaps_enabled', function($on) {
 add_action('template_redirect', function() {
 	if ( bp_seo_defer() ) return;
 	$path = strtok( $_SERVER['REQUEST_URI'] ?? '', '?' );
-	if ( in_array( $path, ['/sitemap_index.xml', '/sitemap.xml'], true ) ) {
+	// 301 the old Yoast sitemap URLs to WP core's, so Search Console + old links keep resolving:
+	// the index (sitemap_index.xml / sitemap.xml) and any per-type "{type}-sitemap.xml"
+	// (page-sitemap.xml, post-sitemap.xml, …) — but NOT core's own /wp-sitemap*.xml.
+	$is_yoast_type = preg_match('#^/[a-z0-9_-]+-sitemap\.xml$#i', $path) && ! preg_match('#^/wp-sitemap#i', $path);
+	if ( in_array( $path, ['/sitemap_index.xml', '/sitemap.xml'], true ) || $is_yoast_type ) {
 		wp_safe_redirect( home_url('/wp-sitemap.xml'), 301 );
 		exit;
 	}

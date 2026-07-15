@@ -209,6 +209,7 @@ function init() {
 	initSurveys();
 	initNewsSliders();
 	restoreViewState();
+	spNavInit();
 	initClickableTagging();
 }
 
@@ -439,20 +440,21 @@ function initSidebar() {
 	});
 }
 
-// On mobile, relocate the notification bell + Sign Out from the topbar into the mobile header's top
-// row (white icons). Moving the actual elements keeps their wiring + the unread badge intact. Back
-// to the topbar on desktop (restoring the bell · undo · logout order).
+// On mobile, relocate ONLY the notification bell from the topbar into the mobile header's top row
+// (white icon) — on its own it gets the whole tap target. Sign Out stays in the sidebar menu on
+// phones (off the cramped top bar). On desktop both live in the sidebar footer (bell, then logout).
+// Moving the actual elements keeps their wiring + the unread badge intact.
 function spPlaceMobileHeaderIcons() {
-	// Bell + Sign Out live in the sidebar footer on desktop; on phones they move into the mobile
-	// header's top-right (so the wiring + unread badge stay on the same elements).
 	const bell = document.getElementById('sp-notification-btn');
 	const logout = document.getElementById('sp-logout-btn-top');
 	const mobileSlot = document.getElementById('sp-mobile-header-actions');
 	const sidebarSlot = document.getElementById('sp-sidebar-actions');
 	if (!bell || !logout || !mobileSlot || !sidebarSlot) return;
-	const target = window.matchMedia('(max-width: 860px)').matches ? mobileSlot : sidebarSlot;
-	target.appendChild(bell);
-	target.appendChild(logout);
+	const isMobile = window.matchMedia('(max-width: 860px)').matches;
+	// Sign Out always sits in the sidebar footer; the bell joins it there on desktop, or moves to the
+	// mobile header on phones. (Re-appending logout keeps the bell·logout order right after a resize.)
+	(isMobile ? mobileSlot : sidebarSlot).appendChild(bell);
+	sidebarSlot.appendChild(logout);
 }
 
 // Collapsing mobile header: show the logo at the top, swap to the page title once scrolled down.
@@ -591,6 +593,7 @@ function activatePanel(panelId) {
 	if (spMain) spMain.scrollTop = 0;
 
 	saveViewState({ panel: panelId });
+	spNavPush(panelId);
 }
 
 function saveViewState(state) {
@@ -612,6 +615,77 @@ function restoreViewState() {
 			activatePanel(state.panel);
 		}
 	} catch (e) {}
+}
+
+
+/*--------------------------------------------------------------
+# Back-Button History (Android PWA)
+--------------------------------------------------------------
+Installed as a standalone PWA, the app launches with a single browser-history
+entry, so Android's Back button exits instead of returning to the previous
+panel. We keep our own history stack: activatePanel() pushes an entry per
+panel change, and Back (popstate) first dismisses any open layer (modal /
+mobile sidebar / report detail), otherwise steps back to the previous panel.
+Back on the root panel still exits, matching native-app behavior. */
+
+let _spNavReady = false;   // history seeded; safe to push
+let _spPopping = false;    // inside a popstate restore — suppress pushes
+
+function spCurrentPanel() {
+	const p = document.querySelector('.sp-panel.active');
+	return p ? p.id.replace(/^sp-panel-/, '') : '';
+}
+
+function spNavInit() {
+	// Seed the current panel as the root entry so the first Back has a target.
+	history.replaceState({ sp: true, panel: spCurrentPanel(), root: true }, '');
+	_spNavReady = true;
+	window.addEventListener('popstate', spNavOnPop);
+}
+
+function spNavPush(panelId) {
+	if (!_spNavReady || _spPopping) return;
+	const st = history.state;
+	if (st && st.sp && st.panel === panelId) return; // don't stack the same panel twice
+	history.pushState({ sp: true, panel: panelId }, '');
+}
+
+// Dismiss the top-most open layer. Returns true if something was closed.
+function spCloseTopLayer() {
+	// Mobile sidebar.
+	const sidebar = document.getElementById('sp-sidebar');
+	if (sidebar && sidebar.classList.contains('open')) { closeMobileSidebar(); return true; }
+
+	// Any modal backdrop (form / directory / mileage / receipt / matrix …) — these are appended
+	// to <body>, so the last one is always the top-most. Removing the node matches how each closes.
+	const backs = document.querySelectorAll('.sp-modal-backdrop');
+	if (backs.length) { backs[backs.length - 1].remove(); document.body.style.overflow = ''; return true; }
+
+	// Report / review detail: an inline view that hides the list while open. Scope to the active
+	// panel so a detail left open in a since-switched-away panel isn't mistaken for the top layer.
+	const active = document.querySelector('.sp-panel.active');
+	if (active) {
+		if (active.querySelector('#sp-report-detail-wrap:not(.sp-hidden)')) { closeReportDetail(''); return true; }
+		if (active.querySelector('#sp-review-detail-wrap:not(.sp-hidden)')) { closeReportDetail('review'); return true; }
+	}
+
+	return false;
+}
+
+function spNavOnPop(e) {
+	// Back first closes an open layer; re-push the current panel so the stack depth (and the
+	// next Back) is preserved — the gesture is "spent" dismissing the layer, not changing panels.
+	if (spCloseTopLayer()) {
+		history.pushState({ sp: true, panel: spCurrentPanel() }, '');
+		return;
+	}
+	const st = e.state;
+	if (st && st.sp && st.panel) {
+		_spPopping = true;
+		activatePanel(st.panel);
+		_spPopping = false;
+	}
+	// No sp state → popped past our root; let the browser / PWA exit.
 }
 
 
@@ -1529,6 +1603,16 @@ function spMsgAttachModal(url, mime, name) {
 	$$('.sp-attach-close', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
 }
 
+// Append a message bubble unless one with the same id is already in the thread. Makes the optimistic
+// insert idempotent, so a stray double-send or a race with the 10s poll can't show the same message
+// twice (previously it posted twice until a page refresh rebuilt the thread from the server).
+function spMsgAppendBubbleOnce(bubbles, msg) {
+	if (!bubbles || !msg) return;
+	if (msg.id != null && bubbles.querySelector(`.sp-msg-bubble[data-id="${msg.id}"]`)) return;
+	bubbles.insertAdjacentHTML('beforeend', msgBubbleHTML(msg, _spMsg.meta && _spMsg.meta.is_group));
+	spMsgScrollBottom(bubbles);
+}
+
 // Upload a file and post it as a message (with any current composer text as a caption).
 async function uploadMsgFile(file) {
 	const cid = _spMsg.cid;
@@ -1548,7 +1632,7 @@ async function uploadMsgFile(file) {
 		if (res && res.success) {
 			if (input) input.value = '';
 			const bubbles = $('#sp-msg-bubbles');
-			if (bubbles) { bubbles.insertAdjacentHTML('beforeend', msgBubbleHTML(res.data.message, _spMsg.meta && _spMsg.meta.is_group)); spMsgScrollBottom(bubbles); }
+			if (bubbles) spMsgAppendBubbleOnce(bubbles, res.data.message);
 			loadMsgConversations();
 		} else { alert((res && res.data && res.data.message) || 'Upload failed.'); }
 	} catch (e) { alert('Upload failed.'); }
@@ -1995,7 +2079,7 @@ async function sendMsg() {
 		const res = await spAjax('site_pulse_messages_send', { conversation_id: cid, body, reply_to_id: replyId });
 		if (res.success) {
 			const bubbles = $('#sp-msg-bubbles');
-			if (bubbles) { bubbles.insertAdjacentHTML('beforeend', msgBubbleHTML(res.data.message, _spMsg.meta && _spMsg.meta.is_group)); spMsgScrollBottom(bubbles); }
+			if (bubbles) spMsgAppendBubbleOnce(bubbles, res.data.message);
 			loadMsgConversations();
 		} else { alert(res.data?.message || 'Could not send.'); input.value = body; }
 	} catch (e) { alert('Could not send.'); input.value = body; }
@@ -4656,7 +4740,10 @@ async function spAddActionItem() {
 	try { const cr = await spAjax('site_pulse_messages_contacts', {}); if (cr && cr.success) contacts = cr.data.contacts || []; } catch (e) {}
 	const hasPeople = contacts.length > 0;
 
-	const due = spDatePlusDays(14);
+	// Urgency drives the due date: high → 3 days out, medium → 7, low → 14. The field is still
+	// editable, so this is a smart default the user can override.
+	const dueDaysForPriority = { high: 3, medium: 7, low: 14 };
+	const due = spDatePlusDays(dueDaysForPriority.medium);
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Add Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
 	html += '<label class="sp-field-label">To-do</label>';
@@ -4709,6 +4796,11 @@ async function spAddActionItem() {
 		});
 	});
 
+	// Changing Urgency re-fills the Due date to match (user can still edit it afterward).
+	const priSel = $('.sp-aai-pri', backdrop);
+	const dueInp = $('.sp-aai-due', backdrop);
+	priSel?.addEventListener('change', () => { if (dueInp) dueInp.value = spDatePlusDays(dueDaysForPriority[priSel.value] ?? 7); });
+
 	$('.sp-aai-desc', backdrop)?.focus();
 	$$('.sp-aai-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
 	$('.sp-aai-save', backdrop)?.addEventListener('click', async () => {
@@ -4728,21 +4820,83 @@ async function spAddActionItem() {
 	});
 }
 
-// Edit an existing item's original text + label (pencil icon on open items).
-function spEditActionItem(item) {
+// Edit an existing item — full parity with Add: text, label, "Also assign to" people, urgency, due
+// date, plus Delete. Owner-only (the pencil only shows on your own open items).
+async function spEditActionItem(item) {
 	const backdrop = spFormModal();
+	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+
+	// Same contacts the Add / New Message pickers use; assigning someone adds a linked copy for them.
+	let contacts = [];
+	try { const cr = await spAjax('site_pulse_messages_contacts', {}); if (cr && cr.success) contacts = cr.data.contacts || []; } catch (e) {}
+	const hasPeople = contacts.length > 0;
+
+	// Urgency drives the due date (same mapping as Add): high → 3 days out, medium → 7, low → 14. Both
+	// fields stay editable — pre-filled from the item's current values.
+	const dueDaysForPriority = { high: 3, medium: 7, low: 14 };
+	const prio = (['high', 'medium', 'low'].indexOf(item.priority) !== -1) ? item.priority : 'medium';
+	const dueVal = (item.due_date && /^\d{4}-\d{2}-\d{2}$/.test(item.due_date)) ? item.due_date : spDatePlusDays(dueDaysForPriority[prio]);
+	const opt = p => `<option value="${p}"${p === prio ? ' selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`;
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button></div>';
 	html += '<label class="sp-field-label">To-do</label>';
 	html += `<textarea class="sp-input sp-aae-desc" rows="2" placeholder="What needs to get done?">${esc(item.description || '')}</textarea>`;
-	html += '<label class="sp-field-label">Label</label>';
-	html += spLabelFieldHtml(item.category || 'To-Do');
-	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-aae-save">Save</button><button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button></div>';
+
+	// Label, optional "Also assign to" people picker, urgency and due date — laid out in one grid,
+	// mirroring Add (reuses the same sp-aai-people* markup so it inherits the picker styling).
+	const labelField = '<div><label class="sp-field-label">Label</label>' + spLabelFieldHtml(item.category || 'To-Do') + '</div>';
+	const urgencyField = '<div><label class="sp-field-label">Urgency</label><select class="sp-select sp-aae-pri">' + opt('high') + opt('medium') + opt('low') + '</select></div>';
+	const dueField = `<div><label class="sp-field-label">Due date</label><input type="date" class="sp-input sp-aae-due" value="${dueVal}"></div>`;
+	if (hasPeople) {
+		const picks = contacts.map(c => `<label class="sp-msg-contact-pick"><input type="checkbox" class="sp-msg-pick sp-aai-people-pick" value="${c.id}" data-name="${esc(c.name)}"><span class="sp-msg-contact-name">${esc(c.name)}</span></label>`).join('');
+		const peopleField = '<div><label class="sp-field-label">Also assign to</label>'
+			+ '<div class="sp-aai-people" id="sp-aai-people">'
+			+ '<button type="button" class="sp-select sp-aai-people-toggle" id="sp-aai-people-toggle">Just me</button>'
+			+ '<div class="sp-aai-people-panel" id="sp-aai-people-panel" hidden>'
+			+ '<input type="text" class="sp-input sp-aai-people-search" placeholder="Search people…">'
+			+ '<div class="sp-msg-contacts sp-aai-people-list">' + picks + '</div>'
+			+ '</div></div></div>';
+		html += '<div class="sp-aai-grid">' + labelField + peopleField + urgencyField + dueField + '</div>';
+	} else {
+		html += labelField;
+		html += '<div class="sp-aai-grid">' + urgencyField + dueField + '</div>';
+	}
+	html += '<div class="sp-report-form-actions">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-aae-save">Save</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-delete sp-aae-delete">Delete</button>';
+	html += '</div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
 	spWireLabelField(backdrop);
+
+	// People picker (mirrors Add / New Message): toggle the panel, filter by search, show a live count.
+	const ppToggle = $('#sp-aai-people-toggle', backdrop);
+	const ppPanel  = $('#sp-aai-people-panel', backdrop);
+	const ppSearch = $('.sp-aai-people-search', backdrop);
+	const syncPeople = () => {
+		const n = $$('.sp-aai-people-pick:checked', backdrop).length;
+		if (ppToggle) ppToggle.textContent = n ? `Me + ${n} ${n === 1 ? 'person' : 'people'}` : 'Just me';
+	};
+	if (ppToggle && ppPanel) {
+		ppToggle.addEventListener('click', (e) => { e.stopPropagation(); ppPanel.hidden = !ppPanel.hidden; if (!ppPanel.hidden) ppSearch?.focus(); });
+		backdrop.addEventListener('click', (e) => { if (!e.target.closest('#sp-aai-people')) ppPanel.hidden = true; }); // click-away closes
+	}
+	$$('.sp-aai-people-pick', backdrop).forEach(cb => cb.addEventListener('change', syncPeople));
+	ppSearch?.addEventListener('input', () => {
+		const q = ppSearch.value.toLowerCase();
+		$$('.sp-aai-people-list .sp-msg-contact-pick', backdrop).forEach(l => {
+			const cb = l.querySelector('.sp-aai-people-pick');
+			l.style.display = cb && cb.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+		});
+	});
+
+	// Changing Urgency re-fills the Due date to match (still editable afterward).
+	const priSel = $('.sp-aae-pri', backdrop);
+	const dueInp = $('.sp-aae-due', backdrop);
+	priSel?.addEventListener('change', () => { if (dueInp) dueInp.value = spDatePlusDays(dueDaysForPriority[priSel.value] ?? 7); });
 
 	$('.sp-aae-desc', backdrop)?.focus();
 	$$('.sp-aae-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
@@ -4750,13 +4904,26 @@ function spEditActionItem(item) {
 		const desc = ($('.sp-aae-desc', backdrop)?.value || '').trim();
 		if (!desc) { alert('Please enter the to-do.'); return; }
 		const category = spLabelFieldValue(backdrop);
+		const priority = priSel?.value || 'medium';
+		const due_date = dueInp?.value || '';
+		const assignees = $$('.sp-aai-people-pick:checked', backdrop).map(cb => parseInt(cb.value, 10)).filter(Boolean);
 		const save = $('.sp-aae-save', backdrop);
 		if (save) save.disabled = true;
 		try {
-			const res = await spAjax('site_pulse_update_action_item', { item_id: item.id, description: desc, category });
+			const res = await spAjax('site_pulse_update_action_item', { item_id: item.id, description: desc, category, priority, due_date, assignees: JSON.stringify(assignees) });
 			if (res.success) { closeFormModal(); loadActionItems(); }
 			else { alert(res.data?.message || 'Could not save the item.'); if (save) save.disabled = false; }
 		} catch (e) { alert('Could not save the item.'); if (save) save.disabled = false; }
+	});
+	$('.sp-aae-delete', backdrop)?.addEventListener('click', async () => {
+		if (!confirm('Delete this action item completely? This removes it entirely — it will NOT show under Completed. This cannot be undone.')) return;
+		const del = $('.sp-aae-delete', backdrop);
+		if (del) del.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_delete_action_item', { item_id: item.id });
+			if (res.success) { closeFormModal(); loadActionItems(); loadNotificationCount(); }
+			else { alert(res.data?.message || 'Could not delete the item.'); if (del) del.disabled = false; }
+		} catch (e) { alert('Could not delete the item.'); if (del) del.disabled = false; }
 	});
 }
 
@@ -7268,6 +7435,7 @@ function reviewQueryParams() {
 		brand:    $('#sp-reviews-stat-brand')?.value || '',
 		stars:    $('#sp-reviews-filter-stars')?.value || '',
 		reply:    $('#sp-reviews-filter-reply')?.value || '',
+		source:   $('#sp-reviews-filter-platform')?.value || '',
 		topic:    spReviewTopicFilter || '',
 		per_page: SP_REVIEWS_PER_PAGE,
 	};
@@ -7286,8 +7454,10 @@ function initReviews() {
 	$('#sp-reviews-refresh-btn')?.addEventListener('click', () => loadReviews(true));
 	$('#sp-reviews-analyze-btn')?.addEventListener('click', analyzeReviews);
 	$('#sp-reviews-load-older')?.addEventListener('click', loadOlderReviews);
-	$('#sp-reviews-filter-stars')?.addEventListener('change', () => loadReviews());
-	$('#sp-reviews-filter-reply')?.addEventListener('change', () => loadReviews());
+	// These below-graph filters scope the LIST and the stat cards, so the graphs move with them too.
+	$('#sp-reviews-filter-stars')?.addEventListener('change', () => { loadReviews(); loadReviewStats(); });
+	$('#sp-reviews-filter-reply')?.addEventListener('change', () => { loadReviews(); loadReviewStats(); });
+	$('#sp-reviews-filter-platform')?.addEventListener('change', () => { loadReviews(); loadReviewStats(); });
 
 	// Analytics scope (restaurant / brand / time range) re-scopes the list (server-side) AND the stat cards.
 	const onScopeChange = () => { loadReviews(); loadReviewStats(); };
@@ -7387,12 +7557,17 @@ async function loadReviewStats() {
 	const range = $('#sp-reviews-stat-range')?.value || 'all';
 	const store = $('#sp-reviews-stat-restaurant')?.value || '';
 	const brand = $('#sp-reviews-stat-brand')?.value || '';
+	// The below-graph filters (ratings / reviews / platform) scope the cards too, so the graphs reflect
+	// exactly what the list is showing — e.g. only Facebook, or only 1-star.
+	const stars  = $('#sp-reviews-filter-stars')?.value || '';
+	const reply  = $('#sp-reviews-filter-reply')?.value || '';
+	const source = $('#sp-reviews-filter-platform')?.value || '';
 	// First load shows the full-size spinner; a re-scope dims the existing cards + overlays a spinner
 	// (the server re-aggregates tens of thousands of reviews, so this can take a few seconds).
 	if (!box.innerHTML) box.innerHTML = '<div class="sp-loading"></div>';
 	else box.classList.add('is-loading');
 	try {
-		const res = await spAjax('site_pulse_review_stats', { range, store, brand });
+		const res = await spAjax('site_pulse_review_stats', { range, store, brand, stars, reply, source });
 		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load stats.')}</div>`; return; }
 		spPopulateStatDropdowns(res.data);
 		renderReviewStats(res.data);
@@ -7655,9 +7830,11 @@ function starString(n) {
 function reviewMatchesFilters(r) {
 	const sf = $('#sp-reviews-filter-stars')?.value || '';
 	const rf = $('#sp-reviews-filter-reply')?.value || '';
+	const pf = $('#sp-reviews-filter-platform')?.value || '';
 	if (sf && String(r.starRating) !== sf) return false;
 	if (rf === 'replied'   && !r.reply) return false;
 	if (rf === 'unreplied' &&  r.reply) return false;
+	if (pf && (r.source || 'google') !== pf) return false;
 	// Note: restaurant / brand / time-range scoping is applied server-side (loadReviews re-fetches),
 	// so the list already holds only the scoped set — only the star/reply/topic filters run here.
 	// Clicking a topic stat card narrows the list to reviews mentioning that topic.
@@ -7721,6 +7898,7 @@ function renderReviewTags(tags) {
 
 function renderReviewCard(r) {
 	const id   = esc(r.reviewId);
+	const isFb = (r.source === 'facebook'); // Facebook recommendations are read-only here (Meta has no owner-reply API for them)
 	const date = r.createTime ? new Date(r.createTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
 	// Google serves a tiny default thumbnail (e.g. ...=s120-c-rp-mo-ba12-br100). Swap the trailing
@@ -7738,8 +7916,9 @@ function renderReviewCard(r) {
 	const store = r.store ? `<span class="unique sp-review-store">${esc(r.store)}</span>` : '';
 
 	// Action buttons sit in the head's right column (under the stars); the reply form stays full-width below.
+	// Facebook recommendations are read-only (no reply/testimonial actions) — you can't reply to them via the API.
 	let actions = '', form = '';
-	if (spReviewsCanManage) {
+	if (spReviewsCanManage && !isFb) {
 		actions =
 			'<div class="unique sp-review-actions">' +
 				`<button type="button" class="unique sp-btn sp-btn-ghost sp-review-reply-btn" data-id="${id}">${r.reply ? 'Edit reply' : 'Reply'}</button>` +
@@ -7769,7 +7948,7 @@ function renderReviewCard(r) {
 				// Right block comes before the main column in source so the body can float-wrap around it
 				// on small screens (≤1024px); desktop keeps the visual order via grid-template-areas.
 				'<div class="unique sp-review-headright">' +
-					`<span class="unique sp-review-rating">${SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
+					`<span class="unique sp-review-rating">${isFb ? SP_FB_ICON : SP_GOOGLE_ICON}<span class="unique sp-review-stars" title="${parseInt(r.starRating, 10) || 0} of 5">${starString(r.starRating)}</span></span>` +
 					store +
 					tags +
 					actions +
@@ -8582,11 +8761,10 @@ function renderSurveyCard(s) {
 		(s.phone ? `<div class="sp-survey-contact-line"><a href="tel:${esc(phoneHref)}">${esc(s.phone)}</a></div>` : '') +
 		(cityState ? `<div class="sp-survey-contact-line">${cityState}</div>` : '');
 
-	// Archive shows for everyone who can view; Delete is god-only, to its right.
+	// Archive (text) shows for everyone who can view; Edit (pencil) for managers; Delete (trash) god-only.
 	const archiveBtn = `<button type="button" class="unique sp-btn sp-btn-ghost sp-survey-archive-btn" data-id="${s.id}">${spSurveyViewArchived ? 'Restore' : 'Archive'}</button>`;
-	const del = spSurveyIsGod
-		? `<button type="button" class="unique sp-btn sp-btn-ghost sp-survey-del-btn" data-id="${s.id}">Delete</button>`
-		: '';
+	const editBtn = (spSurveyCanManage || spSurveyIsGod) ? iconBtn('edit', 'sp-survey-edit-btn', `data-id="${s.id}"`) : '';
+	const del = spSurveyIsGod ? iconBtn('delete', 'sp-survey-del-btn', `data-id="${s.id}"`) : '';
 
 	return (
 		`<div class="sp-card-sm sp-survey-card" data-id="${s.id}">` +
@@ -8598,7 +8776,7 @@ function renderSurveyCard(s) {
 			`<div class="sp-survey-rates">${rows}</div>` +
 			(s.comments ? `<p class="sp-survey-comments">${esc(s.comments)}</p>` : '') +
 			`<div class="sp-survey-person">${person}</div>` +
-			`<div class="sp-survey-actions">${archiveBtn}${del}</div>` +
+			`<div class="sp-survey-actions">${archiveBtn}${editBtn}${del}</div>` +
 		'</div>'
 	);
 }
@@ -8608,6 +8786,9 @@ function onSurveyListClick(e) {
 	if (!btn || !btn.dataset.id) return;
 	if (btn.classList.contains('sp-survey-archive-btn')) {
 		archiveSurvey(btn.dataset.id, btn);
+	} else if (btn.classList.contains('sp-survey-edit-btn')) {
+		const s = spSurveys.find(x => String(x.id) === String(btn.dataset.id));
+		if (s) spEditSurvey(s);
 	} else if (btn.classList.contains('sp-survey-del-btn')) {
 		if (confirm('Delete this survey? This cannot be undone.')) deleteSurvey(btn.dataset.id, btn);
 	}
@@ -8644,6 +8825,78 @@ async function deleteSurvey(id, btn) {
 		alert('Delete failed.');
 		btn.disabled = false;
 	}
+}
+
+// Edit a comment card — fix a mis-read import or update contact/location/ratings. Manager (or god) only.
+function spEditSurvey(s) {
+	const backdrop = spFormModal();
+	const ratings = s.ratings || {};
+
+	// Canonical dimensions first (defined order), then any extra keys the card actually carries.
+	const dimKeys = Object.keys(spSurveyDims).slice();
+	Object.keys(ratings).forEach(k => { if (dimKeys.indexOf(k) === -1) dimKeys.push(k); });
+
+	const ratingSel = (k) => {
+		const cur = parseInt(ratings[k], 10) || 0;
+		let opts = `<option value=""${cur ? '' : ' selected'}>—</option>`;
+		for (let n = 5; n >= 1; n--) opts += `<option value="${n}"${cur === n ? ' selected' : ''}>${n}</option>`;
+		return `<label class="sp-survey-edit-rate"><span>${esc(spSurveyDimLabel(k))}</span><select class="sp-select sp-sve-rating" data-key="${esc(k)}">${opts}</select></label>`;
+	};
+
+	const field = (label, cls, val, type = 'text') =>
+		`<div><label class="sp-field-label">${label}</label><input type="${type}" class="sp-input ${cls}" value="${esc(val || '')}"></div>`;
+
+	let html = '<div class="sp-card sp-report-form-wrap">';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Comment Card</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-sve-cancel">Cancel</button></div>';
+	html += '<div class="sp-aai-grid">';
+	html += field('Location', 'sp-sve-location', s.location);
+	html += field('Visit date', 'sp-sve-visit', (s.visit_date || '').slice(0, 10), 'date');
+	html += field('Customer name', 'sp-sve-name', s.name);
+	html += field('Email', 'sp-sve-email', s.email, 'email');
+	html += field('Phone', 'sp-sve-phone', s.phone);
+	html += field('City', 'sp-sve-city', s.city);
+	html += field('State', 'sp-sve-state', s.state);
+	html += field('Experience', 'sp-sve-experience', s.experience);
+	html += field('Referral', 'sp-sve-referral', s.referral);
+	html += '</div>';
+	html += '<label class="sp-field-label">Comments</label>';
+	html += `<textarea class="sp-input sp-sve-comments" rows="3">${esc(s.comments || '')}</textarea>`;
+	html += '<label class="sp-field-label">Ratings</label>';
+	html += '<div class="sp-survey-edit-rates">' + dimKeys.map(ratingSel).join('') + '</div>';
+	html += '<div class="sp-report-form-actions">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-sve-save">Save</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-sve-cancel">Cancel</button>';
+	html += '</div>';
+	html += '</div>';
+	backdrop.innerHTML = html;
+	markUniqueSpans(backdrop);
+
+	$$('.sp-sve-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
+	$('.sp-sve-save', backdrop)?.addEventListener('click', async () => {
+		const ratingsOut = {};
+		$$('.sp-sve-rating', backdrop).forEach(sel => { const n = parseInt(sel.value, 10); if (n >= 1 && n <= 5) ratingsOut[sel.dataset.key] = n; });
+		const payload = {
+			id:         s.id,
+			location:   $('.sp-sve-location', backdrop)?.value || '',
+			visit_date: $('.sp-sve-visit', backdrop)?.value || '',
+			name:       $('.sp-sve-name', backdrop)?.value || '',
+			email:      $('.sp-sve-email', backdrop)?.value || '',
+			phone:      $('.sp-sve-phone', backdrop)?.value || '',
+			city:       $('.sp-sve-city', backdrop)?.value || '',
+			state:      $('.sp-sve-state', backdrop)?.value || '',
+			experience: $('.sp-sve-experience', backdrop)?.value || '',
+			referral:   $('.sp-sve-referral', backdrop)?.value || '',
+			comments:   $('.sp-sve-comments', backdrop)?.value || '',
+			ratings:    JSON.stringify(ratingsOut),
+		};
+		const save = $('.sp-sve-save', backdrop);
+		if (save) save.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_update_survey', payload);
+			if (res.success) { closeFormModal(); loadSurveys(); spFlash('Comment card updated'); }
+			else { alert(res.data?.message || 'Could not save.'); if (save) save.disabled = false; }
+		} catch (e) { alert('Could not save.'); if (save) save.disabled = false; }
+	});
 }
 
 
@@ -8891,6 +9144,14 @@ function spCardDimLabel(key) {
 	return (d && d[key]) ? d[key] : key;
 }
 
+// Default store for imported comment cards when the AI didn't match one — nearly all cards are Bubba's.
+// Resolves the exact canonical name from the loaded locations so the dropdown option selects cleanly.
+function spCardDefaultLocation() {
+	const locs = (spCardMeta && spCardMeta.locations) || [];
+	const hit = locs.find(l => /bubba/i.test(l.name));
+	return hit ? hit.name : "Bubba's";
+}
+
 // Parse each dropped/picked card (sequential — keeps API load sane and order stable).
 async function handleCardFiles(files) {
 	for (const f of Array.from(files || [])) {
@@ -8904,7 +9165,7 @@ async function handleCardFiles(files) {
 			else {
 				row.status       = 'ok';
 				row.data         = res.data;
-				row.location     = res.data.matched_location || '';   // canonical name if the card's matched a known store
+				row.location     = res.data.matched_location || spCardDefaultLocation();   // AI match wins; otherwise default to Bubba's
 				row.customerName = res.data.customer_name || '';
 				row.email        = res.data.email || '';
 				row.phone        = res.data.phone || '';
@@ -9767,6 +10028,7 @@ let mileageSaveTimer = null;
 let mileageSaving = false;
 let mileageResavePending = false;
 let mileageFormDirty = false;   // any edit this session → the Back button becomes "Cancel"
+let mileageBlockedDate = '';    // a date the server rejected as already-logged; stops autosave from retrying/re-alerting until the date changes
 
 // Flag the form as edited and flip the discard button's label from "Back" to "Cancel".
 function markMileageDirty() {
@@ -9793,6 +10055,10 @@ async function autoSaveMileageEntry() {
 	const min = mileageHomeId ? 1 : 2;
 	if (stopsArr.length < min) return;          // not a valid day yet — wait for more stops
 
+	// One trip per day: if the server already told us this date is taken (create mode only), don't keep
+	// retrying — wait until they change the date. Editing an existing day (entry id set) is unaffected.
+	if (!mileageFormEntryId && form.entry_date.value === mileageBlockedDate) return;
+
 	const data = {
 		entry_id: mileageFormEntryId || '',
 		entry_date: form.entry_date.value,
@@ -9807,6 +10073,13 @@ async function autoSaveMileageEntry() {
 		if (r.success) {
 			mileageFormEntryId = parseInt(r.data.entry_id) || mileageFormEntryId;
 			spFlash('Saved');
+		} else if (r.data?.code === 'duplicate_day') {
+			// A trip already exists for this date — block further retries for it and let them jump to it.
+			mileageBlockedDate = data.entry_date;
+			const existingId = parseInt(r.data.existing_id) || 0;
+			if (existingId && confirm((r.data.message || 'You already have mileage logged for this date.') + '\n\nOpen that day to edit it? Anything entered here will be discarded.')) {
+				setTimeout(() => showMileageForm(existingId), 0);
+			}
 		} else {
 			spFlash(r.data?.message || 'Save failed');
 		}
@@ -9823,6 +10096,7 @@ async function showMileageForm(entryId = 0) {
 
 	mileageFormEntryId = entryId || 0; // create mode (0) until the first save returns an id
 	mileageFormDirty = false;
+	mileageBlockedDate = '';           // fresh form → clear any prior "already logged" block
 	clearTimeout(mileageSaveTimer);
 
 	await loadMileageLocations();
@@ -9962,6 +10236,8 @@ async function showMileageForm(entryId = 0) {
 	const form = $('#sp-mileage-form', wrap);
 	form?.addEventListener('submit', (e) => e.preventDefault()); // Enter in a field shouldn't reload
 	form?.addEventListener('change', () => queueMileageAutoSave());
+	// Changing the date clears any "already logged" block so the newly-picked date can save.
+	form?.querySelector('[name="entry_date"]')?.addEventListener('change', () => { mileageBlockedDate = ''; });
 }
 
 function hideMileageForm() {
@@ -12004,6 +12280,22 @@ function hideVexpForm() {
 	_spVexp.editId = 0;
 }
 
+// Save an expense with the duplicate-receipt guard. If the server flags a likely duplicate (same
+// section + date + amount already on file), ask the user once whether it's really a separate receipt;
+// on confirm, resubmit with allow_duplicate so it goes through. Returns the server result, with
+// `cancelled: true` when the user declined — callers skip the generic "Error saving" alert in that case.
+async function spSaveExpenseGuarded(payload) {
+	let r = await spAjax('site_pulse_save_expense', payload);
+	if (!r.success && r.data && r.data.code === 'duplicate') {
+		if (confirm(r.data.message || 'This looks like a duplicate expense. Add it anyway?')) {
+			r = await spAjax('site_pulse_save_expense', { ...payload, allow_duplicate: 1 });
+		} else {
+			return { success: false, cancelled: true };
+		}
+	}
+	return r;
+}
+
 /* Show the add/edit expense form as its own screen (like the Mileage "Add a Day" flow) by hiding the
    panel's list chrome — summary, period toolbar, intro, list and the Add button — while the form is
    open, then restoring them on close. Same id pattern across vexp / meal / shop / oexp panels. */
@@ -12026,9 +12318,9 @@ async function saveVexp() {
 	if (_spVexp.editId) payload.id = _spVexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-vexp-form-wrap')));
 	try {
-		const r = await spAjax('site_pulse_save_expense', payload);
+		const r = await spSaveExpenseGuarded(payload);
 		if (r.success) { if (dest.section !== 'B') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideVexpForm(); loadVehicleExpenses(); }
-		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
+		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
 }
 
@@ -12205,9 +12497,9 @@ async function saveMeal() {
 	if (_spMeal.editId) payload.id = _spMeal.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-meal-form-wrap')));
 	try {
-		const r = await spAjax('site_pulse_save_expense', payload);
+		const r = await spSaveExpenseGuarded(payload);
 		if (r.success) { if (dest.section !== 'C') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideMealForm(); loadBusinessMeals(); }
-		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
+		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving meal.'); if (btn) btn.disabled = false; }
 }
 
@@ -12382,9 +12674,9 @@ async function saveShop() {
 	if (_spShop.editId) payload.id = _spShop.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-shop-form-wrap')));
 	try {
-		const r = await spAjax('site_pulse_save_expense', payload);
+		const r = await spSaveExpenseGuarded(payload);
 		if (r.success) { if (dest.section !== 'D') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideShopForm(); loadCompetitiveShopping(); }
-		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
+		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving visit.'); if (btn) btn.disabled = false; }
 }
 
@@ -12560,9 +12852,9 @@ async function saveOexp() {
 	if (_spOexp.editId) payload.id = _spOexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-oexp-form-wrap')));
 	try {
-		const r = await spAjax('site_pulse_save_expense', payload);
+		const r = await spSaveExpenseGuarded(payload);
 		if (r.success) { if (dest.section !== 'E') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideOexpForm(); loadOtherExpenses(); }
-		else { alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
+		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
 }
 

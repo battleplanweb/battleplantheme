@@ -179,13 +179,14 @@ function sp_reviews_sql_date( $rfc ): string {
 	return $ts ? "'" . gmdate( 'Y-m-d H:i:s', $ts ) . "'" : 'NULL';
 }
 
-/** Upsert normalized hub reviews into the table, keyed by Google reviewId, stamping location/store/brand. */
-function sp_reviews_upsert( array $reviews, string $location, string $store, string $brand ): void {
+/** Upsert normalized hub reviews into the table, keyed by reviewId, stamping location/store/brand/source. */
+function sp_reviews_upsert( array $reviews, string $location, string $store, string $brand, string $source = 'google' ): void {
 	global $wpdb;
 	$now  = current_time( 'mysql' );
 	$locS = sp_reviews_sql_str( $location );
 	$stoS = sp_reviews_sql_str( $store );
 	$braS = sp_reviews_sql_str( $brand );
+	$srcS = sp_reviews_sql_str( $source );
 	$rows = [];
 	foreach ( $reviews as $r ) {
 		$rid = (string) ( $r['reviewId'] ?? '' );
@@ -200,7 +201,7 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
 			sp_reviews_sql_date( $r['createTime'] ?? '' ),
 			$reply ? sp_reviews_sql_str( (string) ( $reply['comment'] ?? '' ) ) : 'NULL',
 			$reply ? sp_reviews_sql_date( $reply['updateTime'] ?? '' ) : 'NULL',
-			$locS, $stoS, $braS,
+			$locS, $stoS, $braS, $srcS,
 			sp_reviews_sql_str( $now ),
 		] ) . ')';
 	}
@@ -209,12 +210,12 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
 	$table = sp_reviews_table();
 	foreach ( array_chunk( $rows, 100 ) as $chunk ) {
 		$wpdb->query(
-			"INSERT INTO $table (review_id, reviewer, photo, star_rating, comment, create_time, reply_comment, reply_time, location, store, brand, synced_at) VALUES "
+			"INSERT INTO $table (review_id, reviewer, photo, star_rating, comment, create_time, reply_comment, reply_time, location, store, brand, source, synced_at) VALUES "
 			. implode( ',', $chunk )
 			// Note: tags / tagged_at are intentionally left out so re-syncing never wipes AI tags.
 			. ' ON DUPLICATE KEY UPDATE reviewer=VALUES(reviewer), photo=VALUES(photo), star_rating=VALUES(star_rating),'
 			. ' comment=VALUES(comment), create_time=VALUES(create_time), reply_comment=VALUES(reply_comment),'
-			. ' reply_time=VALUES(reply_time), location=VALUES(location), store=VALUES(store), brand=VALUES(brand), synced_at=VALUES(synced_at)'
+			. ' reply_time=VALUES(reply_time), location=VALUES(location), store=VALUES(store), brand=VALUES(brand), source=VALUES(source), synced_at=VALUES(synced_at)'
 		);
 	}
 }
@@ -225,13 +226,16 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
  * plus the secondary list filters (star rating, reply status, AI topic) — all server-side now so the
  * list can be paginated without losing any filtering. Returns [ whereSql, args ].
  */
-function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, string $stars, string $reply, string $topic ): array {
+function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, string $stars, string $reply, string $topic, string $source = '' ): array {
 	global $wpdb;
 	$where = '1=1'; $args = [];
 	if ( '' !== $cutoff ) { $where .= ' AND create_time >= %s'; $args[] = $cutoff; }
 	if ( '' !== $store )  { $where .= ' AND store = %s';        $args[] = $store; }
 	if ( '' !== $brand )  { $where .= ' AND brand = %s';        $args[] = $brand; }
 	if ( '' !== $stars )  { $where .= ' AND star_rating = %d';  $args[] = (int) $stars; }
+	// Platform filter: rows synced before the source column existed are NULL/'' → treat them as Google.
+	if ( 'facebook' === $source )    { $where .= " AND source = 'facebook'"; }
+	elseif ( 'google' === $source )  { $where .= " AND ( source = 'google' OR source IS NULL OR source = '' )"; }
 	if ( 'replied' === $reply )   { $where .= " AND reply_comment IS NOT NULL AND reply_comment <> ''"; }
 	elseif ( 'unreplied' === $reply ) { $where .= " AND (reply_comment IS NULL OR reply_comment = '')"; }
 	// tags is a JSON array of {label,sentiment}; match the topic by its label substring.
@@ -240,16 +244,16 @@ function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, st
 }
 
 /** Count of stored reviews matching the given filters (drives "Showing X of Y" + has_more). */
-function sp_reviews_count_where( string $cutoff = '', string $store = '', string $brand = '', string $stars = '', string $reply = '', string $topic = '' ): int {
+function sp_reviews_count_where( string $cutoff = '', string $store = '', string $brand = '', string $stars = '', string $reply = '', string $topic = '', string $source = '' ): int {
 	global $wpdb;
-	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic );
+	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic, $source );
 	$sql = 'SELECT COUNT(*) FROM ' . sp_reviews_table() . " WHERE $where";
 	return (int) ( $args ? $wpdb->get_var( $wpdb->prepare( $sql, $args ) ) : $wpdb->get_var( $sql ) );
 }
 
-function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $brand = '', string $stars = '', string $reply = '', string $topic = '', int $limit = 0, int $offset = 0 ): array {
+function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $brand = '', string $stars = '', string $reply = '', string $topic = '', int $limit = 0, int $offset = 0, string $source = '' ): array {
 	global $wpdb;
-	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic );
+	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic, $source );
 	$sql = 'SELECT * FROM ' . sp_reviews_table() . " WHERE $where ORDER BY create_time DESC, id DESC";
 	if ( $limit > 0 ) { $sql .= ' LIMIT %d OFFSET %d'; $args[] = $limit; $args[] = max( 0, $offset ); }
 	$rows = ( $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A ) ) ?: [];
@@ -268,6 +272,7 @@ function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $b
 			'location'   => isset( $r['location'] ) ? (string) $r['location'] : '',
 			'store'      => isset( $r['store'] ) ? (string) $r['store'] : '',
 			'brand'      => isset( $r['brand'] ) ? (string) $r['brand'] : '',
+			'source'     => ! empty( $r['source'] ) ? (string) $r['source'] : 'google',
 		];
 	}
 	return $out;
@@ -298,6 +303,22 @@ function sp_reviews_sync( string $location, string $store, string $brand, string
 		'store'      => $store,
 		'brand'      => $brand,
 	];
+}
+
+/**
+ * Pull this site's Facebook Page recommendations from the hub and upsert them alongside Google reviews,
+ * tagged source='facebook' (positive=5★, negative=1★, already normalized hub-side). They live under a
+ * single synthetic 'facebook' location with a "Facebook" store label so they group and badge together;
+ * there's no pagination (Meta returns the recent set) and no reply support. Returns a summary or WP_Error.
+ */
+function sp_reviews_sync_facebook() {
+	$res = sp_reviews_hub_request( 'GET', 'fb-reviews', null, [ 'max' => '100' ] );
+	if ( is_wp_error( $res ) ) return $res;
+
+	$reviews = is_array( $res['reviews'] ?? null ) ? $res['reviews'] : [];
+	sp_reviews_upsert( $reviews, 'facebook', 'Facebook', '', 'facebook' );
+
+	return [ 'fetched' => count( $reviews ) ];
 }
 
 
@@ -332,6 +353,7 @@ function site_pulse_ajax_get_reviews(): void {
 	$fStars    = sanitize_text_field( wp_unslash( $_POST['stars'] ?? '' ) );
 	$fReply    = sanitize_text_field( wp_unslash( $_POST['reply'] ?? '' ) );
 	$fTopic    = sanitize_text_field( wp_unslash( $_POST['topic'] ?? '' ) );
+	$fSource   = sanitize_text_field( wp_unslash( $_POST['source'] ?? '' ) ); // '' | google | facebook (Platforms filter)
 
 	// Pagination — the list is infinite-scrolled a page at a time so an all-time view doesn't try to
 	// ship (and render) tens of thousands of rows at once.
@@ -371,18 +393,35 @@ function site_pulse_ajax_get_reviews(): void {
 			$lm['synced_at']         = time();
 			$meta['loc'][ $L['id'] ] = $lm;
 		}
-		if ( $locations ) sp_reviews_set_meta( $meta );
+
+		// Facebook recommendations: refresh at most hourly (or on a forced sync), stored under the
+		// synthetic 'facebook' location. FB errors are kept OUT of $error on purpose — Meta's recommendation
+		// API is deprecated, and a dead FB source must not nag the (working) Google list with a stale banner
+		// on every view. We stamp synced_at even on failure so a broken source isn't hammered each load; the
+		// last successfully-synced set simply stays in place.
+		$fb_meta   = is_array( $meta['fb'] ?? null ) ? $meta['fb'] : [];
+		$fb_stale  = empty( $fb_meta['synced_at'] ) || ( time() - (int) $fb_meta['synced_at'] > SP_REVIEWS_TTL );
+		if ( ( $force || $fb_stale ) && time() < $deadline ) {
+			$fb = sp_reviews_sync_facebook();
+			if ( is_wp_error( $fb ) ) {
+				error_log( 'sp_reviews_sync_facebook: ' . $fb->get_error_message() );
+			}
+			$fb_meta['synced_at'] = time();
+			$meta['fb'] = $fb_meta;
+		}
+
+		if ( $locations || isset( $meta['fb'] ) ) sp_reviews_set_meta( $meta );
 		$count = sp_reviews_count();
 	}
 
-	$rows     = sp_reviews_get_rows( $cutoff, $fStore, $fBrand, $fStars, $fReply, $fTopic, $per_page, $offset );
+	$rows     = sp_reviews_get_rows( $cutoff, $fStore, $fBrand, $fStars, $fReply, $fTopic, $per_page, $offset, $fSource );
 	$imported = array_flip( sp_reviews_imported_ids() );
 	foreach ( $rows as &$r ) { $r['imported'] = isset( $imported[ (string) $r['reviewId'] ] ); }
 	unset( $r );
 
 	if ( $error && 0 === $count ) wp_send_json_error( [ 'message' => $error ] );
 
-	$matched   = sp_reviews_count_where( $cutoff, $fStore, $fBrand, $fStars, $fReply, $fTopic );
+	$matched   = sp_reviews_count_where( $cutoff, $fStore, $fBrand, $fStars, $fReply, $fTopic, $fSource );
 	$has_more  = ( $offset + count( $rows ) ) < $matched;
 	$total     = sp_reviews_total_expected( $meta, $locations, $matched );
 	$has_older = $locations ? sp_reviews_any_incomplete( $meta, $locations ) : ! empty( $meta['next_token'] );
@@ -856,14 +895,15 @@ function site_pulse_ajax_review_stats(): void {
 
 	$range  = sanitize_text_field( wp_unslash( $_POST['range'] ?? 'all' ) );
 	$cutoff = sp_reviews_range_cutoff( $range );
-	$fStore = sanitize_text_field( wp_unslash( $_POST['store'] ?? '' ) );
-	$fBrand = sanitize_text_field( wp_unslash( $_POST['brand'] ?? '' ) );
+	$fStore  = sanitize_text_field( wp_unslash( $_POST['store'] ?? '' ) );
+	$fBrand  = sanitize_text_field( wp_unslash( $_POST['brand'] ?? '' ) );
+	$fStars  = sanitize_text_field( wp_unslash( $_POST['stars'] ?? '' ) );
+	$fReply  = sanitize_text_field( wp_unslash( $_POST['reply'] ?? '' ) );
+	$fSource = sanitize_text_field( wp_unslash( $_POST['source'] ?? '' ) );
 
-	$where = '1=1';
-	$args  = [];
-	if ( '' !== $cutoff ) { $where .= ' AND create_time >= %s'; $args[] = $cutoff; }
-	if ( '' !== $fStore ) { $where .= ' AND store = %s';        $args[] = $fStore; }
-	if ( '' !== $fBrand ) { $where .= ' AND brand = %s';        $args[] = $fBrand; }
+	// Scope the stat cards with the SAME filter as the review list (minus the topic chip), so every
+	// dropdown moves the graphs: restaurant/brand/time above the charts AND ratings/reviews/platform below.
+	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $fStore, $fBrand, $fStars, $fReply, '', $fSource );
 
 	$sql  = "SELECT star_rating, tags FROM $t WHERE $where";
 	$rows = $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A );

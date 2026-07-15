@@ -152,6 +152,42 @@ function bp_an_delta( $pct, string $label ): string {
 	return '<span class="bp-an-delta ' . $dir . '">' . esc_html( $label ) . ' ' . $arrow . ' ' . abs( (int) $pct ) . '%</span>';
 }
 
+/**
+ * Home-town coordinates for the Analytics zoom map. Prefers the business's own saved coords
+ * (customer_info lat/long); if those aren't set, geocodes the city/state once via Google
+ * (_PLACES_API) and caches it in bp_home_latlng — so the service-area map works for any client
+ * with an address, not only those with coordinates on file. Returns [lat, lng] or null.
+ */
+function bp_an_home_coords( array $ci ) {
+	if ( isset( $ci['lat'], $ci['long'] ) && is_numeric( $ci['lat'] ) && is_numeric( $ci['long'] ) ) {
+		return [ (float) $ci['lat'], (float) $ci['long'] ];
+	}
+	$cached = get_option( 'bp_home_latlng' );
+	if ( is_array( $cached ) && isset( $cached['lat'], $cached['lng'] ) ) {
+		return [ (float) $cached['lat'], (float) $cached['lng'] ];
+	}
+	$city  = trim( (string) ( $ci['city'] ?? '' ) );
+	$state = trim( (string) ( $ci['state-abbr'] ?? '' ) );
+	$addr  = trim( $city . ( $state ? ', ' . $state : '' ) );
+	if ( $addr === '' || ! defined( '_PLACES_API' ) || ! _PLACES_API || get_transient( 'bp_home_geo_fail' ) ) {
+		return null;
+	}
+	$resp = wp_remote_get(
+		'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode( $addr ) . '&components=country:US&key=' . _PLACES_API,
+		[ 'timeout' => 8 ]
+	);
+	if ( is_wp_error( $resp ) ) { set_transient( 'bp_home_geo_fail', true, HOUR_IN_SECONDS * 6 ); return null; }
+	$data = json_decode( wp_remote_retrieve_body( $resp ), true );
+	if ( ( $data['status'] ?? '' ) === 'OK' && isset( $data['results'][0]['geometry']['location'] ) ) {
+		$loc = $data['results'][0]['geometry']['location'];
+		$out = [ 'lat' => round( (float) $loc['lat'], 4 ), 'lng' => round( (float) $loc['lng'], 4 ) ];
+		update_option( 'bp_home_latlng', $out, false );
+		return [ $out['lat'], $out['lng'] ];
+	}
+	set_transient( 'bp_home_geo_fail', true, HOUR_IN_SECONDS * 6 );
+	return null;
+}
+
 function bp_analytics_page() {
 
 	if ( ! ( _USER_LOGIN === 'battleplanweb' || in_array( 'bp_view_stats', (array) _USER_ROLES ) || current_user_can( 'manage_options' ) ) ) {
@@ -405,6 +441,172 @@ function bp_analytics_page() {
 		return $out;
 	};
 
+	// Visitor locations for the map — per-window (7/30/90/180/365d) geocoded city bubbles.
+	// Cities lacking coords (not yet geocoded, or a geocoding miss) are summed into `uncoded` so
+	// the map can note how many sessions aren't plotted. Mirrors the tech pies' snapshot shape.
+	$locationsMap = function () {
+		$cities = get_option( 'bp_ga4_locations_clean' );
+		$coords = get_option( 'bp_ga4_city_latlng' );
+		$states = get_option( 'bp_ga4_city_state_map' );
+		$out    = [];
+		if ( ! is_array( $cities ) ) return $out;
+		if ( ! is_array( $coords ) ) $coords = [];
+		if ( ! is_array( $states ) ) $states = [];
+		foreach ( [ 7, 30, 90, 180, 365 ] as $w ) {
+			$pts = []; $uncoded = 0;
+			foreach ( $cities as $city => $metrics ) {
+				if ( ! is_array( $metrics ) ) continue;
+				$v = (int) ( $metrics[ "sessions-{$w}" ] ?? 0 );
+				if ( $v <= 0 ) continue;
+				$c = $coords[ $city ] ?? null;
+				if ( is_array( $c ) && isset( $c['lat'], $c['lng'] ) && $c['lat'] !== null ) {
+					$label = isset( $states[ $city ] ) && $states[ $city ] ? $city . ', ' . $states[ $city ] : $city;
+					$pts[] = [ 'l' => $label, 'lat' => (float) $c['lat'], 'lng' => (float) $c['lng'], 'v' => $v ];
+				} else {
+					$uncoded += $v;
+				}
+			}
+			usort( $pts, function ( $a, $b ) { return $b['v'] - $a['v']; } );
+			if ( count( $pts ) > 60 ) $pts = array_slice( $pts, 0, 60 );
+			$out[ $w ] = [ 'pts' => $pts, 'uncoded' => $uncoded ];
+		}
+		return $out;
+	};
+
+	// Animated-map time series — monthly per-city sessions with coords. Pivoted to frames the JS can
+	// play through. Null until the nightly run has built bp_ga4_locations_history + geocoded cities.
+	$locationsTimeline = function () {
+		$hist   = get_option( 'bp_ga4_locations_history' );
+		$coords = get_option( 'bp_ga4_city_latlng' );
+		$states = get_option( 'bp_ga4_city_state_map' );
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		if ( ! is_array( $coords ) ) $coords = [];
+		if ( ! is_array( $states ) ) $states = [];
+
+		$monthsSet = [];
+		foreach ( $hist as $series ) {
+			if ( is_array( $series ) ) foreach ( $series as $ym => $v ) $monthsSet[ (string) $ym ] = true;
+		}
+		if ( ! $monthsSet ) return null;
+		$months = array_keys( $monthsSet );
+		sort( $months );  // ascending YYYYMM
+
+		$cities = []; $maxV = 0;
+		foreach ( $hist as $city => $series ) {
+			if ( ! is_array( $series ) ) continue;
+			$c = $coords[ $city ] ?? null;
+			if ( ! is_array( $c ) || ! isset( $c['lat'], $c['lng'] ) || $c['lat'] === null ) continue;  // not (yet) geocoded
+			$vals = [];
+			foreach ( $months as $ym ) { $v = (int) ( $series[ $ym ] ?? 0 ); $vals[] = $v; if ( $v > $maxV ) $maxV = $v; }
+			$label = isset( $states[ $city ] ) && $states[ $city ] ? $city . ', ' . $states[ $city ] : $city;
+			$cities[] = [ 'l' => $label, 'lat' => (float) $c['lat'], 'lng' => (float) $c['lng'], 'v' => $vals ];
+		}
+		if ( ! $cities ) return null;
+
+		$labels = array_map( function ( $ym ) { return date( 'M Y', strtotime( $ym . '01' ) ); }, $months );
+		return [ 'frames' => $months, 'labels' => $labels, 'cities' => $cities, 'maxV' => $maxV ];
+	};
+
+	// Page-trend time series — per-page pageviews at three grains (daily/weekly/monthly), so the chart
+	// follows the Daily/Weekly/Monthly toggle like the traffic graph. Pages sorted by total (top 10),
+	// each grain giving {periods, series:{path:[values]}} aligned to that grain's period axis.
+	$pagesTimeline = function () {
+		$M = get_option( 'bp_ga4_pages_history' );
+		if ( ! is_array( $M ) || ! $M ) return null;
+		// Guard the shape change (was [path][ym], now [ym][path]) — if the old option is still cached,
+		// wait for a fresh Stats run rather than mislabelling. New keys are YYYYMM period keys.
+		if ( ! preg_match( '/^\d{6}$/', (string) array_key_first( $M ) ) ) return null;
+		$W = get_option( 'bp_ga4_pages_history_weekly' ); if ( ! is_array( $W ) ) $W = [];
+		$D = get_option( 'bp_ga4_pages_history_daily' );  if ( ! is_array( $D ) ) $D = [];
+
+		$totals = [];
+		foreach ( $M as $paths ) {
+			if ( is_array( $paths ) ) foreach ( $paths as $p => $v ) $totals[ (string) $p ] = ( $totals[ (string) $p ] ?? 0 ) + (int) $v;
+		}
+		if ( ! $totals ) return null;
+		arsort( $totals );
+		$top  = array_slice( array_keys( $totals ), 0, 10 );
+		$list = array_map( function ( $p ) { return [ 'key' => (string) $p, 'label' => bp_ga4_path_to_label( (string) $p ) ]; }, $top );
+
+		$grain = function ( $hist, $limit ) use ( $top ) {
+			if ( ! is_array( $hist ) || ! $hist ) return null;
+			krsort( $hist );
+			$keys = array_reverse( array_slice( array_keys( $hist ), 0, $limit ) ); // ascending period keys
+			$series = [];
+			foreach ( $top as $p ) {
+				$arr = [];
+				foreach ( $keys as $k ) $arr[] = (int) ( $hist[ $k ][ $p ] ?? 0 );
+				$series[ (string) $p ] = $arr;
+			}
+			return [ 'periods' => array_map( 'strval', $keys ), 'series' => $series ];
+		};
+
+		return [
+			'list'    => $list,
+			'daily'   => $grain( $D, 520 ),
+			'weekly'  => $grain( $W, 260 ),
+			'monthly' => $grain( $M, 72 ),
+		];
+	};
+
+	// Microsoft Clarity UX-health time series — our own daily accumulation (bp_clarity_history) rolled
+	// up to daily/weekly/monthly, so the chart follows the grain toggle. Metrics are the frustration
+	// signals GA4 can't give: rage/dead/error clicks, quick-backs, script errors, excessive scroll.
+	$clarityTimeline = function () {
+		$hist = get_option( 'bp_clarity_history' );
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		ksort( $hist );  // ascending YYYYMMDD
+
+		$metrics = [
+			[ 'key' => 'rage',       'label' => 'Rage clicks' ],
+			[ 'key' => 'dead',       'label' => 'Dead clicks' ],
+			[ 'key' => 'quickback',  'label' => 'Quick backs' ],
+			[ 'key' => 'errClick',   'label' => 'Error clicks' ],
+			[ 'key' => 'scriptErr',  'label' => 'Script errors' ],
+			[ 'key' => 'excessScrl', 'label' => 'Excessive scroll' ],
+			[ 'key' => 'sessions',   'label' => 'Sessions' ],
+			[ 'key' => 'bots',       'label' => 'Bot sessions' ],
+		];
+		$keysOf = array_column( $metrics, 'key' );
+
+		$weekKey = function ( $ymd ) {
+			$ts = strtotime( $ymd ); $dow = (int) date( 'N', $ts );
+			return date( 'Ymd', strtotime( '-' . ( $dow - 1 ) . ' days', $ts ) );
+		};
+
+		// Roll the daily rows up into a grain: [periodKey][metric] = sum. $keyer maps YYYYMMDD → period.
+		$rollup = function ( $keyer, $limit ) use ( $hist, $keysOf ) {
+			$store = [];
+			foreach ( $hist as $ymd => $row ) {
+				if ( ! is_array( $row ) ) continue;
+				$pk = $keyer( (string) $ymd );
+				foreach ( $keysOf as $mk ) $store[ $pk ][ $mk ] = ( $store[ $pk ][ $mk ] ?? 0 ) + (int) ( $row[ $mk ] ?? 0 );
+			}
+			if ( ! $store ) return null;
+			ksort( $store );
+			$periods = array_slice( array_keys( $store ), -$limit );
+			$series  = [];
+			foreach ( $keysOf as $mk ) { $series[ $mk ] = []; foreach ( $periods as $pk ) $series[ $mk ][] = (int) ( $store[ $pk ][ $mk ] ?? 0 ); }
+			return [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+		};
+
+		return [
+			'metrics' => $metrics,
+			'daily'   => $rollup( function ( $ymd ) { return $ymd; }, 520 ),
+			'weekly'  => $rollup( $weekKey, 260 ),
+			'monthly' => $rollup( function ( $ymd ) { return substr( $ymd, 0, 6 ); }, 72 ),
+		];
+	};
+
+	// Client's home town — center of the regional (100-mi) zoom map. From customer_info (its own
+	// business address coords). Null if unset, in which case the zoom panel is omitted.
+	$ci        = customer_info();
+	$anHomeLbl = trim( (string) ( $ci['city'] ?? '' ) . ( ! empty( $ci['state-abbr'] ) ? ', ' . $ci['state-abbr'] : '' ), ', ' );
+	$anHomeCo  = bp_an_home_coords( $ci );  // customer_info lat/long, else a cached geocode of city/state
+	$anHome    = $anHomeCo
+	           ? [ 'lat' => $anHomeCo[0], 'lng' => $anHomeCo[1], 'label' => ( $anHomeLbl !== '' ? $anHomeLbl : 'home' ), 'radius' => 50 ]
+	           : null;
+
 	$hasWeekly = is_array( $historyW ) && $historyW;
 	$hasDaily  = is_array( $historyD ) && $historyD;
 	$payload   = [
@@ -419,25 +621,34 @@ function bp_analytics_page() {
 			'width'      => $widthPie(),
 			'deviceType' => $deviceTypePie(),
 		],
+		'locations'         => $locationsMap(),
+		'locationsTimeline' => $locationsTimeline(),
+		'pages'             => $pagesTimeline(),
+		'clarity'           => $clarityTimeline(),
+		'home'              => $anHome,
 	];
+	$anPages   = ! empty( $payload['pages'] );
+	$anClarity = ! empty( $payload['clarity'] );
 
 	echo '<script type="application/json" id="bp-an-payload">' . wp_json_encode( $payload ) . '</script>';
 
 	// Controls (shared by both charts): granularity · range presets · custom date picker.
+	// Default view = Daily · 30d. Fall back to the finest grain we actually have data for.
+	$defGrain = $hasDaily ? 'daily' : ( $hasWeekly ? 'weekly' : 'monthly' );
 	echo '<div class="bp-an-controls">';
 	echo   '<div class="bp-an-ctrl-grp"><span class="bp-an-ctrl-lbl">View</span>'
-	     .   '<a href="#" class="bp-an-gbtn' . ( $hasDaily  ? '' : ' disabled' ) . '" data-grain="daily">Daily</a>'
-	     .   '<a href="#" class="bp-an-gbtn' . ( $hasWeekly ? '' : ' disabled' ) . '" data-grain="weekly">Weekly</a>'
-	     .   '<a href="#" class="bp-an-gbtn active" data-grain="monthly">Monthly</a>'
+	     .   '<a href="#" class="bp-an-gbtn' . ( $hasDaily  ? '' : ' disabled' ) . ( $defGrain === 'daily'   ? ' active' : '' ) . '" data-grain="daily">Daily</a>'
+	     .   '<a href="#" class="bp-an-gbtn' . ( $hasWeekly ? '' : ' disabled' ) . ( $defGrain === 'weekly'  ? ' active' : '' ) . '" data-grain="weekly">Weekly</a>'
+	     .   '<a href="#" class="bp-an-gbtn' . ( $defGrain === 'monthly' ? ' active' : '' ) . '" data-grain="monthly">Monthly</a>'
 	     . '</div>';
 	echo   '<div class="bp-an-ctrl-grp"><span class="bp-an-ctrl-lbl">Range</span>'
-	     .   '<a href="#" class="bp-an-rbtn" data-days="30">30d</a>'
+	     .   '<a href="#" class="bp-an-rbtn active" data-days="30">30d</a>'
 	     .   '<a href="#" class="bp-an-rbtn" data-days="60">60d</a>'
 	     .   '<a href="#" class="bp-an-rbtn" data-days="90">90d</a>'
 	     .   '<a href="#" class="bp-an-rbtn" data-days="365">1y</a>'
 	     .   '<a href="#" class="bp-an-rbtn" data-days="730">2y</a>'
 	     .   '<a href="#" class="bp-an-rbtn" data-days="1095">3y</a>'
-	     .   '<a href="#" class="bp-an-rbtn active" data-days="all">All</a>'
+	     .   '<a href="#" class="bp-an-rbtn" data-days="all">All</a>'
 	     . '</div>';
 	echo   '<div class="bp-an-ctrl-grp"><input type="date" class="bp-an-date" id="bp-an-start" aria-label="Start date">'
 	     .   '<span class="bp-an-dash">–</span>'
@@ -464,6 +675,34 @@ function bp_analytics_page() {
 	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-behavior"></div><div class="bp-analytics-pie" data-pie="behavior"></div></div>';
 	echo '</div>';
 
+	// Page trends — monthly pageviews for the top pages; each page is a single-select pill.
+	// The card always renders; the pills + line fill in once the nightly run (or a Stats refresh)
+	// has built bp_ga4_pages_history — otherwise the chart area shows a "building…" message.
+	echo '<div class="bp-an-card">';
+	echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Page trends</h2><div class="bp-an-metric-btns">';
+	if ( $anPages ) {
+		foreach ( $payload['pages']['list'] as $i => $pg ) {
+			echo '<a href="#" class="bp-an-pbtn' . ( $i === 0 ? ' active' : '' ) . '" data-pkey="' . esc_attr( $pg['key'] ) . '">' . esc_html( $pg['label'] ) . '</a>';
+		}
+	}
+	echo   '</div></div>';
+	echo   '<div class="bp-an-cardnote">Monthly pageviews for your top pages — pick one. Follows the range control above. Click a y-axis number to cap the scale.</div>';
+	echo   '<div class="bp-analytics-pagetrend"></div>';
+	echo '</div>';
+
+	// UX health (Microsoft Clarity) — frustration signals over time; each metric is a single-select pill.
+	if ( $anClarity ) {
+		echo '<div class="bp-an-card">';
+		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">UX health <span class="bp-an-sub">Microsoft Clarity</span></h2><div class="bp-an-metric-btns">';
+		foreach ( $payload['clarity']['metrics'] as $i => $mt ) {
+			echo '<a href="#" class="bp-an-cbtn' . ( $i === 0 ? ' active' : '' ) . '" data-cmetric="' . esc_attr( $mt['key'] ) . '">' . esc_html( $mt['label'] ) . '</a>';
+		}
+		echo   '</div></div>';
+		echo   '<div class="bp-an-cardnote">Frustration signals Clarity tracks that GA4 can\'t — rage/dead/error clicks, quick-backs, script errors, excessive scroll. Follows the range &amp; grain controls above.</div>';
+		echo   '<div class="bp-analytics-clarity"></div>';
+		echo '</div>';
+	}
+
 	// Site speed — lab (Lighthouse) vs real-user (our tracking) over time, Mobile vs Desktop.
 	echo '<div class="bp-an-card">';
 	echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Site speed</h2><div class="bp-an-metric-btns">'
@@ -484,6 +723,22 @@ function bp_analytics_page() {
 	foreach ( [ 'browsers' => 'Browsers', 'width' => 'Viewports', 'deviceType' => 'Device type' ] as $key => $title ) {
 		echo '<div class="bp-an-techcol"><div class="bp-an-techtitle">' . esc_html( $title ) . '</div>'
 		   . '<div class="bp-analytics-pie" data-pie="tech" data-tech="' . esc_attr( $key ) . '"></div></div>';
+	}
+	echo   '</div>';
+	echo '</div>';
+
+	// Visitor map — geocoded city bubbles over a US basemap, following the same range control as the
+	// rest of the page (monthly time series summed over the window). Left: national. Right (when the
+	// client's home town is known): a 100-mi service-area zoom.
+	echo '<div class="bp-an-card">';
+	echo   '<h2 class="bp-an-h2">Where visitors are</h2>';
+	echo   '<div class="bp-an-cardnote">Engaged sessions by city for the selected range (30d / 60d / … / All, up top). Bubble size = sessions; hover for the count.'
+	     . ( $anHome ? ' The right map auto-zooms to your local service area around ' . esc_html( $anHome['label'] ) . ' (fit to where visitors actually are).' : '' )
+	     . '</div>';
+	echo   '<div class="bp-an-maprow' . ( $anHome ? '' : ' solo' ) . '">';
+	echo     '<div class="bp-an-mapcol"><div class="bp-an-maptitle">United States</div><div class="bp-analytics-locations"></div></div>';
+	if ( $anHome ) {
+		echo   '<div class="bp-an-mapcol"><div class="bp-an-maptitle">Around ' . esc_html( $anHome['label'] ) . '</div><div class="bp-analytics-locations-zoom"></div></div>';
 	}
 	echo   '</div>';
 	echo '</div>';
@@ -951,15 +1206,15 @@ add_action('admin_print_footer_scripts', function() {
 });
 
 // Microsoft Clarity logo-link beside the Dashboard heading. battleplanweb only, and only
-// when a Clarity project ID is set in customer_info['google-tags']['clarity']. Just the logo (no button
-// or label); clicking it opens the in-admin Clarity page (admin.php?page=microsoft-clarity).
+// when a Clarity project ID is set in customer_info['clarity-tags']['id'] (legacy: google-tags['clarity']).
+// Just the logo (no button or label); clicking it opens the in-admin Clarity page.
 add_action('admin_print_footer_scripts', function() {
 	$screen = get_current_screen();
 	if ( ! $screen || $screen->id !== 'dashboard' ) return;
 
 	$customer_info = get_option('customer_info');
-	$clarity = ( is_array($customer_info) && ! empty($customer_info['google-tags']['clarity']) )
-		? $customer_info['google-tags']['clarity'] : '';
+	$clarity = is_array($customer_info)
+		? ( $customer_info['clarity-tags']['id'] ?? $customer_info['google-tags']['clarity'] ?? '' ) : '';
 	if ( ! $clarity ) return;
 
 	if ( _USER_LOGIN !== 'battleplanweb' ) return;   // Clarity link is battleplanweb-only

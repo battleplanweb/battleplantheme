@@ -34,7 +34,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			resizeFunc();
 		};
 
-		window.addEventListener('scroll', () => { scrollFunc(); });	
+		let scrollTicking = false;
+		window.addEventListener('scroll', () => {
+			if (!scrollTicking) {
+				scrollTicking = true;
+				requestAnimationFrame(() => { scrollFunc(); scrollTicking = false; });
+			}
+		}, { passive: true });
 
 		window.addEventListener('resize', () => { resizeFunc(); });	
 

@@ -31,9 +31,11 @@ class BPFB_Hub {
 	const NS         = 'bpfb/v1';
 	const OPT_CONN   = 'bpfb_connection';     // { user_token, obtained_at, pages:[{id,name,access_token}] }
 	const OPT_STATE  = 'bpfb_oauth_state';    // short-lived CSRF state for the OAuth round-trip
-	// OAuth scopes: reviews (pages_read_*) + Facebook Messenger DMs. Instagram messaging is NOT requested
-	// here — `instagram_basic` is deprecated and Meta blocks IG scopes inside a Messenger flow, so IG is
-	// set up separately. Filterable via `bpfb_oauth_scopes` so IG scopes can be added once configured.
+	// OAuth scopes: reviews (pages_read_*) + Facebook Messenger DMs. Instagram DMs are NOT handled through
+	// this Facebook-Login flow — the Meta app is configured for the NEW Instagram API ("Instagram Login",
+	// instagram_business_* perms + Instagram-native tokens), which is a separate token flow, not FB Page
+	// tokens. Do NOT add instagram_* scopes here (Meta will reject the OAuth and break the working FB/reviews
+	// connection). IG is wired separately once we adopt that API. Still filterable via `bpfb_oauth_scopes`.
 	const SCOPES     = 'pages_show_list,pages_read_engagement,pages_read_user_content,business_management,pages_messaging,pages_manage_metadata';
 	const OPT_EVENTS = 'bpfb_webhook_events'; // small ring buffer of recent webhook events (debug/verify)
 

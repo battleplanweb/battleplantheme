@@ -126,7 +126,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			}
 
-			window.addEventListener('scroll', window.scrollTracking, { passive: true });
+			// scrollTracking is called by script-fire-off.js's rAF-throttled scrollFunc — no separate
+			// listener here, to avoid running it twice per scroll.
 
 
 			// Log what percentage of users see various trackable elements

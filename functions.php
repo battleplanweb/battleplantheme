@@ -2829,6 +2829,12 @@ function battleplan_load_tag_manager() {
 		}
 	}
 
+	// Clarity ID now lives in customer_info['clarity-tags']['id']; the google-tags loop above still
+	// picks up the legacy ['google-tags']['clarity'] location so sites mid-rollout keep tracking.
+	if ( !$is_dev && empty($clarity_id) && ! empty($customer_info['clarity-tags']['id']) ) {
+		$clarity_id = esc_js($customer_info['clarity-tags']['id']);
+	}
+
 	if ( empty($analytics_id) && empty($clarity_id) ) return;
 
 	foreach ( $events as $event ) {
@@ -2952,7 +2958,7 @@ HTML;
 add_filter('option_clarity_project_id', function($value) {
 	if ( is_admin() ) return $value;
 	$info = function_exists('customer_info') ? customer_info() : [];
-	$ours = $info['google-tags']['clarity'] ?? '';
+	$ours = $info['clarity-tags']['id'] ?? $info['google-tags']['clarity'] ?? '';   // new location, legacy fallback
 	return $ours ? '' : $value;   // suppress plugin tag only where the bootstrapper injects Clarity
 });
 

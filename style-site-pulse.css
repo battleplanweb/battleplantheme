@@ -1045,6 +1045,12 @@ input[type="radio"] {
 	--button-background-hover:                                 var(--sp-danger-light);
 }
 
+.sp-btn-delete {
+	--button-color-hover:                                      var(--sp-danger);
+	--button-border-hover:                                     1px solid var(--sp-danger);
+	--button-background-hover:                                 var(--sp-danger-light);
+}
+
 .sp-icon-btn:disabled {
 	opacity:                                                   0.4;
 	cursor:                                                    not-allowed;
@@ -2970,10 +2976,42 @@ input[type="file"].sp-input::file-selector-button:hover {
 
 .sp-survey-actions {
 	margin:                                                    12px 0 0;
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	flex-wrap:                                                 wrap;
 }
 
 .sp-survey-actions button {
-	margin-right:                                              10px;
+	margin-right:                                              0;
+}
+
+/* Edit Comment Card modal — per-dimension rating pickers in TWO columns that fill top-to-bottom
+   (down the first column, then the second), so they're easy to scan and use. */
+.sp-survey-edit-rates {
+	column-count:                                              2;
+	column-gap:                                                28px;
+	margin:                                                    6px 0 4px;
+}
+
+.sp-survey-edit-rate {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       10px;
+	font-size:                                                 var(--font-size-sm);
+	break-inside:                                              avoid;   /* keep each label+select together in one column */
+	margin-bottom:                                             10px;
+}
+
+.sp-survey-edit-rate select {
+	width:                                                     72px;
+	flex:                                                      0 0 auto;
+}
+
+/* Narrow screens: a single column so the pickers don't get cramped. */
+@media (max-width: 600px) {
+	.sp-survey-edit-rates { column-count: 1; }
 }
 
 /* Filled badges (overall circle + per-row value) keep white text on the colored fill. */
@@ -4599,6 +4637,13 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-action-complete-btn {
 	grid-column:                                               1 / -1;
+}
+
+/* Reopen is the lone button on a completed item — without this it lands in the 40px icon column and
+   the label gets clipped. Span the full row but size to content (left-aligned) for a natural pill. */
+.sp-action-reopen-btn {
+	grid-column:                                               1 / -1;
+	justify-self:                                              start;
 }
 
 .sp-note-form {
@@ -6844,7 +6889,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 		min-height:                                               var(--sp-mobile-header-h);
 	}
 
-	.sp-logout-btn-top span {
+	.sp-mobile-header-actions .sp-logout-btn-top span {
 		display:                                                  none;
 	}
 

@@ -64,6 +64,12 @@ window.setStyles = function (el, styles) {
 	Object.assign(el.style, styles);
 };
 
+// Mobile no-op: the real parallaxBG/parallaxDiv live in script-desktop.js (desktop only).
+// On mobile the background is handled by CSS (.screen-mobile::before) — these stubs only
+// keep a site's parallax call from throwing and aborting script-site. Overridden on desktop.
+window.parallaxBG = function () {};
+window.parallaxDiv = function () {};
+
 window.__BP_STYLE_SHEET__ = null;
 const RULE_PREFIX = '/*bp*/';
 window.__BP_STYLE_RULES__ = new Set();

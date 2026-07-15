@@ -205,6 +205,19 @@ class BPGBP_Hub {
 			)
 		);
 
+		// Client sites read their own Facebook Page recommendations (resolved from the site's registry
+		// facebook_page_id, fetched via the FB hub on this same install). Same per-site HMAC. Read-only —
+		// there's no FB reply route (Meta doesn't support owner replies to recommendations the way GBP does).
+		register_rest_route(
+			self::NS,
+			'/fb-reviews',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'handle_fb_reviews' ),
+				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
+			)
+		);
+
 		// Client sites reply to one of their reviews (or, with an empty comment, delete the reply).
 		register_rest_route(
 			self::NS,
@@ -389,6 +402,53 @@ class BPGBP_Hub {
 		$count = ( '' !== $page_id && class_exists( 'BPFB_Hub' ) ) ? BPFB_Hub::followers_count( $page_id ) : null;
 
 		return new WP_REST_Response( array( 'ok' => true, 'followers_count' => $count ), 200 );
+	}
+
+	/* ───────────────────────── GET bpgbp/v1/fb-reviews ─────────────────────────
+	 * The calling site's Facebook Page recommendations, resolved from its registry facebook_page_id and
+	 * fetched via the FB hub (BPFB_Hub) on this same install — mirroring what the agency dashboard pulls,
+	 * normalized to the same review shape the client already stores (positive=5★, negative=1★). Read-only.
+	 * Returns an empty list (not an error) when the site has no Page mapped or the FB hub isn't active. */
+	public static function handle_fb_reviews( WP_REST_Request $request ) {
+		$sites    = self::get_sites();
+		$site_key = $request->get_param( '_bpgbp_site_key' );
+		$page_id  = (string) ( $sites[ $site_key ]['facebook_page_id'] ?? '' );
+
+		if ( '' === $page_id || ! class_exists( 'BPFB_Hub' ) ) {
+			$resp = new WP_REST_Response( array( 'ok' => true, 'reviews' => array(), 'pageId' => $page_id ), 200 );
+			$resp->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+			return $resp;
+		}
+
+		$max = (int) ( $request->get_param( 'max' ) ?: 100 );
+		$max = min( 200, max( 1, $max ) );
+
+		try {
+			$raw = BPFB_Hub::fetch_reviews( $page_id, $max );
+		} catch ( Exception $e ) {
+			// e.g. Meta's recommendation-API deprecation (error 12) or an expired token — surface it.
+			return new WP_Error( 'bpfb_error', $e->getMessage(), array( 'status' => 502 ) );
+		}
+
+		$reviews = array();
+		foreach ( (array) $raw as $r ) {
+			// Stable id keyed to page + time + text — same scheme the agency view uses, so a recommendation
+			// upserts to one row instead of duplicating each sync.
+			$reviews[] = array(
+				'reviewId'   => 'fb_' . sha1( $page_id . '|' . ( $r['createTime'] ?? '' ) . '|' . ( $r['comment'] ?? '' ) ),
+				'reviewer'   => (string) ( $r['author'] ?? 'Facebook user' ),
+				'photo'      => '',
+				'starRating' => (int) ( $r['rating'] ?? 0 ),
+				'comment'    => (string) ( $r['comment'] ?? '' ),
+				'createTime' => (string) ( $r['createTime'] ?? '' ),
+				'recommends' => (string) ( $r['recommends'] ?? '' ),
+				'reply'      => null,
+			);
+		}
+
+		$resp = new WP_REST_Response( array( 'ok' => true, 'reviews' => $reviews, 'pageId' => $page_id ), 200 );
+		$resp->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+		return $resp;
 	}
 
 	/* ───────────────────────── GET bpgbp/v1/reviews ───────────────────────── */

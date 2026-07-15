@@ -38,7 +38,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-customer-
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.53' );
+define( 'SITE_PULSE_DB_VERSION', '1.54' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -415,6 +415,7 @@ function site_pulse_install_db(): void {
 		location varchar(255) DEFAULT NULL,
 		store varchar(255) DEFAULT NULL,
 		brand varchar(255) DEFAULT NULL,
+		source varchar(20) NOT NULL DEFAULT 'google',
 		synced_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY review_id (review_id),
@@ -422,7 +423,8 @@ function site_pulse_install_db(): void {
 		KEY create_time (create_time),
 		KEY location (location),
 		KEY store (store),
-		KEY brand (brand)
+		KEY brand (brand),
+		KEY source (source)
 	) $charset;";
 
 	$sql .= "CREATE TABLE " . site_pulse_table('action_items') . " (
@@ -854,6 +856,73 @@ function site_pulse_seed_mileage_locations(): void {
 			'updated_at'             => $now,
 		] );
 	}
+}
+
+/**
+ * Ensure a store Location has a matching approved mileage_location, linked via site_pulse_location_id.
+ * Home-base resolution (site_pulse_user_home_location_id) looks the driver's store up in this table and
+ * requires status='approved', so without a linked row a driver based there gets no Home bookend and
+ * their mileage start/end never pre-populate. The one-time seed only linked locations that existed then;
+ * this keeps every location created or edited afterward (e.g. an "Accounting" home base added later) in
+ * step. Idempotent — updates the existing linked row if present, otherwise creates it.
+ */
+function site_pulse_sync_mileage_location_for_store( int $store_id ): void {
+	if ( ! $store_id ) return;
+	global $wpdb;
+
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, name, address, city, state, is_store FROM " . site_pulse_table('locations') . " WHERE id = %d",
+		$store_id
+	), ARRAY_A );
+	if ( ! $loc ) return;
+
+	$address = implode( ', ', array_filter( [ $loc['address'], $loc['city'], $loc['state'] ] ) );
+	$now     = current_time( 'mysql' );
+
+	$existing = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table('mileage_locations') . " WHERE site_pulse_location_id = %d ORDER BY id LIMIT 1",
+		$store_id
+	) );
+
+	if ( $existing ) {
+		// Keep the linked stop in step with the store, and make sure it's approved so home-base
+		// resolution (which filters on status='approved') actually finds it.
+		$wpdb->update( site_pulse_table('mileage_locations'), [
+			'name'       => $loc['name'],
+			'address'    => $address,
+			'status'     => 'approved',
+			'updated_at' => $now,
+		], [ 'id' => $existing ] );
+		return;
+	}
+
+	$wpdb->insert( site_pulse_table('mileage_locations'), [
+		'name'                   => $loc['name'],
+		'address'                => $address,
+		'location_type'          => ( (int) $loc['is_store'] ) ? 'restaurant' : 'other',
+		'site_pulse_location_id' => $store_id,
+		'status'                 => 'approved',
+		'created_by'             => 0,
+		'approved_at'            => $now,
+		'created_at'             => $now,
+		'updated_at'             => $now,
+	] );
+}
+
+/**
+ * One-time: backfill mileage_locations for any active store Location that predates the sync-on-save
+ * behavior and never got a linked row (e.g. an "Accounting" home base). Runs once, then flags itself
+ * off — matching the existing site_pulse_*_seeded idiom.
+ */
+add_action( 'init', 'site_pulse_backfill_mileage_locations' );
+function site_pulse_backfill_mileage_locations(): void {
+	if ( get_option( 'site_pulse_mileage_loc_backfill_done' ) ) return;
+	global $wpdb;
+	$ids = $wpdb->get_col( "SELECT id FROM " . site_pulse_table('locations') . " WHERE status = 'active'" );
+	foreach ( (array) $ids as $lid ) {
+		site_pulse_sync_mileage_location_for_store( (int) $lid );
+	}
+	update_option( 'site_pulse_mileage_loc_backfill_done', '1' );
 }
 
 function site_pulse_seed_initial_data(): void {
@@ -1467,6 +1536,7 @@ function site_pulse_capability_catalog_all(): array {
 		'view_customer_messages' => 'View customer messages (FB/IG)',
 		'see_superadmin'    => 'See protected admin in lists',
 		'submit_mileage'    => 'Submit mileage',
+		'import_data'       => 'Import reports &amp; comment cards',
 		// "Manage …" block, ordered to follow the admin menu.
 		'manage_users'         => 'Manage users',
 		'manage_roles'         => 'Manage roles',
@@ -2723,12 +2793,14 @@ function site_pulse_ajax_admin_save_location(): void {
 
 	if ( $id ) {
 		$wpdb->update( site_pulse_table('locations'), $data, [ 'id' => $id ] );
+		site_pulse_sync_mileage_location_for_store( $id ); // keep this store's mileage home base linked
 		site_pulse_log( 'location_updated', sprintf( 'Updated location: %s', $data['name'] ) );
 		wp_send_json_success( [ 'message' => 'Location updated.', 'id' => $id ] );
 	} else {
 		$data['created_at'] = $now;
 		$wpdb->insert( site_pulse_table('locations'), $data );
 		$new_id = (int) $wpdb->insert_id;
+		site_pulse_sync_mileage_location_for_store( $new_id ); // new store gets a linked mileage home base
 		site_pulse_log( 'location_created', sprintf( 'Created location: %s', $data['name'] ) );
 		wp_send_json_success( [ 'message' => 'Location created.', 'id' => $new_id ] );
 	}
@@ -4025,6 +4097,14 @@ function site_pulse_generate_action_items( int $report_id ): array {
 	return $items;
 }
 
+// Map an action-item urgency/priority to a due date: high → +3 days, medium → +7, low → +14.
+// One source of truth for every path that creates an action item.
+function site_pulse_action_due_for_priority( string $priority ): string {
+	$days = [ 'high' => 3, 'medium' => 7, 'low' => 14 ];
+	$d    = $days[ $priority ] ?? 7;
+	return date( 'Y-m-d', strtotime( "+{$d} days" ) );
+}
+
 function site_pulse_create_action_items_from_report( int $report_id ): int {
 	$report = site_pulse_get_report( $report_id );
 	if ( ! $report ) return 0;
@@ -4034,7 +4114,6 @@ function site_pulse_create_action_items_from_report( int $report_id ): int {
 
 	global $wpdb;
 	$now       = current_time( 'mysql' );
-	$due_date  = date( 'Y-m-d', strtotime( '+14 days' ) );
 	$count     = 0;
 	$high_items = [];
 
@@ -4051,7 +4130,7 @@ function site_pulse_create_action_items_from_report( int $report_id ): int {
 			'description' => sanitize_text_field( $item['description'] ),
 			'priority'    => $priority,
 			'status'      => 'pending',
-			'due_date'    => $due_date,
+			'due_date'    => site_pulse_action_due_for_priority( $priority ),
 			'created_at'  => $now,
 			'updated_at'  => $now,
 		] );
@@ -4087,7 +4166,7 @@ function site_pulse_ajax_create_action_item(): void {
 	$cat  = mb_substr( $cat, 0, 50 );  // labels stay short
 	if ( ! $me )         wp_send_json_error( [ 'message' => 'Not signed in.' ] );
 	if ( $desc === '' )  wp_send_json_error( [ 'message' => 'Please enter the to-do.' ] );
-	if ( $due === '' || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $due ) ) $due = date( 'Y-m-d', strtotime( '+14 days' ) );
+	if ( $due === '' || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $due ) ) $due = site_pulse_action_due_for_priority( $prio );
 
 	// Optional additional assignees (besides me) — each gets their OWN copy. Validate against the same
 	// contact set the New Message picker uses, so you can only assign to people you may interact with.
@@ -4353,7 +4432,7 @@ function site_pulse_ajax_resolve_action_item(): void {
 			'description'   => $follow_up,
 			'priority'      => $item['priority'],
 			'status'        => 'open',
-			'due_date'      => date( 'Y-m-d', strtotime( '+7 days' ) ),
+			'due_date'      => site_pulse_action_due_for_priority( (string) $item['priority'] ),
 			'meta'          => wp_json_encode( $history ),
 			'display_order' => 0,
 			'created_at'    => $now,
@@ -4618,23 +4697,109 @@ function site_pulse_ajax_update_action_item(): void {
 	$item_id = (int) ( $_POST['item_id'] ?? 0 );
 	$desc    = sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) );
 	$cat     = sanitize_text_field( wp_unslash( $_POST['category'] ?? '' ) );
+	$prio    = in_array( $_POST['priority'] ?? '', [ 'high', 'medium', 'low' ], true ) ? $_POST['priority'] : 'medium';
+	$due     = trim( (string) ( $_POST['due_date'] ?? '' ) );
 	if ( '' === $cat ) $cat = 'To-Do';
 	$cat = mb_substr( $cat, 0, 50 );
 	if ( ! $item_id )      wp_send_json_error( [ 'message' => 'Invalid item.' ] );
 	if ( '' === $desc )    wp_send_json_error( [ 'message' => 'Please enter the to-do.' ] );
+	if ( $due === '' || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $due ) ) $due = site_pulse_action_due_for_priority( $prio );
 
 	global $wpdb;
 	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
 	if ( ! $item ) wp_send_json_error( [ 'message' => 'Item not found.' ] );
 	if ( (int) $item['user_id'] !== $me ) wp_send_json_error( [ 'message' => 'Only the owner can edit this item.' ] );
 
-	$wpdb->update( site_pulse_table( 'action_items' ), [
+	$now    = current_time( 'mysql' );
+	$fields = [
 		'description' => $desc,
 		'category'    => $cat,
-		'updated_at'  => current_time( 'mysql' ),
-	], [ 'id' => $item_id ] );
+		'priority'    => $prio,
+		'due_date'    => $due,
+		'updated_at'  => $now,
+	];
+	$wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'id' => $item_id ] );
+
+	// Grouped (multi-assignee) item: keep every copy in sync, mirroring the due-date changer and Add Details.
+	$group = (string) ( $item['group_id'] ?? '' );
+	if ( '' !== $group ) {
+		$wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'group_id' => $group ] );
+	}
+
+	// Additional assignees (besides me) — mirrors the Add form's "Also assign to". Validate against the
+	// same contact set the New Message picker uses, then give each a linked copy. This only ADDS people:
+	// anyone already in the group is skipped (never duplicated); nobody is removed here.
+	$extra = json_decode( (string) wp_unslash( $_POST['assignees'] ?? '[]' ), true );
+	$extra = is_array( $extra ) ? array_values( array_unique( array_map( 'intval', $extra ) ) ) : [];
+	if ( $extra && function_exists( 'sp_msg_contacts' ) ) {
+		$allowed = array_map( 'intval', array_column( sp_msg_contacts( $me ), 'id' ) );
+		$extra   = array_values( array_intersect( $extra, $allowed ) );
+	}
+	$extra = array_values( array_filter( $extra, fn( $u ) => $u !== $me ) );
+
+	if ( $extra ) {
+		// Standalone item gaining its first co-assignee → start a shared group and link my copy into it.
+		if ( '' === $group ) {
+			$group = wp_generate_password( 20, false );
+			$wpdb->update( site_pulse_table( 'action_items' ), [ 'group_id' => $group ], [ 'id' => $item_id ] );
+		}
+		$existing = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare(
+			"SELECT user_id FROM " . site_pulse_table( 'action_items' ) . " WHERE group_id = %s", $group
+		) ) );
+
+		$me_user = get_userdata( $me );
+		$me_name = $me_user ? $me_user->display_name : 'Someone';
+		foreach ( $extra as $uid ) {
+			if ( in_array( $uid, $existing, true ) ) continue; // already on this item
+			$prof = site_pulse_get_user_profile( $uid );
+			$loc  = $prof ? (int) $prof['location_id'] : 0;
+			$wpdb->insert( site_pulse_table( 'action_items' ), [
+				'report_id'   => (int) $item['report_id'],
+				'user_id'     => $uid,
+				'created_by'  => $me,
+				'location_id' => $loc,
+				'category'    => $cat,
+				'description' => $desc,
+				'priority'    => $prio,
+				'status'      => 'open',
+				'due_date'    => $due,
+				'group_id'    => $group,
+				'created_at'  => $now,
+				'updated_at'  => $now,
+			] );
+			$new_id = (int) $wpdb->insert_id;
+			site_pulse_notify( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), $new_id, 'action_item' );
+			if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
+		}
+	}
 
 	site_pulse_log( 'action_item_edited', 'Action item edited', [ 'item_id' => $item_id ] );
+	wp_send_json_success();
+}
+
+// Delete an action item outright — for when it was a mistake and should vanish entirely (unlike
+// "Mark Complete", which files it under Completed). Owner-only, matching who may edit it. A grouped
+// (multi-assignee) item is removed for everyone, the same way completing/reopening a group syncs all copies.
+add_action( 'wp_ajax_site_pulse_delete_action_item', 'site_pulse_ajax_delete_action_item' );
+function site_pulse_ajax_delete_action_item(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	if ( ! $item_id ) wp_send_json_error( [ 'message' => 'Invalid item.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item ) wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( (int) $item['user_id'] !== $me ) wp_send_json_error( [ 'message' => 'Only the owner can delete this item.' ] );
+
+	$group = (string) ( $item['group_id'] ?? '' );
+	if ( '' !== $group ) {
+		$wpdb->delete( site_pulse_table( 'action_items' ), [ 'group_id' => $group ] );
+	} else {
+		$wpdb->delete( site_pulse_table( 'action_items' ), [ 'id' => $item_id ] );
+	}
+
+	site_pulse_log( 'action_item_deleted', 'Action item deleted', [ 'item_id' => $item_id, 'group_id' => $group ] );
 	wp_send_json_success();
 }
 
@@ -8040,6 +8205,34 @@ function site_pulse_ajax_save_expense(): void {
 		$old_receipt = (string) ( $existing['receipt_path'] ?? '' );
 	}
 
+	// Duplicate-receipt guard: on a NEW line (not an edit), block one that exactly matches an expense
+	// this user already has in the same section — same date AND amount — which is almost always the
+	// same receipt entered twice. The client offers a one-tap "add anyway" that resubmits with
+	// allow_duplicate=1. Runs BEFORE the receipt image is saved so a rejected dupe leaves no orphan file.
+	if ( ! $id && empty( $_POST['allow_duplicate'] ) ) {
+		$dupe = $wpdb->get_row( $wpdb->prepare(
+			"SELECT id, place FROM " . site_pulse_table('expenses') . "
+			 WHERE user_id = %d AND section = %s AND expense_date = %s AND amount = %f
+			 ORDER BY id DESC LIMIT 1",
+			$user_id, $section, $date, $amount
+		), ARRAY_A );
+		if ( $dupe ) {
+			$sec_label = $sections[ $section ]['label'] ?? '';
+			$where     = ! empty( $dupe['place'] ) ? ' at ' . $dupe['place'] : '';
+			wp_send_json_error( [
+				'code'        => 'duplicate',
+				'existing_id' => (int) $dupe['id'],
+				'message'     => sprintf(
+					'You already logged a%s expense for %s totaling $%s%s. This looks like the same receipt entered twice. Add it anyway?',
+					$sec_label !== '' ? ' ' . $sec_label : '',
+					$date,
+					number_format( $amount, 2 ),
+					$where
+				),
+			] );
+		}
+	}
+
 	// Receipt image: a new base64 photo replaces; receipt_remove clears; otherwise the existing
 	// one is left untouched (receipt_path simply omitted from $data on update).
 	if ( ! empty( $_POST['receipt'] ) ) {
@@ -8938,6 +9131,19 @@ function site_pulse_ajax_save_mileage_entry(): void {
 			$now, $user_id, $entry_id
 		) );
 	} else {
+		// One trip per day: block a second entry for a date this driver already logged (they usually
+		// forgot they already entered it). They should edit the existing day instead of duplicating it.
+		$existing_day = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM " . site_pulse_table('mileage_entries') . " WHERE user_id = %d AND entry_date = %s LIMIT 1",
+			$user_id, $entry_date
+		) );
+		if ( $existing_day ) {
+			wp_send_json_error( [
+				'code'        => 'duplicate_day',
+				'existing_id' => $existing_day,
+				'message'     => sprintf( 'You already have mileage logged for %s. Open that day to edit it instead of adding a second entry.', $entry_date ),
+			] );
+		}
 		$wpdb->insert( site_pulse_table('mileage_entries'), [
 			'user_id'          => $user_id,
 			'entry_date'       => $entry_date,

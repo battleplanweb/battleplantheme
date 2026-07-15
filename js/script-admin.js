@@ -791,6 +791,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	var techPies       = document.querySelectorAll('.bp-analytics-pie[data-pie="tech"]');
 	var widthBars      = document.querySelectorAll('.bp-analytics-widthbars');
 	var speedCharts    = document.querySelectorAll('.bp-analytics-speed');
+	var locationCharts = document.querySelectorAll('.bp-analytics-locations');
+	var locationZoomCharts = document.querySelectorAll('.bp-analytics-locations-zoom');
+	var pageTrendCharts = document.querySelectorAll('.bp-analytics-pagetrend');
+	var clarityCharts = document.querySelectorAll('.bp-analytics-clarity');
 	if (!channelCharts.length && !behaviorCharts.length) return;
 
 	var payloadEl = document.getElementById('bp-an-payload');
@@ -1299,6 +1303,54 @@ document.addEventListener('DOMContentLoaded', function () {
 		var dir = pct > 0 ? 'up' : (pct < 0 ? 'down' : 'flat'), arr = pct > 0 ? '▲' : (pct < 0 ? '▼' : '–');
 		return '<span class="bp-an-delta ' + dir + '">' + label + ' ' + arr + ' ' + Math.abs(pct) + '%</span>';
 	}
+	// Page trends — monthly pageviews for the single selected page (pill), sliced to the active range.
+	function activePageKey(container) {
+		var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-pbtn.active');
+		var list = payload.pages && payload.pages.list;
+		return (b && b.dataset.pkey) || (list && list[0] && list[0].key);
+	}
+	function renderPageTrend(container) {
+		var data = payload.pages;
+		if (!data || !data.list || !data.list.length) { container.innerHTML = '<p class="bp-an-empty">No page history yet — it builds on the nightly analytics run (or hit “refresh stats now” on the Stats page).</p>'; return; }
+		var grain = activeGrain(), g = data[grain] || data.monthly;   // follows the Daily/Weekly/Monthly toggle
+		if (!g || !g.periods.length) { container.innerHTML = '<p class="bp-an-empty">No page data at this view.</p>'; return; }
+		var key = activePageKey(container);
+		if (!g.series[key]) key = data.list[0].key;
+		var full = g.series[key] || [];
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var periods = idx.map(function (j) { return g.periods[j]; });
+		var values = idx.map(function (j) { return full[j]; });
+		var label = key, i;
+		for (i = 0; i < data.list.length; i++) if (data.list[i].key === key) { label = data.list[i].label; break; }
+		var defs = [{ key: label, label: label, cls: 'blue', emph: true, values: values }];
+		drawLineChart(container, periods, defs, { grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true, rerender: function () { renderPageTrend(container); } });
+	}
+	// UX health (Clarity) — single selected frustration metric, follows the grain + range controls.
+	function activeClarityMetric(container) {
+		var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-cbtn.active');
+		var metrics = payload.clarity && payload.clarity.metrics;
+		return (b && b.dataset.cmetric) || (metrics && metrics[0] && metrics[0].key);
+	}
+	function renderClarity(container) {
+		var data = payload.clarity;
+		if (!data || !data.metrics || !data.metrics.length) { container.innerHTML = '<p class="bp-an-empty">No Clarity data yet — it builds nightly once a Data Export token is set for this site.</p>'; return; }
+		var grain = activeGrain(), g = data[grain] || data.daily || data.monthly;
+		if (!g || !g.periods.length) { container.innerHTML = '<p class="bp-an-empty">No Clarity data at this view.</p>'; return; }
+		var key = activeClarityMetric(container);
+		if (!g.series[key]) key = data.metrics[0].key;
+		var full = g.series[key] || [];
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var periods = idx.map(function (j) { return g.periods[j]; });
+		var values = idx.map(function (j) { return full[j]; });
+		var label = key, i;
+		for (i = 0; i < data.metrics.length; i++) if (data.metrics[i].key === key) { label = data.metrics[i].label; break; }
+		var defs = [{ key: label, label: label, cls: 'red', emph: true, values: values }];
+		drawLineChart(container, periods, defs, { grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true, rerender: function () { renderClarity(container); } });
+	}
 	// Hero tiles follow the active range: total over the window + "vs prev" and YoY deltas.
 	function renderTiles() {
 		if (!tileEls.length) return;
@@ -1321,6 +1373,207 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	// Visitor map — geocoded city bubbles over a simplified US basemap. The basemap rings and the
+	// bubbles share ONE Albers projection (below), so points always land on the map by construction.
+	var BP_US_RINGS = null;
+	var BP_US_RINGS_STR = '[[-87.36,35,-85.61,34.98,-85.18,32.86,-84.89,32.26,-85.14,31.84,-85,31,-87.6,31,-87.37,30.43,-87.66,30.25,-88.01,30.69,-88.14,30.32,-88.39,30.37,-88.47,31.9,-88.2,35,-87.36,35],[-109.04,37,-109.05,31.33,-111.07,31.33,-114.82,32.49,-114.47,32.84,-114.73,33.41,-114.52,33.55,-114.54,33.93,-114.14,34.31,-114.63,34.88,-114.74,36.1,-114.15,36.03,-114.05,37,-109.04,37],[-94.47,36.5,-90.15,36.5,-90.06,36.3,-90.38,36,-89.73,36,-89.76,35.81,-90.13,35.44,-90.57,34.42,-90.95,34.14,-91.23,33.56,-91.06,33.43,-91.17,33,-94.04,33.02,-94.04,33.55,-94.48,33.64,-94.43,35.4,-94.62,36.5,-94.47,36.5],[-123.23,42.01,-120,42,-120,39,-114.63,35,-114.14,34.31,-114.54,33.93,-114.52,33.55,-114.73,33.41,-114.52,32.76,-117.13,32.54,-117.47,33.3,-118.41,33.74,-118.57,34.04,-120.65,34.58,-120.63,35.1,-121.9,36.32,-121.79,36.8,-121.93,36.98,-122.42,37.24,-122.41,38.15,-122.5,37.93,-122.94,38.03,-123.13,38.45,-123.74,38.96,-123.85,39.83,-124.36,40.26,-124.07,41.44,-124.21,42,-123.23,42.01],[-107.92,41,-102.05,41,-102.04,36.99,-109.04,37,-109.05,41,-107.92,41],[-73.05,42.04,-71.8,42.02,-71.8,41.41,-73.66,40.99,-73.73,41.1,-73.48,41.21,-73.49,42.05,-73.05,42.04],[-75.41,39.8,-75.59,39.46,-75.09,38.8,-75.05,38.45,-75.69,38.46,-75.79,39.72,-75.41,39.8],[-77.04,38.99,-76.91,38.9,-77.04,38.79,-77.04,38.99],[-85.5,31,-85,31,-84.87,30.71,-82.22,30.57,-82.17,30.36,-81.95,30.83,-81.44,30.71,-81.26,29.79,-80.52,28.46,-80.57,28.09,-80.03,26.8,-80.15,25.74,-80.5,25.2,-81.08,25.12,-81.35,25.82,-81.68,25.84,-82.06,26.88,-82.25,26.76,-82.69,27.44,-82.39,27.84,-82.72,27.69,-82.85,27.89,-82.64,28.89,-83.64,29.89,-84.02,30.1,-85.31,29.7,-85.4,29.94,-86.3,30.36,-87.52,30.28,-87.37,30.43,-87.6,31,-85.5,31],[-83.11,35,-83.34,34.68,-82.9,34.49,-82.56,33.94,-81.49,33.01,-81.12,32.12,-80.89,32.03,-81.4,31.13,-81.44,30.71,-81.95,30.83,-82.05,30.36,-82.22,30.57,-84.87,30.71,-85.11,31.28,-85.14,31.84,-84.89,32.26,-85.18,32.86,-85.61,34.98,-83.11,35],[-116.05,49,-116.05,47.98,-115.72,47.7,-115.72,47.42,-114.61,46.64,-114.32,46.65,-114.55,45.56,-113.81,45.6,-113.46,44.87,-113.13,44.77,-112.89,44.39,-111.62,44.55,-111.39,44.76,-111.05,44.48,-111.05,42,-117.03,42,-116.9,44.16,-117.24,44.39,-116.46,45.62,-117.06,46.34,-117.03,49,-116.05,49],[-90.64,42.51,-87.8,42.49,-87.52,41.71,-87.64,39.17,-87.5,38.78,-87.95,38.28,-88.07,37.48,-88.48,37.39,-88.55,37.07,-89.03,37.21,-89.29,36.99,-89.52,37.28,-89.52,37.69,-90.36,38.22,-90.11,38.85,-90.66,38.93,-90.73,39.26,-91.37,39.73,-91.49,40.03,-91.4,40.56,-90.96,40.92,-91.05,41.41,-90.34,41.59,-90.18,41.81,-90.17,42.13,-90.64,42.51],[-85.99,41.76,-84.81,41.76,-84.81,38.79,-85.43,38.73,-85.42,38.53,-86.04,37.96,-86.3,38.17,-86.5,37.93,-86.8,37.99,-87.13,37.79,-87.6,37.98,-88.03,37.8,-87.95,38.28,-87.5,38.78,-87.64,39.17,-87.52,41.71,-85.99,41.76],[-91.37,43.5,-91.06,43.25,-91.07,42.75,-90.71,42.64,-90.14,42,-90.34,41.59,-91.05,41.41,-90.96,40.92,-91.42,40.38,-91.73,40.62,-95.77,40.59,-96.13,41.97,-96.63,42.71,-96.43,43.12,-96.58,43.48,-96.45,43.5,-91.37,43.5],[-101.91,40,-95.31,40,-94.88,39.83,-95.11,39.54,-94.61,39.16,-94.62,37,-102.04,36.99,-102.05,40,-101.91,40],[-83.9,38.77,-83.68,38.63,-82.89,38.76,-82.59,38.42,-82.5,37.93,-81.97,37.54,-83.14,36.74,-83.69,36.58,-88.07,36.68,-88.05,36.5,-89.42,36.5,-89.22,36.58,-89.03,37.21,-88.55,37.07,-88.48,37.39,-88.07,37.48,-88.16,37.66,-87.93,37.89,-87.6,37.98,-87.13,37.79,-86.8,37.99,-86.5,37.93,-86.3,38.17,-86.04,37.96,-85.42,38.53,-85.43,38.73,-84.81,38.79,-84.82,39.1,-84.43,39.1,-84.22,38.81,-83.9,38.77],[-93.61,33.02,-91.17,33,-90.99,32.22,-91.5,31.64,-91.64,31,-89.75,31,-89.85,30.67,-89.52,30.18,-89.84,29.95,-89.6,29.88,-89.5,30.04,-89.29,29.88,-89.42,29.7,-89.65,29.75,-89.7,29.51,-89,29.18,-89.34,29.04,-89.85,29.31,-89.85,29.48,-90.1,29.15,-90.56,29.28,-90.8,29.09,-91.89,29.84,-92.31,29.54,-93.23,29.78,-93.84,29.69,-93.53,30.94,-94.04,31.99,-94.04,33.02,-93.61,33.02],[-70.7,43.06,-70.97,43.34,-71.08,45.3,-70.39,45.74,-70,46.69,-69.23,47.46,-68.9,47.18,-68.23,47.36,-67.95,47.2,-67.79,47.07,-67.8,45.68,-67.46,45.6,-67.49,45.28,-67.16,45.16,-66.98,44.8,-68.05,44.33,-68.22,44.49,-68.17,44.33,-68.4,44.25,-68.98,44.43,-69.07,44.04,-69.83,43.72,-70.03,43.85,-70.7,43.06],[-79.48,39.72,-75.79,39.72,-75.69,38.46,-75.05,38.45,-75.24,38.03,-75.89,37.91,-75.85,38.21,-76.26,38.32,-76.28,39.15,-75.97,39.56,-76.37,39.31,-76.56,38.77,-76.36,38.06,-77.02,38.45,-77.21,38.36,-77.28,38.48,-76.91,38.9,-77.46,39.08,-77.83,39.6,-78.77,39.59,-79.49,39.21,-79.48,39.72],[-70.92,42.89,-70.78,42.7,-70.99,42.27,-70.77,42.25,-70.54,41.81,-69.94,41.81,-70.01,41.67,-71.12,41.5,-71.38,42.02,-73.51,42.09,-73.27,42.75,-71.3,42.7,-70.92,42.89],[-83.45,41.73,-86.82,41.76,-86.36,42.25,-86.21,42.72,-86.53,43.59,-86.25,44.69,-85.61,45.13,-85.52,44.75,-85.39,45.24,-85.03,45.36,-85.12,45.58,-84.94,45.76,-84.22,45.64,-83.32,45.14,-83.45,45.03,-83.27,44.71,-83.33,44.34,-83.83,43.99,-83.91,43.67,-83.67,43.59,-82.92,44.07,-82.64,43.85,-82.41,42.98,-82.52,42.61,-82.8,42.65,-83.45,41.73],[-87.59,45.1,-87.74,45.2,-87.65,45.34,-87.89,45.36,-87.78,45.68,-88.1,45.92,-90.12,46.34,-90.42,46.57,-89,47,-88.18,47.46,-87.96,47.38,-88.44,46.97,-88.44,46.79,-87.9,46.91,-87.39,46.54,-86.7,46.44,-86.16,46.67,-85.06,46.76,-85.03,46.48,-84.13,46.53,-83.99,46.03,-83.48,45.99,-84.66,46.05,-84.7,45.85,-85.5,46.1,-86.66,45.7,-86.78,45.86,-87.17,45.66,-87.59,45.1],[-88.81,47.98,-89.19,47.83,-88.55,48.17,-88.81,47.98],[-92.01,46.71,-92.29,46.67,-92.29,46.08,-92.87,45.72,-92.64,45.44,-92.81,44.75,-91.43,43.99,-91.22,43.5,-96.45,43.5,-96.45,45.3,-96.86,45.6,-96.58,45.82,-96.6,46.33,-96.8,46.66,-97.23,49,-95.15,49,-95.15,49.38,-94.96,49.37,-94.59,48.72,-93.79,48.52,-92.98,48.62,-92.37,48.22,-92.05,48.36,-91.57,48.04,-90.84,48.24,-90.75,48.09,-89.62,48.01,-90.74,47.63,-92.01,46.71],[-88.47,35,-88.1,34.89,-88.47,31.9,-88.39,30.37,-89.52,30.18,-89.85,30.67,-89.75,31,-91.64,31,-91.5,31.64,-90.99,32.22,-91.15,32.64,-91.06,33.43,-91.23,33.56,-90.31,35,-88.47,35],[-91.83,40.61,-91.42,40.38,-91.37,39.73,-90.73,39.26,-90.66,38.93,-90.11,38.85,-90.36,38.22,-89.52,37.69,-89.52,37.28,-89.13,36.98,-89.22,36.58,-89.54,36.5,-89.73,36,-90.38,36,-90.06,36.3,-90.15,36.5,-94.62,36.5,-94.61,39.16,-95.11,39.54,-94.88,39.83,-95.21,39.91,-95.77,40.59,-91.83,40.61],[-104.05,49,-104.04,45,-111.05,45,-111.05,44.48,-111.39,44.76,-111.62,44.55,-112.89,44.39,-113.13,44.77,-113.46,44.87,-113.81,45.6,-114.55,45.56,-114.32,46.65,-114.61,46.64,-115.72,47.42,-115.72,47.7,-116.05,47.98,-116.05,49,-104.05,49],[-103.32,43,-98.5,43,-97.95,42.77,-97.22,42.84,-96.69,42.66,-96.13,41.97,-95.88,40.72,-95.31,40,-102.05,40,-102.05,41,-104.05,41,-104.05,43,-103.32,43],[-117.03,42,-114.04,42,-114.05,36.2,-114.15,36.03,-114.74,36.1,-114.63,35,-120,39,-120,42,-117.03,42],[-71.08,45.3,-70.97,43.34,-70.7,43.06,-71.3,42.7,-72.46,42.73,-72.38,43.57,-72.03,44.32,-71.54,44.59,-71.63,44.75,-71.36,45.27,-71.08,45.3],[-74.24,41.14,-73.9,41,-74.27,40.49,-74,40.41,-74.1,39.76,-74.8,38.99,-75.56,39.63,-74.77,40.22,-75.2,40.58,-75.13,40.97,-74.7,41.36,-74.24,41.14],[-107.42,37,-103,37,-103.07,32,-106.62,32,-106.53,31.79,-108.21,31.79,-108.21,31.33,-109.05,31.33,-109.04,37,-107.42,37],[-73.34,45.01,-73.44,44.04,-73.25,43.52,-73.27,42.75,-73.51,42.09,-73.48,41.21,-73.73,41.1,-73.23,40.91,-72.28,41.16,-72.1,40.99,-73.94,40.54,-73.9,41,-74.89,41.44,-75.36,42,-79.76,42,-79.76,42.27,-78.85,42.78,-79.07,43.26,-76.7,43.34,-76.24,43.53,-76.14,43.96,-76.31,44.2,-75.28,44.85,-74.83,45.02,-73.34,45.01],[-80.98,36.56,-75.87,36.55,-75.75,36.15,-76.67,35.94,-75.78,35.94,-75.72,35.7,-76.15,35.32,-76.48,35.31,-76.54,35.14,-76.28,34.94,-76.49,34.66,-77.21,34.61,-77.83,34.16,-77.97,33.85,-78.54,33.85,-79.68,34.8,-80.8,34.82,-81.04,35.15,-84.32,34.99,-84.29,35.23,-83.77,35.56,-82.99,35.77,-82.64,36.06,-82.04,36.12,-81.68,36.59,-80.98,36.56],[-97.23,49,-96.56,45.93,-104.05,45.94,-104.05,49,-97.23,49],[-80.52,41.98,-80.52,40.64,-80.67,40.58,-80.83,39.71,-81.69,39.27,-81.89,38.87,-82.04,39.03,-82.33,38.45,-82.59,38.42,-82.89,38.76,-83.68,38.63,-84.22,38.81,-84.43,39.1,-84.82,39.1,-84.81,41.69,-83.45,41.73,-82.48,41.38,-80.52,41.98],[-100.09,37,-94.62,37,-94.43,35.4,-94.48,33.64,-95.22,33.96,-96.35,33.69,-96.92,33.96,-97.17,33.74,-97.69,33.98,-97.87,33.85,-98.17,34.11,-99.19,34.21,-99.26,34.4,-99.7,34.38,-100,34.56,-100,36.5,-103,36.5,-103,37,-100.09,37],[-123.21,46.17,-122.9,46.08,-122.76,45.66,-122.25,45.55,-118.99,46,-116.92,45.99,-116.55,45.75,-116.46,45.62,-117.24,44.39,-116.9,44.16,-117.03,42,-124.21,42,-124.55,42.84,-124.17,43.81,-123.99,45.94,-123.55,46.26,-123.21,46.17],[-79.76,42.25,-79.76,42,-75.36,42,-74.7,41.36,-75.21,40.69,-74.77,40.22,-75.15,39.89,-75.79,39.72,-80.52,39.72,-80.52,41.98,-79.76,42.25],[-71.2,41.68,-71.12,41.5,-71.32,41.47,-71.2,41.68],[-71.53,42.02,-71.22,41.71,-71.48,41.37,-71.86,41.32,-71.8,42.01,-71.53,42.02],[-82.76,35.07,-81.04,35.15,-80.8,34.82,-79.68,34.8,-78.54,33.85,-78.94,33.64,-79.36,33.01,-79.58,33.01,-80.89,32.03,-81.12,32.12,-81.49,33.01,-82.56,33.94,-82.9,34.49,-83.34,34.68,-83.11,35,-82.76,35.07],[-104.05,45.94,-96.56,45.93,-96.86,45.6,-96.45,45.3,-96.45,43.5,-96.58,43.48,-96.43,43.12,-96.63,42.71,-96.45,42.49,-97.22,42.84,-97.95,42.77,-98.5,43,-104.05,43,-104.05,45.94],[-88.05,36.5,-88.07,36.68,-81.68,36.59,-82.04,36.12,-82.64,36.06,-82.99,35.77,-83.77,35.56,-84.29,35.23,-84.32,34.99,-90.31,35,-89.54,36.5,-88.05,36.5],[-101.81,36.5,-100,36.5,-100,34.56,-99.7,34.38,-99.26,34.4,-99.19,34.21,-98.17,34.11,-97.87,33.85,-97.69,33.98,-97.17,33.74,-96.92,33.96,-96.35,33.69,-95.22,33.96,-94.04,33.55,-94.04,31.99,-93.53,30.94,-93.84,29.69,-94.52,29.55,-94.74,29.79,-95.02,29.56,-94.9,29.31,-95.38,28.87,-95.99,28.6,-96.66,28.7,-96.4,28.44,-96.77,28.41,-97.54,27.23,-97.22,25.99,-97.52,25.89,-98.2,26.06,-99.17,26.54,-99.48,27.48,-100.3,28.28,-100.67,29.1,-101.41,29.75,-102.34,29.87,-103.28,28.98,-104.51,29.64,-104.9,30.57,-106.64,31.9,-103.07,32,-103.04,36.5,-101.81,36.5],[-112.16,42,-111.05,42,-111.05,41,-109.05,41,-109.04,37,-114.05,37,-114.04,42,-112.16,42],[-71.5,45.01,-71.54,44.59,-72.03,44.32,-72.38,43.57,-72.46,42.73,-73.27,42.75,-73.25,43.52,-73.44,44.04,-73.34,45.01,-71.5,45.01],[-75.4,38.01,-75.24,38.03,-75.97,37.12,-75.94,37.56,-75.67,37.95,-75.4,38.01],[-78.35,39.46,-77.83,39.13,-77.57,39.31,-77.12,38.93,-77.28,38.34,-77.01,38.37,-76.24,37.89,-76.4,37.16,-76.27,37.08,-76.67,37.07,-75.99,36.92,-75.87,36.55,-83.67,36.6,-83.14,36.74,-81.97,37.54,-81.68,37.2,-80.3,37.51,-79.65,38.59,-79.31,38.41,-79,38.85,-78.87,38.76,-78.4,39.17,-78.35,39.46],[-117.03,49,-117.06,46.34,-116.92,45.99,-118.99,46,-121.18,45.6,-122.76,45.66,-122.9,46.08,-124.07,46.33,-123.9,46.54,-124.71,48.18,-124.6,48.38,-122.8,48.09,-122.52,47.88,-122.42,47.32,-122.23,48.03,-122.76,49,-117.03,49],[-122.72,48.31,-122.59,48.35,-122.61,48.15,-122.72,48.31],[-123.03,48.58,-122.92,48.72,-122.81,48.42,-123.03,48.58],[-80.52,40.64,-80.52,39.72,-79.48,39.72,-79.49,39.21,-78.17,39.69,-77.83,39.6,-77.72,39.32,-77.83,39.13,-78.35,39.46,-78.4,39.17,-78.87,38.76,-79,38.85,-79.31,38.41,-79.65,38.59,-80.3,37.51,-81.68,37.2,-82.5,37.93,-82.59,38.42,-82.33,38.45,-82.04,39.03,-81.89,38.87,-81.69,39.27,-80.83,39.71,-80.67,40.58,-80.52,40.64],[-90.42,46.57,-90.12,46.34,-88.1,45.92,-87.78,45.68,-87.89,45.36,-87.65,45.34,-87.74,45.2,-87.59,45.1,-88.04,44.56,-87.03,45.22,-87.74,43.88,-87.91,43.25,-87.8,42.49,-90.64,42.51,-91.07,42.75,-91.06,43.25,-91.43,43.99,-92.81,44.75,-92.64,45.44,-92.87,45.72,-92.29,46.08,-92.29,46.67,-90.84,46.96,-90.89,46.75,-90.42,46.57],[-109.08,45,-104.06,45,-104.05,41,-111.05,41,-111.05,45,-109.08,45]]';
+	function bpUsRings() { if (!BP_US_RINGS) { try { BP_US_RINGS = JSON.parse(BP_US_RINGS_STR); } catch (e) { BP_US_RINGS = []; } } return BP_US_RINGS; }
+	// Spherical Albers equal-area conic, lower-48 (parallels 29.5/45.5, meridian -96). y is returned
+	// already flipped so north is up. Constants precomputed once.
+	var ALB_N, ALB_C, ALB_RHO0;
+	(function () { var rad = Math.PI/180, p1 = 29.5*rad, p2 = 45.5*rad, la0 = 37.5*rad;
+		ALB_N = (Math.sin(p1) + Math.sin(p2)) / 2;
+		ALB_C = Math.cos(p1)*Math.cos(p1) + 2*ALB_N*Math.sin(p1);
+		ALB_RHO0 = Math.sqrt(ALB_C - 2*ALB_N*Math.sin(la0)) / ALB_N; })();
+	function bpAlbers(lng, lat) {
+		var rad = Math.PI/180, th = ALB_N * (lng*rad + 96*rad), rho = Math.sqrt(ALB_C - 2*ALB_N*Math.sin(lat*rad)) / ALB_N;
+		return [rho*Math.sin(th), rho*Math.cos(th) - ALB_RHO0];
+	}
+	// Bubbles sized by engaged sessions; picks the snapshot window nearest the active range.
+	function bpHaversine(lat1, lng1, lat2, lng2) {
+		var R = 3958.8, rad = Math.PI/180, dla = (lat2-lat1)*rad, dln = (lng2-lng1)*rad;
+		var a = Math.sin(dla/2)*Math.sin(dla/2) + Math.cos(lat1*rad)*Math.cos(lat2*rad)*Math.sin(dln/2)*Math.sin(dln/2);
+		return 2 * R * Math.asin(Math.sqrt(a));
+	}
+	function bpDiamond(cx, cy, r) { return 'M' + cx + ',' + (cy-r) + 'L' + (cx+r) + ',' + cy + 'L' + cx + ',' + (cy+r) + 'L' + (cx-r) + ',' + cy + 'Z'; }
+	// Shared map drawer. opts: { proj, W, H, pts, maxV, home, ariaLabel, noteHtml, maxLabels }.
+	// The US basemap rings are always drawn with opts.proj and clipped by the viewBox, so a zoomed
+	// projection just shows the relevant states. Bubbles/labels/ home marker share that same proj.
+	function bpDrawMap(container, opts) {
+		container.innerHTML = '';
+		var proj = opts.proj, W = opts.W, H = opts.H;
+		var svg = el('svg', { 'class': 'bp-an-map-svg', viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet', role: 'img', 'aria-label': opts.ariaLabel });
+		var gBase = el('g', { 'class': 'bp-an-map-base' });
+		bpUsRings().forEach(function (rr) {
+			var d = '', j, q;
+			for (j = 0; j < rr.length; j += 2) { q = proj(rr[j], rr[j+1]); d += (j ? 'L' : 'M') + (Math.round(q[0]*10)/10) + ',' + (Math.round(q[1]*10)/10); }
+			gBase.appendChild(el('path', { 'class': 'bp-an-map-state', d: d + 'Z' }));
+		});
+		svg.appendChild(gBase);
+		if (opts.circle) {
+			var cc = proj(opts.circle.lng, opts.circle.lat), cedge = proj(opts.circle.lng, opts.circle.lat + opts.circle.radius/69), cr = Math.abs(cedge[1] - cc[1]);
+			// Clip the basemap to the service-area disc so everything outside it is the white card
+			// background (matching the national map), not a solid fill of the state we've zoomed into.
+			var clipId = 'bp-map-clip-' + (CLIP_SEQ++), defs = el('defs', {}), clip = el('clipPath', { id: clipId });
+			clip.appendChild(el('circle', { cx: cc[0], cy: cc[1], r: cr }));
+			defs.appendChild(clip); svg.insertBefore(defs, svg.firstChild);
+			gBase.setAttribute('clip-path', 'url(#' + clipId + ')');
+			// Edge ring only — the grey disc is the clipped land itself, so it matches the national map's
+			// land colour. fill:none inline is a fallback; .bp-an-map-radius CSS overrides it when present.
+			svg.appendChild(el('circle', { 'class': 'bp-an-map-radius', cx: cc[0], cy: cc[1], r: cr,
+				fill: 'none', stroke: '#c9ccc6', 'stroke-width': '1.5' }));
+		}
+		var RMIN = 3, RMAX = 34, maxV = opts.maxV;
+		function radius(v) { return maxV <= 0 ? RMIN : RMIN + (RMAX - RMIN) * Math.sqrt(v / maxV); }
+		var sorted = opts.pts.slice().sort(function (a, b) { return b.v - a.v; }); // big first, small on top
+		var gB = el('g', { 'class': 'bp-an-map-bubbles' });
+		sorted.forEach(function (p) {
+			var xy = proj(p.lng, p.lat), c = el('circle', { 'class': 'bp-an-map-bubble', cx: xy[0], cy: xy[1], r: radius(p.v) });
+			var t = document.createElementNS(SVGNS, 'title'); t.textContent = p.l + ': ' + fmtInt(p.v) + ' sessions'; c.appendChild(t);
+			gB.appendChild(c);
+		});
+		svg.appendChild(gB);
+		// Greedy, width-aware label placement: skip any label that would overlap one already placed
+		// (each entry stores [x, y, halfWidth]) so dense metros don't stack into an unreadable blob.
+		// Collisions compare each label's ACTUAL drawn box (x, its baseline y, half-width) — a big
+		// bubble's label sits far above its center, so comparing centers would under-detect overlaps.
+		var gL = el('g', { 'class': 'bp-an-map-labels' }), placed = [];
+		function halfW(str) { return str.length * 3.4 + 5; }
+		if (opts.home) { var hlx = proj(opts.home.lng, opts.home.lat); placed.push([hlx[0], hlx[1] + 20, halfW(opts.home.label)]); }
+		for (var li = 0; li < sorted.length && placed.length < (opts.maxLabels || 7); li++) {
+			var p = sorted[li], lxy = proj(p.lng, p.lat), txt = ('' + p.l).split(',')[0], hw = halfW(txt);
+			var ly = lxy[1] - radius(p.v) - 4, clash = false;
+			for (var pi = 0; pi < placed.length; pi++) {
+				if (Math.abs(placed[pi][0] - lxy[0]) < (placed[pi][2] + hw) && Math.abs(placed[pi][1] - ly) < 13) { clash = true; break; }
+			}
+			if (clash) continue;
+			placed.push([lxy[0], ly, hw]);
+			var tx = el('text', { 'class': 'bp-an-map-label', x: lxy[0], y: ly, 'text-anchor': 'middle' });
+			tx.textContent = txt; gL.appendChild(tx);
+		}
+		if (opts.home) {
+			var hxy = proj(opts.home.lng, opts.home.lat);
+			var star = el('path', { 'class': 'bp-an-map-home', d: bpDiamond(hxy[0], hxy[1], 7) });
+			var ht = document.createElementNS(SVGNS, 'title'); ht.textContent = opts.home.label + ' (home)'; star.appendChild(ht); gL.appendChild(star);
+			var hl = el('text', { 'class': 'bp-an-map-homelabel', x: hxy[0], y: hxy[1] + 20, 'text-anchor': 'middle' }); hl.textContent = opts.home.label; gL.appendChild(hl);
+		}
+		svg.appendChild(gL);
+		container.appendChild(svg);
+		if (opts.noteHtml) { var note = document.createElement('div'); note.className = 'bp-an-map-note'; note.innerHTML = opts.noteHtml; container.appendChild(note); }
+	}
+	// Cities to plot for the active range. With a monthly time series we sum the months overlapping the
+	// window (so 30d/60d/1y all differ and track the rest of the page); otherwise fall back to the
+	// pre-timeline snapshot buckets. Returns { pts:[{l,lat,lng,v}], uncoded, span:'<month label>' }.
+	function bpLocationPts(range) {
+		var tl = payload.locationsTimeline;
+		if (tl && tl.cities && tl.cities.length) {
+			var frames = tl.frames, inc = [], lo = range ? range.lo : null, hi = range ? (range.hi || new Date()) : null, i;
+			for (i = 0; i < frames.length; i++) {
+				var ym = '' + frames[i], y = +ym.slice(0, 4), mo = +ym.slice(4, 6) - 1;
+				var mStart = new Date(y, mo, 1), mEnd = new Date(y, mo + 1, 0, 23, 59, 59);
+				if ((!lo || mEnd >= lo) && (!hi || mStart <= hi)) inc.push(i);
+			}
+			var pts = [];
+			tl.cities.forEach(function (c) {
+				var v = 0, k; for (k = 0; k < inc.length; k++) v += c.v[inc[k]] || 0;
+				if (v > 0) pts.push({ l: c.l, lat: c.lat, lng: c.lng, v: v });
+			});
+			var span = inc.length ? (tl.labels[inc[0]] === tl.labels[inc[inc.length - 1]] ? tl.labels[inc[0]] : tl.labels[inc[0]] + ' \u2013 ' + tl.labels[inc[inc.length - 1]]) : 'no data in range';
+			return { pts: pts, uncoded: 0, span: span };
+		}
+		var loc = payload.locations, w = techWindow(), bucket = loc && (loc[w] || loc[365]);
+		return { pts: (bucket && bucket.pts) || [], uncoded: (bucket && bucket.uncoded) || 0, span: w + '-day snapshot' };
+	}
+	// National map — all mapped cities across the lower-48.
+	function renderLocations(container) {
+		var src = bpLocationPts(activeRange()), pts = src.pts, uncoded = src.uncoded;
+		if (!pts.length) { container.innerHTML = '<p class="bp-an-empty">No mapped locations yet — city coordinates fill in as the nightly analytics run geocodes them.</p>'; return; }
+		var rings = bpUsRings();
+		if (!rings.length) { container.innerHTML = '<p class="bp-an-empty">Map unavailable.</p>'; return; }
+		var W = 960, H = 560, PAD = 14, minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9, ri, i, xy, r;
+		for (ri = 0; ri < rings.length; ri++) { r = rings[ri]; for (i = 0; i < r.length; i += 2) { xy = bpAlbers(r[i], r[i+1]);
+			if (xy[0] < minx) minx = xy[0]; if (xy[0] > maxx) maxx = xy[0]; if (xy[1] < miny) miny = xy[1]; if (xy[1] > maxy) maxy = xy[1]; } }
+		var s = Math.min((W - 2*PAD) / (maxx - minx), (H - 2*PAD) / (maxy - miny)), ox = (W - s*(maxx + minx)) / 2, oy = (H - s*(maxy + miny)) / 2;
+		var proj = function (lng, lat) { var p = bpAlbers(lng, lat); return [s*p[0] + ox, s*p[1] + oy]; };
+		var maxV = 0, total = 0; pts.forEach(function (p) { if (p.v > maxV) maxV = p.v; total += p.v; });
+		var note = fmtInt(total) + ' engaged sessions across ' + pts.length + ' cit' + (pts.length === 1 ? 'y' : 'ies')
+			+ (uncoded > 0 ? ' · <span class="bp-an-map-uncoded">' + fmtInt(uncoded) + ' not mapped</span>' : '')
+			+ ' · <span class="bp-an-map-window">' + src.span + '</span>';
+		bpDrawMap(container, { proj: proj, W: W, H: H, pts: pts, maxV: maxV, home: null, ariaLabel: 'Visitor locations across the United States', noteHtml: note });
+	}
+	// Data-driven service-area extent: centre + radius that tightly enclose the LOCAL cluster of
+	// cities around home, so the zoom re-centres (e.g. shifts toward the metro) and zooms as close as
+	// possible without cutting off relevant cities — instead of a fixed radius wasting empty quadrants.
+	// Uses all-time city totals so the viewport is stable as the range changes (only bubbles resize).
+	// Walks cities outward from home and stops at the first big distance gap (that's the jump to the
+	// next metro / cross-country noise). Returns { lat, lng, radius } or null (→ fixed fallback).
+	function bpZoomExtent(home) {
+		var tl = payload.locationsTimeline;
+		if (!tl || !tl.cities || !tl.cities.length) return null;
+		var CAP = 150, GROWTH = 2.2, MINGAP = 30, MINR = 12, PAD = 0.12;
+		var cand = [], localTotal = 0;
+		tl.cities.forEach(function (c) {
+			var d = bpHaversine(home.lat, home.lng, c.lat, c.lng);
+			if (d > CAP) return;
+			var tot = 0, k; for (k = 0; k < c.v.length; k++) tot += c.v[k] || 0;
+			if (tot > 0) { cand.push({ lat: c.lat, lng: c.lng, tot: tot, d: d }); localTotal += tot; }
+		});
+		if (!cand.length) return null;
+		var floor = Math.max(2, Math.ceil(0.01 * localTotal));
+		var sig = cand.filter(function (c) { return c.tot >= floor; });
+		if (!sig.length) sig = cand;
+		sig.sort(function (a, b) { return a.d - b.d; });
+		var kept = [sig[0]], i;
+		for (i = 1; i < sig.length; i++) {
+			var prevD = kept[kept.length - 1].d, allow = Math.max(prevD * GROWTH, prevD + MINGAP);
+			if (sig[i].d <= allow) kept.push(sig[i]); else break;
+		}
+		var minLat = home.lat, maxLat = home.lat, minLng = home.lng, maxLng = home.lng;
+		kept.forEach(function (c) {
+			if (c.lat < minLat) minLat = c.lat; if (c.lat > maxLat) maxLat = c.lat;
+			if (c.lng < minLng) minLng = c.lng; if (c.lng > maxLng) maxLng = c.lng;
+		});
+		var center = { lat: (minLat + maxLat) / 2, lng: (minLng + maxLng) / 2 }, radiusMi = 0;
+		kept.concat([{ lat: home.lat, lng: home.lng }]).forEach(function (c) {
+			var d = bpHaversine(center.lat, center.lng, c.lat, c.lng); if (d > radiusMi) radiusMi = d;
+		});
+		return { lat: center.lat, lng: center.lng, radius: Math.max(radiusMi * (1 + PAD), MINR) };
+	}
+	// Regional map — auto-fit to the local service area around the client's home town (payload.home).
+	function renderLocationsZoom(container) {
+		var home = payload.home;
+		if (!home) { container.innerHTML = ''; return; }
+		var src = bpLocationPts(activeRange()), allPts = src.pts;
+		if (!allPts.length) { container.innerHTML = '<p class="bp-an-empty">No mapped locations yet — city coordinates fill in as the nightly analytics run geocodes them.</p>'; return; }
+		var rings = bpUsRings();
+		if (!rings.length) { container.innerHTML = '<p class="bp-an-empty">Map unavailable.</p>'; return; }
+		var ext = bpZoomExtent(home) || { lat: home.lat, lng: home.lng, radius: home.radius || 50 };
+		var R = Math.round(ext.radius);
+		var W = 640, H = 560, PAD = 14;
+		var dLat = ext.radius/69, dLng = ext.radius / (69 * Math.cos(ext.lat * Math.PI/180));
+		var corners = [[ext.lng-dLng, ext.lat-dLat], [ext.lng+dLng, ext.lat-dLat], [ext.lng+dLng, ext.lat+dLat], [ext.lng-dLng, ext.lat+dLat]];
+		var minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9, k, p;
+		for (k = 0; k < corners.length; k++) { p = bpAlbers(corners[k][0], corners[k][1]);
+			if (p[0] < minx) minx = p[0]; if (p[0] > maxx) maxx = p[0]; if (p[1] < miny) miny = p[1]; if (p[1] > maxy) maxy = p[1]; }
+		var s = Math.min((W - 2*PAD) / (maxx - minx), (H - 2*PAD) / (maxy - miny)), ox = (W - s*(maxx + minx)) / 2, oy = (H - s*(maxy + miny)) / 2;
+		var proj = function (lng, lat) { var q = bpAlbers(lng, lat); return [s*q[0] + ox, s*q[1] + oy]; };
+		var localPts = [], localTotal = 0, allTotal = 0, maxV = 0;
+		allPts.forEach(function (pt) {
+			if (pt.v > maxV) maxV = pt.v; allTotal += pt.v;
+			if (bpHaversine(ext.lat, ext.lng, pt.lat, pt.lng) <= ext.radius) { localPts.push(pt); localTotal += pt.v; }
+		});
+		var pct = allTotal > 0 ? Math.round(localTotal / allTotal * 100) : 0;
+		var title = container.closest('.bp-an-mapcol') && container.closest('.bp-an-mapcol').querySelector('.bp-an-maptitle');
+		if (title) title.textContent = 'Within ~' + R + ' mi of ' + home.label;
+		var note = ( localPts.length
+			? fmtInt(localTotal) + ' engaged sessions in the ~' + R + ' mi service area · <b>' + pct + '%</b> of mapped US traffic'
+			: 'No mapped sessions near ' + home.label + ' in this range.' )
+			+ ' · <span class="bp-an-map-window">' + src.span + '</span>';
+		bpDrawMap(container, { proj: proj, W: W, H: H, pts: localPts, maxV: maxV,
+			circle: { lat: ext.lat, lng: ext.lng, radius: ext.radius }, home: { lat: home.lat, lng: home.lng, label: home.label },
+			ariaLabel: 'Visitor locations in the service area around ' + home.label, noteHtml: note, maxLabels: 10 });
+	}
+
 	function renderAll() {
 		renderTiles();
 		Array.prototype.forEach.call(behaviorPies, renderBehaviorPie); // set pie visibility first (affects chart width)
@@ -1330,12 +1583,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		Array.prototype.forEach.call(techPies, renderTechPie);
 		Array.prototype.forEach.call(widthBars, renderWidthBars);
 		Array.prototype.forEach.call(speedCharts, renderSpeed);
+		Array.prototype.forEach.call(locationCharts, renderLocations);
+		Array.prototype.forEach.call(locationZoomCharts, renderLocationsZoom);
+		Array.prototype.forEach.call(pageTrendCharts, renderPageTrend);
+		Array.prototype.forEach.call(clarityCharts, renderClarity);
 	}
 
 	function clearDates() { var s = document.getElementById('bp-an-start'), e = document.getElementById('bp-an-end'); if (s) s.value = ''; if (e) e.value = ''; }
 	function setActive(sel, btn) { document.querySelectorAll(sel).forEach(function (x) { x.classList.remove('active'); }); btn.classList.add('active'); }
 	function clearCaps(nodes) { Array.prototype.forEach.call(nodes, function (c) { c._yCap = null; }); }
-	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); }
+	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); }
 
 	document.addEventListener('click', function (ev) {
 		var gb = ev.target.closest('.bp-an-gbtn');
@@ -1353,6 +1610,28 @@ document.addEventListener('DOMContentLoaded', function () {
 			clearCaps(card.querySelectorAll('.bp-analytics-behavior'));
 			card.querySelectorAll('.bp-analytics-pie').forEach(renderBehaviorPie);   // pie visibility first
 			card.querySelectorAll('.bp-analytics-behavior').forEach(renderBehavior); // then chart at correct width
+			return;
+		}
+
+		var pb = ev.target.closest('.bp-an-pbtn');
+		if (pb) {
+			ev.preventDefault();
+			var pcard = pb.closest('.bp-an-card');
+			pcard.querySelectorAll('.bp-an-pbtn').forEach(function (x) { x.classList.remove('active'); });
+			pb.classList.add('active');
+			clearCaps(pcard.querySelectorAll('.bp-analytics-pagetrend'));
+			pcard.querySelectorAll('.bp-analytics-pagetrend').forEach(renderPageTrend);
+			return;
+		}
+
+		var cb = ev.target.closest('.bp-an-cbtn');
+		if (cb) {
+			ev.preventDefault();
+			var ccard = cb.closest('.bp-an-card');
+			ccard.querySelectorAll('.bp-an-cbtn').forEach(function (x) { x.classList.remove('active'); });
+			cb.classList.add('active');
+			clearCaps(ccard.querySelectorAll('.bp-analytics-clarity'));
+			ccard.querySelectorAll('.bp-analytics-clarity').forEach(renderClarity);
 			return;
 		}
 
@@ -1392,15 +1671,19 @@ document.addEventListener('DOMContentLoaded', function () {
 					else if (t.dataset.pie === 'tech') renderTechPie(t);
 					else if (t.dataset.pie === 'channel') renderChannelPie(t);
 					else if (t.dataset.pie === 'behavior') renderBehaviorPie(t);
+					else if (t.classList.contains('bp-analytics-pagetrend')) renderPageTrend(t);
+					else if (t.classList.contains('bp-analytics-clarity')) renderClarity(t);
+					else if (t.classList.contains('bp-analytics-locations-zoom')) renderLocationsZoom(t);
+					else if (t.classList.contains('bp-analytics-locations')) renderLocations(t);
 					else if (t.classList.contains('bp-analytics-behavior')) renderBehavior(t);
 					else renderChannels(t);
 				});
 			});
 		});
-		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts].forEach(function (list) {
+		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, clarityCharts].forEach(function (list) {
 			Array.prototype.forEach.call(list, function (c) { ro.observe(c); });
 		});
-		renderTiles(); // tiles aren't observed by RO — render them at init
+		renderAll(); // deterministic initial paint — don't rely solely on ResizeObserver's first callback
 	} else {
 		renderAll();
 		window.addEventListener('resize', renderAll);

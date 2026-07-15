@@ -19,9 +19,25 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 	window.updateParallaxBackgrounds = () => {
 		const scrollPos = window.pageYOffset;
+		const deviceH = getDeviceH();
 
 		window.parallaxConfigs.forEach(config => {
-			const { containerObj, imageH, topY, bottomY, fullScreen, svgObj } = config;
+			const { containerObj, imageH, topY, bottomY, fullScreen, svgObj, bgLayer, secLayer } = config;
+
+			// Composited full-screen backdrop: move a fixed GPU layer via transform (no repaint).
+			// Drift is derived from the image-to-viewport height ratio and anchored to the
+			// container's scroll progress, so the backdrop starts at the image top and ends at the
+			// image bottom — identical to the old background-position math, but on the GPU.
+			if (bgLayer) {
+				const coverH = Math.max(deviceH, Math.round(window.innerWidth * bgLayer._bpImgH / bgLayer._bpImgW));
+				if (bgLayer._bpH !== coverH) { bgLayer.style.height = `${coverH}px`; bgLayer._bpH = coverH; }
+				const rect = containerObj.getBoundingClientRect();
+				const range = rect.height - deviceH;
+				const frac = range > 0 ? Math.max(0, Math.min(-rect.top / range, 1)) : 0;
+				bgLayer.style.transform = `translate3d(0, ${(-(coverH - deviceH) * frac).toFixed(1)}px, 0)`;
+				return;
+			}
+
 			const obj = containerObj.getBoundingClientRect();
 			const objTop = obj.top;
 			const objHeight = obj.height;
@@ -29,9 +45,9 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 			if (fullScreen) {
 				startScroll = objTop;
-				endScroll = objTop + objHeight - getDeviceH();
+				endScroll = objTop + objHeight - deviceH;
 			} else {
-				startScroll = objTop - getDeviceH();
+				startScroll = objTop - deviceH;
 				endScroll = objTop + objHeight;
 				adjTop = -parseInt(topY, 10);
 				adjBot = -parseInt(bottomY, 10);
@@ -43,10 +59,17 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			let finalPosY = (imageH + adjTop) - ((imageH + adjTop + adjBot) * objScroll);
 			finalPosY = (finalPosY / imageH) * 100;
 
-			// Apply different styles for images vs. SVGs
-			svgObj
-				? svgObj.style.transform = `translateY(${finalPosY}%)`
-				: containerObj.style.backgroundPositionY = `${finalPosY}%`;
+			// Apply as a composited transform — SVG, or a section's clipped inner layer. The section
+			// layer reuses the same finalPosY math, converted from a background-position percentage to
+			// a pixel translate: offset = (sectionHeight - imageHeight) * (finalPosY / 100).
+			if (svgObj) {
+				svgObj.style.transform = `translateY(${finalPosY}%)`;
+			} else if (secLayer) {
+				const shift = (objHeight - imageH) * (finalPosY / 100);
+				secLayer.style.transform = `translate3d(0, ${shift.toFixed(1)}px, 0)`;
+			} else {
+				containerObj.style.backgroundPositionY = `${finalPosY}%`;
+			}
 		});
 	};
 
@@ -62,17 +85,89 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		if (isSVG && svgObj) {
 			// Store SVG-specific config
 			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen, svgObj });
+		} else if (fullScreen) {
+			// Full-screen backdrop on its own composited layer. Replaces background-attachment:fixed
+			// + per-frame backgroundPositionY (a whole-viewport repaint every scroll frame in Chrome).
+			// Preferred path: a CSS scroll-driven animation drives the drift on the compositor with
+			// ZERO main-thread work — no scroll handler, perfectly in sync. JS is only a fallback for
+			// browsers without scroll-timeline support (e.g. Firefox), which are smooth anyway.
+			let bgLayer = document.querySelector('.bp-parallax-bg');
+			if (!bgLayer) {
+				bgLayer = document.createElement('div');
+				bgLayer.className = 'bp-parallax-bg';
+				document.body.insertBefore(bgLayer, document.body.firstChild);
+			}
+			bgLayer._bpImgW = imageW;
+			bgLayer._bpImgH = imageH;
+			bgLayer._bpH = 0;
+			setStyles(bgLayer, {
+				'position': 'fixed',
+				'left': '0',
+				'top': '0',
+				'width': '100%',
+				'zIndex': '-1',
+				'pointerEvents': 'none',
+				'backgroundImage': `url('${site_dir.upload_dir_uri}/${filename}')`,
+				'backgroundSize': 'cover',
+				'backgroundPosition': `${posX} center`,
+				'backgroundRepeat': 'no-repeat',
+				'willChange': 'transform'
+			});
+
+			// Layer height + pan distance change only on resize, never on scroll.
+			const sizeBg = () => {
+				const coverH = Math.max(getDeviceH(), Math.round(window.innerWidth * bgLayer._bpImgH / bgLayer._bpImgW));
+				bgLayer.style.height = `${coverH}px`;
+				bgLayer.style.setProperty('--bp-pan', `${coverH - getDeviceH()}px`);
+			};
+			sizeBg();
+
+			if (window.CSS && CSS.supports && CSS.supports('animation-timeline: scroll()')) {
+				// Compositor path: tie the drift straight to scroll position, no per-frame JS.
+				if (!document.getElementById('bp-parallax-style')) {
+					const st = document.createElement('style');
+					st.id = 'bp-parallax-style';
+					st.textContent =
+						'@keyframes bp-parallax-drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,calc(-1*var(--bp-pan,0px)),0)}}' +
+						'.bp-parallax-bg{animation:bp-parallax-drift linear both;animation-timeline:scroll(root block)}';
+					document.head.appendChild(st);
+				}
+				if (!bgLayer._bpResize) { window.addEventListener('resize', sizeBg, { passive: true }); bgLayer._bpResize = true; }
+				// Intentionally NOT pushed to parallaxConfigs — the backdrop does no per-scroll JS.
+			} else {
+				// Fallback (no scroll-timeline support): JS drives the transform each frame.
+				window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen, bgLayer });
+			}
 		} else {
-			// Apply background image
-			setStyles(containerObj, {
+			// Section backdrop on a composited inner layer. Replaces the per-frame backgroundPositionY
+			// write (a section repaint) with a transform on a clipped child — same drift, on the GPU.
+			// topY/bottomY still control the travel via the finalPosY math in updateParallaxBackgrounds.
+			if (getComputedStyle(containerObj).position === 'static') containerObj.style.position = 'relative';
+			containerObj.style.overflow = 'hidden';
+			containerObj.style.isolation = 'isolate';
+			let secLayer = containerObj.querySelector(':scope > .bp-parallax-sec');
+			if (!secLayer) {
+				secLayer = document.createElement('div');
+				secLayer.className = 'bp-parallax-sec';
+				containerObj.insertBefore(secLayer, containerObj.firstChild);
+			}
+			setStyles(secLayer, {
+				'position': 'absolute',
+				'left': '0',
+				'top': '0',
+				'width': '100%',
+				'height': `${imageH}px`,
+				'zIndex': '-1',
+				'pointerEvents': 'none',
 				'backgroundImage': `url('${site_dir.upload_dir_uri}/${filename}')`,
 				'backgroundSize': `${imageW}px ${imageH}px`,
-				'backgroundPosition': `${posX} 50%`,
-				'backgroundAttachment': fullScreen ? 'fixed' : 'scroll'
+				'backgroundPosition': `${posX} 0`,
+				'backgroundRepeat': 'no-repeat',
+				'willChange': 'transform'
 			});
 
 			// Store image-specific config
-			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen });
+			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen, secLayer });
 		}
 
 		updateParallaxBackgrounds();
@@ -400,8 +495,8 @@ window.splitMenu = (menuSel = "#desktop-navigation", logoSel = ".logo img", comp
 				findPos = Math.min(Math.max(findPos, 0), remain);
 
 				if (findPos > 0 && findPos < remain) {
-					sidebarObj.style.marginTop = `${findPos}px`;
-					checkHeights();
+					// transform (composited) instead of marginTop (layout) — no repaint, no forced reflow
+					sidebarObj.style.transform = `translate3d(0, ${findPos}px, 0)`;
 				}
 
 			}

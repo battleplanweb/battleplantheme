@@ -2216,13 +2216,14 @@ function bp_kw_render_admin_page(): void {
 	<table class="wp-list-table widefat fixed striped" id="kw-table" style="font-size:13px;">
 		<thead>
 			<tr>
-				<th style="width:26%">Keyword</th>
+				<th style="width:24%">Keyword</th>
 				<th style="width:6%">Rank</th>
 				<th style="width:6%">Change</th>
 				<th style="width:5%">Vol</th>
 				<th style="width:6%">Type</th>
-				<th style="width:22%">URL</th>
+				<th style="width:16%">URL</th>
 				<th style="width:8%">First Seen</th>
+				<th style="width:8%">Last Check</th>
 				<th style="width:8%">Next Check</th>
 				<th style="width:13%">Actions</th>
 			</tr>
@@ -2331,6 +2332,7 @@ function bp_kw_render_admin_page(): void {
 					</a>
 				</td>
 				<td style="color:#888;font-size:11px;"><?php echo esc_html($item['first_seen'] ?? '—'); ?></td>
+				<td style="color:#888;font-size:11px;"><?php echo esc_html(!empty($item['last_check']) ? $item['last_check'] : '—'); ?></td>
 				<td style="color:#888;font-size:11px;"><?php echo esc_html($item['next_check'] ?? '—'); ?></td>
 				<td>
 					<form method="post" style="display:inline;">
@@ -2354,7 +2356,7 @@ function bp_kw_render_admin_page(): void {
 				</td>
 			</tr>
 			<tr class="kw-spark-row">
-				<td colspan="8" style="padding:10px 16px 12px;background:#f6f7f7;border-top:none;">
+				<td colspan="9" style="padding:10px 16px 12px;background:#f6f7f7;border-top:none;">
 					<canvas class="kw-spark-canvas" height="60" style="display:block;width:100%;"></canvas>
 				</td>
 			</tr>

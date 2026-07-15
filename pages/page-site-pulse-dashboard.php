@@ -71,6 +71,11 @@ $cap_view_sup           = in_array( 'view_supervisor_reports', $caps, true );
 $cap_view_other_reports = $cap_view_gm || $cap_view_sup;
 $cap_reports_access     = in_array( 'submit_reports', $caps, true ) || $cap_view_other_reports;
 
+// Bulk-import tools (historical GM/Supervisor reports + physical comment cards), gated by the
+// import_data capability. The Comment Cards importer additionally requires the Surveys module on.
+$cap_import       = in_array( 'import_data', $caps, true );
+$cap_import_cards = $cap_import && function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'surveys' );
+
 // Action-item cross-visibility gates (separate caps; OFF by default = own items only).
 $cap_view_other_actions = in_array( 'view_gm_action_items', $caps, true ) || in_array( 'view_supervisor_action_items', $caps, true );
 
@@ -128,11 +133,12 @@ $nav[] = [
 	'slug'  => 'reports',
 	'label' => 'Stores',
 	'icon'  => 'store',
-	'show'  => $cap_reports_access,
+	'show'  => $cap_reports_access || $cap_import,
 	'children' => [
 		[ 'slug' => 'reports-my',     'label' => 'My Reports',          'show' => in_array( 'submit_reports', $caps ) ],
 		[ 'slug' => 'reports-review', 'label' => 'GM Reports',          'action' => 'review-gm',  'show' => $cap_view_gm ],
 		[ 'slug' => 'reports-review', 'label' => 'Supervisor Reports',  'action' => 'review-sup', 'show' => $cap_view_sup ],
+		[ 'slug' => 'import-reports', 'label' => 'Import Reports',       'show' => $cap_import ],
 	],
 ];
 
@@ -168,7 +174,7 @@ $nav[] = [
 	'slug'  => 'reviews',
 	'label' => 'Customer Feedback',
 	'icon'  => 'star',
-	'show'  => $cap_reviews_area || $cap_surveys_area || $cap_agency_reviews || $cap_emails_area || $cap_cm_area,
+	'show'  => $cap_reviews_area || $cap_surveys_area || $cap_agency_reviews || $cap_emails_area || $cap_cm_area || $cap_import_cards,
 	'children' => [
 		// On the review hub (your agency site) you manage clients via Client Reviews and don't need the
 		// site's own Reviews tab; client installs (e.g. Rovin) get Reviews but never Client Reviews.
@@ -177,6 +183,7 @@ $nav[] = [
 		[ 'slug' => 'agency-reviews', 'label' => 'Client Reviews', 'show' => $cap_agency_reviews ],
 			[ 'slug' => 'customer-messages', 'label' => 'Direct Messages', 'show' => $cap_cm_area ],
 		[ 'slug' => 'surveys',        'label' => 'Comment Cards', 'show' => $cap_surveys_area ],
+		[ 'slug' => 'import-cards',   'label' => 'Import Comment Cards', 'show' => $cap_import_cards ],
 		[ 'slug' => 'emails',         'label' => 'Emails',         'show' => $cap_emails_area ],
 	],
 ];
@@ -229,18 +236,8 @@ $nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'sh
 $sp_ai_name = function_exists( 'site_pulse_ai_assistant_name' ) ? site_pulse_ai_assistant_name() : 'AI Assistant';
 $nav[] = [ 'slug' => 'ai-assistant', 'label' => $sp_ai_name, 'icon' => 'chat', 'show' => in_array( 'use_ai_assistant', $caps ) ];
 
-// Import — GOD-only AI bulk-import tools, grouped under one parent menu. Reports = historical GM/
-// Supervisor reports (PDF/CSV/image); Comment Cards = physical customer comment cards (image/PDF).
-$nav[] = [
-	'slug'  => 'import',
-	'label' => 'Import',
-	'icon'  => 'forms',
-	'show'  => $eff_is_god,
-	'children' => [
-		[ 'slug' => 'import-reports', 'label' => 'Reports',       'show' => $eff_is_god ],
-		[ 'slug' => 'import-cards',   'label' => 'Comment Cards', 'show' => $eff_is_god && function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'surveys' ) ],
-	],
-];
+// Import tools now live inside the sections they feed: "Import Reports" under Stores and "Import
+// Comment Cards" under Customer Feedback. Both are gated by the import_data capability (see above).
 
 $nav[] = [
 	'slug'  => 'admin',
@@ -786,9 +783,9 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .= '</section>';
 }
 
-// Import Past Reports Panel (GOD-only) — upload PDFs/CSVs of historical GM reports, AI-parse,
-// review/confirm attribution, and save. No action items are generated for imported reports.
-if ( $eff_is_god ) {
+// Import Past Reports Panel — upload PDFs/CSVs of historical GM reports, AI-parse, review/confirm
+// attribution, and save. No action items are generated for imported reports. Gated by import_data.
+if ( $cap_import ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-import-reports">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Import Past Reports</h2></div>';
 	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload past <strong>GM or Supervisor reports</strong> (PDF, CSV, or image — JPG/PNG, one report per file). Claude reads each file and fills in the matching fields; the report <strong>type is auto-detected from who wrote it</strong> (and editable). Review the detected info below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Supervisor reports aren\'t tied to a location.</em></div></div>';
@@ -804,10 +801,10 @@ if ( $eff_is_god ) {
 	$printPage .= '</section>';
 }
 
-// Import Comment Cards Panel (GOD-only) — upload images/PDFs of physical customer comment cards,
-// AI-read the ratings + contact info + comments, review/confirm, and save into the Surveys table.
-// No "new comment card" notification is fired for imported cards.
-if ( $eff_is_god && function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'surveys' ) ) {
+// Import Comment Cards Panel — upload images/PDFs of physical customer comment cards, AI-read the
+// ratings + contact info + comments, review/confirm, and save into the Surveys table. No "new comment
+// card" notification is fired for imported cards. Gated by import_data + the Surveys module being on.
+if ( $cap_import_cards ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-import-cards">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Import Comment Cards</h2></div>';
 	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload photos or scans of <strong>customer comment cards</strong> (JPG, PNG, or PDF — one card per file). Claude reads each card and fills in the <strong>star ratings, contact info, visit date, and comments</strong>. Review the detected info below, set the <strong>location</strong>, correct anything, then save. Cards are added to <strong>Reviews → Surveys</strong>; <strong>no notification</strong> is sent.</div></div>';
@@ -1010,6 +1007,12 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .=         '<option value="">All reviews</option>';
 	$printPage .=         '<option value="unreplied">Needs reply</option>';
 	$printPage .=         '<option value="replied">Replied</option>';
+	$printPage .=       '</select>';
+	// Platforms filter — narrow the list to one source (e.g. only Facebook recommendations).
+	$printPage .=       '<select id="sp-reviews-filter-platform" class="sp-select">';
+	$printPage .=         '<option value="">All platforms</option>';
+	$printPage .=         '<option value="google">Google</option>';
+	$printPage .=         '<option value="facebook">Facebook</option>';
 	$printPage .=       '</select>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';

@@ -306,16 +306,9 @@ document.addEventListener("DOMContentLoaded", function () {
 	 };
 
 
-	// Set up scroll listener to handle various events
-	const debouncedScrollFunc = debounce(() => {
-		if (typeof lockAlign === 'function') { lockAlign(); }
-		if (typeof toggleScrollTop === 'function') { toggleScrollTop(); }
-	}, 300);
-
-	window.addEventListener('scroll', () => {
-		if (typeof controlLockedDivs === 'function') { controlLockedDivs(); }
-		if (typeof debouncedScrollFunc === 'function') { debouncedScrollFunc(); }
-	}, { passive: true });
+	// Scroll handling (controlLockedDivs + debounced lockAlign/toggleScrollTop) is centralized in
+	// script-fire-off.js's rAF-throttled scrollFunc — no separate listener here, to avoid running
+	// this work twice per scroll.
 
 
 	// Lock #colophon under rest of content

@@ -29,6 +29,11 @@ $daily = get_option('bp_ga4_daily_clean');
 // Add new dashboard widgets
 add_action( 'wp_dashboard_setup', 'battleplan_add_dashboard_widgets' );
 function battleplan_add_dashboard_widgets() {
+	// RETIRED — the numeric stat widgets are superseded by the graphic Analytics screen, which is now
+	// the main Dashboard (bp_dashboard_to_analytics() in functions-admin.php redirects here → Analytics).
+	// The render callbacks below are kept intact; only the registration is disabled. To bring the old
+	// widgets back, uncomment this block (and reach the native dashboard via index.php?core=1).
+	/*
 	if ( _USER_LOGIN == "battleplanweb" || in_array('bp_view_stats', _USER_ROLES) ) :
 		add_meta_box( 'battleplan_site_stats', 'Site Visitors', 'battleplan_admin_site_stats', 'dashboard', 'normal', 'high' );
 		add_meta_box( 'battleplan_admin_referrer_stats', 'Referrers', 'battleplan_admin_referrer_stats', 'dashboard', 'normal', 'high' );
@@ -44,6 +49,7 @@ function battleplan_add_dashboard_widgets() {
 		add_meta_box( 'battleplan_quarterly_stats', 'Quarterly Visitor Trends', 'battleplan_admin_quarterly_stats', 'dashboard', 'column3', 'high' );
 		add_meta_box( 'battleplan_daily_stats', 'Daily Visitors', 'battleplan_admin_daily_stats', 'dashboard', 'column3', 'high' );
 	endif;
+	*/
 }
 
 //delete_option('bp_ga4_pages_clean');

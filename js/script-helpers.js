@@ -70,6 +70,13 @@ window.setStyles = function (el, styles) {
 window.parallaxBG = function () {};
 window.parallaxDiv = function () {};
 
+// Same guard for the desktop-only menu enhancements (real versions in script-desktop.js /
+// script-magic-menu.js, neither of which loads on mobile). Without these, a script-site.js that
+// calls splitMenu()/magicMenu()/addMenuLogo() throws on mobile and aborts the rest of the file.
+window.splitMenu   = function () {};
+window.magicMenu   = function () {};
+window.addMenuLogo = function () {};
+
 window.__BP_STYLE_SHEET__ = null;
 const RULE_PREFIX = '/*bp*/';
 window.__BP_STYLE_RULES__ = new Set();

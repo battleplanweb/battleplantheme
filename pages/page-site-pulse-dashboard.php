@@ -129,17 +129,33 @@ $nav[] = [ 'slug' => 'messages', 'label' => 'Chat', 'icon' => 'chat', 'show' => 
 // created from messages for any user, not just report-access roles.
 $nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'tasks', 'show' => true ];
 
+// Reports are now data-driven: one "{Report} Reports" viewing tab per report this user can view-all, and
+// "My Reports" when they can submit any. Gated on the per-report caps (legacy caps honored too).
+$sp_report_templates = site_pulse_get_all_report_templates();
+$sp_report_children  = [];
+$sp_can_submit_any   = in_array( 'submit_reports', $caps, true );
+foreach ( $sp_report_templates as $sp_t ) {
+	$sp_vc = site_pulse_report_view_cap( (string) $sp_t['slug'] );
+	$sp_lv = site_pulse_report_legacy_view_cap( $sp_t );
+	if ( in_array( $sp_vc, $caps, true ) || ( '' !== $sp_lv && in_array( $sp_lv, $caps, true ) ) ) {
+		$sp_report_children[] = [ 'slug' => 'reports-review', 'label' => (string) $sp_t['name'], 'action' => 'review-template', 'template_id' => (int) $sp_t['id'], 'show' => true ];
+	}
+	if ( ! $sp_can_submit_any && in_array( site_pulse_report_submit_cap( (string) $sp_t['slug'] ), $caps, true ) ) $sp_can_submit_any = true;
+}
+$cap_reports_access = $sp_can_submit_any || ! empty( $sp_report_children );
+
+$sp_report_nav_children = array_merge(
+	[ [ 'slug' => 'reports-my', 'label' => 'My Reports', 'show' => $sp_can_submit_any ] ],
+	$sp_report_children,
+	[ [ 'slug' => 'import-reports', 'label' => 'Import Reports', 'show' => $cap_import ] ]
+);
+
 $nav[] = [
 	'slug'  => 'reports',
 	'label' => 'Stores',
 	'icon'  => 'store',
 	'show'  => $cap_reports_access || $cap_import,
-	'children' => [
-		[ 'slug' => 'reports-my',     'label' => 'My Reports',          'show' => in_array( 'submit_reports', $caps ) ],
-		[ 'slug' => 'reports-review', 'label' => 'GM Reports',          'action' => 'review-gm',  'show' => $cap_view_gm ],
-		[ 'slug' => 'reports-review', 'label' => 'Supervisor Reports',  'action' => 'review-sup', 'show' => $cap_view_sup ],
-		[ 'slug' => 'import-reports', 'label' => 'Import Reports',       'show' => $cap_import ],
-	],
+	'children' => $sp_report_nav_children,
 ];
 
 $nav[] = [
@@ -356,6 +372,7 @@ foreach ( $nav as $item ) {
 		foreach ( $item['children'] as $child ) {
 			if ( empty( $child['show'] ) ) continue;
 			$child_action = ! empty( $child['action'] ) ? ' data-action="' . esc_attr( $child['action'] ) . '"' : '';
+			if ( ! empty( $child['template_id'] ) ) $child_action .= ' data-template-id="' . (int) $child['template_id'] . '"';
 			$printPage .= '<button type="button" class="unique sp-nav-child" data-nav="' . esc_attr( $child['slug'] ) . '"' . $child_action . '>';
 			$printPage .=   '<span>' . esc_html( $child['label'] ) . '</span>';
 			$printPage .= '</button>';

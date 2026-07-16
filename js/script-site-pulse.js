@@ -434,8 +434,7 @@ function initSidebar() {
 			const action = btn.dataset.action;
 			if (action === 'new-report') showReportForm();
 			else if (action === 'mileage-add') showMileageForm();
-			else if (action === 'review-gm') { reviewReportType = 'manager'; applyReviewLocationDefault(); closeReportDetail('review'); loadReviewReports(); }
-			else if (action === 'review-sup') { reviewReportType = 'supervisor'; applyReviewLocationDefault(); closeReportDetail('review'); loadReviewReports(); }
+			else if (action === 'review-template') { reviewTemplateId = btn.dataset.templateId || ''; reviewTemplateName = (btn.textContent || '').trim(); applyReviewLocationDefault(); closeReportDetail('review'); loadReviewReports(); }
 		});
 	});
 }
@@ -2436,7 +2435,7 @@ function renderReportList(container, reports, prefix = '') {
 # Reports — Form
 --------------------------------------------------------------*/
 
-async function showReportForm(existingReport = null) {
+async function showReportForm(existingReport = null, chosenTemplateId = null) {
 	const wrap = $('#sp-report-form-wrap');
 	const listWrap = $('#sp-reports-list');
 	const detailWrap = $('#sp-report-detail-wrap');
@@ -2460,9 +2459,17 @@ async function showReportForm(existingReport = null) {
 			return;
 		}
 
-		// Each role fills out its own report: pick the template whose required role matches the
-		// current (or impersonated) user's role; fall back to the first if there's no exact match.
-		const template = templates.find(t => t.required_role_slug === D.userRole) || templates[0];
+		// The reports this user may submit — driven by the per-report submit caps (submit_report_{slug}),
+		// with legacy submit_reports honored for their role's report. >1 → a type picker appears above the form.
+		const _caps = D.userCaps || [];
+		const submittable = templates.filter(t =>
+			_caps.includes('submit_report_' + t.slug) ||
+			(_caps.includes('submit_reports') && t.required_role_slug === D.userRole)
+		);
+		const pool = submittable.length ? submittable : templates;
+		const template = (chosenTemplateId && pool.find(t => t.id == chosenTemplateId))
+			|| pool.find(t => t.required_role_slug === D.userRole)
+			|| pool[0];
 		let fields = [];
 		let answers = {};
 		let previousReport = null;
@@ -2480,7 +2487,8 @@ async function showReportForm(existingReport = null) {
 			previousReport = tplData.previousReport;
 		}
 
-		renderReportForm(wrap, template, fields, answers, existingReport, previousReport);
+		// No picker when editing an existing report (its type is fixed).
+		renderReportForm(wrap, template, fields, answers, existingReport, previousReport, existingReport ? [] : submittable);
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading form.</p>';
 	}
@@ -2499,7 +2507,7 @@ async function loadTemplateFields(templateId) {
 	}
 }
 
-function renderReportForm(wrap, template, fields, answers, existingReport, previousReport = null) {
+function renderReportForm(wrap, template, fields, answers, existingReport, previousReport = null, submittableList = []) {
 	const previousAnswers = previousReport?.answers || {};
 	const previousDate = previousReport ? formatDate(previousReport.date) : '';
 	const today = new Date();
@@ -2509,6 +2517,12 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 	html += `<h3>${esc(template.name)}</h3>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-form-back-btn">Back</button>';
 	html += '</div>';
+
+	// Report-type picker — only when the user can submit more than one report (e.g. GM + Nightly).
+	if (submittableList.length > 1) {
+		html += '<div class="sp-form-group sp-report-type-picker"><label for="sp-report-type-sel">Report</label>'
+			+ `<select id="sp-report-type-sel" class="sp-select">${submittableList.map(t => `<option value="${t.id}"${t.id == template.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>`;
+	}
 
 	html += '<form id="sp-report-form" class="sp-card-body">';
 	html += `<input type="hidden" name="template_id" value="${template.id}">`;
@@ -2606,6 +2620,8 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 	markUniqueSpans(wrap);
 
 	$('.sp-form-back-btn', wrap)?.addEventListener('click', () => hideReportForm());
+	// Switching report type reloads the blank form for the chosen template.
+	$('#sp-report-type-sel', wrap)?.addEventListener('change', (e) => showReportForm(null, e.target.value));
 	$('#sp-save-draft-btn')?.addEventListener('click', () => saveReport('save'));
 	$('#sp-report-form')?.addEventListener('submit', (e) => {
 		e.preventDefault();
@@ -2697,7 +2713,8 @@ function hideReportForm() {
 let currentReportList = [];
 let currentReportIndex = -1;
 let currentReportPrefix = '';
-let reviewReportType = 'manager'; // which report type the review panel shows: 'manager' (GM) | 'supervisor'
+let reviewTemplateId = '';   // which report (template id) the review panel shows
+let reviewTemplateName = ''; // its name, for the panel/mobile title
 
 async function showReportDetail(reportId, panelPrefix = '') {
 	currentReportPrefix = panelPrefix;
@@ -2721,7 +2738,7 @@ async function showReportDetail(reportId, panelPrefix = '') {
 	// disabled. Skipped entirely when the report is already in the in-memory list.
 	if (currentReportIndex === -1) {
 		try {
-			const filters = panelPrefix === 'review' ? { template_role: reviewReportType } : { scope: 'own' };
+			const filters = panelPrefix === 'review' ? { template_id: reviewTemplateId } : { scope: 'own' };
 			const lres = await spAjax('site_pulse_get_reports', filters);
 			if (lres && lres.success && Array.isArray(lres.data?.reports)) {
 				currentReportList = lres.data.reports;
@@ -3029,9 +3046,11 @@ async function initReview() {
 	const list = $('#sp-review-list');
 	if (!list) return;
 
-	// Default to GM reports, unless the viewer can ONLY see supervisor reports.
-	const canGm = D.userCaps?.includes('view_gm_reports');
-	if (!canGm && D.userCaps?.includes('view_supervisor_reports')) reviewReportType = 'supervisor';
+	// Default to the first report tab (the first "{Report} Reports" nav item) when none is chosen yet.
+	if (!reviewTemplateId) {
+		const firstBtn = $('.sp-nav-child[data-action="review-template"]');
+		if (firstBtn) { reviewTemplateId = firstBtn.dataset.templateId || ''; reviewTemplateName = (firstBtn.textContent || '').trim(); }
+	}
 
 	// Await the filters so the location default (the viewer's own store) is set before the first load.
 	await populateReviewFilters();
@@ -3085,14 +3104,14 @@ async function loadReviewReports() {
 	if (!list) return;
 
 	const titleEl = $('#sp-review-title');
-	if (titleEl) titleEl.textContent = reviewReportType === 'supervisor' ? 'Supervisor Reports' : 'GM Reports';
-	spUpdateMobileTitle(); // reflect GM vs Supervisor in the mobile header title
+	if (titleEl) titleEl.textContent = reviewTemplateName || 'Reports';
+	spUpdateMobileTitle(); // reflect the current report name in the mobile header title
 
 	list.innerHTML = '<div class="sp-loading"></div>';
 
 	const locVal = $('#sp-review-filter-location')?.value || '';
 	const filters = {
-		template_role: reviewReportType, // GM ('manager') vs Supervisor reports
+		template_id: reviewTemplateId, // which report (template) this tab shows
 		period_start: $('#sp-review-filter-start')?.value || '',
 		period_end: $('#sp-review-filter-end')?.value || '',
 	};
@@ -6438,9 +6457,9 @@ async function loadAdminTemplates() {
 }
 
 function renderAdminTemplates(wrap, templates) {
-	// No "+ Add Template" here — the report set is fixed (GM + Supervisor). Templates are
-	// edited in place (rename, toggle, add/remove fields) via the per-template controls below.
-	let html = spReportScheduleCardHtml(); // report-due schedule (frequency + start date) sits on top
+	// Reports are fully client-managed: add a new one, rename, change frequency/first-due, add/remove
+	// fields, or delete. Each report auto-generates "Submit …"/"View all …" permissions (Roles/Individual).
+	let html = '<div class="sp-admin-toolbar" style="margin-bottom:16px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-report-btn">+ Add Report</button></div>';
 
 	if (!templates || templates.length === 0) {
 		html += '<div class="sp-empty-state"><p>No report templates yet.</p></div>';
@@ -6455,10 +6474,13 @@ function renderAdminTemplates(wrap, templates) {
 			html += `<div><strong>${esc(t.name)}</strong> <span class="unique sp-status-badge ${statusClass}">${statusLabel}</span></div>`;
 			html += `<div style="display:grid;grid-auto-flow:column;gap:8px;">`;
 			html += iconBtn('edit', 'sp-edit-template-btn', `data-id="${t.id}"`);
+			html += iconBtn('delete', 'sp-delete-template-btn', `data-id="${t.id}" title="Delete report"`);
 			html += '</div></div>';
-			const roleLabel = spTemplateRoles.find(r => r.slug === t.required_role_slug)?.label || t.required_role_slug;
-			const freqLabel = ({ weekly: 'Weekly', biweekly: 'Bi-Weekly', monthly: 'Monthly' })[t.frequency] || t.frequency;
-			html += `<div class="sp-template-meta">${esc(freqLabel)} &middot; ${esc(roleLabel)} &middot; ${fieldCount} field${fieldCount !== 1 ? 's' : ''}</div>`;
+			const freqLabel = ({ daily: 'Daily', weekly: 'Weekly', biweekly: 'Bi-Weekly', monthly: 'Monthly', quarterly: 'Quarterly' })[t.frequency] || t.frequency;
+			const dueTxt    = t.report_anchor ? ' &middot; first due ' + esc(formatDate(t.report_anchor)) : '';
+			const remindTxt = (t.send_reminders == 1) ? ' &middot; 🔔 reminders' : '';
+			const emailTxt  = t.email_on_submit ? ' &middot; ✉ ' + esc(t.email_on_submit) : '';
+			html += `<div class="sp-template-meta">${esc(freqLabel)}${dueTxt}${remindTxt}${emailTxt} &middot; ${fieldCount} field${fieldCount !== 1 ? 's' : ''}</div>`;
 
 			html += '<div class="sp-template-fields">';
 			if (t.fields && t.fields.length > 0) {
@@ -6485,21 +6507,19 @@ function renderAdminTemplates(wrap, templates) {
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	// Auto-save the report frequency/start date on change (no Save button). A frequency change reloads
-	// the panel so the renamed template (e.g. "GM Weekly Report") refreshes below.
-	const saveReportSchedule = async (reloadAfter) => {
-		const payload = {};
-		$$('.sp-rsched-freq', wrap).forEach(s => { payload[s.dataset.key + '_frequency'] = s.value; });
-		$$('.sp-rsched-anchor', wrap).forEach(i => { payload[i.dataset.key + '_anchor'] = i.value; });
-		try {
-			const res = await spAjax('site_pulse_save_report_schedule', payload);
-			if (!res.success) { alert(res.data?.message || 'Could not save.'); return; }
-			spFlash('Saved');
-			if (reloadAfter) loadAdminTemplates();
-		} catch (err) { alert('Could not save.'); }
-	};
-	$$('.sp-rsched-freq', wrap).forEach(s => s.addEventListener('change', () => saveReportSchedule(true)));
-	$$('.sp-rsched-anchor', wrap).forEach(i => i.addEventListener('change', () => saveReportSchedule(false)));
+	$('#sp-add-report-btn', wrap)?.addEventListener('click', () => showTemplateForm(null));
+
+	$$('.sp-delete-template-btn', wrap).forEach(btn => {
+		btn.addEventListener('click', async () => {
+			const t = templates.find(x => String(x.id) === btn.dataset.id);
+			if (!confirm(`Delete the "${t?.name || ''}" report? A report with existing submissions is deactivated (data kept) instead.`)) return;
+			try {
+				const res = await spAjax('site_pulse_admin_delete_template', { id: btn.dataset.id });
+				if (res.success) { if (res.data?.message) spFlash(res.data.message); loadAdminTemplates(); }
+				else alert(res.data?.message || 'Error deleting report.');
+			} catch (e) { alert('Error deleting report.'); }
+		});
+	});
 
 	$$('.sp-edit-template-btn', wrap).forEach(btn => {
 		btn.addEventListener('click', () => {
@@ -6597,7 +6617,7 @@ function showTemplateForm(tpl) {
 	const wrap = spFormModal();
 
 	const isEdit = !!tpl;
-	const title = isEdit ? 'Edit Template' : 'Add Template';
+	const title = isEdit ? 'Edit Report' : 'Add Report';
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
@@ -6605,14 +6625,14 @@ function showTemplateForm(tpl) {
 	html += '<form id="sp-template-form">';
 	if (isEdit) html += `<input type="hidden" name="id" value="${tpl.id}">`;
 
-	html += '<div class="sp-form-group"><label>Template Name</label>';
+	html += '<div class="sp-form-group"><label>Report Name</label>';
 	html += `<input type="text" name="name" class="sp-input" value="${esc(tpl?.name || '')}" required></div>`;
 
 	html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
 	html += '<div class="sp-form-group"><label>Frequency</label>';
 	html += `<select name="frequency" class="sp-select">`;
-	['weekly','biweekly','monthly','quarterly'].forEach(f => {
-		html += `<option value="${f}"${tpl?.frequency === f ? ' selected' : ''}>${f.charAt(0).toUpperCase() + f.slice(1)}</option>`;
+	[['daily','Daily'],['weekly','Weekly'],['biweekly','Bi-Weekly'],['monthly','Monthly'],['quarterly','Quarterly']].forEach(([v,l]) => {
+		html += `<option value="${v}"${tpl?.frequency === v ? ' selected' : ''}>${l}</option>`;
 	});
 	html += '</select></div>';
 
@@ -6635,8 +6655,18 @@ function showTemplateForm(tpl) {
 	html += '<div class="sp-form-group"><label>Description</label>';
 	html += `<input type="text" name="description" class="sp-input" value="${esc(tpl?.description || '')}"></div>`;
 
+	// Self-contained schedule + delivery, per report.
+	html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+	html += '<div class="sp-form-group"><label>First due date</label>';
+	html += `<input type="date" name="report_anchor" class="sp-input" value="${esc(tpl?.report_anchor || '')}"></div>`;
+	html += '<div class="sp-form-group"><label>Email each submission to <span class="sp-help-text" style="font-weight:400;">(optional)</span></label>';
+	html += `<input type="text" name="email_on_submit" class="sp-input" value="${esc(tpl?.email_on_submit || '')}" placeholder="owner@company.com"></div>`;
+	html += '</div>';
+	html += `<div class="sp-form-group"><label class="sp-reminder-toggle"><input type="checkbox" name="send_reminders" value="1"${tpl?.send_reminders == 1 ? ' checked' : ''}> Send &ldquo;report due&rdquo; reminders on this schedule</label>`;
+	html += '<div class="sp-help-text">When on, this report shows up in Settings &rarr; Notifications so you can pick which roles get the due-date alert.</div></div>';
+
 	html += '<div class="sp-report-form-actions">';
-	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Create Template'}</button>`;
+	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Create Report'}</button>`;
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-tpl-form-cancel">Cancel</button>';
 	html += '</div></form></div>';
 

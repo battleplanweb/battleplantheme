@@ -38,7 +38,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-customer-
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.54' );
+define( 'SITE_PULSE_DB_VERSION', '1.55' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -237,6 +237,9 @@ function site_pulse_install_db(): void {
 		name varchar(255) NOT NULL,
 		description text DEFAULT NULL,
 		frequency varchar(20) NOT NULL DEFAULT 'weekly',
+		report_anchor date DEFAULT NULL,
+		send_reminders tinyint(1) NOT NULL DEFAULT 0,
+		email_on_submit varchar(255) DEFAULT NULL,
 		required_role_slug varchar(50) NOT NULL DEFAULT 'manager',
 		is_active tinyint(1) NOT NULL DEFAULT 1,
 		display_order tinyint(3) NOT NULL DEFAULT 0,
@@ -729,8 +732,19 @@ add_action( 'init', function() {
 		site_pulse_ensure_supervisor_template();
 		update_option( 'site_pulse_supervisor_report_seeded', '1' );
 	}
+
+	// Nightly Report (a per-store nightly numbers sheet). Restaurant-specific, so it only stands up on
+	// installs that opt in: add  add_filter( 'site_pulse_enable_nightly_report', '__return_true' );  in
+	// the client's functions-site.php. Gated on the template NOT already existing (idempotent — the seed
+	// self-guards on the slug too), so it heals itself the first load AFTER the filter goes live rather
+	// than relying on a one-time option flag that could latch before the filter was registered.
+	if ( ! site_pulse_has_nightly_template() && apply_filters( 'site_pulse_enable_nightly_report', false ) ) {
+		site_pulse_ensure_nightly_template();
+	}
+
 	site_pulse_migrate_supervisor_report_caps();
 	site_pulse_migrate_retire_legacy_report_caps();
+	site_pulse_migrate_report_caps_unified(); // reports → per-report caps (additive; keeps legacy working)
 	site_pulse_migrate_survey_caps();
 	site_pulse_migrate_split_settings_caps();
 
@@ -1067,6 +1081,130 @@ function site_pulse_ensure_supervisor_template(): void {
 			'help_text'     => $f['help_text'],
 		] );
 	}
+}
+
+/**
+ * Whether this install has a Nightly Report (a report_templates row with required_role_slug 'nightly').
+ * Gates the Nightly Reports nav tab, the My-Reports type picker, and the email-on-submit — so installs
+ * that don't use it never see any of it.
+ */
+function site_pulse_has_nightly_template(): bool {
+	global $wpdb;
+	return (bool) $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table('report_templates') . " WHERE slug = %s AND is_active = 1", 'nightly'
+	) );
+}
+
+/**
+ * One-time: stand up the "Nightly Report" — a per-store nightly numbers sheet (a THIRD report type
+ * alongside GM + Supervisor, keyed by required_role_slug='nightly'). Restaurant-specific fields, so it
+ * only seeds where opted in via the `site_pulse_enable_nightly_report` filter (a client's
+ * functions-site.php adds it). Self-guards on the slug. Also seeds the default email recipient setting.
+ */
+function site_pulse_ensure_nightly_template(): void {
+	global $wpdb;
+	$tpl_tbl = site_pulse_table('report_templates');
+	$fld_tbl = site_pulse_table('report_fields');
+	if ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $tpl_tbl WHERE slug = %s", 'nightly' ) ) ) return;
+
+	$now   = current_time( 'mysql' );
+	$order = (int) $wpdb->get_var( "SELECT COALESCE(MAX(display_order), -1) + 1 FROM $tpl_tbl" );
+	$wpdb->insert( $tpl_tbl, [
+		'slug'               => 'nightly',
+		'name'               => 'Nightly Report',
+		'description'        => 'Nightly store numbers.',
+		'frequency'          => 'daily',
+		'required_role_slug' => 'nightly',
+		'is_active'          => 1,
+		'display_order'      => $order,
+		'created_at'         => $now,
+		'updated_at'         => $now,
+	] );
+	$tid = (int) $wpdb->insert_id;
+	if ( ! $tid ) return;
+
+	// [ field_key, label, field_type, section ]
+	$fields = [
+		[ 'day',              'Day',                 'text',     '' ],
+		[ 'dinein_lunch',     'Lunch',               'number',   'Dine In' ],
+		[ 'dinein_dinner',    'Dinner',              'number',   'Dine In' ],
+		[ 'dinein_total',     'Total',               'number',   'Dine In' ],
+		[ 'curbside_lunch',   'Lunch',               'number',   'Curbside' ],
+		[ 'curbside_dinner',  'Dinner',              'number',   'Curbside' ],
+		[ 'curbside_total',   'Total',               'number',   'Curbside' ],
+		[ 'cater',            'Cater',               'number',   'Catering & Guests' ],
+		[ 'total_guests',     'Total Guests',        'number',   'Catering & Guests' ],
+		[ 'togo_desserts',    'ToGo Desserts Sold',  'number',   'Add-On Sales' ],
+		[ 'gallons_tea',      'Gallons of Tea Sold', 'number',   'Add-On Sales' ],
+		[ 'curbside_tip_pct', 'Curbside Tip %',      'number',   'Add-On Sales' ],
+		[ 'notes',            'Notes',               'textarea', 'Notes' ],
+	];
+	$i = 0;
+	foreach ( $fields as $f ) {
+		$wpdb->insert( $fld_tbl, [
+			'template_id'   => $tid,
+			'field_key'     => $f[0],
+			'label'         => $f[1],
+			'field_type'    => $f[2],
+			'options'       => '',
+			'placeholder'   => '',
+			'is_required'   => 0,
+			'display_order' => $i++,
+			'section'       => $f[3],
+			'help_text'     => '',
+		] );
+	}
+
+	// Email each submitted Nightly Report to the owners (per-report recipient, editable in Settings → Reports).
+	$wpdb->update( $tpl_tbl, [ 'email_on_submit' => 'owners@babeschicken.com' ], [ 'id' => $tid ] );
+}
+
+/**
+ * Email a just-submitted report to $to (a per-report "email on submit" recipient set in Settings →
+ * Reports; comma-separated allowed). Internal only. Builds a label/value table grouped by the template's
+ * sections. Overridable via the `site_pulse_report_email_recipient` filter.
+ */
+function site_pulse_email_report_on_submit( int $report_id, string $to ): void {
+	$to = trim( (string) apply_filters( 'site_pulse_report_email_recipient', $to, $report_id ) );
+	if ( '' === $to ) return;
+
+	$report = site_pulse_get_report( $report_id );
+	if ( ! $report ) return;
+	$template = site_pulse_get_template( (int) $report['template_id'] );
+	$fields   = $template ? site_pulse_get_template_fields( (int) $template['id'] ) : [];
+	$name     = $template ? (string) $template['name'] : 'Report';
+
+	$amap = [];
+	foreach ( (array) site_pulse_get_report_answers( $report_id ) as $a ) {
+		$amap[ $a['field_key'] ] = (string) ( $a['answer_text'] ?? '' );
+	}
+
+	$loc   = site_pulse_get_location( (int) $report['location_id'] );
+	$user  = get_userdata( (int) $report['user_id'] );
+	$store = $loc ? $loc['name'] : 'Unknown Location';
+	$date  = $report['report_period_start'] ?: gmdate( 'Y-m-d' );
+
+	$rows = ''; $section = '';
+	foreach ( $fields as $f ) {
+		$v = $amap[ $f['field_key'] ] ?? '';
+		if ( '' === trim( (string) $v ) ) continue; // skip blank lines
+		if ( ! empty( $f['section'] ) && $f['section'] !== $section ) {
+			$section = $f['section'];
+			$rows .= '<tr><td colspan="2" style="padding:12px 8px 4px;font-weight:700;border-top:1px solid #eee;">' . esc_html( $section ) . '</td></tr>';
+		}
+		$rows .= '<tr><td style="padding:4px 8px;color:#555;">' . esc_html( $f['label'] ) . '</td>'
+			. '<td style="padding:4px 8px;font-weight:600;">' . nl2br( esc_html( $v ) ) . '</td></tr>';
+	}
+
+	$subject = sprintf( '%s — %s — %s', $name, $store, $date );
+	$body  = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;">';
+	$body .= '<h2 style="margin:0 0 4px;">' . esc_html( $name ) . '</h2>';
+	$body .= '<p style="margin:0 0 12px;color:#555;">' . esc_html( $store ) . ' &middot; ' . esc_html( $date )
+		. ( $user ? ' &middot; submitted by ' . esc_html( $user->display_name ) : '' ) . '</p>';
+	$body .= '<table style="border-collapse:collapse;width:100%;max-width:520px;">' . $rows . '</table>';
+	$body .= '</div>';
+
+	wp_mail( $to, $subject, $body, [ 'Content-Type: text/html; charset=UTF-8' ] );
 }
 
 /**
@@ -1519,10 +1657,17 @@ function site_pulse_capability_catalog_all(): array {
 	// Ordered so every non-"manage" capability comes first, then all the admin "Manage …" ones grouped
 	// at the end (submit_mileage sits with the other submit/view caps). The Tiers / per-user grids draw
 	// a divider above the first "Manage" item, so this grouping keeps regular vs admin caps cleanly split.
-	return [
-		'submit_reports'               => 'Submit reports',
-		'view_gm_reports'              => 'View all GM reports',
-		'view_supervisor_reports'      => 'View all supervisor reports',
+	$cat = [];
+	// Per-report submit/view caps, generated from the report templates — so adding or renaming a report
+	// flows straight into the Roles & Individual permission grids. Keyed on the immutable slug; label uses
+	// the (renameable) report name, e.g. "Submit GM Bi-Weekly Reports" / "View all GM Bi-Weekly Reports".
+	foreach ( site_pulse_get_all_report_templates() as $t ) {
+		$name   = (string) $t['name'];
+		$plural = $name . ( substr( $name, -1 ) === 's' ? '' : 's' );
+		$cat[ site_pulse_report_submit_cap( (string) $t['slug'] ) ] = 'Submit ' . $plural;
+		$cat[ site_pulse_report_view_cap( (string) $t['slug'] ) ]   = 'View all ' . $plural;
+	}
+	return array_merge( $cat, [
 		'view_gm_action_items'         => 'View all GM action items',
 		'view_supervisor_action_items' => 'View all supervisor action items',
 		'view_analytics'    => 'View analytics',
@@ -1552,7 +1697,7 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_directory'     => 'Manage company directory',
 		'manage_emails'        => 'Manage customer emails',
 		'manage_customer_messages' => 'Reply to customer messages (FB/IG)',
-	];
+	] );
 }
 
 /**
@@ -1731,8 +1876,9 @@ function site_pulse_managed_location_ids( int $viewer_id ): array {
 }
 
 function site_pulse_can_view_report( int $viewer_id, array $report ): bool {
-	if ( (int) $report['user_id'] === $viewer_id ) return true;
-	return in_array( (int) $report['user_id'], site_pulse_visible_report_user_ids( $viewer_id ), true );
+	if ( (int) $report['user_id'] === $viewer_id ) return true; // always your own
+	$tpl = site_pulse_get_template( (int) $report['template_id'] );
+	return $tpl && site_pulse_can_view_all_report( $viewer_id, $tpl ); // per-report view-all cap (legacy honored)
 }
 
 
@@ -1822,6 +1968,146 @@ function site_pulse_get_template_fields( int $template_id ): array {
 		"SELECT * FROM " . site_pulse_table('report_fields') . " WHERE template_id = %d ORDER BY display_order",
 		$template_id
 	), ARRAY_A ) ?: [];
+}
+
+/**
+ * All report templates (active by default) — the source of truth for the dynamic per-report capabilities,
+ * viewing tabs, and submit picker. Cached per-request so the capability catalog (called a lot) is cheap.
+ */
+function site_pulse_get_all_report_templates( bool $active_only = true ): array {
+	static $cache = [];
+	$k = $active_only ? 'a' : 'all';
+	if ( isset( $cache[ $k ] ) ) return $cache[ $k ];
+	global $wpdb;
+	$where = $active_only ? "WHERE is_active = 1" : "";
+	$rows  = $wpdb->get_results( "SELECT * FROM " . site_pulse_table('report_templates') . " $where ORDER BY display_order, id", ARRAY_A ) ?: [];
+	return $cache[ $k ] = $rows;
+}
+
+// Per-report capability keys (stable — keyed on the immutable slug, so renaming a report keeps its caps).
+function site_pulse_report_submit_cap( string $slug ): string { return 'submit_report_' . $slug; }
+function site_pulse_report_view_cap( string $slug ): string { return 'view_report_' . $slug; }
+
+// The legacy capability that historically governed this template (backward-compat during/after the
+// unification migration): manager→GM report caps, supervisor→Supervisor report caps.
+function site_pulse_report_legacy_submit_cap(): string { return 'submit_reports'; }
+function site_pulse_report_legacy_view_cap( array $tpl ): string {
+	$r = (string) ( $tpl['required_role_slug'] ?? '' );
+	if ( 'supervisor' === $r ) return 'view_supervisor_reports';
+	if ( 'manager' === $r )    return 'view_gm_reports';
+	return '';
+}
+
+// Can $user_id SUBMIT this report? New per-report cap OR (legacy) submit_reports for their role's report.
+function site_pulse_can_submit_report( int $user_id, array $tpl ): bool {
+	if ( site_pulse_is_god( $user_id ) ) return true;
+	if ( site_pulse_user_can( $user_id, site_pulse_report_submit_cap( (string) $tpl['slug'] ) ) ) return true;
+	$role_slug = (string) ( $tpl['required_role_slug'] ?? '' );
+	if ( '' !== $role_slug && site_pulse_user_can( $user_id, 'submit_reports' ) ) {
+		$prof = site_pulse_get_user_profile( $user_id );
+		$role = $prof ? site_pulse_get_role( (int) $prof['role_id'] ) : null;
+		if ( $role && ( $role['slug'] ?? '' ) === $role_slug ) return true;
+	}
+	return false;
+}
+
+// Can $user_id VIEW ALL submissions of this report (not just their own)? New per-report cap OR legacy.
+function site_pulse_can_view_all_report( int $user_id, array $tpl ): bool {
+	if ( site_pulse_is_god( $user_id ) ) return true;
+	if ( site_pulse_user_can( $user_id, site_pulse_report_view_cap( (string) $tpl['slug'] ) ) ) return true;
+	$legacy = site_pulse_report_legacy_view_cap( $tpl );
+	return '' !== $legacy && site_pulse_user_can( $user_id, $legacy );
+}
+
+// Templates $user_id may SUBMIT / VIEW-ALL (for the My-Reports picker and the dynamic viewing tabs).
+function site_pulse_submittable_templates( int $user_id ): array {
+	return array_values( array_filter( site_pulse_get_all_report_templates(), fn( $t ) => site_pulse_can_submit_report( $user_id, $t ) ) );
+}
+function site_pulse_viewable_report_templates( int $user_id ): array {
+	return array_values( array_filter( site_pulse_get_all_report_templates(), fn( $t ) => site_pulse_can_view_all_report( $user_id, $t ) ) );
+}
+
+// How many submitted/draft reports exist for a template — gates deletion (block if any).
+function site_pulse_template_report_count( int $template_id ): int {
+	global $wpdb;
+	return (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM " . site_pulse_table('reports') . " WHERE template_id = %d", $template_id
+	) );
+}
+
+/**
+ * One-time unification migration (additive, non-destructive): reports move from three hard-coded caps
+ * (submit_reports / view_gm_reports / view_supervisor_reports) to per-report caps. This:
+ *  1. Backfills each template's frequency + first-due from the old per-type schedule settings.
+ *  2. Adds the matching per-report caps to every role / user-override that holds a legacy report cap,
+ *     so permissions survive even after a later Roles-grid save (which drops caps no longer in the
+ *     catalog). Legacy caps are LEFT in place (harmless) — the cap-check helpers also honor them, so the
+ *     app keeps working the instant this deploys, before or after the migration runs.
+ * Guarded by an option flag.
+ */
+function site_pulse_migrate_report_caps_unified(): void {
+	if ( get_option( 'site_pulse_report_caps_unified' ) ) return;
+
+	global $wpdb;
+	$tpl_tbl   = site_pulse_table('report_templates');
+	$templates = $wpdb->get_results( "SELECT * FROM $tpl_tbl", ARRAY_A ) ?: [];
+	if ( ! $templates ) return; // nothing to migrate yet — try again next load
+
+	// 1) Backfill frequency + first-due onto templates from the legacy per-type settings.
+	$prefix_for = [ 'manager' => 'gm', 'supervisor' => 'supervisor' ];
+	foreach ( $templates as $t ) {
+		if ( ! empty( $t['report_anchor'] ) ) continue;
+		$pfx = $prefix_for[ (string) $t['required_role_slug'] ] ?? '';
+		if ( '' === $pfx ) continue;
+		$freq   = (string) site_pulse_get_setting( $pfx . '_report_frequency', '' );
+		$anchor = (string) site_pulse_get_setting( $pfx . '_report_anchor', '' );
+		$upd = [];
+		if ( '' !== $freq )   $upd['frequency']     = $freq;
+		if ( '' !== $anchor ) { $upd['report_anchor'] = $anchor; $upd['send_reminders'] = 1; } // had a schedule → keep reminders on
+		if ( $upd ) $wpdb->update( $tpl_tbl, $upd, [ 'id' => (int) $t['id'] ] );
+	}
+
+	// 2) Legacy → new cap mapping.
+	$gm  = site_pulse_get_template_by_slug( 'manager-biweekly' );
+	$sup = site_pulse_get_template_by_slug( 'supervisor-biweekly' );
+	$submit_by_role = []; // role_slug => [ submit_report_{slug}, ... ] (the reports that role submits)
+	foreach ( $templates as $t ) {
+		$rs = (string) $t['required_role_slug'];
+		if ( '' !== $rs ) $submit_by_role[ $rs ][] = site_pulse_report_submit_cap( (string) $t['slug'] );
+	}
+
+	// Roles.
+	$roles_tbl = site_pulse_table('roles');
+	foreach ( $wpdb->get_results( "SELECT id, slug, capabilities FROM $roles_tbl", ARRAY_A ) ?: [] as $r ) {
+		$caps = json_decode( (string) $r['capabilities'], true ) ?: [];
+		$add  = [];
+		if ( $gm  && in_array( 'view_gm_reports', $caps, true ) )         $add[] = site_pulse_report_view_cap( (string) $gm['slug'] );
+		if ( $sup && in_array( 'view_supervisor_reports', $caps, true ) ) $add[] = site_pulse_report_view_cap( (string) $sup['slug'] );
+		if ( in_array( 'submit_reports', $caps, true ) ) $add = array_merge( $add, $submit_by_role[ (string) $r['slug'] ] ?? [] );
+		$new = array_values( array_unique( array_merge( $caps, $add ) ) );
+		if ( count( $new ) !== count( $caps ) ) {
+			$wpdb->update( $roles_tbl, [ 'capabilities' => wp_json_encode( $new ), 'updated_at' => current_time( 'mysql' ) ], [ 'id' => (int) $r['id'] ] );
+		}
+	}
+
+	// Per-user capability overrides (grant a new cap wherever the matching legacy one is granted).
+	$up_tbl = site_pulse_table('user_profiles');
+	foreach ( $wpdb->get_results( "SELECT user_id, role_id, capability_overrides FROM $up_tbl WHERE capability_overrides IS NOT NULL AND capability_overrides <> ''", ARRAY_A ) ?: [] as $p ) {
+		$ov = site_pulse_parse_overrides( $p['capability_overrides'] );
+		if ( ! $ov ) continue;
+		$changed = false;
+		if ( $gm  && ! empty( $ov['view_gm_reports'] ) && ! isset( $ov[ site_pulse_report_view_cap( (string) $gm['slug'] ) ] ) ) { $ov[ site_pulse_report_view_cap( (string) $gm['slug'] ) ] = true; $changed = true; }
+		if ( $sup && ! empty( $ov['view_supervisor_reports'] ) && ! isset( $ov[ site_pulse_report_view_cap( (string) $sup['slug'] ) ] ) ) { $ov[ site_pulse_report_view_cap( (string) $sup['slug'] ) ] = true; $changed = true; }
+		if ( ! empty( $ov['submit_reports'] ) ) {
+			$role = site_pulse_get_role( (int) $p['role_id'] );
+			foreach ( $submit_by_role[ (string) ( $role['slug'] ?? '' ) ] ?? [] as $sc ) {
+				if ( ! isset( $ov[ $sc ] ) ) { $ov[ $sc ] = true; $changed = true; }
+			}
+		}
+		if ( $changed ) $wpdb->update( $up_tbl, [ 'capability_overrides' => wp_json_encode( $ov ) ], [ 'user_id' => (int) $p['user_id'] ] );
+	}
+
+	update_option( 'site_pulse_report_caps_unified', '1' );
 }
 
 
@@ -2380,8 +2666,12 @@ function site_pulse_ajax_save_report(): void {
 	$answers     = wp_unslash( $_POST['answers'] ?? [] );
 	$action_type = sanitize_text_field( $_POST['action_type'] ?? 'save' );
 
-	if ( ! $user_id || ! site_pulse_user_can( $user_id, 'submit_reports' ) ) {
-		wp_send_json_error( [ 'message' => 'You do not have permission to submit reports.' ] );
+	// Per-report submit permission (submit_report_{slug}, with legacy submit_reports honored during the
+	// transition). Any submit_reports-holder can save any template on the backend was the OLD rule; now it's
+	// scoped to the specific report being saved.
+	$submit_tpl = $template_id ? site_pulse_get_template( $template_id ) : null;
+	if ( ! $user_id || ! $submit_tpl || ! site_pulse_can_submit_report( $user_id, $submit_tpl ) ) {
+		wp_send_json_error( [ 'message' => 'You do not have permission to submit this report.' ] );
 	}
 
 	$profile = site_pulse_get_user_profile( $user_id );
@@ -2425,7 +2715,15 @@ function site_pulse_ajax_save_report(): void {
 	$pending_count = 0;
 	if ( $action_type === 'submit' ) {
 		site_pulse_submit_report( $report_id );
-		$pending_count = site_pulse_create_action_items_from_report( $report_id );
+		// A report with an "email on submit" recipient (set per-report in Settings → Reports) is a lean
+		// data report: email it and skip the AI action-item pass. Otherwise generate action items as usual.
+		$tpl      = $submit_tpl ?: site_pulse_get_template( $template_id );
+		$email_to = $tpl ? trim( (string) ( $tpl['email_on_submit'] ?? '' ) ) : '';
+		if ( '' !== $email_to ) {
+			site_pulse_email_report_on_submit( $report_id, $email_to );
+		} else {
+			$pending_count = site_pulse_create_action_items_from_report( $report_id );
+		}
 	}
 
 	global $wpdb;
@@ -2435,12 +2733,13 @@ function site_pulse_ajax_save_report(): void {
 		[ 'id' => $report_id ]
 	);
 
-	// Submitting clears THIS user's report-due / past-due dashboard banner — no need to X it out.
+	// Submitting clears THIS user's report-due / past-due dashboard banner for THIS report — no need to X it.
 	if ( 'submit' === $action_type ) {
+		$due_type = 'report_due:' . (string) ( $submit_tpl['slug'] ?? '' );
 		$wpdb->query( $wpdb->prepare(
 			"UPDATE " . site_pulse_table('notifications') . " SET on_dashboard = 0, is_read = 1
-			 WHERE user_id = %d AND on_dashboard = 1 AND type = 'report_due'",
-			$user_id
+			 WHERE user_id = %d AND on_dashboard = 1 AND type = %s",
+			$user_id, $due_type
 		) );
 	}
 
@@ -2459,11 +2758,21 @@ function site_pulse_ajax_get_reports(): void {
 	$user_id = site_pulse_effective_user_id();
 	$args    = [];
 
-	// scope=own → strictly the viewer's own reports (the "My Reports" panel). Otherwise the
-	// visible set is driven by the report-visibility capabilities (see visible_report_user_ids).
-	$scope = sanitize_text_field( $_POST['scope'] ?? '' );
+	// scope=own → strictly the viewer's own reports (the "My Reports" panel). The review panel passes a
+	// template_id → visibility is PER-REPORT: see everyone's if the viewer can view-all THAT report,
+	// otherwise just their own of it. (Legacy path, no template_id, falls back to the old visible-user set.)
+	$scope       = sanitize_text_field( $_POST['scope'] ?? '' );
+	$g_tmpl_id   = (int) ( $_POST['template_id'] ?? 0 );
 	if ( $scope === 'own' ) {
 		$args['user_id'] = $user_id;
+	} elseif ( $g_tmpl_id ) {
+		$tpl        = site_pulse_get_template( $g_tmpl_id );
+		$can_all    = $tpl && site_pulse_can_view_all_report( $user_id, $tpl );
+		if ( ! $can_all ) {
+			$args['user_id'] = $user_id;                                   // own of this report only
+		} elseif ( ! empty( $_POST['user_id'] ) ) {
+			$args['user_id'] = (int) $_POST['user_id'];                    // narrow to one submitter
+		}
 	} else {
 		$visible = site_pulse_visible_report_user_ids( $user_id );
 		if ( ! empty( $_POST['user_id'] ) && in_array( (int) $_POST['user_id'], $visible, true ) ) {
@@ -2901,31 +3210,64 @@ function site_pulse_ajax_admin_save_template(): void {
 	global $wpdb;
 	$id   = (int) ( $_POST['id'] ?? 0 );
 	$now  = current_time( 'mysql' );
+	$name = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
+	if ( '' === $name ) wp_send_json_error( [ 'message' => 'Report name is required.' ] );
+
+	$anchor = (string) ( $_POST['report_anchor'] ?? '' );
 	$data = [
-		'name'               => sanitize_text_field( $_POST['name'] ?? '' ),
-		'slug'               => sanitize_title( $_POST['slug'] ?? $_POST['name'] ?? '' ),
+		'name'               => $name,
 		'description'        => sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) ),
 		'frequency'          => sanitize_text_field( $_POST['frequency'] ?? 'weekly' ),
+		'report_anchor'      => preg_match( '/^\d{4}-\d{2}-\d{2}$/', $anchor ) ? $anchor : null,
+		'send_reminders'     => ! empty( $_POST['send_reminders'] ) ? 1 : 0,
+		'email_on_submit'    => ( sanitize_text_field( wp_unslash( $_POST['email_on_submit'] ?? '' ) ) ?: null ),
 		'required_role_slug' => sanitize_text_field( $_POST['required_role_slug'] ?? 'manager' ),
-		'is_active'          => (int) ( $_POST['is_active'] ?? 1 ),
+		'is_active'          => isset( $_POST['is_active'] ) ? (int) $_POST['is_active'] : 1,
 		'updated_at'         => $now,
 	];
 
-	if ( empty( $data['name'] ) ) {
-		wp_send_json_error( [ 'message' => 'Template name is required.' ] );
-	}
-
 	if ( $id ) {
+		// Rename/edit in place — the slug is NOT changed (the per-report caps key on it, so it must stay stable).
 		$wpdb->update( site_pulse_table('report_templates'), $data, [ 'id' => $id ] );
 	} else {
-		$data['display_order'] = (int) $wpdb->get_var( "SELECT COALESCE(MAX(display_order), -1) + 1 FROM " . site_pulse_table('report_templates') );
-		$data['created_at'] = $now;
+		// New report: derive a unique slug from the name (the immutable cap key).
+		$base = sanitize_title( $name ); if ( '' === $base ) $base = 'report';
+		$slug = $base; $n = 2;
+		while ( $wpdb->get_var( $wpdb->prepare( "SELECT id FROM " . site_pulse_table('report_templates') . " WHERE slug = %s", $slug ) ) ) { $slug = $base . '-' . $n++; }
+		$data['slug']          = $slug;
+		$data['display_order']  = (int) $wpdb->get_var( "SELECT COALESCE(MAX(display_order), -1) + 1 FROM " . site_pulse_table('report_templates') );
+		$data['created_at']     = $now;
 		$wpdb->insert( site_pulse_table('report_templates'), $data );
 		$id = (int) $wpdb->insert_id;
 	}
 
-	site_pulse_log( 'template_saved', sprintf( 'Saved report template: %s', $data['name'] ) );
-	wp_send_json_success( [ 'message' => 'Template saved.', 'id' => $id ] );
+	site_pulse_log( 'template_saved', sprintf( 'Saved report template: %s', $name ) );
+	wp_send_json_success( [ 'message' => 'Report saved.', 'id' => $id ] );
+}
+
+// Delete a report template — BLOCKED if it has submissions (deactivated instead, to preserve the data).
+add_action( 'wp_ajax_site_pulse_admin_delete_template', 'site_pulse_ajax_admin_delete_template' );
+function site_pulse_ajax_admin_delete_template(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_templates' ) ) return;
+
+	global $wpdb;
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Missing report.' ] );
+	$tpl = site_pulse_get_template( $id );
+	if ( ! $tpl ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+
+	$count = site_pulse_template_report_count( $id );
+	if ( $count > 0 ) {
+		$wpdb->update( site_pulse_table('report_templates'), [ 'is_active' => 0, 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $id ] );
+		site_pulse_log( 'template_deactivated', sprintf( 'Deactivated report template (has %d submissions): %s', $count, $tpl['name'] ) );
+		wp_send_json_success( [ 'deactivated' => true, 'message' => sprintf( 'This report has %d submitted report%s, so it was deactivated (hidden everywhere, data kept) instead of deleted.', $count, $count === 1 ? '' : 's' ) ] );
+	}
+
+	$wpdb->delete( site_pulse_table('report_fields'), [ 'template_id' => $id ], [ '%d' ] );
+	$wpdb->delete( site_pulse_table('report_templates'), [ 'id' => $id ], [ '%d' ] );
+	site_pulse_log( 'template_deleted', sprintf( 'Deleted report template: %s', $tpl['name'] ) );
+	wp_send_json_success( [ 'deleted' => true, 'message' => 'Report deleted.' ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_save_field', 'site_pulse_ajax_admin_save_field' );
@@ -3334,11 +3676,20 @@ function site_pulse_migrate_notifications_v3(): void {
 	update_option( 'site_pulse_notif_v3_seeded', '1' );
 }
 
-// The notifiable situations (rows of the Settings → Notifications matrix).
+// The notifiable situations (rows of the Settings → Notifications matrix). The per-report "due today"
+// reminders are dynamic: one row per report that has "Send reminders" turned on, keyed report_due:{slug}
+// so each report's reminder routes independently and a report's row disappears when reminders are off.
 function site_pulse_notification_events(): array {
-	return [
+	$events = [
 		'report_submitted'            => 'Report submitted',
-		'report_due'                  => 'Report due today',
+	];
+	if ( function_exists( 'site_pulse_get_all_report_templates' ) ) {
+		foreach ( site_pulse_get_all_report_templates() as $tpl ) {
+			if ( empty( $tpl['send_reminders'] ) ) continue;
+			$events[ 'report_due:' . (string) $tpl['slug'] ] = (string) ( $tpl['name'] ?? 'Report' ) . ' — due-date reminder';
+		}
+	}
+	return array_merge( $events, [
 		'reports_past_due'            => 'Reports past due — who sees the dashboard widget',
 		'survey_received'             => 'New comment card submitted',
 		'action_pending'              => 'Action items created from a new report',
@@ -3351,7 +3702,7 @@ function site_pulse_notification_events(): array {
 		'mileage_pending'             => 'New mileage location proposed (needs approval)',
 		'mileage_approved'            => 'Mileage location approved',
 		'mileage_rejected'            => 'Mileage location rejected',
-	];
+	] );
 }
 
 // The events relevant to THIS install — the ones whose feature is actually on. Used to decide which
@@ -3362,7 +3713,6 @@ function site_pulse_notification_events_active(): array {
 	// Which module powers each event — if that module is off, the event can't fire.
 	$event_module = [
 		'report_submitted'            => 'reports',
-		'report_due'                  => 'reports',
 		'reports_past_due'            => 'reports',
 		'action_pending'              => 'reports',
 		'action_followup'             => 'reports',
@@ -3383,7 +3733,8 @@ function site_pulse_notification_events_active(): array {
 
 	$out = [];
 	foreach ( site_pulse_notification_events() as $ev => $label ) {
-		$mod = $event_module[ $ev ] ?? null;
+		// Dynamic per-report reminder rows (report_due:{slug}) belong to the reports module.
+		$mod = ( 0 === strpos( $ev, 'report_due:' ) ) ? 'reports' : ( $event_module[ $ev ] ?? null );
 		if ( $mod && function_exists( 'site_pulse_module_on' ) && ! site_pulse_module_on( $mod ) ) continue;
 		if ( ! $approval_on && in_array( $ev, $approval_events, true ) ) continue;
 		$out[ $ev ] = $label;
@@ -3422,9 +3773,18 @@ function site_pulse_notification_columns(): array {
 // Defaults mirror the original hard-coded recipients (push on by default — every notified event also
 // wakes the recipient's devices; an admin can uncheck Push per event in Settings → Notifications).
 function site_pulse_notification_defaults(): array {
-	return [
+	$defaults = [
 		'report_submitted'            => [ 'bell' => 1, 'supervisor' => 1, 'push' => 1 ],
-		'report_due'                  => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
+	];
+	// Each report with reminders on defaults to notifying its own submitter (+ push), matching the old
+	// single "report due" behavior; admins can re-route per report in Settings → Notifications.
+	if ( function_exists( 'site_pulse_get_all_report_templates' ) ) {
+		foreach ( site_pulse_get_all_report_templates() as $tpl ) {
+			if ( empty( $tpl['send_reminders'] ) ) continue;
+			$defaults[ 'report_due:' . (string) $tpl['slug'] ] = [ 'bell' => 1, 'gm' => 1, 'push' => 1 ];
+		}
+	}
+	return array_merge( $defaults, [
 		'reports_past_due'            => [ 'bell' => 1, 'role:supervisor' => 1, 'role:admin' => 1, 'role:owner' => 1 ],
 		'survey_received'             => [ 'bell' => 1, 'gm' => 1, 'supervisor' => 1, 'push' => 1 ],
 		'action_pending'              => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
@@ -3437,7 +3797,7 @@ function site_pulse_notification_defaults(): array {
 		'mileage_pending'             => [ 'bell' => 1, 'role:admin' => 1, 'role:owner' => 1, 'push' => 1 ],
 		'mileage_approved'            => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
 		'mileage_rejected'            => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
-	];
+	] );
 }
 
 // The effective matrix: saved overrides per event, falling back to defaults for any event not saved.
@@ -3652,10 +4012,11 @@ function site_pulse_report_is_due_today( string $frequency, string $anchor ): bo
 	return ( $days % $step ) === 0;
 }
 
-// Daily cron — when a GM and/or Supervisor report falls due today (per the Reports settings schedule),
-// post a PERSONAL "Report due today" reminder to each person who must submit. One combined event
-// ('report_due'): the contextual User column delivers it to the person who owes the report, and User's
-// Supervisor to their boss. No-op until a frequency + start date is configured for the type.
+// Daily cron — when any report with "Send reminders" on falls due today (per that report's own
+// frequency + first-due date), post a PERSONAL "due today" reminder to each person who must submit it.
+// Routing is per-report: the event key is 'report_due:{slug}', so Settings → Notifications can route
+// each report's reminder independently (the contextual User column reaches the person who owes it,
+// User's Supervisor their boss). No-op for reports without send_reminders / frequency / start date.
 add_action( 'site_pulse_report_due_reminder', 'site_pulse_run_report_due_reminders' );
 function site_pulse_run_report_due_reminders(): void {
 	if ( function_exists( 'site_pulse_module_on' ) && ! site_pulse_module_on( 'reports' ) ) return;
@@ -3663,36 +4024,45 @@ function site_pulse_run_report_due_reminders(): void {
 	global $wpdb;
 	$today  = current_time( 'Y-m-d' );
 	$ntable = site_pulse_table('notifications');
+	$users  = site_pulse_get_all_users( true );   // active, non-superadmin — evaluated once per run
 
-	// role slug => settings prefix (gm_report_* / supervisor_report_*).
-	$types = [ 'manager' => 'gm', 'supervisor' => 'supervisor' ];
-	foreach ( $types as $role => $prefix ) {
-		$freq   = site_pulse_get_setting( $prefix . '_report_frequency', '' );
-		$anchor = site_pulse_get_setting( $prefix . '_report_anchor', '' );
-		if ( '' === $freq || '' === $anchor ) continue;                 // not configured → skip
+	foreach ( site_pulse_get_all_report_templates() as $tpl ) {
+		if ( empty( $tpl['send_reminders'] ) ) continue;
+		$freq   = (string) ( $tpl['frequency'] ?? '' );
+		$anchor = (string) ( $tpl['report_anchor'] ?? '' );
+		if ( '' === $freq || '' === $anchor ) continue;                 // not scheduled → skip
 		if ( ! site_pulse_report_is_due_today( $freq, $anchor ) ) continue;
 
-		// Due today for this role — one personal banner per person who actually submits reports.
-		foreach ( site_pulse_user_ids_with_role( $role ) as $uid ) {
-			if ( ! site_pulse_has_cap_raw( $uid, 'submit_reports' ) ) continue;
-			$profile = site_pulse_get_user_profile( $uid );
-			if ( ! $profile || ( $profile['status'] ?? 'active' ) !== 'active' ) continue;
-			// Clear this user's leftover due banner first, then post a fresh "due today".
+		$slug        = (string) $tpl['slug'];
+		$event       = 'report_due:' . $slug;
+		$submit_cap  = site_pulse_report_submit_cap( $slug );
+		$legacy_role = (string) ( $tpl['required_role_slug'] ?? '' );
+		$name        = (string) ( $tpl['name'] ?? 'report' );
+
+		// Due today — one personal banner per person who can submit THIS report (new per-report cap,
+		// or the legacy submit_reports cap when their role matches the report's original required role).
+		foreach ( $users as $u ) {
+			$uid = (int) ( $u['user_id'] ?? 0 );
+			if ( ! $uid ) continue;
+			$can = site_pulse_has_cap_raw( $uid, $submit_cap )
+				|| ( '' !== $legacy_role && (string) ( $u['role_slug'] ?? '' ) === $legacy_role && site_pulse_has_cap_raw( $uid, 'submit_reports' ) );
+			if ( ! $can ) continue;
+			// Clear this user's leftover due banner for THIS report first, then post a fresh "due today".
 			$wpdb->query( $wpdb->prepare(
-				"UPDATE $ntable SET on_dashboard = 0, is_read = 1 WHERE user_id = %d AND type = 'report_due' AND on_dashboard = 1",
-				$uid
+				"UPDATE $ntable SET on_dashboard = 0, is_read = 1 WHERE user_id = %d AND type = %s AND on_dashboard = 1",
+				$uid, $event
 			) );
-			site_pulse_dispatch_notification( 'report_due', $uid, 'Your report is due today.', 0, 'report' );
+			site_pulse_dispatch_notification( $event, $uid, 'Your ' . $name . ' is due today.', 0, 'report' );
 		}
 	}
 
 	// Day(s) after a due date: anyone still holding an un-acked "due today" banner from a prior day
 	// (didn't submit, didn't X it) has the wording switched to "past due". Today's fresh banners are
-	// excluded by the created_at < today guard.
-	$past = 'Your report is past due.';
+	// excluded by the created_at < today guard. Matches every per-report reminder type.
 	$wpdb->query( $wpdb->prepare(
-		"UPDATE $ntable SET message = %s WHERE type = 'report_due' AND on_dashboard = 1 AND message <> %s AND DATE(created_at) < %s",
-		$past, $past, $today
+		"UPDATE $ntable SET message = 'Your report is past due.'
+		 WHERE type LIKE 'report_due:%' AND on_dashboard = 1 AND message LIKE 'Your %is due today.' AND DATE(created_at) < %s",
+		$today
 	) );
 }
 

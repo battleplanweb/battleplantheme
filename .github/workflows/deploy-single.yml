@@ -1,0 +1,35 @@
+name: 🎯 Deploy — Single Site (test)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag to deploy (e.g. v41.4)'
+        required: true
+        default: ''
+      wpe_env:
+        description: 'WP Engine install name (e.g. courterhallstg)'
+        required: true
+        default: ''
+      cache_clear:
+        description: 'Clear cache after deploy?'
+        required: false
+        default: 'TRUE'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag ${{ github.event.inputs.tag }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Deploy to ${{ github.event.inputs.wpe_env }}
+        uses: wpengine/github-action-wpe-site-deploy@v3
+        with:
+          WPE_SSHG_KEY_PRIVATE: ${{ secrets.WPE_SSHG_KEY_PRIVATE }}
+          WPE_ENV: ${{ github.event.inputs.wpe_env }}
+          REMOTE_PATH: "wp-content/themes/battleplantheme/"
+          PHP_LINT: TRUE
+          CACHE_CLEAR: ${{ github.event.inputs.cache_clear }}

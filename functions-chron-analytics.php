@@ -41,10 +41,8 @@ function bp_run_chron_analytics(bool $force = false): void {
  * ONCE nightly (numOfDays=1, no dimension breakdown = site totals) and APPEND yesterday's row to the
  * bp_clarity_history[YYYYMMDD] time series we build ourselves. Token = per-project JWT stored in
  * customer_info['clarity-tags']['token'] (['clarity-tags']['id'] is the tracking ID — a different thing).
- *
- * NOTE: only Traffic's field names are documented; the click/error metrics are extracted best-effort
- * (first numeric value in the metric's row). The one-time raw-response log lets us lock the exact
- * field names — check the error log after the first run and tighten bp_clarity_metric_value() if off.
+ * Metric field names below are confirmed against a live response (the raw-response log is kept as a
+ * one-time safety net in case Clarity changes its schema).
  */
 function bp_clarity_collect_daily(): bool {
     $ci    = customer_info();
@@ -79,17 +77,25 @@ function bp_clarity_collect_daily(): bool {
     }
     if (!$byMetric) return false;
 
-    $traffic = $byMetric['Traffic'] ?? [];
+    // Exact keys confirmed from a live response (Jul 2026). metricName has NO spaces (RageClickCount,
+    // not "Rage Click Count"). For the click/scroll metrics the event count is `subTotal` (sessionsCount
+    // is just the day's total, identical on every metric). Traffic's distinct-user field is
+    // `distinctUserCount` (the docs' "distantUserCount" was a typo).
+    $get = function (string $name, string $field) use ($byMetric) {
+        return (int) round((float) ($byMetric[$name][$field] ?? 0));
+    };
     $row = [
-        'sessions'    => bp_clarity_metric_value($traffic, ['totalSessionCount']),
-        'bots'        => bp_clarity_metric_value($traffic, ['totalBotSessionCount']),
-        'users'       => bp_clarity_metric_value($traffic, ['distantUserCount']),
-        'rage'        => bp_clarity_metric_value($byMetric['Rage Click Count']   ?? []),
-        'dead'        => bp_clarity_metric_value($byMetric['Dead Click Count']   ?? []),
-        'quickback'   => bp_clarity_metric_value($byMetric['Quickback Click']    ?? []),
-        'scriptErr'   => bp_clarity_metric_value($byMetric['Script Error Count'] ?? []),
-        'errClick'    => bp_clarity_metric_value($byMetric['Error Click Count']  ?? []),
-        'excessScrl'  => bp_clarity_metric_value($byMetric['Excessive Scroll']   ?? []),
+        'sessions'    => $get('Traffic', 'totalSessionCount'),
+        'bots'        => $get('Traffic', 'totalBotSessionCount'),
+        'users'       => $get('Traffic', 'distinctUserCount'),
+        'rage'        => $get('RageClickCount',   'subTotal'),
+        'dead'        => $get('DeadClickCount',   'subTotal'),
+        'quickback'   => $get('QuickbackClick',   'subTotal'),
+        'scriptErr'   => $get('ScriptErrorCount', 'subTotal'),
+        'errClick'    => $get('ErrorClickCount',  'subTotal'),
+        'excessScrl'  => $get('ExcessiveScroll',  'subTotal'),
+        'scrollDepth' => (int) round((float) ($byMetric['ScrollDepth']['averageScrollDepth'] ?? 0)),  // avg %, session-weighted on rollup
+        'activeTime'  => $get('EngagementTime',   'activeTime'),   // active engagement seconds
     ];
 
     $ymd  = gmdate('Ymd', strtotime('-1 day'));           // the window numOfDays=1 covers (UTC)
@@ -104,16 +110,6 @@ function bp_clarity_collect_daily(): bool {
     return true;
 }
 
-/**
- * Pull a scalar from a Clarity metric's information row. Tries the given known keys first (Traffic is
- * the only metric with documented field names), then falls back to the first numeric value — good
- * enough for the single-count click/error metrics until we confirm their exact keys from the raw log.
- */
-function bp_clarity_metric_value(array $row, array $keys = []): int {
-    foreach ($keys as $k) if (isset($row[$k]) && is_numeric($row[$k])) return (int) round((float) $row[$k]);
-    foreach ($row as $v) if (is_numeric($v)) return (int) round((float) $v);
-    return 0;
-}
 
 /*
  * Build a GA4 Data API client + property id from the site's customer_info +
@@ -1057,6 +1053,87 @@ function bp_ga4_collect_pages_history(BetaAnalyticsDataClient $client, $property
 }
 
 /**
+ * Scroll-depth history — the time series behind the "Content Visibility" chart. The site fires GA4
+ * unlock_achievement events with achievement_id "{postID}-{threshold}" ({postID}-init on load, then
+ * -20/-30/…/-100 as the visitor scrolls). We pull [period × achievementId] engagedSessions (same
+ * metric the snapshot widget uses), sum across pages per threshold, and store per-period counts incl.
+ * `init` (the denominator). Monthly comes from a yearMonth pull (36mo); daily+weekly share one date
+ * pull (bounded to 180d — achievementId is high-cardinality, so we don't pull it date-level for years).
+ * Stored as [periodKey][threshold] => engagedSessions (threshold ∈ init,20,30,…,100).
+ */
+function bp_ga4_collect_achievements_history(BetaAnalyticsDataClient $client, $propertyId): bool {
+    $threshSet = array_flip(['init', '20', '30', '40', '50', '60', '70', '80', '90', '100']);
+
+    // One pass over [period × achievementId] fills BOTH the scroll-depth store (…-init/-20…-100) and
+    // the tracked-events store (track-*/conversion-* — component interactions + conversions).
+    $accumulate = function (array $rows, callable $keyer, array &$scroll, array &$events) use ($threshSet) {
+        foreach ($rows as $row) {
+            $period = trim($row['d'][0]);
+            $id     = str_replace(' ', '-', trim($row['d'][1]));   // match the snapshot's normalisation
+            if ($id === '') continue;
+            $v = (int) $row['m'][0];
+            if ($v <= 0) continue;
+            $pk = $keyer($period);
+            if (strncmp($id, 'track-', 6) === 0 || strncmp($id, 'conversion-', 11) === 0) {
+                $events[$pk][$id] = ($events[$pk][$id] ?? 0) + $v;   // full key, e.g. track-financing / conversion-phone-calls
+                continue;
+            }
+            $suffix = substr($id, strrpos($id, '-') + 1);          // "{postID}-60" → "60"; "…-init" → "init"
+            if (!isset($threshSet[$suffix])) continue;
+            $scroll[$pk][$suffix] = ($scroll[$pk][$suffix] ?? 0) + $v;
+        }
+    };
+
+    $report = function ($dim, $withAchievement, $start) use ($client, $propertyId) {
+        $dims = [new Dimension(['name' => $dim])];
+        if ($withAchievement) $dims[] = new Dimension(['name' => 'achievementId']);
+        return bp_ga4_run_report_all_rows($client, [
+            'property'        => 'properties/' . $propertyId,
+            'dateRanges'      => [new DateRange(['start_date' => $start, 'end_date' => date('Y-m-d', strtotime('-1 day'))])],
+            'dimensions'      => $dims,
+            'metrics'         => [new Metric(['name' => 'engagedSessions'])],
+            'dimensionFilter' => bp_ga4_dimension_filter(),
+        ]);
+    };
+    // Total engaged sessions per period — the denominator the component-% needs (matches the widget).
+    $addEngaged = function (array $rows, callable $keyer, array &$events) {
+        foreach ($rows as $row) {
+            $v = (int) $row['m'][0];
+            if ($v <= 0) continue;
+            $pk = $keyer(trim($row['d'][0]));
+            $events[$pk]['_engaged'] = ($events[$pk]['_engaged'] ?? 0) + $v;
+        }
+    };
+
+    $mStart = date('Y-m-01', strtotime('-35 months'));
+    $dStart = date('Y-m-d', strtotime('-180 days'));
+    $ident  = function ($p) { return $p; };
+
+    // Monthly (deep) from yearMonth; daily + weekly (recent) share one bounded date pull.
+    $scrollM = []; $scrollD = []; $scrollW = [];
+    $eventsM = []; $eventsD = []; $eventsW = [];
+    $accumulate( $report('yearMonth', true, $mStart), $ident, $scrollM, $eventsM );
+    $dRows = $report('date', true, $dStart);
+    $accumulate( $dRows, $ident, $scrollD, $eventsD );
+    $accumulate( $dRows, 'bp_ga4_week_key', $scrollW, $eventsW );
+
+    // Engaged-session denominators (no achievementId dimension → tiny queries).
+    $addEngaged( $report('yearMonth', false, $mStart), $ident, $eventsM );
+    $eDRows = $report('date', false, $dStart);
+    $addEngaged( $eDRows, $ident, $eventsD );
+    $addEngaged( $eDRows, 'bp_ga4_week_key', $eventsW );
+
+    if (!$scrollM && !$scrollD && !$eventsM && !$eventsD) return false;
+    if ($scrollM) update_option('bp_ga4_scroll_history',        $scrollM, false);
+    if ($scrollD) update_option('bp_ga4_scroll_history_daily',  $scrollD, false);
+    if ($scrollW) update_option('bp_ga4_scroll_history_weekly', $scrollW, false);
+    if ($eventsM) update_option('bp_ga4_events_history',        $eventsM, false);
+    if ($eventsD) update_option('bp_ga4_events_history_daily',  $eventsD, false);
+    if ($eventsW) update_option('bp_ga4_events_history_weekly', $eventsW, false);
+    return true;
+}
+
+/**
  * Geocode city names → lat/lng for the Analytics map. Reuses the site's existing Google geocoding
  * (_PLACES_API), restricted to the US. Results cache forever in bp_ga4_city_latlng
  * ([city => ['lat'=>..,'lng'=>..]], or ['lat'=>null] to remember a permanent miss). We geocode only
@@ -1171,6 +1248,7 @@ function bp_ga4_collect_all_clean(BetaAnalyticsDataClient $client, $propertyId):
     bp_ga4_collect_locations_history($client, $propertyId);
     bp_ga4_geocode_cities();
     bp_ga4_collect_pages_history($client, $propertyId);
+    bp_ga4_collect_achievements_history($client, $propertyId);
 
     bp_ga4_build_tracked_elements();
 

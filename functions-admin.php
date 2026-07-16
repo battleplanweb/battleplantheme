@@ -558,35 +558,55 @@ function bp_analytics_page() {
 		ksort( $hist );  // ascending YYYYMMDD
 
 		$metrics = [
-			[ 'key' => 'rage',       'label' => 'Rage clicks' ],
-			[ 'key' => 'dead',       'label' => 'Dead clicks' ],
-			[ 'key' => 'quickback',  'label' => 'Quick backs' ],
-			[ 'key' => 'errClick',   'label' => 'Error clicks' ],
-			[ 'key' => 'scriptErr',  'label' => 'Script errors' ],
-			[ 'key' => 'excessScrl', 'label' => 'Excessive scroll' ],
-			[ 'key' => 'sessions',   'label' => 'Sessions' ],
-			[ 'key' => 'bots',       'label' => 'Bot sessions' ],
+			[ 'key' => 'rage',        'label' => 'Rage clicks' ],
+			[ 'key' => 'dead',        'label' => 'Dead clicks' ],
+			[ 'key' => 'quickback',   'label' => 'Quick backs' ],
+			[ 'key' => 'errClick',    'label' => 'Error clicks' ],
+			[ 'key' => 'scriptErr',   'label' => 'Script errors' ],
+			[ 'key' => 'excessScrl',  'label' => 'Excessive scroll' ],
+			[ 'key' => 'scrollDepth', 'label' => 'Avg scroll depth' ],
+			[ 'key' => 'activeTime',  'label' => 'Engagement time' ],
+			[ 'key' => 'sessions',    'label' => 'Sessions' ],
+			[ 'key' => 'bots',        'label' => 'Bot sessions' ],
 		];
-		$keysOf = array_column( $metrics, 'key' );
+		$keysOf  = array_column( $metrics, 'key' );
+		$avgKeys = [ 'scrollDepth' ];   // session-weighted average across the period; everything else sums
 
 		$weekKey = function ( $ymd ) {
 			$ts = strtotime( $ymd ); $dow = (int) date( 'N', $ts );
 			return date( 'Ymd', strtotime( '-' . ( $dow - 1 ) . ' days', $ts ) );
 		};
 
-		// Roll the daily rows up into a grain: [periodKey][metric] = sum. $keyer maps YYYYMMDD → period.
-		$rollup = function ( $keyer, $limit ) use ( $hist, $keysOf ) {
-			$store = [];
+		// Roll the daily rows up into a grain. Counts sum; rate metrics (scroll depth) are averaged,
+		// weighted by that day's sessions. $keyer maps YYYYMMDD → period key.
+		$rollup = function ( $keyer, $limit ) use ( $hist, $keysOf, $avgKeys ) {
+			$sum = []; $wsum = []; $wt = [];
 			foreach ( $hist as $ymd => $row ) {
 				if ( ! is_array( $row ) ) continue;
-				$pk = $keyer( (string) $ymd );
-				foreach ( $keysOf as $mk ) $store[ $pk ][ $mk ] = ( $store[ $pk ][ $mk ] ?? 0 ) + (int) ( $row[ $mk ] ?? 0 );
+				$pk   = $keyer( (string) $ymd );
+				$sess = (int) ( $row['sessions'] ?? 0 );
+				foreach ( $keysOf as $mk ) {
+					$v = (float) ( $row[ $mk ] ?? 0 );
+					$sum[ $pk ][ $mk ]  = ( $sum[ $pk ][ $mk ]  ?? 0 ) + $v;
+					$wsum[ $pk ][ $mk ] = ( $wsum[ $pk ][ $mk ] ?? 0 ) + $v * $sess;
+				}
+				$wt[ $pk ] = ( $wt[ $pk ] ?? 0 ) + $sess;
 			}
-			if ( ! $store ) return null;
-			ksort( $store );
-			$periods = array_slice( array_keys( $store ), -$limit );
+			if ( ! $sum ) return null;
+			ksort( $sum );
+			$periods = array_slice( array_keys( $sum ), -$limit );
 			$series  = [];
-			foreach ( $keysOf as $mk ) { $series[ $mk ] = []; foreach ( $periods as $pk ) $series[ $mk ][] = (int) ( $store[ $pk ][ $mk ] ?? 0 ); }
+			foreach ( $keysOf as $mk ) {
+				$series[ $mk ] = [];
+				foreach ( $periods as $pk ) {
+					if ( in_array( $mk, $avgKeys, true ) ) {
+						$tot = $wt[ $pk ] ?? 0;
+						$series[ $mk ][] = $tot > 0 ? (int) round( ( $wsum[ $pk ][ $mk ] ?? 0 ) / $tot ) : 0;
+					} else {
+						$series[ $mk ][] = (int) round( $sum[ $pk ][ $mk ] ?? 0 );
+					}
+				}
+			}
 			return [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
 		};
 
@@ -595,6 +615,111 @@ function bp_analytics_page() {
 			'daily'   => $rollup( function ( $ymd ) { return $ymd; }, 520 ),
 			'weekly'  => $rollup( $weekKey, 260 ),
 			'monthly' => $rollup( function ( $ymd ) { return substr( $ymd, 0, 6 ); }, 72 ),
+		];
+	};
+
+	// Content Visibility — scroll-depth reach over time. Each threshold's value is the CUMULATIVE
+	// "% of pageviews that reached at least this depth" = engagedSessions at that threshold ÷ init
+	// (pageview loads). Monotonic (20% ≥ 30% ≥ … ≥ 100%), so the JS can derive per-band slices too.
+	$scrollTimeline = function () {
+		$M = get_option( 'bp_ga4_scroll_history' );        if ( ! is_array( $M ) ) $M = [];
+		$W = get_option( 'bp_ga4_scroll_history_weekly' );  if ( ! is_array( $W ) ) $W = [];
+		$D = get_option( 'bp_ga4_scroll_history_daily' );   if ( ! is_array( $D ) ) $D = [];
+		if ( ! $M && ! $W && ! $D ) return null;
+
+		$thresholds = [ '20', '30', '40', '50', '60', '70', '80', '90', '100' ];
+
+		$grain = function ( $hist, $limit ) use ( $thresholds ) {
+			if ( ! is_array( $hist ) || ! $hist ) return null;
+			krsort( $hist );
+			$keys   = array_reverse( array_slice( array_keys( $hist ), 0, $limit ) );  // ascending period keys
+			$series = [];
+			foreach ( $thresholds as $t ) $series[ $t ] = [];
+			foreach ( $keys as $k ) {
+				$init = (float) ( $hist[ $k ]['init'] ?? 0 );
+				foreach ( $thresholds as $t ) {
+					$c = (float) ( $hist[ $k ][ $t ] ?? 0 );
+					$series[ $t ][] = $init > 0 ? round( min( 100, $c / $init * 100 ), 1 ) : 0;
+				}
+			}
+			return [ 'periods' => array_map( 'strval', $keys ), 'series' => $series ];
+		};
+
+		return [
+			'thresholds' => $thresholds,
+			'daily'      => $grain( $D, 180 ),
+			'weekly'     => $grain( $W, 104 ),
+			'monthly'    => $grain( $M, 36 ),
+		];
+	};
+
+	// Tracked Components & Events over time — the track-*/conversion-* achievement events. Component
+	// interactions (Financing, Testimonials…) are reported as % of engaged sessions (matching the
+	// dashboard widget); conversions (Emails, Phone Calls…) as raw counts. Each item is one pill.
+	$eventsTimeline = function () {
+		$M = get_option( 'bp_ga4_events_history' );         if ( ! is_array( $M ) ) $M = [];
+		$W = get_option( 'bp_ga4_events_history_weekly' );  if ( ! is_array( $W ) ) $W = [];
+		$D = get_option( 'bp_ga4_events_history_daily' );   if ( ! is_array( $D ) ) $D = [];
+		if ( ! $M && ! $W && ! $D ) return null;
+
+		// Discover every tracked key + its lifetime total (for ordering). '_engaged' is the denominator.
+		$totals = [];
+		foreach ( [ $M, $W, $D ] as $hist ) {
+			foreach ( $hist as $row ) {
+				if ( ! is_array( $row ) ) continue;
+				foreach ( $row as $k => $v ) {
+					if ( $k === '_engaged' ) continue;
+					$totals[ (string) $k ] = ( $totals[ (string) $k ] ?? 0 ) + (int) $v;
+				}
+			}
+		}
+		if ( ! $totals ) return null;
+
+		$label = function ( $raw ) {
+			$name = preg_replace( '/^(track|conversion)-/', '', (string) $raw );
+			return ucwords( trim( str_replace( '-', ' ', $name ) ) );
+		};
+
+		// Components (track-*) first, then conversions (conversion-*); each group sorted by total desc.
+		$comp = []; $conv = [];
+		foreach ( $totals as $k => $t ) {
+			if ( strncmp( $k, 'track-', 6 ) === 0 )            $comp[ $k ] = $t;
+			elseif ( strncmp( $k, 'conversion-', 11 ) === 0 )  $conv[ $k ] = $t;
+		}
+		arsort( $comp ); arsort( $conv );
+		$items = []; $typeOf = [];
+		foreach ( $comp as $k => $t ) { $items[] = [ 'key' => (string) $k, 'label' => $label( $k ), 'type' => 'pct'   ]; $typeOf[ $k ] = 'pct';   }
+		foreach ( $conv as $k => $t ) { $items[] = [ 'key' => (string) $k, 'label' => $label( $k ), 'type' => 'count' ]; $typeOf[ $k ] = 'count'; }
+		if ( ! $items ) return null;
+		$keys = array_column( $items, 'key' );
+
+		$grain = function ( $hist, $limit ) use ( $keys, $typeOf ) {
+			if ( ! is_array( $hist ) || ! $hist ) return null;
+			krsort( $hist );
+			$pk     = array_reverse( array_slice( array_keys( $hist ), 0, $limit ) ); // ascending period keys
+			$series = [];
+			foreach ( $keys as $k ) {
+				$arr = [];
+				foreach ( $pk as $p ) {
+					$row = is_array( $hist[ $p ] ?? null ) ? $hist[ $p ] : [];
+					$c   = (float) ( $row[ $k ] ?? 0 );
+					if ( $typeOf[ $k ] === 'pct' ) {
+						$eng   = (float) ( $row['_engaged'] ?? 0 );
+						$arr[] = $eng > 0 ? round( min( 100, $c / $eng * 100 ), 1 ) : 0;
+					} else {
+						$arr[] = (int) $c;
+					}
+				}
+				$series[ $k ] = $arr;
+			}
+			return [ 'periods' => array_map( 'strval', $pk ), 'series' => $series ];
+		};
+
+		return [
+			'items'   => $items,
+			'daily'   => $grain( $D, 180 ),
+			'weekly'  => $grain( $W, 104 ),
+			'monthly' => $grain( $M, 36 ),
 		];
 	};
 
@@ -625,10 +750,14 @@ function bp_analytics_page() {
 		'locationsTimeline' => $locationsTimeline(),
 		'pages'             => $pagesTimeline(),
 		'clarity'           => $clarityTimeline(),
+		'scroll'            => $scrollTimeline(),
+		'events'            => $eventsTimeline(),
 		'home'              => $anHome,
 	];
 	$anPages   = ! empty( $payload['pages'] );
 	$anClarity = ! empty( $payload['clarity'] );
+	$anScroll  = ! empty( $payload['scroll'] );
+	$anEvents  = ! empty( $payload['events'] );
 
 	echo '<script type="application/json" id="bp-an-payload">' . wp_json_encode( $payload ) . '</script>';
 
@@ -687,21 +816,8 @@ function bp_analytics_page() {
 	}
 	echo   '</div></div>';
 	echo   '<div class="bp-an-cardnote">Monthly pageviews for your top pages — pick one. Follows the range control above. Click a y-axis number to cap the scale.</div>';
-	echo   '<div class="bp-analytics-pagetrend"></div>';
+	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-pagetrend"></div><div class="bp-analytics-pie" data-pie="pages"></div></div>';
 	echo '</div>';
-
-	// UX health (Microsoft Clarity) — frustration signals over time; each metric is a single-select pill.
-	if ( $anClarity ) {
-		echo '<div class="bp-an-card">';
-		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">UX health <span class="bp-an-sub">Microsoft Clarity</span></h2><div class="bp-an-metric-btns">';
-		foreach ( $payload['clarity']['metrics'] as $i => $mt ) {
-			echo '<a href="#" class="bp-an-cbtn' . ( $i === 0 ? ' active' : '' ) . '" data-cmetric="' . esc_attr( $mt['key'] ) . '">' . esc_html( $mt['label'] ) . '</a>';
-		}
-		echo   '</div></div>';
-		echo   '<div class="bp-an-cardnote">Frustration signals Clarity tracks that GA4 can\'t — rage/dead/error clicks, quick-backs, script errors, excessive scroll. Follows the range &amp; grain controls above.</div>';
-		echo   '<div class="bp-analytics-clarity"></div>';
-		echo '</div>';
-	}
 
 	// Site speed — lab (Lighthouse) vs real-user (our tracking) over time, Mobile vs Desktop.
 	echo '<div class="bp-an-card">';
@@ -714,6 +830,43 @@ function bp_analytics_page() {
 	echo   '<div class="bp-an-cardnote"><b>Real-user</b> (load &amp; % on-target) = actual visitors\' devices &amp; networks from our own tracking — a daily trend. <b>Lab</b> (LCP &amp; score) = throttled Lighthouse snapshots from the site audit (a fixed regression yardstick), captured only ~quarterly, so those two are sparse. Dashed line = the "good" threshold. Click a y-axis number to cap the scale.</div>';
 	echo   '<div class="bp-analytics-speed"></div>';
 	echo '</div>';
+
+	// UX health (Microsoft Clarity) — frustration + engagement signals over time; single-select pills.
+	if ( $anClarity ) {
+		echo '<div class="bp-an-card">';
+		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">UX health</h2><div class="bp-an-metric-btns">';
+		foreach ( $payload['clarity']['metrics'] as $i => $mt ) {
+			echo '<a href="#" class="bp-an-cbtn' . ( $i === 0 ? ' active' : '' ) . '" data-cmetric="' . esc_attr( $mt['key'] ) . '">' . esc_html( $mt['label'] ) . '</a>';
+		}
+		echo   '</div></div>';
+		echo   '<div class="bp-an-cardnote">Behavior signals from Microsoft Clarity that GA4 can\'t give — rage/dead/error clicks, quick-backs, script errors, excessive scroll, plus avg scroll depth &amp; engagement time. Follows the range &amp; grain controls above.</div>';
+		echo   '<div class="bp-analytics-clarity"></div>';
+		echo '</div>';
+	}
+
+	// Content Visibility — scroll-depth distribution over time (stacked to 100%; deepest = dark, bottom).
+	if ( $anScroll ) {
+		echo '<div class="bp-an-card">';
+		echo   '<h2 class="bp-an-h2">Content Visibility</h2>';
+		echo   '<div class="bp-an-cardnote">The distribution of how far visitors scroll, over time — stacked to 100%. The dark band at the bottom reached the whole page; the light band on top barely scrolled. Hover for the cumulative reach at each depth. Follows the range &amp; grain controls above.</div>';
+		echo   '<div class="bp-analytics-scroll"></div>';
+		echo '</div>';
+	}
+
+	// Tracked Components & Events — track-*/conversion-* achievement events over time; single-select
+	// pills. Components (Financing, Testimonials…) plot as % of engaged sessions; conversions
+	// (Emails, Phone Calls…) plot as counts. The y-axis + tooltip adapt per item's unit.
+	if ( $anEvents ) {
+		echo '<div class="bp-an-card">';
+		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Tracked events</h2><div class="bp-an-metric-btns">';
+		foreach ( $payload['events']['items'] as $i => $it ) {
+			echo '<a href="#" class="bp-an-ebtn' . ( $i === 0 ? ' active' : '' ) . '" data-ekey="' . esc_attr( $it['key'] ) . '" data-etype="' . esc_attr( $it['type'] ) . '">' . esc_html( $it['label'] ) . '</a>';
+		}
+		echo   '</div></div>';
+		echo   '<div class="bp-an-cardnote"><b>Components</b> (Financing, Testimonials…) show the <b>% of engaged sessions</b> that interacted with them; <b>conversions</b> (Emails, Phone Calls…) show the <b>count</b>. Pick one. Follows the range &amp; grain controls above. Click a y-axis number to cap the scale.</div>';
+		echo   '<div class="bp-analytics-events"></div>';
+		echo '</div>';
+	}
 
 	// Tech row — browser / screen-width / device breakdowns (nearest snapshot to the range).
 	echo '<div class="bp-an-card">';
@@ -1115,6 +1268,22 @@ function battleplan_custom_post_type_counts() {
 		  	endif;
 		endforeach;
 	endforeach;
+}
+
+// The main Dashboard IS the graphic Analytics screen now. Bounce the bare dashboard (index.php with
+// no subpage) straight to the Analytics page for anyone who can view stats — the old numeric widgets
+// are retired (see battleplan_add_dashboard_widgets in functions-admin-stats.php). Escape hatch for the
+// native WordPress dashboard (Site Health, At-a-Glance, etc.): add ?core=1 to the index.php URL.
+add_action('admin_init', 'bp_dashboard_to_analytics');
+function bp_dashboard_to_analytics() {
+	global $pagenow;
+	if ( $pagenow !== 'index.php' ) return;                                  // dashboard home only
+	if ( ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) !== 'GET' ) return;         // never intercept POSTs
+	if ( ! empty( $_GET['page'] ) || ! empty( $_GET['core'] ) ) return;      // already a subpage / escape hatch
+	if ( wp_doing_ajax() ) return;
+	if ( ! ( _USER_LOGIN === 'battleplanweb' || in_array( 'bp_view_stats', (array) _USER_ROLES ) || current_user_can( 'manage_options' ) ) ) return;
+	wp_safe_redirect( admin_url( 'index.php?page=bp-analytics' ) );
+	exit;
 }
 
 // Remove unwanted dashboard widgets
@@ -2086,6 +2255,44 @@ function bp_image_orientation( $file ) {
 	}
 
 	return 1;
+}
+
+/**
+ * Bake an image's EXIF/container orientation into its actual pixels and strip the (now-stale) flag, so
+ * it shows upright EVERYWHERE — regardless of whether the viewing browser honors the orientation tag.
+ * This is the reliable cross-device fix for iPhone/Android photos that arrive sideways (the phone stores
+ * rotated pixels + an orientation flag; not every surface applies the flag).
+ *
+ * Safe no-op when: the file's missing, it's already upright (orientation 1), or Imagick isn't available.
+ * Returns true only when the file was actually rewritten. Rotations mirror the admin "Fix Photo
+ * Orientation" tool (values 2–8 per the EXIF spec).
+ */
+function bp_bake_image_orientation( $file ) {
+	if ( ! $file || ! file_exists( $file ) || ! class_exists( 'Imagick' ) ) return false;
+	$o = bp_image_orientation( $file );
+	if ( $o < 2 ) return false; // 1 = upright, nothing to do
+	try {
+		$im = new Imagick( $file );
+		// Imagick doesn't auto-rotate on load — the buffer holds the raw stored pixels, so rotate/flip
+		// explicitly to match the recorded orientation.
+		switch ( $o ) {
+			case 2: $im->flopImage(); break;
+			case 3: $im->rotateImage( 'none', 180 ); break;
+			case 4: $im->flipImage(); break;
+			case 5: $im->flopImage(); $im->rotateImage( 'none', 270 ); break;
+			case 6: $im->rotateImage( 'none', 90 ); break;
+			case 7: $im->flopImage(); $im->rotateImage( 'none', 90 ); break;
+			case 8: $im->rotateImage( 'none', 270 ); break;
+		}
+		$im->setImageOrientation( Imagick::ORIENTATION_TOPLEFT );
+		$im->stripImage();          // drop the now-stale flag + other metadata
+		$im->writeImage( $file );
+		$im->clear();
+		$im->destroy();
+		return true;
+	} catch ( Exception $e ) {
+		return false;
+	}
 }
 
 // Walk a WebP file's RIFF chunks, find the EXIF chunk, return its Orientation.

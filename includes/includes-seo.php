@@ -240,8 +240,10 @@ function bp_seo_is_noindex(): bool {
 	if ( is_singular() ) {
 		$id = get_queried_object_id();
 		if ( get_post_meta($id, BP_SEO_NOINDEX, true) === '1' ) $noindex = true;
-		// CPTs the old cron flagged noindex-{pt}=1
-		if ( in_array( get_post_type($id), ['testimonials', 'elements', 'products', 'universal'], true ) ) $noindex = true;
+		// CPTs the old cron flagged noindex-{pt}=1 — plus jobsite_geo raw records (/jobsites/…), which
+		// exist only to feed the /service/ pages; we don't want them found or landed on directly.
+		// products = shared HVAC brand partials, identical across the whole dealer fleet → noindex.
+		if ( in_array( get_post_type($id), ['testimonials', 'elements', 'products', 'universal', 'jobsite_geo'], true ) ) $noindex = true;
 	}
 	if ( is_author() || is_date() )              $noindex = true;   // noindex-author / disable-date archives
 	if ( is_search() || is_404() )               $noindex = true;
@@ -249,7 +251,8 @@ function bp_seo_is_noindex(): bool {
 	if ( is_post_type_archive( ['testimonials', 'products', 'galleries', 'optimized'] ) ) $noindex = true;
 
 	if ( is_tax( ['gallery-type', 'gallery-tags', 'image-categories', 'image-tags',
-	              'jobsite_geo-service-types', 'jobsite_geo-service-areas'] ) ) $noindex = true;
+	              'jobsite_geo-service-types', 'jobsite_geo-service-areas', 'jobsite_geo-techs',
+	              'product-brand', 'product-type', 'product-class'] ) ) $noindex = true;
 
 	return (bool) apply_filters('bp_seo_noindex', $noindex, get_queried_object());
 }
@@ -647,6 +650,52 @@ add_action('template_redirect', function() {
 	if ( in_array( $path, ['/sitemap_index.xml', '/sitemap.xml'], true ) || $is_yoast_type ) {
 		wp_safe_redirect( home_url('/wp-sitemap.xml'), 301 );
 		exit;
+	}
+}, 0);
+
+// Keep WP-core's sitemap in lockstep with our noindex/redirect rules. Yoast used to drop noindexed
+// post types/taxonomies from its sitemap automatically; core doesn't know our rules, so without this
+// it lists things we've noindexed or 301'd (jobsite raw records at /jobsites/, service-area/-type
+// redirects, product/image taxonomies) → "Submitted URL marked noindex" errors in Search Console.
+// Excluded = internal / aggregator / redirected types ONLY. Everything else stays in: pages, blog
+// posts, products, galleries, landing, /service/ (jobsite_geo-services), and any custom CPT a site
+// registers. Both lists are per-site filterable.
+add_filter('wp_sitemaps_post_types', function($post_types) {
+	if ( bp_seo_defer() ) return $post_types;
+	$drop = apply_filters('bp_sitemap_exclude_post_types', [
+		'elements',      // reusable page sections (header/widgets), never standalone
+		'universal',     // universal templates, embedded via shortcode
+		'jobsite_geo',   // raw job records (/jobsites/…) — 301'd to their /service/ page
+		'testimonials',  // surfaced via sliders, not as standalone pages
+		'products',      // shared HVAC brand partials → identical across the dealer fleet (duplicate content)
+		'attachment',    // media attachment pages
+	]);
+	foreach ( (array) $drop as $pt ) unset( $post_types[$pt] );
+	return $post_types;
+});
+add_filter('wp_sitemaps_taxonomies', function($taxonomies) {
+	if ( bp_seo_defer() ) return $taxonomies;
+	$drop = apply_filters('bp_sitemap_exclude_taxonomies', [
+		'gallery-type', 'gallery-tags', 'image-categories', 'image-tags',
+		'jobsite_geo-service-types', 'jobsite_geo-service-areas', 'jobsite_geo-techs',  // vague / 301'd to /service/
+		'product-brand', 'product-type', 'product-class',
+	]);
+	foreach ( (array) $drop as $tax ) unset( $taxonomies[$tax] );
+	return $taxonomies;   // keeps jobsite_geo-services (/service/), category, post_tag
+});
+// Drop the author/users sitemap (/wp-sitemap-users-*.xml). Author archives are noindexed on these
+// (effectively single-operator) client sites, so listing them adds nothing.
+add_filter('wp_sitemaps_add_provider', function($provider, $name) {
+	return ( ! bp_seo_defer() && $name === 'users' ) ? false : $provider;
+}, 10, 2);
+// Removing that provider orphans the /wp-sitemap-users-*.xml route (WP falls through to a soft 200
+// HTML page). Force a clean 404 so the stale Search Console entry dies like the excluded post/tax ones.
+add_action('template_redirect', function() {
+	if ( ! bp_seo_defer() && get_query_var('sitemap') === 'users' ) {
+		global $wp_query;
+		$wp_query->set_404();
+		status_header(404);
+		nocache_headers();
 	}
 }, 0);
 

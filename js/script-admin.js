@@ -794,7 +794,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	var locationCharts = document.querySelectorAll('.bp-analytics-locations');
 	var locationZoomCharts = document.querySelectorAll('.bp-analytics-locations-zoom');
 	var pageTrendCharts = document.querySelectorAll('.bp-analytics-pagetrend');
+	var pagesPies      = document.querySelectorAll('.bp-analytics-pie[data-pie="pages"]');
 	var clarityCharts = document.querySelectorAll('.bp-analytics-clarity');
+	var scrollCharts = document.querySelectorAll('.bp-analytics-scroll');
+	var eventCharts = document.querySelectorAll('.bp-analytics-events');
 	if (!channelCharts.length && !behaviorCharts.length) return;
 
 	var payloadEl = document.getElementById('bp-an-payload');
@@ -1327,6 +1330,32 @@ document.addEventListener('DOMContentLoaded', function () {
 		var defs = [{ key: label, label: label, cls: 'blue', emph: true, values: values }];
 		drawLineChart(container, periods, defs, { grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true, rerender: function () { renderPageTrend(container); } });
 	}
+	// Page-share donut — each top page's slice of TOTAL pageviews over the active range/grain, with an
+	// "Other pages" slice for everything outside the top list. Total is summed from the site pageviews
+	// over the SAME period keys the pages cover, so the split is exact (both are screenPageViews).
+	function renderPagesPie(pieC) {
+		var data = payload.pages;
+		if (!data || !data.list || !data.list.length) { pieC.innerHTML = ''; return; }
+		var grain = activeGrain(), g = data[grain] || data.monthly;
+		if (!g || !g.periods.length) { pieC.innerHTML = ''; return; }
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var keys = idx.map(function (j) { return g.periods[j]; });
+		var slices = [], topSum = 0;
+		data.list.forEach(function (p, i) {
+			var arr = g.series[p.key] || [], sum = 0;
+			idx.forEach(function (j) { sum += arr[j] || 0; });
+			if (sum > 0) { slices.push({ label: p.label, value: sum, cls: 'c' + (i % 11) }); topSum += sum; }
+		});
+		var gt = filterGrain(payload[grain], grain), pv = {}, totalPV = 0;
+		if (gt && gt.periods && gt.site && gt.site.pageviews) gt.periods.forEach(function (k, j) { pv['' + k] = gt.site.pageviews[j] || 0; });
+		keys.forEach(function (k) { totalPV += pv['' + k] || 0; });
+		var other = Math.max(0, Math.round(totalPV - topSum));
+		if (other > 0) slices.push({ label: 'Other pages', value: other, cls: 'cother' });
+		if (!slices.length) { pieC.innerHTML = '<p class="bp-an-empty">No data.</p>'; return; }
+		drawDonut(pieC, slices);
+	}
 	// UX health (Clarity) — single selected frustration metric, follows the grain + range controls.
 	function activeClarityMetric(container) {
 		var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-cbtn.active');
@@ -1350,6 +1379,124 @@ document.addEventListener('DOMContentLoaded', function () {
 		for (i = 0; i < data.metrics.length; i++) if (data.metrics[i].key === key) { label = data.metrics[i].label; break; }
 		var defs = [{ key: label, label: label, cls: 'red', emph: true, values: values }];
 		drawLineChart(container, periods, defs, { grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true, rerender: function () { renderClarity(container); } });
+	}
+	// Tracked events — the single selected component/conversion, follows the grain + range controls.
+	// Components plot as % of engaged sessions (teal); conversions plot as counts (green).
+	function activeEventKey(container) {
+		var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-ebtn.active');
+		var items = payload.events && payload.events.items;
+		return (b && b.dataset.ekey) || (items && items[0] && items[0].key);
+	}
+	function renderEvents(container) {
+		var data = payload.events;
+		if (!data || !data.items || !data.items.length) { container.innerHTML = '<p class="bp-an-empty">No tracked-event history yet — it builds on the nightly analytics run (or hit “refresh stats now” on the Stats page).</p>'; return; }
+		var grain = activeGrain(), g = data[grain] || data.daily || data.monthly;   // follows the Daily/Weekly/Monthly toggle
+		if (!g || !g.periods.length) { container.innerHTML = '<p class="bp-an-empty">No tracked-event data at this view.</p>'; return; }
+		var key = activeEventKey(container);
+		if (!g.series[key]) key = data.items[0].key;
+		var full = g.series[key] || [];
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var periods = idx.map(function (j) { return g.periods[j]; });
+		var values = idx.map(function (j) { return full[j]; });
+		var label = key, type = 'count', i;
+		for (i = 0; i < data.items.length; i++) if (data.items[i].key === key) { label = data.items[i].label; type = data.items[i].type; break; }
+		var isPct = type === 'pct';
+		var opts = { grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true, rerender: function () { renderEvents(container); } };
+		if (isPct) {
+			opts.yFmt = function (v) { return Math.round(v) + '%'; };
+			opts.vFmt = function (v) { return (Math.round(v * 10) / 10) + '%'; };
+		}
+		var defs = [{ key: label, label: label, cls: isPct ? 'teal' : 'green', emph: true, values: values }];
+		drawLineChart(container, periods, defs, opts);
+	}
+	// Content Visibility — the depth distribution stacked to 100% over time (deepest = dark, bottom).
+	// Legend labels the drawn slices (ranges); the tooltip reports CUMULATIVE reach (reached ≥ depth).
+	function bpScrollSlice(container) {
+		var data = payload.scroll, grain = activeGrain(), g = data && (data[grain] || data.monthly);
+		if (!g || !g.periods.length) return null;
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		return { grain: grain, periods: idx.map(function (j) { return g.periods[j]; }),
+			pick: function (t) { return idx.map(function (j) { return g.series[t] ? g.series[t][j] : 0; }); } };
+	}
+	function renderScroll(container) {
+		var data = payload.scroll;
+		if (!data || !data.thresholds) { container.innerHTML = '<p class="bp-an-empty">No scroll-depth history yet — it builds on the nightly analytics run.</p>'; return; }
+		var s = bpScrollSlice(container);
+		if (!s) { container.innerHTML = '<p class="bp-an-empty">No scroll data at this view.</p>'; return; }
+		var T = data.thresholds, cum = {}; T.forEach(function (t) { cum[t] = s.pick(t); });
+		// Each band's drawn height is its slice (cum[t] − cum[deeper]); its tooltip value is cum[t] itself
+		// (the cumulative "reached at least this depth", which is what reads intuitively).
+		var bands = [{ key: '100', label: 'Reached 100%', cls: 'd100', values: cum['100'], tipLabel: 'Reached 100%', tipVals: cum['100'] }];
+		for (var i = T.length - 2; i >= 0; i--) {
+			var t = T[i], deeper = T[i + 1];
+			bands.push({ key: t, label: t + '–' + deeper + '%', cls: 'd' + t,
+				values: cum[t].map(function (v, j) { return Math.max(0, v - cum[deeper][j]); }),
+				tipLabel: 'Reached ≥' + t + '%', tipVals: cum[t] });
+		}
+		// The "Under 20%" band is drawn as its slice (100 − reached≥20%), but cumulatively it's the base —
+		// everyone who loaded the page — so the tooltip shows 100%.
+		var under = cum['20'].map(function (v) { return Math.max(0, 100 - v); });
+		bands.push({ key: 'under', label: 'Under 20%', cls: 'dunder', values: under, tipLabel: 'Loaded (all)', tipVals: under.map(function () { return 100; }) });
+		drawStackedBands(container, s.periods, bands, { grain: s.grain });
+	}
+	// Stacked-area renderer for the depth-bands view (bands sum to ~100% per period).
+	function drawStackedBands(container, periods, bands, opts) {
+		var width = container.clientWidth || 0; if (width < 80) return;
+		var height = 300, mL = 54, mR = 22, mT = 14, mB = 28;
+		var plotL = mL, plotR = width - mR, plotT = mT, plotB = height - mB, plotW = plotR - plotL, plotH = plotB - plotT, N = periods.length;
+		function xS(i) { return N <= 1 ? plotL : plotL + (i / (N - 1)) * plotW; }
+		function yS(v) { return plotB - (v / 100) * plotH; }
+		container.innerHTML = '';
+		var legend = document.createElement('div'); legend.className = 'bp-an-legend';
+		bands.forEach(function (b) { var it = document.createElement('span'); it.className = 'bp-an-leg static'; it.innerHTML = '<span class="bp-an-key k-' + b.cls + '"></span>' + b.label; legend.appendChild(it); });
+		container.appendChild(legend);
+		var svg = el('svg', { 'class': 'bp-an-svg', width: '100%', height: height, viewBox: '0 0 ' + width + ' ' + height });
+		[0, 25, 50, 75, 100].forEach(function (v) {
+			var gy = yS(v);
+			svg.appendChild(el('line', { 'class': 'bp-an-grid', x1: plotL, y1: gy, x2: plotR, y2: gy }));
+			var yl = el('text', { 'class': 'bp-an-ylab', x: plotL - 8, y: gy + 3, 'text-anchor': 'end' }); yl.textContent = v + '%'; svg.appendChild(yl);
+		});
+		var lastX = -999, prevMo = null;
+		periods.forEach(function (keyRaw, i) {
+			var key = '' + keyRaw, mo = +key.slice(4, 6), isJan = mo === 1, x = xS(i), major, dayGrain = (opts.grain === 'weekly' || opts.grain === 'daily');
+			if (dayGrain) { major = (mo !== prevMo); prevMo = mo; } else { major = isJan || i === 0; }
+			if (dayGrain) { if (!major || x - lastX < 34) return; } else if (!major && x - lastX < 46) return;
+			if (x - lastX < 22) return; lastX = x;
+			var lbl = MONTHS[mo - 1] + (isJan || (i === 0 && opts.grain === 'monthly') ? " '" + key.slice(2, 4) : '');
+			var xl = el('text', { 'class': 'bp-an-xlab' + (isJan ? ' yr' : ''), x: x, y: plotB + 18, 'text-anchor': 'middle' }); xl.textContent = lbl; svg.appendChild(xl);
+		});
+		var cumBase = []; for (var i = 0; i < N; i++) cumBase.push(0);
+		var g = el('g', {});
+		bands.forEach(function (b) {
+			var top = [], bot = [], j;
+			for (j = 0; j < N; j++) { var base = cumBase[j], t = base + (b.values[j] || 0); bot.push([xS(j), yS(base)]); top.push([xS(j), yS(t)]); cumBase[j] = t; }
+			var d = 'M' + top[0][0] + ',' + top[0][1];
+			for (j = 1; j < N; j++) d += 'L' + top[j][0] + ',' + top[j][1];
+			for (j = N - 1; j >= 0; j--) d += 'L' + bot[j][0] + ',' + bot[j][1];
+			g.appendChild(el('path', { 'class': 'bp-an-band k-' + b.cls, d: d + 'Z' }));
+		});
+		svg.appendChild(g);
+		var focus = el('g', { 'class': 'bp-an-focus', style: 'display:none' });
+		var vLine = el('line', { 'class': 'bp-an-cross', x1: 0, y1: plotT, x2: 0, y2: plotB }); focus.appendChild(vLine); svg.appendChild(focus);
+		var hit = el('rect', { 'class': 'bp-an-hit', x: plotL, y: plotT, width: plotW, height: plotH, fill: 'transparent' }); svg.appendChild(hit);
+		container.appendChild(svg);
+		var tip = document.createElement('div'); tip.className = 'bp-an-tip'; tip.style.display = 'none'; container.appendChild(tip);
+		hit.addEventListener('mousemove', function (ev) {
+			var rect = svg.getBoundingClientRect(), scale = width / (rect.width || width);
+			var px = (ev.clientX - rect.left) * scale, i = N <= 1 ? 0 : Math.round(((px - plotL) / plotW) * (N - 1));
+			if (i < 0) i = 0; if (i > N - 1) i = N - 1;
+			focus.style.display = ''; var x = xS(i); vLine.setAttribute('x1', x); vLine.setAttribute('x2', x);
+			var rows = bands.map(function (b) { return '<div class="bp-an-tip-row"><span class="bp-an-key k-' + b.cls + '"></span>' + b.tipLabel + '<span class="bp-an-tip-v">' + Math.round(b.tipVals[i] || 0) + '%</span></div>'; }).join('');
+			tip.innerHTML = '<div class="bp-an-tip-h">' + fmtPeriodFull(periods[i], opts.grain) + '</div>' + rows;
+			tip.style.display = 'block';
+			var rr = container.getBoundingClientRect(), lx = (x / width) * rr.width;
+			tip.style.left = Math.min(rr.width - tip.offsetWidth - 6, Math.max(6, lx + 12)) + 'px'; tip.style.top = '34px';
+		});
+		hit.addEventListener('mouseleave', function () { focus.style.display = 'none'; tip.style.display = 'none'; });
 	}
 	// Hero tiles follow the active range: total over the window + "vs prev" and YoY deltas.
 	function renderTiles() {
@@ -1586,13 +1733,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		Array.prototype.forEach.call(locationCharts, renderLocations);
 		Array.prototype.forEach.call(locationZoomCharts, renderLocationsZoom);
 		Array.prototype.forEach.call(pageTrendCharts, renderPageTrend);
+		Array.prototype.forEach.call(pagesPies, renderPagesPie);
 		Array.prototype.forEach.call(clarityCharts, renderClarity);
+		Array.prototype.forEach.call(scrollCharts, renderScroll);
+		Array.prototype.forEach.call(eventCharts, renderEvents);
 	}
 
 	function clearDates() { var s = document.getElementById('bp-an-start'), e = document.getElementById('bp-an-end'); if (s) s.value = ''; if (e) e.value = ''; }
 	function setActive(sel, btn) { document.querySelectorAll(sel).forEach(function (x) { x.classList.remove('active'); }); btn.classList.add('active'); }
 	function clearCaps(nodes) { Array.prototype.forEach.call(nodes, function (c) { c._yCap = null; }); }
-	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); }
+	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); clearCaps(scrollCharts); clearCaps(eventCharts); }
 
 	document.addEventListener('click', function (ev) {
 		var gb = ev.target.closest('.bp-an-gbtn');
@@ -1635,6 +1785,17 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 
+		var eb = ev.target.closest('.bp-an-ebtn');
+		if (eb) {
+			ev.preventDefault();
+			var ecard = eb.closest('.bp-an-card');
+			ecard.querySelectorAll('.bp-an-ebtn').forEach(function (x) { x.classList.remove('active'); });
+			eb.classList.add('active');
+			clearCaps(ecard.querySelectorAll('.bp-analytics-events'));
+			ecard.querySelectorAll('.bp-analytics-events').forEach(renderEvents);
+			return;
+		}
+
 		var sb = ev.target.closest('.bp-an-sbtn');
 		if (sb) {
 			ev.preventDefault();
@@ -1668,11 +1829,14 @@ document.addEventListener('DOMContentLoaded', function () {
 					t._bpPending = false;
 					if (t.classList.contains('bp-analytics-widthbars')) renderWidthBars(t);
 					else if (t.classList.contains('bp-analytics-speed')) renderSpeed(t);
+					else if (t.dataset.pie === 'pages') renderPagesPie(t);
 					else if (t.dataset.pie === 'tech') renderTechPie(t);
 					else if (t.dataset.pie === 'channel') renderChannelPie(t);
 					else if (t.dataset.pie === 'behavior') renderBehaviorPie(t);
 					else if (t.classList.contains('bp-analytics-pagetrend')) renderPageTrend(t);
 					else if (t.classList.contains('bp-analytics-clarity')) renderClarity(t);
+					else if (t.classList.contains('bp-analytics-scroll')) renderScroll(t);
+					else if (t.classList.contains('bp-analytics-events')) renderEvents(t);
 					else if (t.classList.contains('bp-analytics-locations-zoom')) renderLocationsZoom(t);
 					else if (t.classList.contains('bp-analytics-locations')) renderLocations(t);
 					else if (t.classList.contains('bp-analytics-behavior')) renderBehavior(t);
@@ -1680,7 +1844,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				});
 			});
 		});
-		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, clarityCharts].forEach(function (list) {
+		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, pagesPies, clarityCharts, scrollCharts, eventCharts].forEach(function (list) {
 			Array.prototype.forEach.call(list, function (c) { ro.observe(c); });
 		});
 		renderAll(); // deterministic initial paint — don't rely solely on ResizeObserver's first callback

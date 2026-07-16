@@ -564,6 +564,13 @@ function site_pulse_ajax_messages_upload_send(): void {
 		wp_send_json_error( [ 'message' => $moved['error'] ?? 'Upload failed.' ] );
 	}
 
+	// Bake in EXIF orientation so phone photos (iPhone especially) never show up sideways — the fix is
+	// applied to the stored pixels, so it's reliable across every make/browser. Imagick-only; no-op
+	// otherwise (browsers then fall back to honoring the orientation flag themselves).
+	if ( ! empty( $moved['file'] ) && ! empty( $moved['type'] ) && strpos( (string) $moved['type'], 'image/' ) === 0 && function_exists( 'bp_bake_image_orientation' ) ) {
+		bp_bake_image_orientation( $moved['file'] );
+	}
+
 	if ( $body !== '' ) $body = sanitize_textarea_field( $body );
 
 	global $wpdb;

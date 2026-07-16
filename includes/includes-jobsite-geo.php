@@ -1367,6 +1367,40 @@ add_action('template_redirect', function () {
 	exit;
 }, 5);
 
+// /jobsites/{slug}/ singles are raw job records that only exist to feed the /service/ landing pages —
+// they shouldn't rank or be landed on directly. 301 each to its own service+town page: the
+// jobsite_geo-services term it's tagged with IS the canonical /service/{service--city-st}/ combo, so
+// no guessing. Falls back to its city's best service page, then the archive. (The jobsite_geo
+// noindex in includes-seo.php is the belt-and-suspenders if none of these resolve.)
+add_action('template_redirect', function () {
+	if ( ! is_singular( 'jobsite_geo' ) ) return;
+
+	$id = get_queried_object_id();
+
+	// Let anyone who can edit the job still view/preview it (techs, managers, admins); only the
+	// public + crawlers get funneled to the /service/ page.
+	if ( is_preview() || current_user_can( 'edit_post', $id ) ) return;
+
+	// 1) the job's own service+town term (most-populated one if it carries more than one)
+	$services = get_the_terms( $id, 'jobsite_geo-services' );
+	if ( ! empty( $services ) && ! is_wp_error( $services ) ) {
+		usort( $services, function ( $a, $b ) { return $b->count <=> $a->count; } );
+		$link = get_term_link( $services[0] );
+		if ( ! is_wp_error( $link ) ) { wp_safe_redirect( $link, 301 ); exit; }
+	}
+
+	// 2) fallback: best /service/ for the job's city (via its service-areas term)
+	$areas = get_the_terms( $id, 'jobsite_geo-service-areas' );
+	if ( ! empty( $areas ) && ! is_wp_error( $areas ) ) {
+		wp_safe_redirect( bp_geo_area_redirect_url( $areas[0]->slug ), 301 );
+		exit;
+	}
+
+	// 3) last resort: the jobsite archive
+	wp_safe_redirect( get_post_type_archive_link( 'jobsite_geo' ) ?: home_url( '/' ), 301 );
+	exit;
+}, 5);
+
 
 /*--------------------------------------------------------------
 # Jobsite GEO Scoring System

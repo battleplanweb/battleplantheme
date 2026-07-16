@@ -118,6 +118,14 @@ function site_pulse_cap_module_map(): array {
 			$map[ $cap ] = $slug;
 		}
 	}
+	// The dynamic per-report caps (submit_report_{slug} / view_report_{slug}) belong to the Reports module,
+	// so turning Reports off correctly hides them. (Called at runtime, after the report helpers are loaded.)
+	if ( function_exists( 'site_pulse_get_all_report_templates' ) ) {
+		foreach ( site_pulse_get_all_report_templates() as $t ) {
+			$map[ site_pulse_report_submit_cap( (string) $t['slug'] ) ] = 'reports';
+			$map[ site_pulse_report_view_cap( (string) $t['slug'] ) ]   = 'reports';
+		}
+	}
 	return $map;
 }
 

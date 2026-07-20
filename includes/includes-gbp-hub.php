@@ -37,6 +37,7 @@ class BPGBP_Hub {
 	const MEDIA_URL       = 'https://mybusiness.googleapis.com/v4/%s/media';              // %s = accounts/X/locations/Y — Photos gallery
 	const REVIEWS_URL     = 'https://mybusiness.googleapis.com/v4/%s/reviews';            // %s = accounts/X/locations/Y
 	const REVIEW_REPLY_URL= 'https://mybusiness.googleapis.com/v4/%s/reviews/%s/reply';   // %s = location, %s = reviewId
+	const PERFORMANCE_URL = 'https://businessprofileperformance.googleapis.com/v1/%s:fetchMultiDailyMetricsTimeSeries'; // %s = locations/Y ONLY (no accounts/ prefix)
 	const MAX_CLOCK_SKEW  = 300; // seconds — replay/clock-skew window for signed requests
 	const SUMMARY_LIMIT   = 1500; // Google's hard cap on local-post summary length
 
@@ -201,6 +202,18 @@ class BPGBP_Hub {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( __CLASS__, 'handle_reviews' ),
+				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
+			)
+		);
+
+		// Client sites read their own GBP Performance metrics (impressions / call clicks / website clicks /
+		// direction requests) as a recent daily series. Per-site HMAC; location resolved hub-side. Read-only.
+		register_rest_route(
+			self::NS,
+			'/performance',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'handle_performance' ),
 				'permission_callback' => array( __CLASS__, 'verify_site_signature' ),
 			)
 		);
@@ -491,6 +504,78 @@ class BPGBP_Hub {
 			200
 		);
 		// Never let an edge cache (Cloudflare/WPE) store this per-site response.
+		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+		return $response;
+	}
+
+	/* ───────────────────────── GET bpgbp/v1/performance ───────────────────────── */
+
+	public static function handle_performance( WP_REST_Request $request ) {
+		$sites    = self::get_sites();
+		$site_key = $request->get_param( '_bpgbp_site_key' );
+		$site     = $sites[ $site_key ];
+
+		$location = self::resolve_site_location( $site, (string) $request->get_param( 'location' ) );
+		if ( '' === $location ) {
+			return new WP_Error( 'bpgbp_bad_location', 'That location is not configured for this site.', array( 'status' => 403 ) );
+		}
+		// The Performance API is keyed by locations/{id} ONLY — strip any accounts/{aid}/ prefix.
+		$perf_loc = strstr( $location, 'locations/' );
+		if ( false === $perf_loc ) $perf_loc = $location;
+
+		// Trailing ~30 days; GBP performance reports with a ~2–3 day lag, so end 3 days back.
+		$end   = strtotime( '-3 days' );
+		$start = strtotime( '-33 days' );
+		$qs    = array();
+		foreach ( array(
+			'CALL_CLICKS', 'WEBSITE_CLICKS', 'BUSINESS_DIRECTION_REQUESTS',
+			'BUSINESS_IMPRESSIONS_DESKTOP_MAPS', 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH',
+			'BUSINESS_IMPRESSIONS_MOBILE_MAPS', 'BUSINESS_IMPRESSIONS_MOBILE_SEARCH',
+		) as $m ) {
+			$qs[] = 'dailyMetrics=' . $m;
+		}
+		$qs[] = 'dailyRange.start_date.year='  . (int) gmdate( 'Y', $start );
+		$qs[] = 'dailyRange.start_date.month=' . (int) gmdate( 'n', $start );
+		$qs[] = 'dailyRange.start_date.day='   . (int) gmdate( 'j', $start );
+		$qs[] = 'dailyRange.end_date.year='    . (int) gmdate( 'Y', $end );
+		$qs[] = 'dailyRange.end_date.month='   . (int) gmdate( 'n', $end );
+		$qs[] = 'dailyRange.end_date.day='     . (int) gmdate( 'j', $end );
+
+		$url = sprintf( self::PERFORMANCE_URL, $perf_loc ) . '?' . implode( '&', $qs );
+
+		try {
+			$token = self::get_access_token();
+			$data  = self::google_request( 'GET', $url, $token );
+		} catch ( Exception $e ) {
+			return new WP_Error( 'bpgbp_google_error', $e->getMessage(), array( 'status' => 502 ) );
+		}
+
+		// Fold the seven raw metrics into four buckets, per day → YYYYMMDD => {impressions,calls,website,directions}.
+		$byDay = array();
+		foreach ( ( isset( $data['multiDailyMetricTimeSeries'] ) ? $data['multiDailyMetricTimeSeries'] : array() ) as $wrap ) {
+			$series_list = ( isset( $wrap['dailyMetricTimeSeries'] ) && is_array( $wrap['dailyMetricTimeSeries'] ) )
+				? $wrap['dailyMetricTimeSeries']
+				: array( $wrap );   // tolerate a flatter shape
+			foreach ( $series_list as $series ) {
+				$metric = isset( $series['dailyMetric'] ) ? $series['dailyMetric'] : '';
+				if ( 0 === strpos( $metric, 'BUSINESS_IMPRESSIONS' ) ) $bucket = 'impressions';
+				elseif ( 'CALL_CLICKS' === $metric )                   $bucket = 'calls';
+				elseif ( 'WEBSITE_CLICKS' === $metric )                $bucket = 'website';
+				elseif ( 'BUSINESS_DIRECTION_REQUESTS' === $metric )   $bucket = 'directions';
+				else continue;
+				$dated = isset( $series['timeSeries']['datedValues'] ) ? $series['timeSeries']['datedValues'] : array();
+				foreach ( $dated as $dv ) {
+					$d = isset( $dv['date'] ) ? $dv['date'] : array();
+					if ( empty( $d['year'] ) ) continue;
+					$ymd = sprintf( '%04d%02d%02d', (int) $d['year'], (int) ( isset( $d['month'] ) ? $d['month'] : 1 ), (int) ( isset( $d['day'] ) ? $d['day'] : 1 ) );
+					$val = isset( $dv['value'] ) ? (int) $dv['value'] : 0;
+					if ( ! isset( $byDay[ $ymd ] ) ) $byDay[ $ymd ] = array();
+					$byDay[ $ymd ][ $bucket ] = ( isset( $byDay[ $ymd ][ $bucket ] ) ? $byDay[ $ymd ][ $bucket ] : 0 ) + $val;
+				}
+			}
+		}
+
+		$response = new WP_REST_Response( array( 'ok' => true, 'location' => $location, 'metrics' => $byDay ), 200 );
 		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
 		return $response;
 	}

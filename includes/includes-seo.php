@@ -52,11 +52,19 @@ function bp_seo_sep(): string {
 
 /**
  * Post types that get title/meta/OG treatment + an editor meta box.
- * Mirrors the old cron's "known content" list. Filterable per site.
+ * Every PUBLIC post type qualifies automatically (so a new CPT needs zero SEO
+ * wiring); a handful of WP/ACF system types are never content and are excluded.
+ * Filter `bp_seo_content_types` to add/remove per site.
  */
 function bp_seo_content_types(): array {
-	$types = ['post', 'page', 'universal', 'products', 'landing', 'events'];
-	if ( post_type_exists('jobsite_geo') ) $types[] = 'jobsite_geo';
+	$exclude = [
+		'attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset',
+		'oembed_cache', 'user_request', 'wp_block', 'wp_template', 'wp_template_part',
+		'wp_navigation', 'wp_global_styles', 'acf-field-group', 'acf-field', 'elements',
+	];
+	$always = ['post', 'page', 'universal', 'products', 'landing', 'events']; // present even if not flagged public
+	$public = array_diff( get_post_types(['public' => true], 'names'), $exclude );
+	$types  = array_values( array_unique( array_merge($always, $public) ) );
 	return apply_filters('bp_seo_content_types', $types);
 }
 
@@ -175,8 +183,7 @@ function bp_seo_title_template(): string {
 		$tpl = '%%title%%' . $tail; // %%title%% resolves to the term name via ctx below
 	} elseif ( is_singular() ) {
 		$pt      = get_post_type();
-		$known   = ['post', 'page', 'universal', 'products', 'landing', 'events'];
-		$tpl     = in_array($pt, $known, true)
+		$tpl     = in_array($pt, bp_seo_content_types(), true)
 			? '%%title%%' . $tail
 			: ucfirst($pt) . $tail;
 	} else {
@@ -705,8 +712,27 @@ add_action('template_redirect', function() {
 add_action('add_meta_boxes', function() {
 	if ( bp_seo_defer() ) return;
 	foreach ( bp_seo_metabox_types() as $pt ) {
-		add_meta_box( 'bp-seo', 'Battle Plan SEO', 'bp_seo_metabox_render', $pt, 'normal', 'default' );
+		add_meta_box( 'bp-seo', 'Battle Plan SEO', 'bp_seo_metabox_render', $pt, 'normal', 'low' );
 	}
+});
+
+// Pin the SEO box directly beneath "Page Bottom". Priority 'low' places it there by
+// default; this also repositions it for users with a saved meta-box order, where a
+// newly-added box would otherwise float to the top of the column.
+add_action('current_screen', function( $screen ) {
+	if ( ! $screen || $screen->base !== 'post' || bp_seo_defer() ) return;
+	$pt = $screen->post_type;
+	if ( ! in_array( $pt, bp_seo_metabox_types(), true ) ) return;
+
+	add_filter( "get_user_option_meta-box-order_{$pt}", function( $order ) use ( $pt ) {
+		if ( ! is_array($order) || empty($order['normal']) ) return $order; // no saved order → priority 'low' handles it
+		$ids = array_values( array_diff( array_filter( array_map('trim', explode(',', $order['normal'])) ), ['bp-seo'] ) );
+		$pos = array_search( "{$pt}-bottom", $ids, true );
+		if ( $pos === false ) $ids[] = 'bp-seo';
+		else array_splice( $ids, $pos + 1, 0, 'bp-seo' );
+		$order['normal'] = implode( ',', $ids );
+		return $order;
+	} );
 });
 
 function bp_seo_metabox_render( $post ) {

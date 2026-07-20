@@ -177,40 +177,15 @@ if ($forceD || $autoTriggerD) {
 
 
 /*--------------------------------------------------------------
-# Chron E — Site Audit
+# Chron E — Site Audit  [REMOVED]
 #
-# The audit runner (bp_run_site_audit) had NO automatic trigger — it
-# only ever ran from the manual "Run Audit" admin button, so it never
-# fired on its own. This wires it into the nightly window on the
-# ~90-day cadence (customer_info['audit_delay']), using the same
-# bp_audit_time / bp_audit_next options the admin Audit screen reads.
-# First run is staggered across ~4 weeks so all sites don't audit
-# (and hammer the GA4/GSC/PageSpeed APIs) on the same night.
+# The site audit is now MANUAL ONLY: Dashboard → Run Audit, driven step-by-step from the browser
+# (see the stepped runner in functions-site-audit-ai.php). It never runs unattended.
+#
+# It briefly lived here because the audit is too slow for one web request, and the chron rides a
+# live bot page view — which meant it 502'd the visitor. Cron was a workaround for the timeout,
+# not a reason for the audit to be automatic, so both are gone.
 --------------------------------------------------------------*/
-
-$forceE   = filter_var(get_option('bp_force_audit', false), FILTER_VALIDATE_BOOLEAN);
-$lastRunE = (int) get_option('bp_audit_time', 0);
-$nextE    = (int) get_option('bp_audit_next', 0);
-
-$auditIntervalE = isset($customerInfo['audit_delay'])
-    ? (int) $customerInfo['audit_delay']
-    : (86400 * 90);
-
-if ($nextE <= 0) {
-    $nextE = bp_next_nightly_window() + rand(0, 86400 * 28); // stagger the first run across ~4 weeks
-    update_option('bp_audit_next', $nextE);
-}
-
-$dueE         = time() >= $nextE;
-$autoTriggerE = _IS_BOT && !_IS_SERP_BOT && $dueE;
-
-if ($forceE || $autoTriggerE) {
-    delete_option('bp_force_audit');
-    update_option('bp_audit_time', time());
-    update_option('bp_audit_next', time() + $auditIntervalE + rand(0, 3600));
-    require_once get_template_directory() . '/functions-site-audit.php';
-    bp_run_site_audit();
-}
 
 
 /*--------------------------------------------------------------

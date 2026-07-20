@@ -179,6 +179,52 @@ function sp_reviews_sql_date( $rfc ): string {
 	return $ts ? "'" . gmdate( 'Y-m-d H:i:s', $ts ) . "'" : 'NULL';
 }
 
+/**
+ * create_time SQL for the reviews upsert — never NULL, so a review can't be silently hidden by the list's
+ * `create_time >= cutoff` filter. Prefers createTime, falls back to updateTime, and as a last resort stamps
+ * the current time so a malformed/absent timestamp still SURFACES the review (at the top) instead of losing it.
+ */
+function sp_reviews_create_time_sql( $create, $update ): string {
+	foreach ( [ $create, $update ] as $v ) {
+		$v = trim( (string) $v );
+		if ( '' !== $v ) { $ts = strtotime( $v ); if ( $ts ) return "'" . gmdate( 'Y-m-d H:i:s', $ts ) . "'"; }
+	}
+	return "'" . gmdate( 'Y-m-d H:i:s' ) . "'";
+}
+
+// One-time: make review_id CASE-SENSITIVE. Google review IDs are case-sensitive tokens, but the table's
+// default (case-insensitive) collation could treat two IDs that differ only by case as equal on the UNIQUE
+// KEY — so the upsert's ON DUPLICATE KEY UPDATE silently merged them and dropped one review. Binary
+// collation on the id column (and thus its unique index) fixes it. Already-lost rows re-appear on the next
+// sync that returns them (now stored as distinct ids).
+add_action( 'init', 'sp_reviews_migrate_id_binary' );
+function sp_reviews_migrate_id_binary(): void {
+	if ( get_option( 'sp_reviews_id_binary' ) ) return;
+	global $wpdb;
+	$t = sp_reviews_table();
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) === $t ) {
+		$wpdb->query( "ALTER TABLE `$t` MODIFY `review_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL" );
+	}
+	update_option( 'sp_reviews_id_binary', '1' );
+}
+
+// One-time: add the update_time column (so the list can bubble edited reviews to the top). Backfilled to
+// create_time for existing rows; the next sync fills the real Google updateTime.
+add_action( 'init', 'sp_reviews_migrate_update_time' );
+function sp_reviews_migrate_update_time(): void {
+	if ( get_option( 'sp_reviews_update_time_col' ) ) return;
+	global $wpdb;
+	$t = sp_reviews_table();
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) === $t ) {
+		$has = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM `$t` LIKE %s", 'update_time' ) );
+		if ( ! $has ) {
+			$wpdb->query( "ALTER TABLE `$t` ADD COLUMN update_time datetime DEFAULT NULL AFTER create_time, ADD KEY update_time (update_time)" );
+			$wpdb->query( "UPDATE `$t` SET update_time = create_time WHERE update_time IS NULL" );
+		}
+	}
+	update_option( 'sp_reviews_update_time_col', '1' );
+}
+
 /** Upsert normalized hub reviews into the table, keyed by reviewId, stamping location/store/brand/source. */
 function sp_reviews_upsert( array $reviews, string $location, string $store, string $brand, string $source = 'google' ): void {
 	global $wpdb;
@@ -187,10 +233,21 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
 	$stoS = sp_reviews_sql_str( $store );
 	$braS = sp_reviews_sql_str( $brand );
 	$srcS = sp_reviews_sql_str( $source );
-	$rows = [];
+	$rows     = [];
+	$seen_ids = [];
 	foreach ( $reviews as $r ) {
 		$rid = (string) ( $r['reviewId'] ?? '' );
-		if ( $rid === '' ) continue;
+		if ( $rid === '' ) {
+			// A review with no id can't be stored (the table keys on review_id) — log it so a silent
+			// drop is visible instead of a review just vanishing from the list.
+			error_log( 'sp_reviews_upsert: skipped a review with an empty reviewId (reviewer="' . (string) ( $r['reviewer'] ?? '' ) . '", location="' . $location . '")' );
+			continue;
+		}
+		if ( isset( $seen_ids[ $rid ] ) ) {
+			// Two rows with the same id in one batch → one overwrites the other. Shouldn't happen; log if it does.
+			error_log( 'sp_reviews_upsert: duplicate reviewId within one batch (one copy overwrites the other): ' . $rid . ' @ ' . $location );
+		}
+		$seen_ids[ $rid ] = true;
 		$reply = is_array( $r['reply'] ?? null ) ? $r['reply'] : null;
 		$rows[] = '(' . implode( ',', [
 			sp_reviews_sql_str( $rid ),
@@ -198,7 +255,8 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
 			sp_reviews_sql_str( (string) ( $r['photo'] ?? '' ) ),
 			(string) (int) ( $r['starRating'] ?? 0 ),
 			sp_reviews_sql_str( (string) ( $r['comment'] ?? '' ) ),
-			sp_reviews_sql_date( $r['createTime'] ?? '' ),
+			sp_reviews_create_time_sql( $r['createTime'] ?? '', $r['updateTime'] ?? '' ),
+			sp_reviews_create_time_sql( $r['updateTime'] ?? '', $r['createTime'] ?? '' ), // update_time (edits bubble the list)
 			$reply ? sp_reviews_sql_str( (string) ( $reply['comment'] ?? '' ) ) : 'NULL',
 			$reply ? sp_reviews_sql_date( $reply['updateTime'] ?? '' ) : 'NULL',
 			$locS, $stoS, $braS, $srcS,
@@ -210,11 +268,11 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
 	$table = sp_reviews_table();
 	foreach ( array_chunk( $rows, 100 ) as $chunk ) {
 		$wpdb->query(
-			"INSERT INTO $table (review_id, reviewer, photo, star_rating, comment, create_time, reply_comment, reply_time, location, store, brand, source, synced_at) VALUES "
+			"INSERT INTO $table (review_id, reviewer, photo, star_rating, comment, create_time, update_time, reply_comment, reply_time, location, store, brand, source, synced_at) VALUES "
 			. implode( ',', $chunk )
 			// Note: tags / tagged_at are intentionally left out so re-syncing never wipes AI tags.
 			. ' ON DUPLICATE KEY UPDATE reviewer=VALUES(reviewer), photo=VALUES(photo), star_rating=VALUES(star_rating),'
-			. ' comment=VALUES(comment), create_time=VALUES(create_time), reply_comment=VALUES(reply_comment),'
+			. ' comment=VALUES(comment), create_time=VALUES(create_time), update_time=VALUES(update_time), reply_comment=VALUES(reply_comment),'
 			. ' reply_time=VALUES(reply_time), location=VALUES(location), store=VALUES(store), brand=VALUES(brand), source=VALUES(source), synced_at=VALUES(synced_at)'
 		);
 	}
@@ -226,10 +284,12 @@ function sp_reviews_upsert( array $reviews, string $location, string $store, str
  * plus the secondary list filters (star rating, reply status, AI topic) — all server-side now so the
  * list can be paginated without losing any filtering. Returns [ whereSql, args ].
  */
-function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, string $stars, string $reply, string $topic, string $source = '' ): array {
+function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, string $stars, string $reply, string $topic, string $source = '', bool $by_update = false ): array {
 	global $wpdb;
 	$where = '1=1'; $args = [];
-	if ( '' !== $cutoff ) { $where .= ' AND create_time >= %s'; $args[] = $cutoff; }
+	// The LIST scopes by UPDATE time (so an edited older review bubbles back into the recent window);
+	// analytics pass $by_update=false and keep create_time (a rating counts for when it was written).
+	if ( '' !== $cutoff ) { $where .= $by_update ? ' AND COALESCE(update_time, create_time) >= %s' : ' AND create_time >= %s'; $args[] = $cutoff; }
 	if ( '' !== $store )  { $where .= ' AND store = %s';        $args[] = $store; }
 	if ( '' !== $brand )  { $where .= ' AND brand = %s';        $args[] = $brand; }
 	if ( '' !== $stars )  { $where .= ' AND star_rating = %d';  $args[] = (int) $stars; }
@@ -246,15 +306,16 @@ function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, st
 /** Count of stored reviews matching the given filters (drives "Showing X of Y" + has_more). */
 function sp_reviews_count_where( string $cutoff = '', string $store = '', string $brand = '', string $stars = '', string $reply = '', string $topic = '', string $source = '' ): int {
 	global $wpdb;
-	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic, $source );
+	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic, $source, true );
 	$sql = 'SELECT COUNT(*) FROM ' . sp_reviews_table() . " WHERE $where";
 	return (int) ( $args ? $wpdb->get_var( $wpdb->prepare( $sql, $args ) ) : $wpdb->get_var( $sql ) );
 }
 
 function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $brand = '', string $stars = '', string $reply = '', string $topic = '', int $limit = 0, int $offset = 0, string $source = '' ): array {
 	global $wpdb;
-	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic, $source );
-	$sql = 'SELECT * FROM ' . sp_reviews_table() . " WHERE $where ORDER BY create_time DESC, id DESC";
+	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $store, $brand, $stars, $reply, $topic, $source, true );
+	// Bubble edited reviews up: order by update time (falls back to create time for un-edited rows).
+	$sql = 'SELECT * FROM ' . sp_reviews_table() . " WHERE $where ORDER BY COALESCE(update_time, create_time) DESC, id DESC";
 	if ( $limit > 0 ) { $sql .= ' LIMIT %d OFFSET %d'; $args[] = $limit; $args[] = max( 0, $offset ); }
 	$rows = ( $args ? $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A ) ) ?: [];
 	$out  = [];
@@ -267,6 +328,7 @@ function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $b
 			'starRating' => (int) $r['star_rating'],
 			'comment'    => $r['comment'],
 			'createTime' => $r['create_time'] ? gmdate( 'c', strtotime( $r['create_time'] ) ) : '',
+			'updateTime' => ! empty( $r['update_time'] ) ? gmdate( 'c', strtotime( $r['update_time'] ) ) : '',
 			'reply'      => $has_reply ? [ 'comment' => $r['reply_comment'], 'updateTime' => $r['reply_time'], 'by' => ( ! empty( $r['reply_by'] ) ? site_pulse_display_name( (int) $r['reply_by'] ) : '' ) ] : null,
 			'tags'       => ( isset( $r['tags'] ) && $r['tags'] ) ? ( json_decode( $r['tags'], true ) ?: [] ) : [],
 			'location'   => isset( $r['location'] ) ? (string) $r['location'] : '',

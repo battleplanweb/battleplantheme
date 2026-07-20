@@ -798,6 +798,9 @@ document.addEventListener('DOMContentLoaded', function () {
 	var clarityCharts = document.querySelectorAll('.bp-analytics-clarity');
 	var scrollCharts = document.querySelectorAll('.bp-analytics-scroll');
 	var eventCharts = document.querySelectorAll('.bp-analytics-events');
+	var cwvCharts = document.querySelectorAll('.bp-analytics-cwv');
+	var auditCharts = document.querySelectorAll('.bp-analytics-audit');
+	var keywordCharts = document.querySelectorAll('.bp-analytics-keywords');
 	if (!channelCharts.length && !behaviorCharts.length) return;
 
 	var payloadEl = document.getElementById('bp-an-payload');
@@ -1072,9 +1075,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		var yMax = 0; vis.forEach(function (s) { s.values.forEach(function (v) { if (v > yMax) yMax = v; }); });
 		var capped = container._yCap && container._yCap > 0;                                  // clicked y-axis cap
-		var ny = niceMax(capped ? container._yCap : yMax, 4), yTop = capped ? container._yCap : ny.max;
+		if (!capped && opts.threshold != null && opts.threshold > yMax) yMax = opts.threshold; // keep the benchmark on-scale even when all data sits below it
+		var ny, yTop;
+		if (!capped && opts.yMaxFixed) { yTop = opts.yMaxFixed; ny = { max: yTop, step: opts.yStepFixed || (yTop / 5) }; } // hard cap the axis (e.g. 0–5 star rating)
+		else { ny = niceMax(capped ? container._yCap : yMax, 4); yTop = capped ? container._yCap : ny.max; }
 		function xS(i) { return N <= 1 ? plotL : plotL + (i/(N-1))*plotW; }
-		function yS(v) { return plotB - (v/yTop)*plotH; }
+		// invertY flips the axis so a LOWER value plots HIGHER (for "lower is better" metrics like search position).
+		function yS(v) { return opts.invertY ? (plotT + (v/yTop)*plotH) : (plotB - (v/yTop)*plotH); }
 		function yfmt(v) { return opts.yFmt ? opts.yFmt(v) : (isDur ? (v >= 60 ? Math.round(v/60) + 'm' : Math.round(v) + 's') : fmtInt(v)); }
 		function vfmt(v) { return opts.vFmt ? opts.vFmt(v) : (isDur ? fmtDur(v) : fmtInt(v)); }
 
@@ -1265,6 +1272,82 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	// Lighthouse — selected lab metric; Mobile + Desktop lines + the "good" threshold. Nine metrics: four
+	// category scores (0–100, higher better) + five perf metrics. Pre-bucketed per grain → range-slice.
+	var CWV_META = {
+		perf: { unit: 'score', good: 90,  dir: 'high' },
+		fcp:  { unit: 's',     good: 1.8, dir: 'low'  },
+		tbt:  { unit: 'ms',    good: 200, dir: 'low'  },
+		si:   { unit: 's',     good: 3.4, dir: 'low'  },
+		lcp:  { unit: 's',     good: 2.5, dir: 'low'  },
+		cls:  { unit: 'cls',   good: 0.1, dir: 'low'  },
+		acc:  { unit: 'score', good: 90,  dir: 'high' },
+		best: { unit: 'score', good: 90,  dir: 'high' },
+		seo:  { unit: 'score', good: 90,  dir: 'high' }
+	};
+	function activeCwvMetric(container) { var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-vbtn.active'); var m = payload.cwv && payload.cwv.metrics; return (b && b.dataset.vmetric) || (m && m[0] && m[0].key); }
+	function renderCWV(container) {
+		var data = payload.cwv;
+		if (!data) { container.innerHTML = '<p class="bp-an-empty">No Lighthouse data yet.</p>'; return; }
+		var metric = activeCwvMetric(container);
+		var grain = activeGrain(), g = data[grain] || data.daily || data.weekly || data.monthly;
+		var noteEmpty = function () { container.innerHTML = '<p class="bp-an-empty">No Lighthouse data for this view yet — it builds every ~3 days.</p>'; };
+		if (!g || !g.periods || !g.periods.length || !g.series[metric]) { noteEmpty(); return; }
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var periods = idx.map(function (j) { return g.periods[j]; });
+		var ser = g.series[metric];
+		var mob = idx.map(function (j) { return ser.m[j] || 0; }), desk = idx.map(function (j) { return ser.d[j] || 0; });
+		if (!mob.concat(desk).some(function (v) { return v > 0; })) { noteEmpty(); return; }
+		var meta = CWV_META[metric] || CWV_META.perf, unit = meta.unit;
+		var fmtV = unit === 's'   ? function (v) { return (Math.round(v * 100) / 100) + 's'; }
+		         : unit === 'ms'  ? function (v) { return Math.round(v) + 'ms'; }
+		         : unit === 'cls' ? function (v) { return (Math.round(v * 1000) / 1000); }
+		         :                  function (v) { return Math.round(v); };   // score 0–100
+		var defs = [
+			{ key: 'Mobile',  label: 'Mobile',  cls: 'green', emph: true, values: mob },
+			{ key: 'Desktop', label: 'Desktop', cls: 'blue',  emph: true, values: desk }
+		];
+		drawLineChart(container, periods, defs, {
+			grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true,
+			yFmt: fmtV, vFmt: fmtV,
+			threshold: meta.good, thresholdLabel: fmtV(meta.good) + (meta.dir === 'high' ? ' goal' : ' good'),
+			rerender: function () { renderCWV(container); }
+		});
+	}
+
+	// Audit-metric cards (Search Console / Backlinks / Content / Reviews) — generic single-line renderer.
+	// The card's data-audit picks the group in payload.auditMetrics; the active .bp-an-abtn picks the metric.
+	function auditMetricInfo(data, key) { for (var i = 0; i < data.metrics.length; i++) if (data.metrics[i].key === key) return data.metrics[i]; return data.metrics[0]; }
+	function renderAuditCard(container) {
+		var group = container.dataset.audit, data = payload.auditMetrics && payload.auditMetrics[group];
+		if (!data || !data.metrics) { container.innerHTML = '<p class="bp-an-empty">No data yet.</p>'; return; }
+		var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-abtn.active');
+		var metric = (b && b.dataset.ametric) || data.metrics[0].key;
+		var grain = activeGrain(), g = data[grain] || data.daily || data.weekly || data.monthly;
+		if (!g || !g.periods || !g.periods.length || !g.series[metric]) { container.innerHTML = '<p class="bp-an-empty">No data for this view yet — it builds every ~3 days.</p>'; return; }
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var periods = idx.map(function (j) { return g.periods[j]; });
+		var vals = idx.map(function (j) { return g.series[metric][j] || 0; });
+		if (!vals.some(function (v) { return v > 0; })) { container.innerHTML = '<p class="bp-an-empty">No data for this metric yet.</p>'; return; }
+		var info = auditMetricInfo(data, metric), unit = info.unit;
+		var fmtV = unit === 'pct'    ? function (v) { return (Math.round(v * 10) / 10) + '%'; }
+		         : unit === 'pos'    ? function (v) { return (Math.round(v * 10) / 10); }
+		         : unit === 'rating' ? function (v) { return (Math.round(v * 10) / 10); }
+		         :                     function (v) { return fmtInt(v); };
+		var defs = [{ key: info.label, label: info.label, cls: 'blue', emph: true, values: vals }];
+		var opts = {
+			grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true,
+			yFmt: fmtV, vFmt: fmtV, rerender: function () { renderAuditCard(container); }
+		};
+		if (unit === 'rating') { opts.yMaxFixed = 5; opts.yStepFixed = 1; }       // stars top out at 5
+		else if (unit === 'pos') { opts.invertY = true; }                          // search position: lower = better = higher on chart
+		drawLineChart(container, periods, defs, opts);
+	}
+
 	function renderBehavior(container) {
 		var grain = activeGrain(), g = filterGrain(payload[grain], grain);
 		if (!g || !g.periods.length) { container.innerHTML = '<p class="bp-an-empty">No data for this view/range.</p>'; return; }
@@ -1448,18 +1531,25 @@ document.addEventListener('DOMContentLoaded', function () {
 		var width = container.clientWidth || 0; if (width < 80) return;
 		var height = 300, mL = 54, mR = 22, mT = 14, mB = 28;
 		var plotL = mL, plotR = width - mR, plotT = mT, plotB = height - mB, plotW = plotR - plotL, plotH = plotB - plotT, N = periods.length;
+		var pct = opts.mode !== 'count';   // default (scroll depth) stacks to 100%; 'count' stacks raw totals
+		var yTop = 100, gridStep = 25;
+		if (!pct) {
+			var maxTotal = 0;
+			for (var mi = 0; mi < N; mi++) { var s = 0; bands.forEach(function (b) { s += b.values[mi] || 0; }); if (s > maxTotal) maxTotal = s; }
+			var nm = niceMax(maxTotal, 4); yTop = nm.max || 1; gridStep = nm.step || (yTop / 4);
+		}
 		function xS(i) { return N <= 1 ? plotL : plotL + (i / (N - 1)) * plotW; }
-		function yS(v) { return plotB - (v / 100) * plotH; }
+		function yS(v) { return plotB - (v / yTop) * plotH; }
 		container.innerHTML = '';
 		var legend = document.createElement('div'); legend.className = 'bp-an-legend';
 		bands.forEach(function (b) { var it = document.createElement('span'); it.className = 'bp-an-leg static'; it.innerHTML = '<span class="bp-an-key k-' + b.cls + '"></span>' + b.label; legend.appendChild(it); });
 		container.appendChild(legend);
 		var svg = el('svg', { 'class': 'bp-an-svg', width: '100%', height: height, viewBox: '0 0 ' + width + ' ' + height });
-		[0, 25, 50, 75, 100].forEach(function (v) {
-			var gy = yS(v);
+		for (var gv = 0; gv <= yTop + 1e-9; gv += gridStep) {
+			var gy = yS(gv);
 			svg.appendChild(el('line', { 'class': 'bp-an-grid', x1: plotL, y1: gy, x2: plotR, y2: gy }));
-			var yl = el('text', { 'class': 'bp-an-ylab', x: plotL - 8, y: gy + 3, 'text-anchor': 'end' }); yl.textContent = v + '%'; svg.appendChild(yl);
-		});
+			var yl = el('text', { 'class': 'bp-an-ylab', x: plotL - 8, y: gy + 3, 'text-anchor': 'end' }); yl.textContent = pct ? (gv + '%') : fmtInt(gv); svg.appendChild(yl);
+		}
 		var lastX = -999, prevMo = null;
 		periods.forEach(function (keyRaw, i) {
 			var key = '' + keyRaw, mo = +key.slice(4, 6), isJan = mo === 1, x = xS(i), major, dayGrain = (opts.grain === 'weekly' || opts.grain === 'daily');
@@ -1490,7 +1580,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			var px = (ev.clientX - rect.left) * scale, i = N <= 1 ? 0 : Math.round(((px - plotL) / plotW) * (N - 1));
 			if (i < 0) i = 0; if (i > N - 1) i = N - 1;
 			focus.style.display = ''; var x = xS(i); vLine.setAttribute('x1', x); vLine.setAttribute('x2', x);
-			var rows = bands.map(function (b) { return '<div class="bp-an-tip-row"><span class="bp-an-key k-' + b.cls + '"></span>' + b.tipLabel + '<span class="bp-an-tip-v">' + Math.round(b.tipVals[i] || 0) + '%</span></div>'; }).join('');
+			var rows = bands.map(function (b) { return '<div class="bp-an-tip-row"><span class="bp-an-key k-' + b.cls + '"></span>' + b.tipLabel + '<span class="bp-an-tip-v">' + Math.round(b.tipVals[i] || 0) + (pct ? '%' : '') + '</span></div>'; }).join('');
 			tip.innerHTML = '<div class="bp-an-tip-h">' + fmtPeriodFull(periods[i], opts.grain) + '</div>' + rows;
 			tip.style.display = 'block';
 			var rr = container.getBoundingClientRect(), lx = (x / width) * rr.width;
@@ -1498,6 +1588,29 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 		hit.addEventListener('mouseleave', function () { focus.style.display = 'none'; tip.style.display = 'none'; });
 	}
+	// Keyword Rankings — stacked rank-band distribution over time; Count (raw totals) or Share (100%).
+	function activeKwMode(container) { var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-kmbtn.active'); return (b && b.dataset.kmode) || 'count'; }
+	function renderKeywords(container) {
+		var data = payload.keywords;
+		if (!data || !data.bands) { container.innerHTML = '<p class="bp-an-empty">No keyword-ranking history yet — it builds every ~3 days.</p>'; return; }
+		var grain = activeGrain(), g = data[grain] || data.daily || data.weekly || data.monthly;
+		if (!g || !g.periods || !g.periods.length) { container.innerHTML = '<p class="bp-an-empty">No keyword data at this view.</p>'; return; }
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });
+		var periods = idx.map(function (j) { return g.periods[j]; });
+		var share = activeKwMode(container) === 'share';
+		var raw = {}; data.bands.forEach(function (bd) { raw[bd.key] = idx.map(function (j) { return (g.series[bd.key] || [])[j] || 0; }); });
+		var totals = periods.map(function (_, k) { var s = 0; data.bands.forEach(function (bd) { s += raw[bd.key][k]; }); return s; });
+		if (!totals.some(function (v) { return v > 0; })) { container.innerHTML = '<p class="bp-an-empty">No keyword data at this view.</p>'; return; }
+		var bands = data.bands.map(function (bd) {
+			var vals = raw[bd.key].map(function (v, k) { return share ? (totals[k] > 0 ? v / totals[k] * 100 : 0) : v; });
+			var tip  = raw[bd.key].map(function (v, k) { return share ? (totals[k] > 0 ? Math.round(v / totals[k] * 100) : 0) : v; });
+			return { key: bd.key, label: bd.label, cls: bd.cls, values: vals, tipLabel: bd.label, tipVals: tip };
+		});
+		drawStackedBands(container, periods, bands, { grain: grain, mode: share ? 'share' : 'count' });
+	}
+
 	// Hero tiles follow the active range: total over the window + "vs prev" and YoY deltas.
 	function renderTiles() {
 		if (!tileEls.length) return;
@@ -1737,12 +1850,15 @@ document.addEventListener('DOMContentLoaded', function () {
 		Array.prototype.forEach.call(clarityCharts, renderClarity);
 		Array.prototype.forEach.call(scrollCharts, renderScroll);
 		Array.prototype.forEach.call(eventCharts, renderEvents);
+		Array.prototype.forEach.call(cwvCharts, renderCWV);
+		Array.prototype.forEach.call(auditCharts, renderAuditCard);
+		Array.prototype.forEach.call(keywordCharts, renderKeywords);
 	}
 
 	function clearDates() { var s = document.getElementById('bp-an-start'), e = document.getElementById('bp-an-end'); if (s) s.value = ''; if (e) e.value = ''; }
 	function setActive(sel, btn) { document.querySelectorAll(sel).forEach(function (x) { x.classList.remove('active'); }); btn.classList.add('active'); }
 	function clearCaps(nodes) { Array.prototype.forEach.call(nodes, function (c) { c._yCap = null; }); }
-	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); clearCaps(scrollCharts); clearCaps(eventCharts); }
+	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); clearCaps(scrollCharts); clearCaps(eventCharts); clearCaps(cwvCharts); clearCaps(auditCharts); }
 
 	document.addEventListener('click', function (ev) {
 		var gb = ev.target.closest('.bp-an-gbtn');
@@ -1796,6 +1912,38 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 
+		var vb = ev.target.closest('.bp-an-vbtn');
+		if (vb) {
+			ev.preventDefault();
+			var vcard = vb.closest('.bp-an-card');
+			vcard.querySelectorAll('.bp-an-vbtn').forEach(function (x) { x.classList.remove('active'); });
+			vb.classList.add('active');
+			clearCaps(vcard.querySelectorAll('.bp-analytics-cwv'));
+			vcard.querySelectorAll('.bp-analytics-cwv').forEach(renderCWV);
+			return;
+		}
+
+		var ab = ev.target.closest('.bp-an-abtn');
+		if (ab) {
+			ev.preventDefault();
+			var acard = ab.closest('.bp-an-card');
+			acard.querySelectorAll('.bp-an-abtn').forEach(function (x) { x.classList.remove('active'); });
+			ab.classList.add('active');
+			clearCaps(acard.querySelectorAll('.bp-analytics-audit'));
+			acard.querySelectorAll('.bp-analytics-audit').forEach(renderAuditCard);
+			return;
+		}
+
+		var km = ev.target.closest('.bp-an-kmbtn');
+		if (km) {
+			ev.preventDefault();
+			var kcard = km.closest('.bp-an-card');
+			kcard.querySelectorAll('.bp-an-kmbtn').forEach(function (x) { x.classList.remove('active'); });
+			km.classList.add('active');
+			kcard.querySelectorAll('.bp-analytics-keywords').forEach(renderKeywords);
+			return;
+		}
+
 		var sb = ev.target.closest('.bp-an-sbtn');
 		if (sb) {
 			ev.preventDefault();
@@ -1837,6 +1985,9 @@ document.addEventListener('DOMContentLoaded', function () {
 					else if (t.classList.contains('bp-analytics-clarity')) renderClarity(t);
 					else if (t.classList.contains('bp-analytics-scroll')) renderScroll(t);
 					else if (t.classList.contains('bp-analytics-events')) renderEvents(t);
+					else if (t.classList.contains('bp-analytics-cwv')) renderCWV(t);
+					else if (t.classList.contains('bp-analytics-audit')) renderAuditCard(t);
+					else if (t.classList.contains('bp-analytics-keywords')) renderKeywords(t);
 					else if (t.classList.contains('bp-analytics-locations-zoom')) renderLocationsZoom(t);
 					else if (t.classList.contains('bp-analytics-locations')) renderLocations(t);
 					else if (t.classList.contains('bp-analytics-behavior')) renderBehavior(t);
@@ -1844,7 +1995,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				});
 			});
 		});
-		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, pagesPies, clarityCharts, scrollCharts, eventCharts].forEach(function (list) {
+		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, pagesPies, clarityCharts, scrollCharts, eventCharts, cwvCharts, auditCharts, keywordCharts].forEach(function (list) {
 			Array.prototype.forEach.call(list, function (c) { ro.observe(c); });
 		});
 		renderAll(); // deterministic initial paint — don't rely solely on ResizeObserver's first callback

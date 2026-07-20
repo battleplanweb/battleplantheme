@@ -53,7 +53,7 @@ function site_pulse_modules(): array {
 		'mileage' => [
 			'label'   => 'Mileage &amp; Tolls',
 			'desc'    => 'Mileage logging, reimbursement reports, and NTTA toll reconciliation.',
-			'caps'    => [ 'submit_mileage', 'manage_mileage' ],
+			'caps'    => [ 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_expense_overview', 'manage_mileage' ],
 			'default' => true,
 		],
 		'forms' => [

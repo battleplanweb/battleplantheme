@@ -404,12 +404,13 @@ function site_pulse_install_db(): void {
 	// up the full back-catalog via "Load older" instead of re-pulling the newest snapshot each time.
 	$sql .= "CREATE TABLE " . site_pulse_table('reviews') . " (
 		id int(11) NOT NULL AUTO_INCREMENT,
-		review_id varchar(255) NOT NULL,
+		review_id varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
 		reviewer varchar(255) DEFAULT NULL,
 		photo varchar(500) DEFAULT NULL,
 		star_rating tinyint(1) NOT NULL DEFAULT 0,
 		comment text DEFAULT NULL,
 		create_time datetime DEFAULT NULL,
+		update_time datetime DEFAULT NULL,
 		reply_comment text DEFAULT NULL,
 		reply_time datetime DEFAULT NULL,
 		reply_by bigint(20) DEFAULT NULL,
@@ -424,6 +425,7 @@ function site_pulse_install_db(): void {
 		UNIQUE KEY review_id (review_id),
 		KEY star_rating (star_rating),
 		KEY create_time (create_time),
+		KEY update_time (update_time),
 		KEY location (location),
 		KEY store (store),
 		KEY brand (brand),
@@ -1340,6 +1342,20 @@ function site_pulse_seed_roles(): void {
 			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_analytics', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
+		// System Admin = a full-access role (every current capability). Below God; auto NOT dynamic — an
+		// admin re-ticks a brand-new feature (God always has it). A generic User is a minimal starter role.
+		[
+			'slug'            => 'system-admin',
+			'label'           => 'System Admin',
+			'capabilities'    => wp_json_encode( array_keys( site_pulse_capability_catalog_all() ) ),
+			'hierarchy_level' => 110,
+		],
+		[
+			'slug'            => 'user',
+			'label'           => 'User',
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'submit_mileage' ] ),
+			'hierarchy_level' => 10,
+		],
 	];
 
 	// Insert-only: seed defaults on first run, but never overwrite a tier an admin has since
@@ -1356,6 +1372,53 @@ function site_pulse_seed_roles(): void {
 		}
 	}
 }
+
+// One-time (existing installs, no version bump): ensure the System Admin (full-access) + generic User
+// roles exist. Insert-only — never touches roles an admin already has. New installs get these via the seed.
+add_action( 'init', 'site_pulse_seed_extra_roles' );
+function site_pulse_seed_extra_roles(): void {
+	if ( get_option( 'site_pulse_extra_roles_seeded' ) ) return;
+	global $wpdb;
+	$t = site_pulse_table('roles');
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) !== $t ) return;
+	$extra = [
+		[ 'slug' => 'system-admin', 'label' => 'System Admin', 'capabilities' => wp_json_encode( array_keys( site_pulse_capability_catalog_all() ) ), 'hierarchy_level' => 110, 'is_active' => 1 ],
+		[ 'slug' => 'user',         'label' => 'User',         'capabilities' => wp_json_encode( [ 'submit_reports', 'submit_mileage' ] ),         'hierarchy_level' => 10,  'is_active' => 1 ],
+	];
+	foreach ( $extra as $r ) {
+		if ( ! $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE slug = %s", $r['slug'] ) ) ) {
+			$wpdb->insert( $t, $r );
+		}
+	}
+	update_option( 'site_pulse_extra_roles_seeded', '1' );
+}
+
+// One-time: Chat + Action Items used to be visible to everyone. Now they're gated by view_chat /
+// view_action_items so admins can restrict them per-role. Grant both to EVERY existing role so current
+// access is unchanged; a brand-new role starts without them (tick to grant), like any other feature.
+add_action( 'init', 'site_pulse_grant_universal_caps', 25 );
+function site_pulse_grant_universal_caps(): void {
+	if ( get_option( 'site_pulse_universal_caps_v2' ) ) return;
+	global $wpdb;
+	$t = site_pulse_table('roles');
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) !== $t ) return;
+	// Chat + Action Items → every role. The per-screen expense caps (split out of submit_mileage) → only
+	// roles that already had submit_mileage, so who-can-see-what is unchanged. A brand-new role starts blank.
+	$universal = [ 'view_chat', 'view_action_items' ];
+	$expense   = [ 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_expense_overview' ];
+	foreach ( ( $wpdb->get_results( "SELECT id, slug, capabilities FROM $t", ARRAY_A ) ?: [] ) as $r ) {
+		if ( $r['slug'] === 'god' ) continue; // god resolves dynamically
+		$caps = json_decode( (string) $r['capabilities'], true );
+		$caps = is_array( $caps ) ? $caps : [];
+		$add  = $universal;
+		if ( in_array( 'submit_mileage', $caps, true ) || in_array( 'manage_mileage', $caps, true ) ) $add = array_merge( $add, $expense );
+		$changed = false;
+		foreach ( $add as $c ) { if ( ! in_array( $c, $caps, true ) ) { $caps[] = $c; $changed = true; } }
+		if ( $changed ) $wpdb->update( $t, [ 'capabilities' => wp_json_encode( array_values( $caps ) ) ], [ 'id' => (int) $r['id'] ] );
+	}
+	update_option( 'site_pulse_universal_caps_v2', '1' );
+}
+
 
 function site_pulse_is_god( int $user_id = 0 ): bool {
 	if ( ! $user_id ) $user_id = get_current_user_id();
@@ -1570,6 +1633,8 @@ function site_pulse_enqueue_assets(): void {
 		// Only true for the real battleplanweb session AND not while impersonating — so "view as
 		// <someone>" hides the super-admin-only controls (Grant/Revoke God) like that user sees.
 		'isSuperadmin'       => site_pulse_is_superadmin( $real_user_id ) && ! site_pulse_is_impersonating(),
+		// God or a System Admin — the only people who see the per-page Grant/Restrict bar.
+		'isSystemAdmin'      => site_pulse_is_system_admin( $eff_user_id ),
 		'impersonating'      => site_pulse_is_impersonating(),
 		// Whether the REAL user has ever opened the installed (home-screen) app — used to stop
 		// nagging installers with the dashboard install card.
@@ -1630,6 +1695,60 @@ function site_pulse_get_role( int $role_id ): ?array {
 	return $row ?: null;
 }
 
+/*--------------------------------------------------------------
+# Roles — capability helpers (module-grouped grid support)
+--------------------------------------------------------------*/
+
+/** God, or a user who can manage roles (a "system admin"). Gates the per-page Grant/Restrict bar. */
+function site_pulse_is_system_admin( int $user_id ): bool {
+	return site_pulse_is_god( $user_id ) || site_pulse_user_can( $user_id, 'manage_roles' );
+}
+
+/** Every catalog capability owned by a module (via the cap→module map). */
+function site_pulse_module_caps( string $module ): array {
+	$map  = site_pulse_cap_module_map();  // cap => owning module
+	$caps = [];
+	foreach ( site_pulse_capability_catalog_all() as $cap => $label ) {
+		if ( ( $map[ $cap ] ?? null ) === $module ) $caps[] = $cap;
+	}
+	return $caps;
+}
+
+/** Whether a cap is an admin/"manage" capability (Module Manager gets these; Module User doesn't). */
+function site_pulse_cap_is_admin( string $cap ): bool {
+	return strpos( $cap, 'manage_' ) === 0 || in_array( $cap, [ 'upload_forms', 'import_data' ], true );
+}
+
+/**
+ * The capability catalog grouped BY MODULE for the permission grids — one group per module (in registry
+ * order) with its caps, plus a trailing "General" group for caps owned by no module. Uses the DISPLAY
+ * catalog (module-off caps hidden), so an off module simply doesn't appear.
+ * Returns: [ { key, label, caps: [ { cap, label, admin } ] } ].
+ */
+function site_pulse_capability_catalog_grouped(): array {
+	$catalog = site_pulse_capability_catalog();   // display catalog (module-filtered)
+	$map     = site_pulse_cap_module_map();        // cap => owning module
+	$modules = function_exists( 'site_pulse_modules' ) ? site_pulse_modules() : [];
+
+	$groups = [];
+	foreach ( $modules as $mslug => $mod ) {
+		$groups[ $mslug ] = [ 'key' => $mslug, 'label' => trim( wp_strip_all_tags( html_entity_decode( (string) $mod['label'] ) ) ), 'caps' => [] ];
+	}
+	$core = [ 'key' => 'core', 'label' => 'General', 'caps' => [] ];
+
+	foreach ( $catalog as $cap => $label ) {
+		$entry = [ 'cap' => $cap, 'label' => $label, 'admin' => site_pulse_cap_is_admin( $cap ) ];
+		$m = $map[ $cap ] ?? null;
+		if ( $m !== null && isset( $groups[ $m ] ) ) $groups[ $m ]['caps'][] = $entry;
+		else $core['caps'][] = $entry;
+	}
+
+	$out = [];
+	foreach ( $groups as $g ) { if ( $g['caps'] ) $out[] = $g; }
+	if ( $core['caps'] ) $out[] = $core;
+	return $out;
+}
+
 function site_pulse_get_role_by_slug( string $slug ): ?array {
 	global $wpdb;
 	$row = $wpdb->get_row( $wpdb->prepare(
@@ -1670,6 +1789,8 @@ function site_pulse_capability_catalog_all(): array {
 	return array_merge( $cat, [
 		'view_gm_action_items'         => 'View all GM action items',
 		'view_supervisor_action_items' => 'View all supervisor action items',
+		'view_chat'         => 'Use Chat',
+		'view_action_items' => 'View Action Items',
 		'view_analytics'    => 'View analytics',
 		'view_ai_insights'  => 'View AI insights',
 		'use_ai_assistant'  => 'Use AI Assistant',
@@ -1681,6 +1802,12 @@ function site_pulse_capability_catalog_all(): array {
 		'view_customer_messages' => 'View customer messages (FB/IG)',
 		'see_superadmin'    => 'See protected admin in lists',
 		'submit_mileage'    => 'Submit mileage',
+		'view_tolls'                 => 'Tolls (reconcile)',
+		'view_vehicle_expenses'      => 'Vehicle Expenses',
+		'view_business_meals'        => 'Business Meals',
+		'view_competitive_shopping'  => 'Competitive Shopping',
+		'view_other_expenses'        => 'Other Expenses',
+		'view_expense_overview'      => 'Expense Report Overview',
 		'import_data'       => 'Import reports &amp; comment cards',
 		// "Manage …" block, ordered to follow the admin menu.
 		'manage_users'         => 'Manage users',
@@ -1742,10 +1869,11 @@ function site_pulse_parse_overrides( $raw ): array {
 }
 
 /**
- * A user's effective capabilities: their role's capabilities, then per-user overrides applied
- * on top (an override of true grants a cap the role lacks; false revokes one the role grants).
- * This is THE single source of truth — used by site_pulse_user_can() for server-side AJAX gating,
- * by the dashboard template, and by the JS localization — so an override holds everywhere.
+ * A user's effective capabilities: their ACCESS ROLE's capabilities (the software permission dimension),
+ * then per-user overrides applied on top (an override of true grants a cap the access role lacks; false
+ * revokes one it grants). Falls back to the legacy POSITION caps when no access role is assigned yet, so
+ * behavior is identical before the migration runs. THE single source of truth — used by
+ * site_pulse_user_can() for server-side AJAX gating, the dashboard template, and the JS localization.
  */
 function site_pulse_effective_caps( int $user_id ): array {
 	// A god sees and can do everything, all the time — the FULL capability catalog, never
@@ -1760,6 +1888,7 @@ function site_pulse_effective_caps( int $user_id ): array {
 
 	$role = site_pulse_get_role( (int) $profile['role_id'] );
 	$caps = $role ? ( json_decode( $role['capabilities'], true ) ?: [] ) : [];
+	$caps = array_values( array_filter( (array) $caps, static fn( $c ) => $c !== 'god_mode' ) );
 
 	foreach ( site_pulse_parse_overrides( $profile['capability_overrides'] ?? null ) as $cap => $on ) {
 		if ( $on ) {
@@ -2926,9 +3055,9 @@ function site_pulse_ajax_admin_create_user(): void {
 	] );
 
 	if ( $result['success'] ) {
+		global $wpdb;
 		// Work-from-home (no store location): set a private home as the mileage home base.
 		if ( (int) ( $_POST['location_id'] ?? 0 ) === 0 && isset( $_POST['home_private_address'] ) && trim( $_POST['home_private_address'] ) !== '' ) {
-			global $wpdb;
 			$hid = site_pulse_mileage_set_private_home( (int) $result['user_id'], sanitize_text_field( $_POST['home_private_address'] ) );
 			$wpdb->update( site_pulse_table('user_profiles'), [ 'mileage_home_location_id' => $hid ], [ 'user_id' => (int) $result['user_id'] ] );
 		}
@@ -3403,6 +3532,7 @@ function site_pulse_ajax_admin_get_roles(): void {
 	wp_send_json_success( [
 		'roles'       => site_pulse_get_all_roles(),          // excludes the hidden God tier
 		'catalog'     => site_pulse_capability_catalog(),
+		'grouped'     => site_pulse_capability_catalog_grouped(),  // caps grouped by module for the grid
 		'user_counts' => $counts,
 	] );
 }
@@ -3509,6 +3639,176 @@ function site_pulse_ajax_admin_reorder_roles(): void {
 		);
 	}
 	wp_send_json_success( [ 'message' => 'Roles reordered.' ] );
+}
+
+/*--------------------------------------------------------------
+# Per-page Grant/Restrict bar (God + System Admin only) — edits the SAME access-role caps + overrides
+--------------------------------------------------------------*/
+
+/** Which capability gates each panel/page. Every leaf screen is here so the Grant/Restrict bar shows on
+ *  it. Dashboard (home) is intentionally omitted; report tabs are managed via the per-report caps grid.
+ *  Forms sub-panels ('forms-<cat>') fall back to view_forms in the resolver below. */
+function site_pulse_page_access_map(): array {
+	return apply_filters( 'site_pulse_page_access_map', [
+		'messages'            => 'view_chat',
+		'action-items'        => 'view_action_items',
+		// reports-my (each report's submit cap) + reports-review (a report's view cap) are resolved
+		// dynamically in site_pulse_page_access_report_caps() — not here.
+		'import-reports'      => 'import_data',
+		// Expense Report + sub-pages — each its own capability so they're granted/restricted independently.
+		'mileage'             => 'submit_mileage',
+		'mileage-tolls'       => 'view_tolls',
+		'vehicle-expenses'    => 'view_vehicle_expenses',
+		'business-meals'      => 'view_business_meals',
+		'competitive-shopping'=> 'view_competitive_shopping',
+		'other-expenses'      => 'view_other_expenses',
+		'expense-report'      => 'view_expense_overview',
+		// Customer Feedback area. A page with both a view + manage cap lists both (shown as two rows).
+		'reviews'             => [ 'view_reviews', 'manage_reviews' ],
+		'review-trends'       => 'view_reviews',
+		'agency-reviews'      => 'manage_reviews',
+		'customer-messages'   => [ 'view_customer_messages', 'manage_customer_messages' ],
+		'surveys'             => [ 'view_surveys', 'manage_surveys' ],
+		'import-cards'        => 'import_data',
+		'emails'              => [ 'view_emails', 'manage_emails' ],
+		'directory'           => [ 'view_directory', 'manage_directory' ],
+		'forms'               => [ 'view_forms', 'upload_forms' ],
+		'forms-all'           => [ 'view_forms', 'upload_forms' ],
+		'analytics'           => 'view_analytics',
+		'ai-assistant'        => 'use_ai_assistant',
+		// Settings sub-pages.
+		'admin-users'         => 'manage_users',
+		'admin-tiers'         => 'manage_roles',
+		'admin-locations'     => 'manage_locations',
+		'admin-templates'     => 'manage_templates',
+		'admin-ai-prompts'    => 'manage_settings',
+		'review-settings'     => 'manage_reviews',
+		'admin-mileage'       => 'manage_mileage',
+		'admin-forms'         => 'manage_settings',
+		'admin-settings'      => 'manage_settings',
+		'admin-notifications' => 'manage_notifications',
+		'admin-apikeys'       => 'manage_api_keys',
+	] );
+}
+
+/** The capabilities that gate a page — a list (a page may have several, e.g. View + Manage). Includes a
+ *  fallback for the dynamic forms-<category> sub-panels. */
+function site_pulse_page_access_caps( string $page ): array {
+	$map = site_pulse_page_access_map();
+	$v = $map[ $page ] ?? null;
+	if ( $v === null && strpos( $page, 'forms-' ) === 0 ) $v = [ 'view_forms', 'upload_forms' ];
+	if ( $v === null ) return [];
+	return is_array( $v ) ? array_values( $v ) : [ $v ];
+}
+
+function site_pulse_page_access_gate(): bool {
+	return site_pulse_is_system_admin( site_pulse_effective_user_id() );
+}
+
+/**
+ * Report pages use dynamic per-report caps (submit_reports is gone from the catalog):
+ *  - reports-my    → every active report's Submit cap (one permission row per report)
+ *  - reports-review → the posted template's View cap (one row)
+ * Returns [] for any other page. $template_id is only used for reports-review.
+ */
+function site_pulse_page_access_report_caps( string $page, int $template_id = 0 ): array {
+	if ( 'reports-my' === $page ) {
+		$caps = [];
+		foreach ( site_pulse_get_all_report_templates() as $t ) $caps[] = site_pulse_report_submit_cap( (string) $t['slug'] );
+		return $caps;
+	}
+	if ( 'reports-review' === $page ) {
+		$tpl = $template_id ? site_pulse_get_template( $template_id ) : null;
+		return $tpl ? [ site_pulse_report_view_cap( (string) $tpl['slug'] ) ] : [];
+	}
+	return [];
+}
+
+add_action( 'wp_ajax_site_pulse_admin_page_access_get', 'site_pulse_ajax_admin_page_access_get' );
+function site_pulse_ajax_admin_page_access_get(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_page_access_gate() ) { wp_send_json_error( [ 'message' => 'Not authorized.' ] ); return; }
+
+	$page = sanitize_text_field( wp_unslash( $_POST['page'] ?? '' ) );
+	// Reports resolve to dynamic per-report caps; everything else uses the static map.
+	$caps = site_pulse_page_access_report_caps( $page, (int) ( $_POST['template_id'] ?? 0 ) );
+	if ( ! $caps ) $caps = site_pulse_page_access_caps( $page );
+	if ( ! $caps ) { wp_send_json_success( [ 'has_cap' => false ] ); return; }
+
+	$catalog = site_pulse_capability_catalog_all();
+
+	// Parse role caps + user overrides ONCE, then compute has-access per permission.
+	$all_roles = site_pulse_get_all_roles();   // excludes the hidden God role
+	$role_caps = [];
+	foreach ( $all_roles as $r ) { $rc = json_decode( (string) $r['capabilities'], true ); $role_caps[ (int) $r['id'] ] = is_array( $rc ) ? $rc : []; }
+	$all_users = site_pulse_get_all_users( true );
+
+	$permissions = [];
+	foreach ( $caps as $cap ) {
+		if ( ! isset( $catalog[ $cap ] ) ) continue;
+		$roles = [];
+		foreach ( $all_roles as $r ) {
+			$roles[] = [ 'id' => (int) $r['id'], 'label' => (string) $r['label'], 'has' => in_array( $cap, $role_caps[ (int) $r['id'] ], true ) ];
+		}
+		$users = [];
+		foreach ( $all_users as $u ) {
+			$via_role = in_array( $cap, $role_caps[ (int) $u['role_id'] ] ?? [], true );
+			$ov = site_pulse_parse_overrides( $u['capability_overrides'] ?? null );
+			$has = array_key_exists( $cap, $ov ) ? ( $ov[ $cap ] === true ) : $via_role;
+			$users[] = [ 'user_id' => (int) $u['user_id'], 'name' => (string) ( $u['display_name'] ?: $u['user_login'] ), 'has' => $has ];
+		}
+		$permissions[] = [
+			'cap'       => $cap,
+			'cap_label' => html_entity_decode( wp_strip_all_tags( (string) $catalog[ $cap ] ) ),
+			'roles'     => $roles,
+			'users'     => $users,
+		];
+	}
+
+	wp_send_json_success( [ 'has_cap' => ! empty( $permissions ), 'permissions' => $permissions ] );
+}
+
+add_action( 'wp_ajax_site_pulse_admin_page_access_set', 'site_pulse_ajax_admin_page_access_set' );
+function site_pulse_ajax_admin_page_access_set(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_page_access_gate() ) { wp_send_json_error( [ 'message' => 'Not authorized.' ] ); return; }
+
+	global $wpdb;
+	$page  = sanitize_text_field( wp_unslash( $_POST['page'] ?? '' ) );
+	$ttype = ( (string) ( $_POST['target_type'] ?? '' ) === 'user' ) ? 'user' : 'role';
+	$tid   = (int) ( $_POST['target_id'] ?? 0 );
+	$grant = ! empty( $_POST['grant'] );
+	$cap   = sanitize_text_field( wp_unslash( $_POST['cap'] ?? '' ) );
+	// The cap must be one this page actually gates on (a real catalog cap) — never trust an arbitrary cap.
+	$valid = in_array( $cap, site_pulse_page_access_caps( $page ), true );
+	if ( ! $valid && 'reports-my' === $page )     $valid = ( strpos( $cap, 'submit_report_' ) === 0 );  // any report's Submit cap
+	if ( ! $valid && 'reports-review' === $page )  $valid = ( strpos( $cap, 'view_report_' ) === 0 );    // any report's View cap
+	if ( ! $valid || ! isset( site_pulse_capability_catalog_all()[ $cap ] ) ) wp_send_json_error( [ 'message' => 'Unknown permission.' ] );
+
+	if ( 'role' === $ttype ) {
+		$r = site_pulse_get_role( $tid );
+		if ( ! $r || $r['slug'] === 'god' ) wp_send_json_error( [ 'message' => 'That role can\'t be changed here.' ] );
+		$caps = json_decode( (string) $r['capabilities'], true );
+		$caps = is_array( $caps ) ? $caps : [];
+		if ( $grant ) { if ( ! in_array( $cap, $caps, true ) ) $caps[] = $cap; }
+		else          { $caps = array_values( array_diff( $caps, [ $cap ] ) ); }
+		$wpdb->update( site_pulse_table('roles'), [ 'capabilities' => wp_json_encode( array_values( $caps ) ) ], [ 'id' => $tid ] );
+		site_pulse_log( 'page_access_role', sprintf( '%s %s on role #%d (%s)', $grant ? 'Granted' : 'Restricted', $cap, $tid, $page ) );
+		wp_send_json_success( [ 'message' => 'Saved.' ] );
+	}
+
+	$p = site_pulse_get_user_profile( $tid );
+	if ( ! $p ) wp_send_json_error( [ 'message' => 'User not found.' ] );
+	$role = site_pulse_get_role( (int) $p['role_id'] );
+	$rc   = $role ? ( json_decode( (string) $role['capabilities'], true ) ?: [] ) : [];
+	$via_role = is_array( $rc ) && in_array( $cap, $rc, true );
+	$ov = site_pulse_parse_overrides( $p['capability_overrides'] ?? null );
+	// Keep overrides minimal: only store one when it DIFFERS from the role default, else clear it.
+	if ( $grant ) { if ( $via_role ) unset( $ov[ $cap ] ); else $ov[ $cap ] = true; }
+	else          { if ( $via_role ) $ov[ $cap ] = false; else unset( $ov[ $cap ] ); }
+	$wpdb->update( site_pulse_table('user_profiles'), [ 'capability_overrides' => wp_json_encode( $ov ), 'updated_at' => current_time('mysql') ], [ 'user_id' => $tid ] );
+	site_pulse_log( 'page_access_user', sprintf( '%s %s for user #%d (%s)', $grant ? 'Granted' : 'Restricted', $cap, $tid, $page ) );
+	wp_send_json_success( [ 'message' => 'Saved.' ] );
 }
 
 
@@ -4683,7 +4983,41 @@ function site_pulse_get_action_items( array $args = [] ): array {
 		$sql = $wpdb->prepare( $sql, ...$values );
 	}
 
-	return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
+	$rows = $wpdb->get_results( $sql, ARRAY_A ) ?: [];
+
+	// Who each item is visible to = its assignee(s): all members for a grouped (multi-assigned) item,
+	// else just the owner. {id,name} per person so the client can swap the viewer's own name for "you"
+	// (and drop the line for solo items). Batch-resolved by group_id — a single extra query, not N+1.
+	$group_ids = [];
+	foreach ( $rows as $r ) { $g = (string) ( $r['group_id'] ?? '' ); if ( '' !== $g ) $group_ids[ $g ] = true; }
+	$group_members = [];
+	if ( $group_ids ) {
+		$gids = array_keys( $group_ids );
+		$ph   = implode( ',', array_fill( 0, count( $gids ), '%s' ) );
+		$grows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT ai.group_id, ai.user_id, u.display_name AS name
+			 FROM " . site_pulse_table('action_items') . " ai
+			 LEFT JOIN {$wpdb->users} u ON u.ID = ai.user_id
+			 LEFT JOIN " . site_pulse_table('user_profiles') . " up ON up.user_id = ai.user_id
+			 LEFT JOIN " . site_pulse_table('roles') . " r ON r.id = up.role_id
+			 WHERE ai.group_id IN ($ph)
+			 ORDER BY r.hierarchy_level DESC, u.display_name", ...$gids ), ARRAY_A ) ?: [];
+		foreach ( $grows as $gr ) {
+			$g = (string) $gr['group_id']; $uid = (int) $gr['user_id']; $n = (string) $gr['name'];
+			if ( ! $uid || '' === $n ) continue;
+			if ( ! isset( $group_members[ $g ] ) ) $group_members[ $g ] = [];
+			if ( ! isset( $group_members[ $g ][ $uid ] ) ) $group_members[ $g ][ $uid ] = [ 'id' => $uid, 'name' => $n ];
+		}
+	}
+	foreach ( $rows as &$r ) {
+		$g = (string) ( $r['group_id'] ?? '' );
+		$r['visible_to'] = ( '' !== $g && ! empty( $group_members[ $g ] ) )
+			? array_values( $group_members[ $g ] )
+			: [ [ 'id' => (int) ( $r['user_id'] ?? 0 ), 'name' => (string) ( $r['user_name'] ?? '' ) ] ];
+	}
+	unset( $r );
+
+	return $rows;
 }
 
 add_action( 'wp_ajax_site_pulse_get_action_items', 'site_pulse_ajax_get_action_items' );
@@ -4963,6 +5297,91 @@ function site_pulse_ajax_add_action_note(): void {
 	wp_send_json_success( [ 'due_date' => $new_due ] );
 }
 
+// Attach a photo to an action item. Stored in the item's meta.attachments[] (JSON — no schema change)
+// and synced across every grouped copy, like notes. Anyone who can edit the item may attach.
+add_action( 'wp_ajax_site_pulse_action_item_upload', 'site_pulse_ajax_action_item_upload' );
+function site_pulse_ajax_action_item_upload(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	if ( ! $me || ! $item_id ) wp_send_json_error( [ 'message' => 'Invalid item.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item ) wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+	if ( empty( $_FILES['file'] ) || ! is_uploaded_file( $_FILES['file']['tmp_name'] ?? '' ) ) wp_send_json_error( [ 'message' => 'No file received.' ] );
+
+	$file = $_FILES['file'];
+	if ( (int) $file['size'] > 15 * 1024 * 1024 ) wp_send_json_error( [ 'message' => 'Image is too large (max 15 MB).' ] );
+
+	$name    = (string) $file['name'];
+	$ext     = strtolower( pathinfo( $name, PATHINFO_EXTENSION ) );
+	$allowed = [ 'jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif' ];
+	if ( ! in_array( $ext, $allowed, true ) ) wp_send_json_error( [ 'message' => 'Please choose an image.' ] );
+	$check = wp_check_filetype_and_ext( $file['tmp_name'], $name );
+	if ( empty( $check['ext'] ) || empty( $check['type'] ) || strpos( (string) $check['type'], 'image/' ) !== 0 ) {
+		wp_send_json_error( [ 'message' => 'That file isn’t an image.' ] );
+	}
+
+	$subdir = 'site-pulse-action';
+	$redir  = function ( $dirs ) use ( $subdir ) {
+		$dirs['subdir'] = '/' . $subdir . $dirs['subdir'];
+		$dirs['path']   = $dirs['basedir'] . $dirs['subdir'];
+		$dirs['url']    = $dirs['baseurl'] . $dirs['subdir'];
+		return $dirs;
+	};
+	add_filter( 'upload_dir', $redir );
+	$file['name'] = 'spai-' . wp_generate_password( 16, false, false ) . '.' . $check['ext'];
+	$moved = wp_handle_upload( $file, [ 'test_form' => false ] );
+	remove_filter( 'upload_dir', $redir );
+	if ( empty( $moved['url'] ) || ! empty( $moved['error'] ) ) wp_send_json_error( [ 'message' => $moved['error'] ?? 'Upload failed.' ] );
+
+	$att = [ 'url' => esc_url_raw( $moved['url'] ), 'name' => sanitize_text_field( $name ), 'mime' => sanitize_text_field( $moved['type'] ) ];
+
+	$meta = $item['meta'] ? json_decode( $item['meta'], true ) : [];
+	if ( ! is_array( $meta ) ) $meta = [];
+	$atts   = ( isset( $meta['attachments'] ) && is_array( $meta['attachments'] ) ) ? $meta['attachments'] : [];
+	$atts[] = $att;
+	$meta['attachments'] = $atts;
+
+	$fields = [ 'meta' => wp_json_encode( $meta ), 'updated_at' => current_time( 'mysql' ) ];
+	$wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'id' => $item_id ] );
+	$group = (string) ( $item['group_id'] ?? '' );
+	if ( '' !== $group ) $wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'group_id' => $group ] );
+
+	wp_send_json_success( [ 'attachment' => $att ] );
+}
+
+// Remove a photo from an action item (matched by URL). Editable-by gated; synced across grouped copies.
+add_action( 'wp_ajax_site_pulse_action_item_remove_attachment', 'site_pulse_ajax_action_item_remove_attachment' );
+function site_pulse_ajax_action_item_remove_attachment(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	$url     = esc_url_raw( (string) ( $_POST['url'] ?? '' ) );
+	if ( ! $me || ! $item_id || '' === $url ) wp_send_json_error( [ 'message' => 'Invalid request.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item ) wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+
+	$meta = $item['meta'] ? json_decode( $item['meta'], true ) : [];
+	if ( ! is_array( $meta ) ) $meta = [];
+	$atts = ( isset( $meta['attachments'] ) && is_array( $meta['attachments'] ) ) ? $meta['attachments'] : [];
+	$meta['attachments'] = array_values( array_filter( $atts, function ( $a ) use ( $url ) {
+		return ( (string) ( $a['url'] ?? '' ) ) !== $url;
+	} ) );
+
+	$fields = [ 'meta' => wp_json_encode( $meta ), 'updated_at' => current_time( 'mysql' ) ];
+	$wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'id' => $item_id ] );
+	$group = (string) ( $item['group_id'] ?? '' );
+	if ( '' !== $group ) $wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'group_id' => $group ] );
+
+	wp_send_json_success( [] );
+}
+
 // Change an action item's due date (clickable due date on open & pending items — extend/move time).
 add_action( 'wp_ajax_site_pulse_set_action_due_date', 'site_pulse_ajax_set_action_due_date' );
 function site_pulse_ajax_set_action_due_date(): void {
@@ -5163,13 +5582,26 @@ function site_pulse_ajax_delete_action_item(): void {
 	if ( (int) $item['user_id'] !== $me ) wp_send_json_error( [ 'message' => 'Only the owner can delete this item.' ] );
 
 	$group = (string) ( $item['group_id'] ?? '' );
-	if ( '' !== $group ) {
+	$scope = ( (string) ( $_POST['scope'] ?? '' ) === 'me' ) ? 'me' : 'all';
+
+	if ( '' !== $group && 'me' === $scope ) {
+		// Shared item, "just remove me": drop only my copy; everyone else keeps theirs. If that leaves a
+		// single copy, unshare it (clear the group_id) so it stops rendering as a shared item.
+		$wpdb->delete( site_pulse_table( 'action_items' ), [ 'id' => $item_id ] );
+		$remaining = (array) $wpdb->get_col( $wpdb->prepare(
+			"SELECT id FROM " . site_pulse_table( 'action_items' ) . " WHERE group_id = %s", $group
+		) );
+		if ( count( $remaining ) === 1 ) {
+			$wpdb->update( site_pulse_table( 'action_items' ), [ 'group_id' => null ], [ 'group_id' => $group ] );
+		}
+	} elseif ( '' !== $group ) {
+		// "Delete for everyone" — remove the whole shared group.
 		$wpdb->delete( site_pulse_table( 'action_items' ), [ 'group_id' => $group ] );
 	} else {
 		$wpdb->delete( site_pulse_table( 'action_items' ), [ 'id' => $item_id ] );
 	}
 
-	site_pulse_log( 'action_item_deleted', 'Action item deleted', [ 'item_id' => $item_id, 'group_id' => $group ] );
+	site_pulse_log( 'action_item_deleted', 'Action item deleted', [ 'item_id' => $item_id, 'group_id' => $group, 'scope' => $scope ] );
 	wp_send_json_success();
 }
 
@@ -8484,15 +8916,24 @@ function site_pulse_expense_destinations(): array {
 	return $out;
 }
 
+// Each expense section is its own screen with its own capability (B=Vehicle, C=Meals, D=Competitive
+// Shopping, E=Other). manage_mileage / god see all; an unknown section falls back to submit_mileage.
+function site_pulse_expense_section_cap( string $section ): string {
+	$map = [ 'B' => 'view_vehicle_expenses', 'C' => 'view_business_meals', 'D' => 'view_competitive_shopping', 'E' => 'view_other_expenses' ];
+	return $map[ $section ] ?? '';
+}
+function site_pulse_can_expense_section( int $user_id, string $section ): bool {
+	if ( site_pulse_god_can_override() || site_pulse_user_can( $user_id, 'manage_mileage' ) ) return true;
+	$cap = site_pulse_expense_section_cap( $section );
+	return $cap ? site_pulse_user_can( $user_id, $cap ) : site_pulse_user_can( $user_id, 'submit_mileage' );
+}
+
 add_action( 'wp_ajax_site_pulse_get_expenses', 'site_pulse_ajax_get_expenses' );
 function site_pulse_ajax_get_expenses(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
-	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_god_can_override() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
-
 	$section  = sanitize_text_field( $_POST['section'] ?? 'B' );
+	if ( ! site_pulse_can_expense_section( $user_id, $section ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	$sections = site_pulse_expense_sections();
 	if ( ! isset( $sections[ $section ] ) ) wp_send_json_error( [ 'message' => 'Unknown expense section.' ] );
 
@@ -8523,13 +8964,11 @@ add_action( 'wp_ajax_site_pulse_save_expense', 'site_pulse_ajax_save_expense' );
 function site_pulse_ajax_save_expense(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
-	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_god_can_override() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
 
 	global $wpdb;
 	$id       = (int) ( $_POST['id'] ?? 0 );
 	$section  = sanitize_text_field( $_POST['section'] ?? 'B' );
+	if ( ! site_pulse_can_expense_section( $user_id, $section ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	$sections = site_pulse_expense_sections();
 	if ( ! isset( $sections[ $section ] ) ) wp_send_json_error( [ 'message' => 'Unknown expense section.' ] );
 
@@ -9227,14 +9666,12 @@ add_action( 'wp_ajax_site_pulse_scan_receipt', 'site_pulse_ajax_scan_receipt' );
 function site_pulse_ajax_scan_receipt(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
-	if ( ! site_pulse_user_can( $user_id, 'submit_mileage' ) && ! site_pulse_god_can_override() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
+	$section  = sanitize_text_field( $_POST['section'] ?? 'B' );
+	if ( ! site_pulse_can_expense_section( $user_id, $section ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	if ( ! site_pulse_get_api_key() ) {
 		wp_send_json_error( [ 'message' => 'No Claude API key set. Add one under Settings → API Keys first.' ] );
 	}
 
-	$section  = sanitize_text_field( $_POST['section'] ?? 'B' );
 	$sections = site_pulse_expense_sections();
 	if ( ! isset( $sections[ $section ] ) ) wp_send_json_error( [ 'message' => 'Unknown expense section.' ] );
 

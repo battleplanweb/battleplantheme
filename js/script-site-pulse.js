@@ -32,6 +32,7 @@ const ICON_ATTACH = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none"
 const ICON_TASK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
 const ICON_MIC = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
 const ICON_REPLY = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
+const ICON_SEARCH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
 const ICON_CHART_BAR = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
 const ICON_CHART_PIE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>';
 
@@ -180,6 +181,31 @@ function spFormModal() {
 }
 function closeFormModal() { document.getElementById('sp-form-modal')?.remove(); }
 
+// A small multi-option confirm dialog (more than the two choices window.confirm allows). Renders its own
+// overlay ABOVE any open form modal and resolves to the chosen option's value (null on cancel/backdrop).
+// options: [{ label, value, class }]. Give the cancel option value null.
+function spChoiceDialog({ title, message, options }) {
+	return new Promise(resolve => {
+		const back = document.createElement('div');
+		back.className = 'sp-modal-backdrop sp-form-modal-backdrop';
+		back.style.zIndex = '10000';
+		let html = '<div class="sp-card sp-report-form-wrap sp-choice-dialog">';
+		if (title) html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(title)}</h3></div>`;
+		if (message) html += `<p class="sp-choice-msg">${esc(message)}</p>`;
+		html += '<div class="sp-choice-actions">';
+		(options || []).forEach((o, i) => {
+			html += `<button type="button" class="unique sp-btn ${o.class || 'sp-btn-secondary'}" data-i="${i}">${esc(o.label)}</button>`;
+		});
+		html += '</div></div>';
+		back.innerHTML = html;
+		document.body.appendChild(back);
+		markUniqueSpans(back);
+		const done = (val) => { back.remove(); resolve(val); };
+		back.addEventListener('click', (e) => { if (e.target === back) done(null); });
+		$$('.sp-choice-actions .sp-btn', back).forEach(b => b.addEventListener('click', () => done((options[parseInt(b.dataset.i, 10)] || {}).value ?? null)));
+	});
+}
+
 
 /*--------------------------------------------------------------
 # Initialization
@@ -224,7 +250,7 @@ const SP_CLICK_SELECTOR = 'button, a[href], [role="button"], [data-nav]';
 // Never tag these: real buttons (.sp-btn keep their own hover), and classes that carry a clickable
 // style but aren't actually clickable in every context (e.g. .sp-msg-members is a button in one
 // place and a plain container in another).
-const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer';
+const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer, .sp-mileage-end-trailer';
 function spTagClickable(el) {
 	if (!el || el.nodeType !== 1 || el.classList.contains('sp-button')) return;
 	if (el.closest('#wpadminbar')) return;
@@ -424,6 +450,10 @@ function initSidebar() {
 				if (!_spForms[cat]) _spForms[cat] = { items: [], sort: { col: 'date', dir: 'desc' }, search: '', filter: '', canUpload: false, selected: new Set() };
 				_spForms[cat].filter = btn.dataset.sub || '';
 			}
+			// Set the current report BEFORE activatePanel so the Grant/Restrict bar (updated inside
+			// activatePanel) resolves this tab's per-report view cap.
+			const action = btn.dataset.action;
+			if (action === 'review-template') { reviewTemplateId = btn.dataset.templateId || ''; reviewTemplateName = (btn.textContent || '').trim(); }
 			activatePanel(nav);
 			// Highlight the child that was actually clicked (several children can share a panel
 			// slug, e.g. GM Reports / Supervisor Reports both use reports-review).
@@ -431,10 +461,9 @@ function initSidebar() {
 			btn.classList.add('active');
 			closeMobileSidebar();
 			// Action children open a form / switch the review type (after their panel is active).
-			const action = btn.dataset.action;
 			if (action === 'new-report') showReportForm();
 			else if (action === 'mileage-add') showMileageForm();
-			else if (action === 'review-template') { reviewTemplateId = btn.dataset.templateId || ''; reviewTemplateName = (btn.textContent || '').trim(); applyReviewLocationDefault(); closeReportDetail('review'); loadReviewReports(); }
+			else if (action === 'review-template') { applyReviewLocationDefault(); closeReportDetail('review'); loadReviewReports(); }
 		});
 	});
 }
@@ -585,6 +614,9 @@ function activatePanel(panelId) {
 	if (panelId === 'mileage' && typeof hideMileageForm === 'function') hideMileageForm();
 	if (panelId === 'reports-my' && typeof hideReportForm === 'function') hideReportForm();
 
+	// God + System Admin only: refresh the top-of-page Grant/Restrict bar for this page.
+	spUpdatePageAccessBar(panelId);
+
 	// A new panel is effectively a new page — jump back to the top so the user starts at its header
 	// instead of wherever they'd scrolled to in the previous panel (most noticeable on mobile).
 	window.scrollTo(0, 0);
@@ -593,6 +625,106 @@ function activatePanel(panelId) {
 
 	saveViewState({ panel: panelId });
 	spNavPush(panelId);
+}
+
+/* ---- Per-page Grant/Restrict bar (God + System Admin only) — edits the same access-role caps + overrides ---- */
+
+function spUpdatePageAccessBar(panelId) {
+	if (!D.isSystemAdmin) return;
+	const main = document.getElementById('sp-main');
+	if (!main) return;
+	let bar = document.getElementById('sp-page-access-bar');
+	if (!bar) {
+		bar = document.createElement('div');
+		bar.id = 'sp-page-access-bar';
+		bar.className = 'sp-page-access-bar';
+		bar.hidden = true;
+		main.insertBefore(bar, main.firstChild);
+		// Click anywhere outside a picker closes any open picker panel (bound once, document-level so a
+		// background click reaches it; the toggle button stops propagation so its own click doesn't close it).
+		document.addEventListener('click', (e) => { if (!e.target.closest('.sp-pa-picker')) $$('.sp-pa-panel').forEach(p => p.hidden = true); });
+	}
+	bar.dataset.page = panelId;
+	spLoadPageAccessBar(panelId, bar);
+}
+
+async function spLoadPageAccessBar(panelId, bar) {
+	try {
+		// Report tabs share one panel slug; pass which report so the server resolves its per-report cap.
+		const params = { page: panelId };
+		if (panelId === 'reports-review') {
+			let tid = reviewTemplateId;
+			if (!tid) { const b = $('.sp-nav-child[data-action="review-template"].active') || $('.sp-nav-child[data-action="review-template"]'); if (b) tid = b.dataset.templateId || ''; }
+			params.template_id = tid;
+		}
+		const res = await spAjax('site_pulse_admin_page_access_get', params);
+		if (bar.dataset.page !== panelId) return; // navigated away mid-request
+		if (!res.success || !res.data.has_cap) { bar.hidden = true; bar.innerHTML = ''; return; }
+		spRenderPageAccessBar(bar, panelId, res.data);
+		bar.hidden = false;
+	} catch (e) { bar.hidden = true; }
+}
+
+function spRenderPageAccessBar(bar, panelId, d) {
+	// One row per PERMISSION (a page may gate on several, e.g. View + Manage). Each row: "Permission: X"
+	// + a Roles picker + a People picker. Checkbox lists like the New Message / action-item people picker.
+	const pickerHtml = (kind, label, items, valKey, cap) => {
+		const nOn = items.filter(i => i.has).length;
+		const rows = items.map(i =>
+			`<label class="sp-pa-row"><input type="checkbox" class="sp-pa-cb" data-kind="${kind}" data-cap="${esc(cap)}" value="${i[valKey]}"${i.has ? ' checked' : ''}><span class="sp-pa-name">${esc(i.label || i.name)}</span></label>`
+		).join('');
+		return '<div class="sp-pa-picker">'
+			+ `<button type="button" class="sp-select sp-pa-toggle">${esc(label)}${nOn ? ` · ${nOn}` : ''}</button>`
+			+ '<div class="sp-pa-panel" hidden>'
+			+ `<input type="text" class="sp-input sp-pa-search" placeholder="Search…">`
+			+ `<div class="sp-pa-list">${rows}</div>`
+			+ '</div></div>';
+	};
+
+	let html = '';
+	(d.permissions || []).forEach(p => {
+		html += '<div class="sp-pa-inner">';
+		html += `<span class="sp-pa-label">Permission: <span class="sp-pa-cap">${esc(p.cap_label)}</span></span>`;
+		html += pickerHtml('role', 'Roles', p.roles, 'id', p.cap);
+		html += pickerHtml('user', 'People', p.users, 'user_id', p.cap);
+		html += '</div>';
+	});
+	bar.innerHTML = html;
+
+	const setAccess = async (kind, cap, id, grant) => {
+		try {
+			const r = await spAjax('site_pulse_admin_page_access_set', { page: panelId, cap, target_type: kind, target_id: id, grant: grant ? 1 : 0 });
+			if (!r.success) { alert(r.data?.message || 'Error saving.'); return false; }
+		} catch (e) { alert('Error saving.'); return false; }
+		return true;
+	};
+
+	// Each picker: toggle its panel (opening one closes the others), filter by search, grant/restrict live.
+	$$('.sp-pa-picker', bar).forEach(picker => {
+		const toggle = $('.sp-pa-toggle', picker);
+		const panel = $('.sp-pa-panel', picker);
+		const search = $('.sp-pa-search', picker);
+		const baseLabel = (toggle.textContent || '').split(' · ')[0];
+		toggle?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			const wasHidden = panel.hidden;
+			$$('.sp-pa-panel', bar).forEach(p => p.hidden = true);
+			panel.hidden = !wasHidden;
+			if (!panel.hidden) search?.focus();
+		});
+		search?.addEventListener('input', () => {
+			const q = search.value.toLowerCase();
+			$$('.sp-pa-row', picker).forEach(l => { l.style.display = (l.textContent || '').toLowerCase().includes(q) ? '' : 'none'; });
+		});
+		$$('.sp-pa-cb', picker).forEach(cb => cb.addEventListener('change', async () => {
+			cb.disabled = true;
+			const ok = await setAccess(cb.dataset.kind, cb.dataset.cap, cb.value, cb.checked);
+			cb.disabled = false;
+			if (!ok) { cb.checked = !cb.checked; return; }
+			const n = $$('.sp-pa-cb:checked', picker).length;
+			toggle.textContent = baseLabel + (n ? ` · ${n}` : '');
+		}));
+	});
 }
 
 function saveViewState(state) {
@@ -1464,7 +1596,7 @@ function spMsgCancelReply() {
 // re-rendering when nothing changed — a full innerHTML swap every 10s is what caused the flicker.
 function spMsgThreadSig(data) {
 	const msgs = data.messages || [];
-	return msgs.map(m => `${m.id}:${m.edited || 0}:${(m.body || '').length}:${m.attach_url ? 1 : 0}`).join(',') + '|' + spMsgReceiptHTML(data);
+	return msgs.map(m => `${m.id}:${m.edited || 0}:${(m.body || '').length}:${m.attach_url || 0}`).join(',') + '|' + spMsgReceiptHTML(data);
 }
 
 // Speech-to-text dictation into the composer (Web Speech API). The mic button only appears when the
@@ -1577,7 +1709,7 @@ function msgBubbleHTML(m, isGroup) {
 
 // Open a message attachment in a popup (like the "new message" dialog) instead of a new tab — far
 // easier to dismiss on mobile. Images and PDFs preview inline; everything else offers Download.
-function spMsgAttachModal(url, mime, name) {
+function spMsgAttachModal(url, mime, name, msgId) {
 	if (!url) return;
 	const backdrop = spFormModal();
 	const isImg = (mime || '').indexOf('image/') === 0;
@@ -1593,13 +1725,44 @@ function spMsgAttachModal(url, mime, name) {
 	} else {
 		html += '<div class="sp-attach-modal-body sp-attach-modal-fileonly"><p>No preview available for this file type.</p></div>';
 	}
-	html += '<div class="sp-attach-modal-actions">'
-		+ '<a class="unique sp-btn sp-btn-primary" href="' + esc(url) + '" download>Download</a>'
+	html += '<div class="sp-attach-modal-actions">';
+	// Rotate controls (images only) — physically rotate the stored file so it sticks for everyone in the chat.
+	if (isImg && msgId) {
+		html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-attach-rotate" data-dir="ccw" title="Rotate left" aria-label="Rotate left">&#8634;</button>';
+		html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-attach-rotate" data-dir="cw" title="Rotate right" aria-label="Rotate right">&#8635;</button>';
+	}
+	html += '<a class="unique sp-btn sp-btn-primary" href="' + esc(url) + '" download>Download</a>'
 		+ '<button type="button" class="unique sp-btn sp-btn-secondary sp-attach-close">Close</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
 	$$('.sp-attach-close', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
+
+	// Rotate 90° either way — persists to the file server-side, then swaps the fresh (cache-busted) URL
+	// into the viewer, the Download link, and the thumbnail in the thread so this client updates too.
+	$$('.sp-attach-rotate', backdrop).forEach(btn => btn.addEventListener('click', async () => {
+		const rotBtns = $$('.sp-attach-rotate', backdrop);
+		rotBtns.forEach(b => b.disabled = true);
+		try {
+			const res = await spAjax('site_pulse_messages_rotate_attachment', { message_id: msgId, direction: btn.dataset.dir });
+			if (res.success && res.data && res.data.url) {
+				const nu = res.data.url;
+				const img = backdrop.querySelector('.sp-attach-modal-img');
+				if (img) img.src = nu;
+				const dl = backdrop.querySelector('.sp-attach-modal-actions a[download]');
+				if (dl) dl.href = nu;
+				const thumb = document.querySelector(`.sp-msg-bubble[data-id="${msgId}"] .sp-msg-attach-img`);
+				if (thumb) {
+					thumb.dataset.attachUrl = nu;
+					const ti = thumb.querySelector('img');
+					if (ti) ti.src = nu;
+				}
+			} else {
+				alert((res.data && res.data.message) || 'Could not rotate the image.');
+			}
+		} catch (e) { alert('Could not rotate the image.'); }
+		rotBtns.forEach(b => b.disabled = false);
+	}));
 }
 
 // Append a message bubble unless one with the same id is already in the thread. Makes the optimistic
@@ -1648,7 +1811,7 @@ function initMessages() {
 		threadEl._wiredActions = true;
 		threadEl.addEventListener('click', (e) => {
 			const attachBtn = e.target.closest('.sp-msg-attach-img, .sp-msg-attach-file');
-			if (attachBtn) { spMsgAttachModal(attachBtn.dataset.attachUrl, attachBtn.dataset.attachMime, attachBtn.dataset.attachName); return; }
+			if (attachBtn) { const _b = attachBtn.closest('.sp-msg-bubble'); spMsgAttachModal(attachBtn.dataset.attachUrl, attachBtn.dataset.attachMime, attachBtn.dataset.attachName, _b ? _b.dataset.id : 0); return; }
 			const replyBtn = e.target.closest('.sp-msg-reply');
 			if (replyBtn) { const b = replyBtn.closest('.sp-msg-bubble'); if (b) spMsgStartReply(b); return; }
 			const taskBtn = e.target.closest('.sp-msg-task');
@@ -1939,14 +2102,23 @@ function renderMsgThread(data) {
 	html += `<div class="sp-msg-thread-title-wrap"><span class="sp-msg-thread-title">${esc(conv.title || 'Conversation')}</span></div>`;
 	html += '</div>';
 	html += '<span class="sp-msg-thread-actions">';
+	html += `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-btn" title="Search this conversation" aria-label="Search conversation">${ICON_SEARCH}</button>`;
 	html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-msg-delete" title="Delete this conversation from your list" aria-label="Delete conversation">${ICON_DELETE}</button>`;
 	html += '</span>';
 	html += '</div>';
+	// In-thread find bar (hidden until the magnifier is tapped) — highlights matches + prev/next.
+	html += '<div class="sp-msg-search-bar" id="sp-msg-search-bar" hidden>'
+		+ '<input type="search" class="sp-input sp-msg-search-input" placeholder="Search this conversation…" aria-label="Search this conversation">'
+		+ '<span class="sp-msg-search-count" aria-live="polite"></span>'
+		+ `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-prev" title="Previous match" aria-label="Previous match">&#9650;</button>`
+		+ `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-next" title="Next match" aria-label="Next match">&#9660;</button>`
+		+ `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-close" title="Close search" aria-label="Close search">&times;</button>`
+		+ '</div>';
 	html += '<div class="sp-msg-bubbles" id="sp-msg-bubbles">';
 	(data.messages || []).forEach(m => { html += msgBubbleHTML(m, isGroup); });
 	html += spMsgReceiptHTML(data);
 	html += '</div>';
-	html += '<form class="sp-msg-composer" id="sp-msg-composer">'
+	html += '<form class="sp-msg-composer sp-card-footer" id="sp-msg-composer">'
 		+ '<button type="button" class="sp-btn sp-btn-ghost sp-msg-mic-btn unique" id="sp-msg-mic" title="Dictate a message" aria-label="Dictate a message" hidden>' + ICON_MIC + '</button>'
 		+ '<label class="sp-btn sp-btn-ghost sp-msg-attach-btn unique" title="Attach a file" aria-label="Attach a file">' + ICON_ATTACH + '<input type="file" id="sp-msg-file" hidden></label>'
 		+ '<textarea class="sp-msg-input" id="sp-msg-input" rows="1" placeholder="Type a message…"></textarea>'
@@ -2014,6 +2186,7 @@ function renderMsgThread(data) {
 		if (r.success) { spMsgBackToList(); }
 		else alert(r.data?.message || 'Could not delete.');
 	});
+	spMsgWireSearch(thread);
 	spMsgInitMic(thread);
 
 	// "Seen" dwell: track the latest message and arm the 3s timer.
@@ -2021,6 +2194,129 @@ function renderMsgThread(data) {
 	_spMsg.maxId = msgs.length ? parseInt(msgs[msgs.length - 1].id, 10) : 0;
 	_spMsg.threadSig = spMsgThreadSig(data); // so the first poll doesn't needlessly re-render
 	spMsgStartSeenTimer(conv.id || _spMsg.cid);
+}
+
+// ── In-thread search (find bar): highlight matches in the current conversation + prev/next ──────────
+let _spMsgSearch = { hits: [], idx: -1, query: '' };
+
+function spMsgWireSearch(thread) {
+	_spMsgSearch = { hits: [], idx: -1, query: '' }; // fresh per thread render
+	const btn = $('.sp-msg-search-btn', thread);
+	const bar = $('#sp-msg-search-bar', thread);
+	if (!btn || !bar) return;
+	const input = $('.sp-msg-search-input', bar);
+
+	const open  = () => { bar.hidden = false; input.focus(); input.select(); };
+	const close = () => {
+		bar.hidden = true;
+		input.value = '';
+		_spMsgSearch = { hits: [], idx: -1, query: '' };
+		spMsgClearHighlights($('#sp-msg-bubbles', thread));
+	};
+
+	btn.addEventListener('click', () => { if (bar.hidden) open(); else close(); });
+	$('.sp-msg-search-close', bar)?.addEventListener('click', close);
+	$('.sp-msg-search-prev', bar)?.addEventListener('click', () => spMsgSearchStep(-1));
+	$('.sp-msg-search-next', bar)?.addEventListener('click', () => spMsgSearchStep(1));
+	input?.addEventListener('input', () => spMsgRunSearch(input.value));
+	input?.addEventListener('keydown', (e) => {
+		if (e.key === 'Enter') { e.preventDefault(); spMsgSearchStep(e.shiftKey ? -1 : 1); }
+		else if (e.key === 'Escape') { e.preventDefault(); close(); }
+	});
+}
+
+function spMsgRunSearch(query) {
+	const bubbles = $('#sp-msg-bubbles');
+	if (!bubbles) return;
+	query = (query || '').trim();
+	_spMsgSearch.query = query;
+	const hits = spMsgHighlight(bubbles, query);
+	_spMsgSearch.hits = hits;
+	_spMsgSearch.idx = hits.length ? 0 : -1;
+	if (hits.length) spMsgSearchGoto(0);
+	spMsgSearchUpdateCount();
+}
+
+function spMsgSearchStep(dir) {
+	const n = _spMsgSearch.hits.length;
+	if (!n) return;
+	let i = _spMsgSearch.idx + dir;
+	if (i < 0) i = n - 1;
+	if (i >= n) i = 0;
+	spMsgSearchGoto(i);
+}
+
+function spMsgSearchGoto(i) {
+	const hits = _spMsgSearch.hits;
+	if (!hits.length) return;
+	hits.forEach(h => h.classList.remove('current'));
+	_spMsgSearch.idx = i;
+	const el = hits[i];
+	if (el) { el.classList.add('current'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+	spMsgSearchUpdateCount();
+}
+
+function spMsgSearchUpdateCount() {
+	const c = $('.sp-msg-search-count');
+	if (!c) return;
+	const n = _spMsgSearch.hits.length;
+	c.textContent = n ? `${_spMsgSearch.idx + 1}/${n}` : (_spMsgSearch.query ? 'No results' : '');
+}
+
+// Restore the original text nodes by unwrapping any highlight <mark>s.
+function spMsgClearHighlights(container) {
+	if (!container) return;
+	container.querySelectorAll('mark.sp-msg-search-hit').forEach(m => {
+		const parent = m.parentNode;
+		if (!parent) return;
+		parent.replaceChild(document.createTextNode(m.textContent), m);
+		parent.normalize();
+	});
+}
+
+// Wrap every case-insensitive match of `query` in the message bodies; returns the <mark>s in order.
+function spMsgHighlight(container, query) {
+	spMsgClearHighlights(container);
+	const hits = [];
+	if (!query) return hits;
+	const q = query.toLowerCase();
+	container.querySelectorAll('.sp-msg-bubble-body').forEach(body => {
+		const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null);
+		const nodes = [];
+		while (walker.nextNode()) nodes.push(walker.currentNode);
+		nodes.forEach(node => {
+			const text = node.nodeValue;
+			const lower = text.toLowerCase();
+			if (lower.indexOf(q) === -1) return;
+			const frag = document.createDocumentFragment();
+			let pos = 0, idx = lower.indexOf(q, 0);
+			while (idx !== -1) {
+				if (idx > pos) frag.appendChild(document.createTextNode(text.slice(pos, idx)));
+				const mark = document.createElement('mark');
+				mark.className = 'sp-msg-search-hit';
+				mark.textContent = text.slice(idx, idx + q.length);
+				frag.appendChild(mark);
+				hits.push(mark);
+				pos = idx + q.length;
+				idx = lower.indexOf(q, pos);
+			}
+			if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+			node.parentNode.replaceChild(frag, node);
+		});
+	});
+	return hits;
+}
+
+// The 10s poll swaps the bubbles' innerHTML, wiping highlights — re-apply the active search afterward.
+function spMsgReapplySearch() {
+	const bar = $('#sp-msg-search-bar');
+	if (!bar || bar.hidden || !_spMsgSearch.query) return;
+	const prev = _spMsgSearch.idx;
+	const hits = spMsgHighlight($('#sp-msg-bubbles'), _spMsgSearch.query);
+	_spMsgSearch.hits = hits;
+	_spMsgSearch.idx = hits.length ? Math.min(prev < 0 ? 0 : prev, hits.length - 1) : -1;
+	if (_spMsgSearch.idx >= 0) hits[_spMsgSearch.idx].classList.add('current');
+	spMsgSearchUpdateCount();
 }
 
 // Lightweight refresh used by the poll — swap just the bubbles so the composer text isn't lost.
@@ -2045,6 +2341,7 @@ async function refreshMsgThread(cid) {
 		// Keep the viewport steady: snap to bottom only if they were already there, else hold position.
 		// Bottom-snap must defer past layout (iOS lays bubbles out a tick late), or it lands a few up.
 		if (atBottom) spMsgScrollBottom(bubbles); else bubbles.scrollTop = prevTop;
+		spMsgReapplySearch(); // keep highlights alive across the poll re-render
 
 		// New messages arrived while viewing → they need their own 3s dwell before counting as seen.
 		const newMax = msgs.length ? parseInt(msgs[msgs.length - 1].id, 10) : 0;
@@ -2266,7 +2563,7 @@ async function loadWidgetReports() {
 		$$('.sp-widget-item', body).forEach(item => {
 			item.addEventListener('click', () => {
 				// These are the viewer's OWN reports → open them in My Reports when possible.
-				const navTarget = D.userCaps?.includes('submit_reports') ? 'reports-my' : 'reports-review';
+				const navTarget = spCanSubmitReports() ? 'reports-my' : 'reports-review';
 				activatePanel(navTarget);
 				currentReportList = res.data.reports;
 				showReportDetail(item.dataset.reportId, navTarget === 'reports-review' ? 'review' : '');
@@ -2435,6 +2732,13 @@ function renderReportList(container, reports, prefix = '') {
 # Reports — Form
 --------------------------------------------------------------*/
 
+// True when the viewer can submit at least one report type — the new per-report submit caps
+// (submit_report_{slug}) OR the legacy blanket submit_reports cap. Gods hold every per-report cap.
+function spCanSubmitReports() {
+	const c = D.userCaps || [];
+	return c.includes('submit_reports') || c.some(x => x.indexOf('submit_report_') === 0);
+}
+
 async function showReportForm(existingReport = null, chosenTemplateId = null) {
 	const wrap = $('#sp-report-form-wrap');
 	const listWrap = $('#sp-reports-list');
@@ -2466,6 +2770,14 @@ async function showReportForm(existingReport = null, chosenTemplateId = null) {
 			_caps.includes('submit_report_' + t.slug) ||
 			(_caps.includes('submit_reports') && t.required_role_slug === D.userRole)
 		);
+
+		// Starting a brand-new report with more than one report type available → ask WHICH first,
+		// instead of dropping the user into whichever one happens to sort first.
+		if (!existingReport && !chosenTemplateId && submittable.length > 1) {
+			renderReportTypeChooser(wrap, submittable);
+			return;
+		}
+
 		const pool = submittable.length ? submittable : templates;
 		const template = (chosenTemplateId && pool.find(t => t.id == chosenTemplateId))
 			|| pool.find(t => t.required_role_slug === D.userRole)
@@ -2492,6 +2804,33 @@ async function showReportForm(existingReport = null, chosenTemplateId = null) {
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading form.</p>';
 	}
+}
+
+// The "which report?" step shown when a user can submit more than one type. Picking one opens that
+// report's form (showReportForm with the chosen template id); Back returns to the reports list.
+function renderReportTypeChooser(wrap, submittable) {
+	let html = '<div class="sp-card-header sp-header-grid sp-report-form-header">';
+	html += '<h3>New Report</h3>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-form-back-btn">Back</button>';
+	html += '</div>';
+	html += '<div class="sp-report-type-choices">';
+	submittable.forEach(t => {
+		const freq = ({ daily: 'Daily', weekly: 'Weekly', biweekly: 'Bi-Weekly', monthly: 'Monthly', quarterly: 'Quarterly' })[t.frequency] || '';
+		html += `<button type="button" class="unique sp-report-type-choice" data-template-id="${t.id}">`;
+		html += `<span class="sp-report-type-choice-name">${esc(t.name)}</span>`;
+		if (t.description) html += `<span class="sp-report-type-choice-desc">${esc(t.description)}</span>`;
+		else if (freq) html += `<span class="sp-report-type-choice-desc">${esc(freq)}</span>`;
+		html += '</button>';
+	});
+	html += '</div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	$$('.sp-report-type-choice', wrap).forEach(btn => {
+		btn.addEventListener('click', () => showReportForm(null, btn.dataset.templateId));
+	});
+	$('.sp-form-back-btn', wrap)?.addEventListener('click', () => hideReportForm());
 }
 
 async function loadTemplateFields(templateId) {
@@ -2555,7 +2894,7 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 
 		const val = answers[f.field_key] || '';
 		const prior = previousAnswers[f.field_key] || '';
-		html += '<div class="sp-form-group">';
+		html += '<div class="sp-form-group sp-card-item">';
 		html += `<label for="sp-field-${f.field_key}">${esc(f.label)}${f.is_required == 1 ? ' <span class="sp-text-danger">*</span>' : ''}</label>`;
 		if (prior) {
 			html += `<div class="sp-prior-answer"><span class="sp-prior-answer-date">${esc(previousDate)}:</span> ${esc(prior)}</div>`;
@@ -2570,6 +2909,12 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 				break;
 			case 'number':
 				html += `<input type="number" id="sp-field-${f.field_key}" name="answers[${f.field_key}]" class="sp-input" value="${esc(val)}" placeholder="${esc(f.placeholder || '')}"${f.is_required == 1 ? ' required' : ''}>`;
+				break;
+			case 'math':
+				// Auto-calculated from other fields' values via the stored equation (in f.options).
+				// Read-only, but still submitted (readonly inputs post their value). wireReportMathFields()
+				// recomputes it live as the referenced fields change.
+				html += `<input type="text" inputmode="decimal" readonly id="sp-field-${f.field_key}" name="answers[${f.field_key}]" class="sp-input sp-math-field" value="${esc(val)}" data-equation="${esc(f.options || '')}">`;
 				break;
 			case 'select':
 				html += `<select id="sp-field-${f.field_key}" name="answers[${f.field_key}]" class="sp-select"${f.is_required == 1 ? ' required' : ''}>`;
@@ -2627,6 +2972,51 @@ function renderReportForm(wrap, template, fields, answers, existingReport, previ
 		e.preventDefault();
 		saveReport(editingSubmitted ? 'save' : 'submit');
 	});
+	wireReportMathFields(wrap, fields);
+}
+
+// Evaluate a "Math" field's equation (field keys + arithmetic) against the form's current values.
+// Field keys are replaced with their numeric value (blank/non-numeric → 0); the result must reduce to
+// pure arithmetic (digits, + - * / % . ( ) only) before it's evaluated. Returns '' if it can't compute.
+function spEvalMathExpr(equation, values) {
+	if (!equation) return '';
+	const expr = String(equation).replace(/[A-Za-z_][A-Za-z0-9_]*/g, (tok) => {
+		const n = parseFloat(values[tok]);
+		return isFinite(n) ? String(n) : '0';
+	});
+	if (expr.trim() === '' || !/^[\d+\-*/%().\s]*$/.test(expr)) return '';
+	try {
+		const r = Function('"use strict"; return (' + expr + ');')();
+		if (typeof r !== 'number' || !isFinite(r)) return '';
+		return String(Math.round(r * 100) / 100);   // 2-decimal precision
+	} catch (e) { return ''; }
+}
+
+// Keep every Math field live: recompute on any input in the form, and once on load. Runs a few passes
+// so a Math field may reference another Math field (e.g. Grand Total = SubtotalA + SubtotalB).
+function wireReportMathFields(wrap, fields) {
+	const mathEls = $$('.sp-math-field', wrap);
+	if (!mathEls.length) return;
+	const form = $('#sp-report-form', wrap) || wrap;
+
+	const recompute = () => {
+		const values = {};
+		(fields || []).forEach(f => {
+			const el = wrap.querySelector(`[name="answers[${f.field_key}]"]`);
+			if (el) values[f.field_key] = el.value;
+		});
+		for (let pass = 0; pass < 3; pass++) {
+			mathEls.forEach(el => {
+				const v = spEvalMathExpr(el.dataset.equation, values);
+				el.value = v;
+				const key = (el.name.match(/^answers\[(.+)\]$/) || [])[1];
+				if (key) values[key] = v;
+			});
+		}
+	};
+
+	form.addEventListener('input', recompute);
+	recompute();
 }
 
 let isSaving = false;
@@ -2766,7 +3156,7 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	const hasPrev = currentReportIndex > 0;
 	const hasNext = currentReportIndex < currentReportList.length - 1 && currentReportIndex >= 0;
 
-	const showNewBtn = !panelPrefix && D.userCaps?.includes('submit_reports');
+	const showNewBtn = !panelPrefix && spCanSubmitReports();
 
 	// Title header — matches the report form's header (centered title + Back).
 	let html = '<div class="sp-card-header sp-header-grid sp-report-form-header">';
@@ -2787,7 +3177,7 @@ function renderReportDetail(wrap, report, answers, fields, location, author, pan
 	// Author can edit their own report (My Reports view only — the backend authorizes edits to
 	// your own report; the Review view shows others' reports, which you can't edit). Sits to the
 	// left of the trash button.
-	const canEdit = !panelPrefix && D.userCaps?.includes('submit_reports');
+	const canEdit = !panelPrefix && spCanSubmitReports();
 	if (canEdit) {
 		html += iconBtn('edit', 'sp-detail-edit', `data-report-id="${report.id}" title="Edit report"`);
 	}
@@ -4234,7 +4624,7 @@ function renderUsersRows(wrap) {
 		if (canDelete) {
 			userActions += ' ' + iconBtn('delete', 'sp-god-delete-user', `data-user-id="${u.user_id}" data-user-name="${esc(u.display_name)}" title="Delete user"`);
 		}
-		html += `<td>${userActions}</td>`;
+		html += `<td><div class="sp-row-actions">${userActions}</div></td>`;
 		html += '</tr>';
 	});
 	tbody.innerHTML = html;
@@ -4471,6 +4861,7 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	};
 	bindPermRows();
 	const roleSelEl = wrap.querySelector('select[name="role_id"]');
+	// Changing the role re-baselines the override grid on that role's caps.
 	roleSelEl?.addEventListener('change', () => {
 		if (permsBox) { permsBox.innerHTML = spPermGridHtml(roles, roleSelEl.value, user, false); bindPermRows(); }
 	});
@@ -4750,6 +5141,90 @@ function spLabelFieldValue(scope) {
 // "+ Add Action Item" — create your own to-do (description, urgency, due date), optionally assigning
 // it to additional people via a picker that mirrors the New Message dialog (each gets their own copy,
 // linked so completing one closes all).
+// Photo section markup for the Add/Edit Action Item modals — an empty thumbnail strip + an "Add Photo"
+// button. spWireActionPhotoSection() fills/wires it.
+function spActionPhotoSectionHtml() {
+	// A real <button> (not a <label>) so it gets the normal .sp-btn styling — a <label> here would also
+	// match `.sp-report-form-wrap label` and inherit block/uppercase/left-label rules. The hidden file
+	// input is a sibling, triggered by the button's click handler.
+	return '<div class="sp-form-group sp-aai-photo-group"><label class="sp-field-label">Photos</label>'
+		+ '<div class="sp-aai-photos-strip"></div>'
+		+ '<button type="button" class="unique sp-btn sp-btn-ghost sp-aai-photos-add">+ Add Photo</button>'
+		+ '<input type="file" accept="image/*" multiple class="sp-aai-photos-input" hidden></div>';
+}
+
+// Upload one image to an action item (multipart, like chat attachments).
+async function spUploadActionPhoto(itemId, file) {
+	const fd = new FormData();
+	fd.append('action', 'site_pulse_action_item_upload');
+	fd.append('nonce', spGetNonce());
+	fd.append('item_id', itemId);
+	fd.append('file', file);
+	const r = await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd });
+	return r.json();
+}
+
+// Wire the photo section: render EXISTING attachments (remove hits the server live), stage NEWLY-picked
+// files as local previews, and expose uploadPending(id) to push the staged files after the item is saved.
+function spWireActionPhotoSection(backdrop, existing, itemId) {
+	const strip = $('.sp-aai-photos-strip', backdrop);
+	const input = $('.sp-aai-photos-input', backdrop);
+	const pending = [];
+	if (!strip) return { uploadPending: async () => {} };
+
+	$('.sp-aai-photos-add', backdrop)?.addEventListener('click', () => input && input.click());
+
+	const makeCell = (src, isImg, onRemove) => {
+		const cell = document.createElement('div');
+		cell.className = 'sp-action-attach';
+		cell.innerHTML = `<span class="sp-action-attach-thumb${isImg ? '' : ' sp-action-attach-file'}">${isImg ? `<img src="${src}" alt="">` : ICON_ATTACH}</span>`
+			+ '<button type="button" class="sp-action-attach-remove" title="Remove photo" aria-label="Remove photo">&times;</button>';
+		cell.querySelector('.sp-action-attach-remove').addEventListener('click', onRemove);
+		strip.appendChild(cell);
+		return cell;
+	};
+
+	// Already-saved photos (Edit) — × removes on the server right away.
+	(existing || []).forEach(a => {
+		const isImg = (a.mime || '').indexOf('image/') === 0;
+		const cell = makeCell(a.url, isImg, async () => {
+			if (itemId) {
+				if (!confirm('Remove this photo?')) return;
+				try {
+					const res = await spAjax('site_pulse_action_item_remove_attachment', { item_id: itemId, url: a.url });
+					if (!res.success) { alert(res.data?.message || 'Could not remove the photo.'); return; }
+				} catch (e) { alert('Could not remove the photo.'); return; }
+			}
+			cell.remove();
+		});
+	});
+
+	// Newly-picked files — staged locally (object-URL preview), uploaded on Save. × just unstages.
+	input?.addEventListener('change', () => {
+		Array.from(input.files || []).forEach(file => {
+			if (!/^image\//.test(file.type)) return;
+			const url = URL.createObjectURL(file);
+			const entry = { file };
+			entry.cell = makeCell(url, true, () => {
+				URL.revokeObjectURL(url);
+				const i = pending.indexOf(entry);
+				if (i !== -1) pending.splice(i, 1);
+				entry.cell.remove();
+			});
+			pending.push(entry);
+		});
+		input.value = '';
+	});
+
+	return {
+		uploadPending: async (id) => {
+			for (const entry of pending) {
+				try { await spUploadActionPhoto(id, entry.file); } catch (e) {}
+			}
+		}
+	};
+}
+
 async function spAddActionItem() {
 	const backdrop = spFormModal();
 	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
@@ -4788,11 +5263,13 @@ async function spAddActionItem() {
 		html += labelField;
 		html += '<div class="sp-aai-grid">' + urgencyField + dueField + '</div>';
 	}
+	html += spActionPhotoSectionHtml();
 	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-aai-save">Add</button><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
 	spWireLabelField(backdrop);
+	const photos = spWireActionPhotoSection(backdrop, [], 0);
 
 	// People picker (mirrors New Message): toggle the panel, filter by search, show a live count.
 	const ppToggle = $('#sp-aai-people-toggle', backdrop);
@@ -4833,7 +5310,7 @@ async function spAddActionItem() {
 		if (save) save.disabled = true;
 		try {
 			const res = await spAjax('site_pulse_create_action_item', { description: desc, priority, due_date, category, assignees: JSON.stringify(assignees) });
-			if (res.success) { closeFormModal(); loadActionItems(); }
+			if (res.success) { await photos.uploadPending(res.data?.id); closeFormModal(); loadActionItems(); }
 			else { alert(res.data?.message || 'Could not add the item.'); if (save) save.disabled = false; }
 		} catch (e) { alert('Could not add the item.'); if (save) save.disabled = false; }
 	});
@@ -4881,6 +5358,7 @@ async function spEditActionItem(item) {
 		html += labelField;
 		html += '<div class="sp-aai-grid">' + urgencyField + dueField + '</div>';
 	}
+	html += spActionPhotoSectionHtml();
 	html += '<div class="sp-report-form-actions">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-aae-save">Save</button>';
 	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button>';
@@ -4890,6 +5368,11 @@ async function spEditActionItem(item) {
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
 	spWireLabelField(backdrop);
+
+	// Existing photos from the item's meta → shown with a live remove; new picks upload on Save.
+	let existingAtts = [];
+	try { const m = item.meta ? (typeof item.meta === 'string' ? JSON.parse(item.meta) : item.meta) : null; if (m && Array.isArray(m.attachments)) existingAtts = m.attachments; } catch (e) {}
+	const photos = spWireActionPhotoSection(backdrop, existingAtts, item.id);
 
 	// People picker (mirrors Add / New Message): toggle the panel, filter by search, show a live count.
 	const ppToggle = $('#sp-aai-people-toggle', backdrop);
@@ -4930,16 +5413,33 @@ async function spEditActionItem(item) {
 		if (save) save.disabled = true;
 		try {
 			const res = await spAjax('site_pulse_update_action_item', { item_id: item.id, description: desc, category, priority, due_date, assignees: JSON.stringify(assignees) });
-			if (res.success) { closeFormModal(); loadActionItems(); }
+			if (res.success) { await photos.uploadPending(item.id); closeFormModal(); loadActionItems(); }
 			else { alert(res.data?.message || 'Could not save the item.'); if (save) save.disabled = false; }
 		} catch (e) { alert('Could not save the item.'); if (save) save.disabled = false; }
 	});
 	$('.sp-aae-delete', backdrop)?.addEventListener('click', async () => {
-		if (!confirm('Delete this action item completely? This removes it entirely — it will NOT show under Completed. This cannot be undone.')) return;
+		// Shared item (2+ people) → let them delete for everyone OR just remove themselves. Solo → plain confirm.
+		const shared = Array.isArray(item.visible_to) && item.visible_to.length > 1;
+		let scope = 'all';
+		if (shared) {
+			const choice = await spChoiceDialog({
+				title: 'Delete action item',
+				message: 'This action item is shared with other people. Delete it for everyone, or just remove yourself and leave it for the others?',
+				options: [
+					{ label: 'Delete for everyone', value: 'all', class: 'sp-btn-primary sp-btn-delete' },
+					{ label: 'Just remove me', value: 'me', class: 'sp-btn-secondary' },
+					{ label: 'Cancel', value: null, class: 'sp-btn-ghost' },
+				],
+			});
+			if (!choice) return;
+			scope = choice;
+		} else if (!confirm('Delete this action item completely? This removes it entirely — it will NOT show under Completed. This cannot be undone.')) {
+			return;
+		}
 		const del = $('.sp-aae-delete', backdrop);
 		if (del) del.disabled = true;
 		try {
-			const res = await spAjax('site_pulse_delete_action_item', { item_id: item.id });
+			const res = await spAjax('site_pulse_delete_action_item', { item_id: item.id, scope });
 			if (res.success) { closeFormModal(); loadActionItems(); loadNotificationCount(); }
 			else { alert(res.data?.message || 'Could not delete the item.'); if (del) del.disabled = false; }
 		} catch (e) { alert('Could not delete the item.'); if (del) del.disabled = false; }
@@ -5157,6 +5657,11 @@ function renderActionItems(container, items, pending = []) {
 		});
 	});
 
+	// Thumbnail → enlarge in the shared attachment viewer. (Add/remove happen in the Edit modal.)
+	$$('.sp-action-attach-thumb', container).forEach(btn => {
+		btn.addEventListener('click', () => spMsgAttachModal(btn.dataset.url, btn.dataset.mime, btn.dataset.name));
+	});
+
 	initActionItemDragDrop(container);
 }
 
@@ -5199,12 +5704,32 @@ function renderActionItemCard(item, mode) {
 		if (where.length) html += `<div class="sp-action-item-who"><span class="unique">${where.join(' ▪ ')}</span></div>`;
 	}
 
-	// Where it came from + when, and the due date.
+	// Where it came from + when, and the due date. If YOU created it, drop the "by <name>" — just "Added on".
 	if (!isPending) {
-		const source = (parseInt(item.report_id, 10) > 0) ? 'Reports' : (item.creator_name ? esc(item.creator_name) : '');
 		const added = item.created_at ? formatDate(String(item.created_at).split(' ')[0]) : '';
-		if (added) html += `<div class="sp-action-item-sub"><span class="unique">Added by ${source || 'the team'} on ${added}</span></div>`;
+		if (added) {
+			const fromReport = parseInt(item.report_id, 10) > 0;
+			const mineCreated = !fromReport && String(item.created_by) === String(D.userId);
+			const source = fromReport ? 'Reports' : (item.creator_name ? esc(item.creator_name) : 'the team');
+			const label = mineCreated ? `Added on ${added}` : `Added by ${source} on ${added}`;
+			html += `<div class="sp-action-item-sub"><span class="unique">${label}</span></div>`;
+		}
 	}
+
+	// Who this item is visible to — only worth showing when it's SHARED (2+ people). The viewer's own
+	// name becomes "you" (moved to the end): e.g. "Visible to Victor Vazquez & you". Solo items → no line.
+	const vt = Array.isArray(item.visible_to) ? item.visible_to : [];
+	if (!isPending && vt.length > 1) {
+		const others = [];
+		let hasMe = false;
+		vt.forEach(p => { if (String(p.id) === String(D.userId)) hasMe = true; else others.push(esc(p.name)); });
+		const parts = hasMe ? others.concat('you') : others;
+		let label;
+		if (parts.length <= 1) label = parts[0] || '';
+		else label = parts.slice(0, -1).join(', ') + ' & ' + parts[parts.length - 1];
+		if (label) html += `<div class="sp-action-item-sub sp-action-item-visible"><span class="unique">Visible to ${label}</span></div>`;
+	}
+
 	if (item.due_date) {
 		if (isResolved) {
 			html += `<div class="sp-action-item-sub"><span class="unique">Was due by ${formatDate(item.due_date)}</span></div>`;
@@ -5250,6 +5775,21 @@ function renderActionItemCard(item, mode) {
 	if (isResolved && item.mine) {
 		html += '<div class="sp-action-item-actions">';
 		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-action-reopen-btn" data-item-id="${item.id}">Reopen</button>`;
+		html += '</div>';
+	}
+
+	// Photo attachments — thumbnails at the bottom; click to enlarge. (Add/remove live in the Edit modal.)
+	const atts = (meta && Array.isArray(meta.attachments)) ? meta.attachments : [];
+	if (atts.length) {
+		html += '<div class="sp-action-item-attachments">';
+		atts.forEach(a => {
+			const isImg = (a.mime || '').indexOf('image/') === 0;
+			html += '<div class="sp-action-attach">';
+			html += `<button type="button" class="unique sp-action-attach-thumb${isImg ? '' : ' sp-action-attach-file'}" data-url="${esc(a.url)}" data-mime="${esc(a.mime || '')}" data-name="${esc(a.name || '')}">`
+				+ (isImg ? `<img src="${esc(a.url)}" alt="${esc(a.name || '')}" loading="lazy">` : ICON_ATTACH)
+				+ '</button>';
+			html += '</div>';
+		});
 		html += '</div>';
 	}
 
@@ -5731,7 +6271,7 @@ function renderAdminModules(wrap, modules) {
 
 /* ---- Tiers (Roles) ---- */
 
-let spTierData = { roles: [], catalog: {}, counts: {} };
+let spTierData = { roles: [], catalog: {}, grouped: [], counts: {} };
 
 async function loadAdminTiers() {
 	const wrap = $('#sp-admin-tiers-content');
@@ -5741,11 +6281,31 @@ async function loadAdminTiers() {
 	try {
 		const res = await spAjax('site_pulse_admin_get_roles', {});
 		if (!res.success) { wrap.innerHTML = '<p>Error loading roles.</p>'; return; }
-		spTierData = { roles: res.data.roles || [], catalog: res.data.catalog || {}, counts: res.data.user_counts || {} };
+		spTierData = { roles: res.data.roles || [], catalog: res.data.catalog || {}, grouped: res.data.grouped || [], counts: res.data.user_counts || {} };
 		renderAdminTiers(wrap);
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading roles.</p>';
 	}
+}
+
+// Capability grid grouped by module (shared look with the roles cards) — checkboxes + per-module All/None.
+function tierGridHtml(caps) {
+	const groups = spTierData.grouped || [];
+	if (!groups.length) return '';
+	let html = '<div class="sp-arole-grid">';
+	groups.forEach(g => {
+		html += `<div class="sp-arole-modgroup" data-module="${esc(g.key)}">`;
+		html += `<div class="sp-arole-modhead"><span class="sp-arole-modtitle">${esc(g.label)}</span>`;
+		html += '<span class="sp-arole-modquick"><button type="button" class="unique sp-btn sp-btn-ghost sp-arole-all">All</button><button type="button" class="unique sp-btn sp-btn-ghost sp-arole-none">None</button></span></div>';
+		html += '<div class="sp-arole-modcaps">';
+		g.caps.forEach(c => {
+			const checked = caps.includes(c.cap) ? ' checked' : '';
+			html += `<label class="sp-tier-cap${c.admin ? ' sp-cap-admin' : ''}"><input type="checkbox" value="${esc(c.cap)}"${checked}> ${esc(c.label)}</label>`;
+		});
+		html += '</div></div>';
+	});
+	html += '</div>';
+	return html;
 }
 
 // Tier 1..N by distinct hierarchy_level, highest = Tier 1. Roles arrive sorted by rank desc,
@@ -5762,13 +6322,15 @@ function tierNumbers(roles) {
 }
 
 function renderAdminTiers(wrap) {
-	const { roles, catalog, counts } = spTierData;
+	// ROLES = one flexible category (name + order + module-grouped permissions). A company models it as
+	// org positions, software roles, or a mix — whatever fits.
+	const { roles, counts } = spTierData;
 	const tiers = tierNumbers(roles);
 
 	let html = '<div class="sp-admin-toolbar">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-tier-btn">+ Add Role</button>';
 	html += '</div>';
-	html += '<p class="sp-help-text" style="margin:0 0 16px;">Rename a role and the new name shows everywhere it appears. The internal identity, members, and reports are unaffected.</p>';
+	html += '<p class="sp-help-text" style="margin:0 0 16px;">Rename or reorder roles (top = most senior), and tick what each can do — grouped by module. Fine-tune one individual below.</p>';
 	html += '<div id="sp-tier-form-wrap" hidden></div>';
 
 	if (!roles.length) {
@@ -5779,38 +6341,23 @@ function renderAdminTiers(wrap) {
 			const n = counts[r.id] || 0;
 			let caps = [];
 			try { caps = JSON.parse(r.capabilities || '[]') || []; } catch (e) {}
-
-			html += `<div class="sp-card sp-tier-card" data-id="${r.id}">`;
-			html += '<div class="sp-tier-card-head">';
-			html += `<span class="unique sp-tier-badge">Role ${tiers[r.id]}</span>`;
+			html += `<div class="sp-card sp-tier-card sp-arole-card" data-id="${r.id}">`;
+			html += '<div class="sp-arole-head">';
+			html += `<span class="unique sp-tier-badge">${tiers[r.id]}</span>`;
 			html += `<input type="text" class="sp-input sp-tier-name" value="${esc(r.label)}" aria-label="Role name">`;
 			html += `<span class="sp-tier-count">${n} member${n === 1 ? '' : 's'}</span>`;
-			html += '<div class="sp-tier-move">';
 			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-up" title="Move up"${idx === 0 ? ' disabled' : ''}>&uarr;</button>`;
 			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-down" title="Move down"${idx === roles.length - 1 ? ' disabled' : ''}>&darr;</button>`;
-			html += '</div></div>';
-
-			html += '<div class="sp-tier-caps">';
-			let sawManage = false;
-			Object.entries(catalog).forEach(([cap, label]) => {
-				const checked = caps.includes(cap) ? ' checked' : '';
-				const divider = (!sawManage && /^Manage/i.test(label)) ? ' sp-cap-admin-start' : '';
-				if (divider) sawManage = true;
-				html += `<label class="sp-tier-cap${divider}"><input type="checkbox" value="${cap}"${checked}> ${esc(label)}</label>`;
-			});
-			html += '</div>';
-
-			html += '<div class="sp-tier-card-foot">';
 			html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-tier-delete"${n ? ' disabled title="Reassign members first"' : ' title="Delete" aria-label="Delete"'}>${ICON_DELETE}</button>`;
 			html += '</div>';
+			html += `<div class="sp-arole-body">${tierGridHtml(caps)}</div>`;
 			html += '</div>';
 		});
 		html += '</div>';
 	}
 
-	// Below the role cards: jump to one user's Edit popup to fine-tune their permissions on top
-	// of their role default. Hidden until populated (and only if the admin can manage users).
-	html += '<div class="sp-roles-user-picker" id="sp-roles-user-picker" hidden><label for="sp-roles-user-select">Customize an individual user’s permissions <span class="unique sp-text-secondary" style="font-weight:400;">(overrides their role default — the role itself stays intact)</span></label>';
+	// Fine-tune one individual on top of their role default.
+	html += '<div class="sp-roles-user-picker" id="sp-roles-user-picker" hidden><label for="sp-roles-user-select">Customize an individual user’s permissions <span class="unique sp-text-secondary" style="font-weight:400;">(overrides their role — the role itself stays intact)</span></label>';
 	html += '<select class="sp-select" id="sp-roles-user-select"><option value="">Select a user…</option></select></div>';
 
 	wrap.innerHTML = html;
@@ -5820,12 +6367,15 @@ function renderAdminTiers(wrap) {
 
 	$$('.sp-tier-card', wrap).forEach(card => {
 		const id = card.dataset.id;
-		// Auto-save: name on commit (blur/Enter), capabilities the moment a box is ticked.
 		$('.sp-tier-name', card)?.addEventListener('change', () => saveTier(id, card));
-		$$('.sp-tier-caps input', card).forEach(cb => cb.addEventListener('change', () => saveTier(id, card)));
 		$('.sp-tier-delete', card)?.addEventListener('click', () => deleteTier(id, card));
 		$('.sp-tier-up', card)?.addEventListener('click', () => moveTier(id, -1));
 		$('.sp-tier-down', card)?.addEventListener('click', () => moveTier(id, 1));
+		$$('.sp-arole-grid input[type="checkbox"]', card).forEach(cb => cb.addEventListener('change', () => saveTier(id, card)));
+		$$('.sp-arole-modgroup', card).forEach(grp => {
+			$('.sp-arole-all', grp)?.addEventListener('click', () => { $$('input[type="checkbox"]', grp).forEach(cb => cb.checked = true); saveTier(id, card); });
+			$('.sp-arole-none', grp)?.addEventListener('click', () => { $$('input[type="checkbox"]', grp).forEach(cb => cb.checked = false); saveTier(id, card); });
+		});
 	});
 
 	populateRolesUserPicker();
@@ -5876,21 +6426,12 @@ async function populateRolesUserPicker() {
 
 function showTierForm() {
 	const wrap = spFormModal();
-	const { catalog } = spTierData;
 
 	let html = '<div class="sp-tier-form">';
 	html += '<h3 style="margin:0 0 12px;">New Role</h3>';
 	html += '<div class="sp-form-group"><label>Role Name</label>';
 	html += '<input type="text" id="sp-new-tier-name" class="sp-input" placeholder="e.g. Shift Lead"></div>';
-	html += '<div class="sp-form-group"><label>Capabilities</label>';
-	html += '<div class="sp-tier-caps">';
-	let sawManageNew = false;
-	Object.entries(catalog).forEach(([cap, label]) => {
-		const divider = (!sawManageNew && /^Manage/i.test(label)) ? ' sp-cap-admin-start' : '';
-		if (divider) sawManageNew = true;
-		html += `<label class="sp-tier-cap${divider}"><input type="checkbox" value="${cap}"> ${esc(label)}</label>`;
-	});
-	html += '</div></div>';
+	html += '<p class="sp-help-text" style="margin:0 0 12px;">Tick its permissions afterward on the role card.</p>';
 	html += '<div class="sp-report-form-actions">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-create-tier-btn">Create Role</button>';
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-cancel-tier-btn">Cancel</button>';
@@ -5903,9 +6444,8 @@ function showTierForm() {
 	$('#sp-create-tier-btn')?.addEventListener('click', async () => {
 		const label = $('#sp-new-tier-name')?.value?.trim();
 		if (!label) { alert('Please enter a role name.'); return; }
-		const caps = $$('.sp-tier-caps input:checked', wrap).map(c => c.value);
 		try {
-			const res = await spAjax('site_pulse_admin_save_role', { id: 0, label, capabilities: caps });
+			const res = await spAjax('site_pulse_admin_save_role', { id: 0, label, capabilities: [] });
 			if (res.success) { closeFormModal(); loadAdminTiers(); }
 			else alert(res.data?.message || 'Error creating role.');
 		} catch (e) { alert('Error creating role.'); }
@@ -5915,7 +6455,7 @@ function showTierForm() {
 async function saveTier(id, card) {
 	const label = $('.sp-tier-name', card)?.value?.trim();
 	if (!label) { spFlash('Role name required'); return; }
-	const caps = $$('.sp-tier-caps input:checked', card).map(c => c.value);
+	const caps = $$('.sp-arole-grid input[type="checkbox"]:checked', card).map(c => c.value);
 	try {
 		const res = await spAjax('site_pulse_admin_save_role', { id, label, capabilities: caps });
 		if (res.success) {
@@ -6492,7 +7032,7 @@ function renderAdminTemplates(wrap, templates) {
 					html += `<span class="sp-field-label">${esc(f.label)}</span>`;
 					html += `<span class="sp-field-type">${esc(f.field_type)}</span>`;
 					html += iconBtn('edit', 'sp-edit-field-btn', `data-field-id="${f.id}" data-template-id="${t.id}"`);
-					html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-delete-field-btn" data-field-id="${f.id}">×</button>`;
+					html += iconBtn('delete', 'sp-delete-field-btn', `data-field-id="${f.id}" title="Delete field"`);
 					html += '</div>';
 				});
 				html += '</div>';
@@ -6713,18 +7253,24 @@ function showFieldForm(field, templateId) {
 	html += '</div>';
 
 	html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">';
+	const isMath = field?.field_type === 'math';
 	html += '<div class="sp-form-group"><label>Type</label>';
 	html += `<select name="field_type" class="sp-select">`;
-	['textarea','text','number','select','rating'].forEach(t => {
+	['textarea','text','number','select','rating','math'].forEach(t => {
 		html += `<option value="${t}"${field?.field_type === t ? ' selected' : ''}>${t.charAt(0).toUpperCase() + t.slice(1)}</option>`;
 	});
 	html += '</select></div>';
 
-	html += '<div class="sp-form-group"><label>Required</label>';
+	// Required (normal fields) ↔ Equation (Math fields) share this slot — toggled by the Type dropdown.
+	html += `<div class="sp-form-group" id="sp-field-required-group"${isMath ? ' hidden' : ''}><label>Required</label>`;
 	html += `<select name="is_required" class="sp-select">`;
 	html += `<option value="0"${!field || field.is_required == 0 ? ' selected' : ''}>No</option>`;
 	html += `<option value="1"${field?.is_required == 1 ? ' selected' : ''}>Yes</option>`;
 	html += '</select></div>';
+
+	html += `<div class="sp-form-group" id="sp-field-equation-group"${isMath ? '' : ' hidden'}><label>Equation</label>`;
+	html += `<input type="text" name="equation_input" class="sp-input" value="${esc(isMath ? (field?.options || '') : '')}" placeholder="e.g. lunch + dinner">`;
+	html += `<div class="sp-help-text">Use other fields' keys with + - * / and ( ). e.g. <code>lunch + dinner</code></div></div>`;
 
 	html += '<div class="sp-form-group"><label>Section</label>';
 	html += `<input type="text" name="section" class="sp-input" value="${esc(field?.section || '')}"></div>`;
@@ -6748,11 +7294,29 @@ function showFieldForm(field, templateId) {
 		btn.addEventListener('click', () => closeFormModal());
 	});
 
+	// Type dropdown swaps the Required slot for the Equation slot (Math fields have no "required").
+	const typeSel = $('[name="field_type"]', wrap);
+	const syncMathUI = () => {
+		const m = typeSel && typeSel.value === 'math';
+		const reqG = $('#sp-field-required-group', wrap);
+		const eqG  = $('#sp-field-equation-group', wrap);
+		if (reqG) reqG.hidden = !!m;
+		if (eqG)  eqG.hidden  = !m;
+	};
+	typeSel?.addEventListener('change', syncMathUI);
+	syncMathUI();
+
 	$('#sp-field-form')?.addEventListener('submit', async (e) => {
 		e.preventDefault();
 		const formData = new FormData(e.target);
 		const data = {};
 		for (const [key, val] of formData.entries()) data[key] = val;
+		// A Math field stores its equation in `options` and is never "required".
+		if (data.field_type === 'math') {
+			data.options = data.equation_input || '';
+			data.is_required = '0';
+		}
+		delete data.equation_input;
 		try {
 			const res = await spAjax('site_pulse_admin_save_field', data);
 			if (res.success) {
@@ -7369,8 +7933,8 @@ function renderCmThread(data) {
 	html += '</div>';
 	if (data.can_manage) {
 		html += data.reply_open
-			? '<div class="sp-msg-composer"><textarea class="unique sp-input sp-msg-input" id="sp-cm-input" rows="1" placeholder="Reply…"></textarea><button type="button" class="unique sp-btn sp-btn-primary" id="sp-cm-send">Send</button></div>'
-			: '<div class="sp-msg-composer"><span class="sp-help-text">The 24-hour reply window has closed — Meta only allows a reply within 24h of the customer’s last message.</span></div>';
+			? '<div class="sp-msg-composer sp-card-footer"><textarea class="unique sp-input sp-msg-input" id="sp-cm-input" rows="1" placeholder="Reply…"></textarea><button type="button" class="unique sp-btn sp-btn-primary" id="sp-cm-send">Send</button></div>'
+			: '<div class="sp-msg-composer sp-card-footer"><span class="sp-help-text">The 24-hour reply window has closed — Meta only allows a reply within 24h of the customer’s last message.</span></div>';
 	}
 	thread.innerHTML = html;
 	markUniqueSpans(thread);
@@ -7969,7 +8533,17 @@ function renderReviewCard(r) {
 	}
 
 	const tags = renderReviewTags(r.tags);
-	const body = r.comment ? `<p class="unique sp-review-body">${esc(r.comment)}</p>` : '<p class="unique sp-review-body sp-review-nobody">(no comment)</p>';
+	// Reviewer edited their review after posting (updateTime meaningfully later than createTime) → flag it.
+	// 60s tolerance avoids false positives from Google's sub-minute create/update timestamp jitter.
+	let edited = false;
+	if (r.updateTime && r.createTime) {
+		const c = new Date(r.createTime).getTime(), u = new Date(r.updateTime).getTime();
+		edited = isFinite(c) && isFinite(u) && (u - c) > 60000;
+	}
+	const editTag = edited ? '<span class="unique sp-review-edited" title="The reviewer edited this review after posting">EDIT:</span> ' : '';
+	const body = r.comment
+		? `<p class="unique sp-review-body">${editTag}${esc(r.comment)}</p>`
+		: `<p class="unique sp-review-body sp-review-nobody">${editTag}(no comment)</p>`;
 
 	return (
 		`<div class="unique sp-card sp-review-card" data-id="${id}">` +

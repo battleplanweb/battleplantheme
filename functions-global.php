@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v44.3' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v44.4' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 /**
@@ -33,6 +33,29 @@ function bp_module_on( $opt, string $key = 'install' ): bool {
 	}
 	return ! empty( $v );
 }
+
+/*--------------------------------------------------------------
+# Site Audit — cron runner REMOVED
+#
+# The audit is manual only now (Dashboard → Run Audit), driven step-by-step from the browser so
+# each chunk finishes inside the request timeout. The WP-Cron event that used to live here was
+# only ever a workaround for that timeout, so it's gone along with Chron E.
+#
+# One-time cleanup of the leftovers from that approach, on installs that ran it.
+--------------------------------------------------------------*/
+
+add_action( 'admin_init', 'bp_site_audit_cron_cleanup' );
+function bp_site_audit_cron_cleanup(): void {
+	if ( get_option( 'bp_site_audit_cron_removed' ) ) return;
+	$ts = wp_next_scheduled( 'bp_site_audit_event' );
+	while ( $ts ) {
+		wp_unschedule_event( $ts, 'bp_site_audit_event' );
+		$ts = wp_next_scheduled( 'bp_site_audit_event' );
+	}
+	delete_option( 'bp_site_audit_queued_at' );
+	update_option( 'bp_site_audit_cron_removed', 1, false );
+}
+
 
 /**
  * Alert the framework maintainer when an Anthropic (Claude) API call fails because

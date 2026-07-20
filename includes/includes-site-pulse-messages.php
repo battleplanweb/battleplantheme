@@ -608,6 +608,99 @@ function site_pulse_ajax_messages_upload_send(): void {
 	] ] );
 }
 
+/**
+ * Rotate an image file in place by a clockwise angle (90/180/270), rewriting the actual pixels so the
+ * new orientation sticks for every viewer. Imagick first, GD as a fallback (so it works even where
+ * Imagick isn't installed). Clears any EXIF orientation flag. Returns true on success.
+ *
+ * Defined HERE (an always-loaded Site Pulse include) rather than functions-admin.php, which only loads
+ * for admins — the rotate endpoint runs under admin-ajax for ordinary users too. Guarded so it won't
+ * clash if an admin-only copy is ever loaded first.
+ */
+if ( ! function_exists( 'bp_rotate_image_file' ) ) {
+	function bp_rotate_image_file( $file, $degrees ) {
+		if ( ! $file || ! file_exists( $file ) ) return false;
+		$degrees = ( ( (int) $degrees % 360 ) + 360 ) % 360;
+		if ( 0 === $degrees ) return true;
+
+		// Imagick — rotateImage turns clockwise for a positive angle.
+		if ( class_exists( 'Imagick' ) ) {
+			try {
+				$im = new Imagick( $file );
+				$im->rotateImage( 'none', $degrees );
+				$im->setImageOrientation( Imagick::ORIENTATION_TOPLEFT );
+				$im->stripImage();
+				$im->writeImage( $file );
+				$im->clear();
+				$im->destroy();
+				return true;
+			} catch ( Exception $e ) { /* fall through to GD */ }
+		}
+
+		// GD fallback. imagerotate turns COUNTER-clockwise for a positive angle, so pass (360 - degrees).
+		if ( ! function_exists( 'imagerotate' ) ) return false;
+		$info = @getimagesize( $file );
+		if ( ! $info ) return false;
+		$type = $info[2];
+		switch ( $type ) {
+			case IMAGETYPE_JPEG: $src = @imagecreatefromjpeg( $file ); break;
+			case IMAGETYPE_PNG:  $src = @imagecreatefrompng( $file ); break;
+			case IMAGETYPE_GIF:  $src = @imagecreatefromgif( $file ); break;
+			case IMAGETYPE_WEBP: $src = function_exists( 'imagecreatefromwebp' ) ? @imagecreatefromwebp( $file ) : false; break;
+			default: return false;
+		}
+		if ( ! $src ) return false;
+		$rot = imagerotate( $src, 360 - $degrees, 0 );
+		imagedestroy( $src );
+		if ( ! $rot ) return false;
+		if ( in_array( $type, [ IMAGETYPE_PNG, IMAGETYPE_GIF ], true ) ) { imagealphablending( $rot, false ); imagesavealpha( $rot, true ); }
+		$ok = false;
+		switch ( $type ) {
+			case IMAGETYPE_JPEG: $ok = imagejpeg( $rot, $file, 90 ); break;
+			case IMAGETYPE_PNG:  $ok = imagepng( $rot, $file ); break;
+			case IMAGETYPE_GIF:  $ok = imagegif( $rot, $file ); break;
+			case IMAGETYPE_WEBP: $ok = function_exists( 'imagewebp' ) ? imagewebp( $rot, $file ) : false; break;
+		}
+		imagedestroy( $rot );
+		return (bool) $ok;
+	}
+}
+
+// Rotate a message's image attachment 90° (clockwise or counter-clockwise) in place, so the corrected
+// orientation is baked into the file and everyone in the conversation sees it upright. Any participant
+// may fix a sideways photo. Returns a cache-busted URL (the file path is unchanged, so we bump a ?r=
+// version and persist it) which the client swaps into the viewer + thumbnail.
+add_action( 'wp_ajax_site_pulse_messages_rotate_attachment', 'site_pulse_ajax_messages_rotate_attachment' );
+function site_pulse_ajax_messages_rotate_attachment(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me     = site_pulse_effective_user_id();
+	$msg_id = (int) ( $_POST['message_id'] ?? 0 );
+	$dir    = ( (string) ( $_POST['direction'] ?? 'cw' ) === 'ccw' ) ? 'ccw' : 'cw';
+	if ( ! $me || ! $msg_id ) wp_send_json_error( [ 'message' => 'Missing message.' ] );
+	if ( ! function_exists( 'bp_rotate_image_file' ) ) wp_send_json_error( [ 'message' => 'Rotation unavailable on this server.' ] );
+
+	global $wpdb;
+	$msg = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'messages' ) . " WHERE id = %d", $msg_id ), ARRAY_A );
+	if ( ! $msg ) wp_send_json_error( [ 'message' => 'Message not found.' ] );
+	if ( ! sp_msg_is_participant( (int) $msg['conversation_id'], $me ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( strpos( (string) $msg['attach_mime'], 'image/' ) !== 0 ) wp_send_json_error( [ 'message' => 'Not an image.' ] );
+
+	// Map the stored URL (minus any ?query) to a path under the uploads dir — never trust it outside uploads.
+	$url  = preg_replace( '/\?.*$/', '', (string) $msg['attach_url'] );
+	$up   = wp_upload_dir();
+	if ( strpos( $url, $up['baseurl'] ) !== 0 ) wp_send_json_error( [ 'message' => 'File not found.' ] );
+	$path = $up['basedir'] . substr( $url, strlen( $up['baseurl'] ) );
+	$path = realpath( $path );
+	if ( ! $path || strpos( $path, realpath( $up['basedir'] ) ) !== 0 || ! file_exists( $path ) ) wp_send_json_error( [ 'message' => 'File not found.' ] );
+
+	$degrees = ( 'ccw' === $dir ) ? 270 : 90;   // helper rotates clockwise; 270cw = 90ccw ("rotate left")
+	if ( ! bp_rotate_image_file( $path, $degrees ) ) wp_send_json_error( [ 'message' => 'Could not rotate the image.' ] );
+
+	$new_url = $url . '?r=' . time();            // same file, fresh URL → busts the browser/CDN cache everywhere
+	$wpdb->update( site_pulse_table( 'messages' ), [ 'attach_url' => esc_url_raw( $new_url ) ], [ 'id' => $msg_id ] );
+	wp_send_json_success( [ 'url' => $new_url ] );
+}
+
 // Notify every OTHER participant of a new message. Messages are NOT bell notifications — they live
 // in the Messages tab with their own unread count (derived from the messages table's last_read
 // pointers). So here we only wake the recipient's devices (push) and optionally email; nothing is

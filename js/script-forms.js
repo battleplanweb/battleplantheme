@@ -27,7 +27,24 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		});
 	}
 
+	// Lock the form while a submission is in flight so a second click, an Enter
+	// keypress, or an impatient double-tap can't fire a second POST — each one is a
+	// separate email, which is how the same visitor ends up sending 3+ duplicates.
+	// The submit button is really disabled (not just styled via .submitting), and a
+	// dataset flag guards the fetch itself.
+	function lockForm(form) {
+		form.dataset.bpSubmitting = '1';
+		form.querySelectorAll('button[type="submit"], input[type="submit"], .bp-submit').forEach(b => { b.disabled = true; });
+	}
+
+	function unlockForm(form) {
+		delete form.dataset.bpSubmitting;
+		form.querySelectorAll('button[type="submit"], input[type="submit"], .bp-submit').forEach(b => { b.disabled = false; });
+	}
+
 	function submitViaFetch(form) {
+		if (form.dataset.bpSubmitting === '1') return;   // already in flight — ignore repeat submits
+		lockForm(form);
 		setFormState(form, 'submitting');
 		clearResponse(form);
 
@@ -45,17 +62,21 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 			if (!ok || !data || !data.status) {
 				setFormState(form, 'failed');
 				showResponse(form, 'Sorry, something went wrong. Please try again or call us.');
+				unlockForm(form);
 				return;
 			}
 			if (data.status === 'mail_sent') {
 				form.dispatchEvent(new CustomEvent('bp:form:sent', { bubbles: true, detail: data }));
 				if (data.redirect) {
-					// Keep .submitting state so the spinner stays visible until the new page loads
+					// Keep the form locked + .submitting spinner visible until the new page loads
 					window.location.href = data.redirect;
 				} else {
 					setFormState(form, 'mail-sent-ok');
 					showResponse(form, data.message || 'Thank you. Your message has been sent.');
 					form.reset();
+					// Re-enable so a genuinely new message can be sent; the server
+					// de-dupes identical repeats within a short window.
+					unlockForm(form);
 				}
 			} else if (data.status === 'validation_failed') {
 				setFormState(form, 'invalid');
@@ -66,14 +87,23 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 						if (el) el.classList.add('bp-not-valid');
 					});
 				}
+				unlockForm(form);   // let them fix the highlighted fields and resubmit
 			} else {
 				setFormState(form, 'failed');
 				showResponse(form, data.message || 'Sorry, your message could not be sent.');
+				unlockForm(form);
 			}
 		})
 		.catch(() => {
+			// A slow send (image conversion + Brevo) can outlast a proxy/gateway
+			// timeout: the email actually went out, but the browser sees a failed
+			// request. We can't tell success from failure here, so re-enable to allow
+			// a retry — but avoid flatly telling them to resend (that's what produced
+			// duplicates). The server's idempotency guard collapses a duplicate repeat
+			// into the same result instead of sending a second email.
 			setFormState(form, 'failed');
-			showResponse(form, 'Network error. Please check your connection and try again.');
+			showResponse(form, 'Your message may not have gone through. If you don’t hear back from us shortly, please try again or give us a call.');
+			unlockForm(form);
 		});
 	}
 

@@ -188,6 +188,172 @@ function bp_an_home_coords( array $ci ) {
 	return null;
 }
 
+/**
+ * Payload for the audit-derived metric cards (Search Console, Backlinks, Content, Reviews). Each card is
+ * { metrics:[{key,label,unit}], daily/weekly/monthly:{periods, series:{metricKey:[…]}} }. Search Console is
+ * dense daily (clicks/impressions summed, CTR derived, position impression-weighted); the rest are 3-day
+ * snapshots rolled up as "latest value in the period". Cards with no history are simply omitted.
+ */
+function bp_an_audit_metrics_payload(): array {
+	$out     = [];
+	$weekKey = function ( $ymd ) { $ts = strtotime( $ymd ); $dow = (int) date( 'N', $ts ); return date( 'Ymd', strtotime( '-' . ( $dow - 1 ) . ' days', $ts ) ); };
+	$keyers  = [ 'daily' => function ( $p ) { return $p; }, 'weekly' => $weekKey, 'monthly' => function ( $p ) { return substr( $p, 0, 6 ); } ];
+	$limits  = [ 'daily' => 180, 'weekly' => 104, 'monthly' => 36 ];
+
+	// Snapshot rollup: latest value per period (for slow-moving counts).
+	$snap = function ( $optKey, array $mkeys ) use ( $keyers, $limits ) {
+		$hist = get_option( $optKey );
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		$grains = []; $any = false;
+		foreach ( $keyers as $g => $keyer ) {
+			$byPeriod = [];
+			foreach ( $hist as $ymd => $rec ) {
+				if ( strlen( (string) $ymd ) !== 8 || ! is_array( $rec ) ) continue;
+				$pk = $keyer( (string) $ymd );
+				if ( ! isset( $byPeriod[ $pk ] ) || (string) $ymd > $byPeriod[ $pk ]['d'] ) $byPeriod[ $pk ] = [ 'd' => (string) $ymd, 'v' => $rec ];
+			}
+			if ( ! $byPeriod ) { $grains[ $g ] = null; continue; }
+			ksort( $byPeriod );
+			$periods = array_slice( array_keys( $byPeriod ), -$limits[ $g ] );
+			$series  = [];
+			foreach ( $mkeys as $m ) { $series[ $m ] = []; foreach ( $periods as $pk ) $series[ $m ][] = (float) ( $byPeriod[ $pk ]['v'][ $m ] ?? 0 ); }
+			$grains[ $g ] = [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+			$any = true;
+		}
+		return $any ? $grains : null;
+	};
+
+	// Sum rollup: total per period (for dense daily count metrics like GBP performance).
+	$sum = function ( $optKey, array $mkeys ) use ( $keyers, $limits ) {
+		$hist = get_option( $optKey );
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		$grains = []; $any = false;
+		foreach ( $keyers as $g => $keyer ) {
+			$acc = [];
+			foreach ( $hist as $ymd => $rec ) {
+				if ( strlen( (string) $ymd ) !== 8 || ! is_array( $rec ) ) continue;
+				$pk = $keyer( (string) $ymd );
+				foreach ( $mkeys as $m ) $acc[ $pk ][ $m ] = ( $acc[ $pk ][ $m ] ?? 0 ) + (float) ( $rec[ $m ] ?? 0 );
+			}
+			if ( ! $acc ) { $grains[ $g ] = null; continue; }
+			ksort( $acc );
+			$periods = array_slice( array_keys( $acc ), -$limits[ $g ] );
+			$series  = [];
+			foreach ( $mkeys as $m ) { $series[ $m ] = []; foreach ( $periods as $pk ) $series[ $m ][] = round( $acc[ $pk ][ $m ] ?? 0 ); }
+			$grains[ $g ] = [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+			$any = true;
+		}
+		return $any ? $grains : null;
+	};
+
+	// Search Console — dense daily; clicks/impressions sum, CTR derived, position impression-weighted.
+	$scHist = get_option( 'bp_gsc_totals_history' );
+	if ( is_array( $scHist ) && $scHist ) {
+		$grains = []; $any = false;
+		foreach ( $keyers as $g => $keyer ) {
+			$acc = [];
+			foreach ( $scHist as $ymd => $rec ) {
+				if ( strlen( (string) $ymd ) !== 8 || ! is_array( $rec ) ) continue;
+				$pk = $keyer( (string) $ymd );
+				$im = (int) ( $rec['impressions'] ?? 0 );
+				$acc[ $pk ]['clicks']  = ( $acc[ $pk ]['clicks']  ?? 0 ) + (int) ( $rec['clicks'] ?? 0 );
+				$acc[ $pk ]['impr']    = ( $acc[ $pk ]['impr']    ?? 0 ) + $im;
+				$acc[ $pk ]['posImpr'] = ( $acc[ $pk ]['posImpr'] ?? 0 ) + (float) ( $rec['position'] ?? 0 ) * $im;
+			}
+			if ( ! $acc ) { $grains[ $g ] = null; continue; }
+			ksort( $acc );
+			$periods = array_slice( array_keys( $acc ), -$limits[ $g ] );
+			$series  = [ 'clicks' => [], 'impressions' => [], 'ctr' => [], 'position' => [] ];
+			foreach ( $periods as $pk ) {
+				$cl = $acc[ $pk ]['clicks']; $im = $acc[ $pk ]['impr']; $pi = $acc[ $pk ]['posImpr'];
+				$series['clicks'][]      = $cl;
+				$series['impressions'][] = $im;
+				$series['ctr'][]         = $im > 0 ? round( $cl / $im * 100, 2 ) : 0;
+				$series['position'][]    = $im > 0 ? round( $pi / $im, 1 ) : 0;
+			}
+			$grains[ $g ] = [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+			$any = true;
+		}
+		if ( $any ) $out['searchConsole'] = array_merge( [ 'metrics' => [
+			[ 'key' => 'clicks',      'label' => 'Clicks',       'unit' => 'int' ],
+			[ 'key' => 'impressions', 'label' => 'Impressions',  'unit' => 'int' ],
+			[ 'key' => 'ctr',         'label' => 'CTR',          'unit' => 'pct' ],
+			[ 'key' => 'position',    'label' => 'Avg Position', 'unit' => 'pos' ],
+		] ], $grains );
+	}
+
+	if ( $bl = $snap( 'bp_gsc_links_history', [ 'backlinks', 'domains' ] ) ) {
+		$out['backlinks'] = array_merge( [ 'metrics' => [
+			[ 'key' => 'backlinks', 'label' => 'Backlinks',       'unit' => 'int' ],
+			[ 'key' => 'domains',   'label' => 'Linking Domains', 'unit' => 'int' ],
+		] ], $bl );
+	}
+	if ( $ct = $snap( 'bp_content_history', [ 'blog', 'pages', 'jobsites', 'galleries', 'testimonials', 'images' ] ) ) {
+		$out['content'] = array_merge( [ 'metrics' => [
+			[ 'key' => 'blog',         'label' => 'Blog Posts',   'unit' => 'int' ],
+			[ 'key' => 'pages',        'label' => 'Pages',        'unit' => 'int' ],
+			[ 'key' => 'jobsites',     'label' => 'Jobsites',     'unit' => 'int' ],
+			[ 'key' => 'galleries',    'label' => 'Galleries',    'unit' => 'int' ],
+			[ 'key' => 'testimonials', 'label' => 'Testimonials', 'unit' => 'int' ],
+			[ 'key' => 'images',       'label' => 'Images',       'unit' => 'int' ],
+		] ], $ct );
+	}
+	if ( $rv = $snap( 'bp_gbp_stats_history', [ 'reviews', 'rating' ] ) ) {
+		$out['reviews'] = array_merge( [ 'metrics' => [
+			[ 'key' => 'reviews', 'label' => 'Reviews', 'unit' => 'int' ],
+			[ 'key' => 'rating',  'label' => 'Rating',  'unit' => 'rating' ],
+		] ], $rv );
+	}
+	if ( $gp = $sum( 'bp_gbp_perf_history', [ 'impressions', 'calls', 'website', 'directions' ] ) ) {
+		$out['gbpPerf'] = array_merge( [ 'metrics' => [
+			[ 'key' => 'impressions', 'label' => 'Impressions',    'unit' => 'int' ],
+			[ 'key' => 'calls',       'label' => 'Call Clicks',    'unit' => 'int' ],
+			[ 'key' => 'website',     'label' => 'Website Clicks', 'unit' => 'int' ],
+			[ 'key' => 'directions',  'label' => 'Directions',     'unit' => 'int' ],
+		] ], $gp );
+	}
+
+	return $out;
+}
+
+/**
+ * Payload for the Keyword Rankings stacked-band card. Reads bp_kw_bands_history (3-day snapshots of how
+ * many tracked keywords sit in each rank band) and rolls it up per grain as "latest snapshot in the
+ * period". Returns { bands:[{key,label,cls}], daily/weekly/monthly:{periods, series:{b1..b4:[…]}} } or null.
+ */
+function bp_an_keywords_payload(): ?array {
+	$hist = get_option( 'bp_kw_bands_history' );
+	if ( ! is_array( $hist ) || ! $hist ) return null;
+	$mkeys   = [ 'b1', 'b2', 'b3', 'b4' ];
+	$weekKey = function ( $ymd ) { $ts = strtotime( $ymd ); $dow = (int) date( 'N', $ts ); return date( 'Ymd', strtotime( '-' . ( $dow - 1 ) . ' days', $ts ) ); };
+	$keyers  = [ 'daily' => function ( $p ) { return $p; }, 'weekly' => $weekKey, 'monthly' => function ( $p ) { return substr( $p, 0, 6 ); } ];
+	$limits  = [ 'daily' => 180, 'weekly' => 104, 'monthly' => 36 ];
+
+	$grains = []; $any = false;
+	foreach ( $keyers as $g => $keyer ) {
+		$byPeriod = [];
+		foreach ( $hist as $ymd => $rec ) {
+			if ( strlen( (string) $ymd ) !== 8 || ! is_array( $rec ) ) continue;
+			$pk = $keyer( (string) $ymd );
+			if ( ! isset( $byPeriod[ $pk ] ) || (string) $ymd > $byPeriod[ $pk ]['d'] ) $byPeriod[ $pk ] = [ 'd' => (string) $ymd, 'v' => $rec ];
+		}
+		if ( ! $byPeriod ) { $grains[ $g ] = null; continue; }
+		ksort( $byPeriod );
+		$periods = array_slice( array_keys( $byPeriod ), -$limits[ $g ] );
+		$series  = [];
+		foreach ( $mkeys as $m ) { $series[ $m ] = []; foreach ( $periods as $pk ) $series[ $m ][] = (int) ( $byPeriod[ $pk ]['v'][ $m ] ?? 0 ); }
+		$grains[ $g ] = [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+		$any = true;
+	}
+	if ( ! $any ) return null;
+	return array_merge( [ 'bands' => [
+		[ 'key' => 'b1', 'label' => '1–3',   'cls' => 'kw1' ],
+		[ 'key' => 'b2', 'label' => '4–10',  'cls' => 'kw2' ],
+		[ 'key' => 'b3', 'label' => '11–20', 'cls' => 'kw3' ],
+		[ 'key' => 'b4', 'label' => '21+',   'cls' => 'kw4' ],
+	] ], $grains );
+}
+
 function bp_analytics_page() {
 
 	if ( ! ( _USER_LOGIN === 'battleplanweb' || in_array( 'bp_view_stats', (array) _USER_ROLES ) || current_user_can( 'manage_options' ) ) ) {
@@ -723,6 +889,68 @@ function bp_analytics_page() {
 		];
 	};
 
+	// Lighthouse (lab) over time — from bp_cwv_lab_history, PSI pulled every ~3 days. Each metric plots
+	// Mobile + Desktop. Nine metrics: four category scores (Performance, Accessibility, Best Practices,
+	// SEO) + five performance metrics (FCP, Speed Index, LCP, TBT, CLS). Sparse daily snapshots are
+	// mean-bucketed into each grain (a point estimate averaged over the period is fine for lab).
+	$cwvTimeline = function () {
+		$metrics = [
+			[ 'key' => 'perf', 'label' => 'Performance' ],
+			[ 'key' => 'fcp',  'label' => 'First Contentful Paint' ],
+			[ 'key' => 'tbt',  'label' => 'Total Blocking Time' ],
+			[ 'key' => 'si',   'label' => 'Speed Index' ],
+			[ 'key' => 'lcp',  'label' => 'Largest Contentful Paint' ],
+			[ 'key' => 'cls',  'label' => 'Cumulative Layout Shift' ],
+			[ 'key' => 'acc',  'label' => 'Accessibility' ],
+			[ 'key' => 'best', 'label' => 'Best Practices' ],
+			[ 'key' => 'seo',  'label' => 'SEO' ],
+		];
+		$mkeys   = array_column( $metrics, 'key' );
+		$labHist = get_option( 'bp_cwv_lab_history' );
+		if ( ! is_array( $labHist ) || ! $labHist ) return null;
+		$scoreKeys = [ 'perf' => 1, 'acc' => 1, 'best' => 1, 'seo' => 1, 'tbt' => 1 ];   // rounded to integers
+
+		$weekKey = function ( $ymd ) { $ts = strtotime( $ymd ); $dow = (int) date( 'N', $ts ); return date( 'Ymd', strtotime( '-' . ( $dow - 1 ) . ' days', $ts ) ); };
+		$grain   = function ( callable $keyer, $limit ) use ( $labHist, $mkeys, $scoreKeys ) {
+			$acc = [];   // [period][metric][dev] = ['sum'=>, 'cnt'=>]
+			foreach ( $labHist as $ymd => $rec ) {
+				if ( strlen( (string) $ymd ) !== 8 || ! is_array( $rec ) ) continue;
+				$pk = $keyer( (string) $ymd );
+				foreach ( $mkeys as $mk ) {
+					foreach ( [ 'm', 'd' ] as $dev ) {
+						if ( ! isset( $rec[ $mk ][ $dev ] ) ) continue;
+						$acc[ $pk ][ $mk ][ $dev ]['sum'] = ( $acc[ $pk ][ $mk ][ $dev ]['sum'] ?? 0 ) + (float) $rec[ $mk ][ $dev ];
+						$acc[ $pk ][ $mk ][ $dev ]['cnt'] = ( $acc[ $pk ][ $mk ][ $dev ]['cnt'] ?? 0 ) + 1;
+					}
+				}
+			}
+			if ( ! $acc ) return null;
+			ksort( $acc );
+			$periods = array_slice( array_keys( $acc ), -$limit );
+			$series  = [];
+			foreach ( $mkeys as $mk ) $series[ $mk ] = [ 'm' => [], 'd' => [] ];
+			foreach ( $periods as $pk ) {
+				foreach ( $mkeys as $mk ) {
+					foreach ( [ 'm', 'd' ] as $dev ) {
+						if ( isset( $acc[ $pk ][ $mk ][ $dev ] ) && $acc[ $pk ][ $mk ][ $dev ]['cnt'] > 0 ) {
+							$v = $acc[ $pk ][ $mk ][ $dev ]['sum'] / $acc[ $pk ][ $mk ][ $dev ]['cnt'];
+							$series[ $mk ][ $dev ][] = isset( $scoreKeys[ $mk ] ) ? round( $v ) : round( $v, $mk === 'cls' ? 3 : 2 );
+						} else {
+							$series[ $mk ][ $dev ][] = 0;
+						}
+					}
+				}
+			}
+			return [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+		};
+
+		$daily   = $grain( function ( $p ) { return $p; }, 180 );
+		$weekly  = $grain( $weekKey, 104 );
+		$monthly = $grain( function ( $p ) { return substr( $p, 0, 6 ); }, 36 );
+		if ( ! $daily && ! $weekly && ! $monthly ) return null;
+		return [ 'metrics' => $metrics, 'daily' => $daily, 'weekly' => $weekly, 'monthly' => $monthly ];
+	};
+
 	// Client's home town — center of the regional (100-mi) zoom map. From customer_info (its own
 	// business address coords). Null if unset, in which case the zoom panel is omitted.
 	$ci        = customer_info();
@@ -752,12 +980,17 @@ function bp_analytics_page() {
 		'clarity'           => $clarityTimeline(),
 		'scroll'            => $scrollTimeline(),
 		'events'            => $eventsTimeline(),
+		'cwv'               => $cwvTimeline(),
+		'auditMetrics'      => bp_an_audit_metrics_payload(),
+		'keywords'          => bp_an_keywords_payload(),
 		'home'              => $anHome,
 	];
 	$anPages   = ! empty( $payload['pages'] );
 	$anClarity = ! empty( $payload['clarity'] );
 	$anScroll  = ! empty( $payload['scroll'] );
 	$anEvents  = ! empty( $payload['events'] );
+	$anCwv     = ! empty( $payload['cwv'] );
+	$anKw      = ! empty( $payload['keywords'] );
 
 	echo '<script type="application/json" id="bp-an-payload">' . wp_json_encode( $payload ) . '</script>';
 
@@ -831,6 +1064,20 @@ function bp_analytics_page() {
 	echo   '<div class="bp-analytics-speed"></div>';
 	echo '</div>';
 
+	// Lighthouse — lab scores/metrics over time (PSI pulled every ~3 days). Pills pick the metric; each
+	// shows Mobile + Desktop lines + the "good" threshold. Four category scores + five perf metrics.
+	if ( $anCwv ) {
+		echo '<div class="bp-an-card">';
+		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Lighthouse</h2><div class="bp-an-metric-btns">';
+		foreach ( $payload['cwv']['metrics'] as $i => $mt ) {
+			echo '<a href="#" class="bp-an-vbtn' . ( $i === 0 ? ' active' : '' ) . '" data-vmetric="' . esc_attr( $mt['key'] ) . '">' . esc_html( $mt['label'] ) . '</a>';
+		}
+		echo   '</div></div>';
+		echo   '<div class="bp-an-cardnote">Lab scores from Google Lighthouse (PageSpeed Insights), pulled every ~3 days — <b>Performance / Accessibility / Best&nbsp;Practices / SEO</b> (0–100, higher is better) plus the performance metrics <b>FCP / Speed Index / LCP</b> (seconds), <b>TBT</b> (ms) and <b>CLS</b>. Mobile &amp; Desktop; dashed line = the "good" threshold. Follows the range &amp; grain controls above.</div>';
+		echo   '<div class="bp-analytics-cwv"></div>';
+		echo '</div>';
+	}
+
 	// UX health (Microsoft Clarity) — frustration + engagement signals over time; single-select pills.
 	if ( $anClarity ) {
 		echo '<div class="bp-an-card">';
@@ -895,6 +1142,40 @@ function bp_analytics_page() {
 	}
 	echo   '</div>';
 	echo '</div>';
+
+	// Audit-derived metric cards — Search Console, Backlinks, Content, Reviews. Single-select pills (one
+	// metric = one line); each is fed by a 3-day collector. Any card whose history is empty is omitted.
+	foreach ( [
+		[ 'searchConsole', 'Search Console', 'Google Search <b>clicks, impressions, CTR</b> &amp; <b>average position</b> (US), per day — from the Search Analytics API, refreshed every ~3 days. Follows the range &amp; grain controls above.' ],
+		[ 'backlinks',     'Backlinks',      'Total <b>backlinks</b> and distinct <b>linking domains</b> from Search Console. Google refreshes link data slowly, so the line steps rather than wiggles.' ],
+		[ 'content',       'Content',        'Published <b>Blog posts, Jobsites, Galleries &amp; Testimonials</b> over time.' ],
+		[ 'reviews',       'Reviews',        'Google <b>review count</b> &amp; average <b>star rating</b> over time.' ],
+		[ 'gbpPerf',       'Google Business Profile', 'GBP <b>impressions, call clicks, website clicks</b> &amp; <b>direction requests</b> per day, pulled via the GBP hub (refreshed every ~3 days). Google reports these with a ~3-day lag.' ],
+	] as $ac ) {
+		if ( empty( $payload['auditMetrics'][ $ac[0] ] ) ) continue;
+		$card = $payload['auditMetrics'][ $ac[0] ];
+		echo '<div class="bp-an-card">';
+		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">' . esc_html( $ac[1] ) . '</h2><div class="bp-an-metric-btns">';
+		foreach ( $card['metrics'] as $i => $mt ) {
+			echo '<a href="#" class="bp-an-abtn' . ( $i === 0 ? ' active' : '' ) . '" data-ametric="' . esc_attr( $mt['key'] ) . '">' . esc_html( $mt['label'] ) . '</a>';
+		}
+		echo   '</div></div>';
+		echo   '<div class="bp-an-cardnote">' . $ac[2] . '</div>';
+		echo   '<div class="bp-analytics-audit" data-audit="' . esc_attr( $ac[0] ) . '"></div>';
+		echo '</div>';
+	}
+
+	// Keyword Rankings — stacked rank-band distribution over time (DataForSEO). Count / Share toggle.
+	if ( $anKw ) {
+		echo '<div class="bp-an-card">';
+		echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">Keyword Rankings</h2><div class="bp-an-metric-btns">'
+		     .   '<a href="#" class="bp-an-kmbtn active" data-kmode="count">Count</a>'
+		     .   '<a href="#" class="bp-an-kmbtn" data-kmode="share">Share</a>'
+		     . '</div></div>';
+		echo   '<div class="bp-an-cardnote">How many tracked keywords sit in each Google rank band — <b>1–3</b> (bottom, darkest) through <b>21+</b> (top). <b>Count</b> stacks the totals (band height = # of keywords); <b>Share</b> normalizes to 100% to show the mix. As rankings improve you\'ll watch the dark 1–3 band grow. Follows the range &amp; grain controls above.</div>';
+		echo   '<div class="bp-analytics-keywords"></div>';
+		echo '</div>';
+	}
 
 	echo '</div>';
 }
@@ -1754,16 +2035,10 @@ function battleplan_auto_add_image_category($attachment_id) {
     }
 }
 
+// The audit can't run inside a single request (crawl + PageSpeed renders + a Claude call blow the
+// gateway timeout — that was the 502). It's now driven step-by-step from the Site Audit screen, so
+// this action just sends you there; the Run Audit button on that page does the work.
 function battleplan_force_run_audit() {
-    $customerInfo  = customer_info();
-    $auditInterval = isset($customerInfo['audit_delay'])
-        ? (int) $customerInfo['audit_delay']
-        : (86400 * 90);
-
-    update_option('bp_audit_time', time());
-    update_option('bp_audit_next', time() + $auditInterval + rand(0, 3600));
-    require_once get_template_directory() . '/functions-site-audit.php';
-    bp_run_site_audit();
     wp_safe_redirect(admin_url('index.php?page=site-audit'));
     exit;
 }
@@ -1802,6 +2077,47 @@ function battleplan_chron_analytics_status() {
  * is built. Hidden unless the URL carries ?bp_ga4_channels=1. Remove once the
  * real Analytics page ships.
  */
+
+// TEMP diagnostic (battleplanweb + ?bp_audit=1): why aren't the audit-metric cards populating? Shows each
+// history's row count + the precondition behind each collector, and can force a run / test the GBP hub call.
+add_action('admin_notices', 'bp_audit_metrics_debug');
+function bp_audit_metrics_debug() {
+    if (!defined('_USER_LOGIN') || _USER_LOGIN !== 'battleplanweb' || empty($_GET['bp_audit'])) return;
+    $t = get_template_directory();
+    foreach (['functions-chron-helpers.php', 'functions-chron-analytics.php'] as $f) { if (file_exists("$t/$f")) require_once "$t/$f"; }
+
+    if (!empty($_GET['run'])) {
+        delete_option('bp_audit_metrics_next');
+        if (function_exists('bp_collect_audit_metrics')) bp_collect_audit_metrics();
+        echo '<div class="notice notice-info"><p>Ran audit-metrics collectors.</p></div>';
+    }
+
+    $cnt = function ($k) { $v = get_option($k); return is_array($v) ? count($v) : 0; };
+    $svc = defined('GA4_SERVICE_ACCOUNT_JSON') ? 'defined' : 'MISSING';
+    $tok = function_exists('bp_gsc_token') ? (bp_gsc_token() ? 'OK' : 'NULL') : 'fn-missing';
+    $ci  = function_exists('customer_info') ? customer_info() : [];
+    $pids = function_exists('ci_normalize_pids') ? ci_normalize_pids($ci['pid'] ?? []) : array_filter((array) ($ci['pid'] ?? []));
+    $gbpUpd = get_option('bp_gbp_update');
+    $revSum = 0; if (is_array($gbpUpd)) foreach ($pids as $p) $revSum += (int) ($gbpUpd[$p]['google-reviews'] ?? 0);
+    $hubCfg = function_exists('bpgbp_client_is_configured') ? (bpgbp_client_is_configured() ? 'yes' : 'no') : 'fn-missing';
+    $perf = '(click test)';
+    if (!empty($_GET['perf']) && function_exists('bpgbp_client_get')) {
+        $r = bpgbp_client_get('performance');
+        $perf = is_wp_error($r) ? ('ERROR: ' . $r->get_error_message())
+              : (empty($r['ok']) ? ('no-ok: ' . wp_json_encode($r)) : ('OK — days=' . (is_array($r['metrics'] ?? null) ? count($r['metrics']) : 0)));
+    }
+
+    echo '<div class="notice notice-warning"><p><b>Audit-metrics diagnostic</b><br>';
+    echo 'history rows — searchConsole: ' . $cnt('bp_gsc_totals_history') . ' &nbsp; backlinks: ' . $cnt('bp_gsc_links_history')
+       . ' &nbsp; content: ' . $cnt('bp_content_history') . ' &nbsp; reviews: ' . $cnt('bp_gbp_stats_history') . ' &nbsp; gbpPerf: ' . $cnt('bp_gbp_perf_history') . '<br>';
+    echo '<b>GSC</b>: service-account=' . $svc . ', token=' . $tok . '<br>';
+    echo '<b>Reviews</b>: pids=[' . esc_html(implode(', ', (array) $pids)) . '] &nbsp; bp_gbp_update entries=' . (is_array($gbpUpd) ? count($gbpUpd) : 0) . ' &nbsp; reviews sum=' . $revSum . '<br>';
+    echo '<b>GBP perf</b>: hub configured=' . $hubCfg . ' &nbsp; perf call=' . esc_html($perf) . '<br>';
+    echo '<a class="button" href="' . esc_url(add_query_arg(['bp_audit' => 1, 'run' => 1])) . '">▶ Run collectors now</a> &nbsp; ';
+    echo '<a class="button" href="' . esc_url(add_query_arg(['bp_audit' => 1, 'perf' => 1])) . '">Test GBP perf hub call</a>';
+    echo '</p></div>';
+}
+
 add_action('admin_notices', 'bp_ga4_channel_history_debug');
 function bp_ga4_channel_history_debug() {
 
@@ -2295,6 +2611,9 @@ function bp_bake_image_orientation( $file ) {
 	}
 }
 
+// bp_rotate_image_file() lives in includes-site-pulse-messages.php (always loaded, incl. admin-ajax for
+// non-admin users) — functions-admin.php only loads for admins, so the rotate endpoint couldn't see it here.
+
 // Walk a WebP file's RIFF chunks, find the EXIF chunk, return its Orientation.
 function bp_webp_orientation( $file ) {
 	$data = @file_get_contents( $file );
@@ -2735,423 +3054,35 @@ add_action('admin_head', function(){
 
 
 /*--------------------------------------------------------------
-# Site Audit — Read-Only Auto Table
-# Data populated automatically from bp_site_audit on each chron run
-# Historical data stored in bp_site_audit_details
+# Site Audit — Claude's read of the site
+# The audit no longer collects metrics (the chron does that). It crawls the main pages, sends the
+# chron's data + page structure to Claude, and stores a DATED report.
+# History: get_option('bp_site_audit_ai_history')  — see functions-site-audit-ai.php
 --------------------------------------------------------------*/
+
+// Load at top level, not inside the page function: the audit's step endpoint registers
+// wp_ajax_bp_audit_step in here, and admin-ajax.php never calls battleplan_site_audit(). Without
+// this the Run Audit button's requests would come back "0". file_exists-guarded so a partial
+// deploy can't fatal the admin.
+$bp_audit_ai_file = get_template_directory() . '/functions-site-audit-ai.php';
+if ( file_exists( $bp_audit_ai_file ) ) require_once $bp_audit_ai_file;
+unset( $bp_audit_ai_file );
 
 function battleplan_site_audit() {
 
-    $customer_info   = get_option('customer_info');
-    $siteType        = is_array($customer_info) ? ($customer_info['site-type'] ?? '') : '';
-    $siteAudit       = get_option('bp_site_audit_details') ?: [];
-    $launchDate      = get_option('bp_launch_date');
-    $launchTs        = $launchDate ? strtotime($launchDate) : null;
-    $daysSinceLaunch = $launchTs ? (int)((time() - $launchTs) / 86400) : 9999;
+	echo '<div class="wrap">';
+	echo '<h1 style="font-size:28px;font-weight:bold;">Site Audit</h1>';
+	echo '<p style="font-size:15px;margin-top:-6px;color:#888;max-width:840px;">Claude reviews the site itself &mdash; the main pages&rsquo; structure, headings, calls to action and copy &mdash; alongside everything the nightly chron already collects (traffic, Search Console, page speed, keywords, Google Business, backlinks, content and Clarity), and reports what&rsquo;s working and what to fix. Every run is kept below, so you can see how the site changes over time.</p>';
 
-    // One-time legacy migration
-    $migrationDone = get_option('bp_audit_migration_done');
+	if ( function_exists( 'bp_audit_run_step' ) ) bp_audit_render_runner();
 
-    if (!$migrationDone) {
-
-
-	$legacyMap = [
-		'lighthouse-mobile-score'  => 'lighthouse-mobile-score',
-		'lighthouse-mobile-fcp'    => 'lighthouse-mobile-fcp',
-		'lighthouse-mobile-lcp'    => 'lighthouse-mobile-lcp',
-		'lighthouse-mobile-tbt'    => 'lighthouse-mobile-tbt',
-		'lighthouse-mobile-si'     => 'lighthouse-mobile-si',
-		'lighthouse-mobile-cls'    => 'lighthouse-mobile-cls',
-		'lighthouse-desktop-score' => 'lighthouse-desktop-score',
-		'lighthouse-desktop-fcp'   => 'lighthouse-desktop-fcp',
-		'lighthouse-desktop-lcp'   => 'lighthouse-desktop-lcp',
-		'lighthouse-desktop-tbt'   => 'lighthouse-desktop-tbt',
-		'lighthouse-desktop-si'    => 'lighthouse-desktop-si',
-		'lighthouse-desktop-cls'   => 'lighthouse-desktop-cls',
-		'back-total-links'         => 'back-total-links',
-		'back-domains'             => 'back-domains',
-		'cite-key-citations'   	  => 'cite-key-citations',
-		'cite-citation-score'   	  => 'cite-citation-score',
-		'cite-total-citations'     => 'cite-total-citations',
-		'console-clicks'           => 'console-clicks-28',
-		'console-position'         => 'console-position-28',
-		'console-impressions'      => 'console-impressions-28',
-		'console-ctr'              => 'console-ctr-28',
-		'gmb-overview'             => 'gmb-impressions',
-		'gmb-calls'                => 'gmb-calls',
-		'gmb-clicks'               => 'gmb-website-clicks',
-		'google-reviews'           => 'google-reviews',
-		'google-rating'            => 'google-rating',
-		'load_time_mobile'         => 'load_time_mobile',
-		'load_time_desktop'        => 'load_time_desktop',
-	];
-
-	   foreach ($siteAudit as $date => $entry) {
-
-		 // if (isset($entry['ga4-sessions-30'])) continue;
-
-		  $migrated = [];
-		  foreach ($legacyMap as $oldKey => $newKey) {
-			 if (isset($entry[$oldKey]) && $entry[$oldKey] !== '—') {
-				$migrated[$newKey] = $entry[$oldKey];
-			 }
-		  }
-		  foreach ($entry as $k => $v) {
-			 if (!isset($migrated[$k])) $migrated[$k] = $v;
-		  }
-
-		  $siteAudit[$date] = $migrated;
-	   }
-
-		updateOption('bp_site_audit_details', $siteAudit, false);
-		update_option('bp_audit_migration_done', true);
-	}
-
-    // -------------------------------------------------------
-    // Define row structure for the table
-    // -------------------------------------------------------
-    $sections = [
-
-        'PageSpeed — Mobile' => [
-            'lighthouse-mobile-score' => 'Performance Score',
-            'lighthouse-mobile-fcp'   => 'First Contentful Paint',
-            'lighthouse-mobile-lcp'   => 'Largest Contentful Paint',
-            'lighthouse-mobile-tbt'   => 'Total Blocking Time',
-            'lighthouse-mobile-si'    => 'Speed Index',
-            'lighthouse-mobile-cls'   => 'Cumulative Layout Shift',
-            'lighthouse-mobile-acc'   => 'Accessibility',
-            'lighthouse-mobile-seo'   => 'SEO Score',
-        ],
-
-        'PageSpeed — Desktop' => [
-            'lighthouse-desktop-score' => 'Performance Score',
-            'lighthouse-desktop-fcp'   => 'First Contentful Paint',
-            'lighthouse-desktop-lcp'   => 'Largest Contentful Paint',
-            'lighthouse-desktop-tbt'   => 'Total Blocking Time',
-            'lighthouse-desktop-si'    => 'Speed Index',
-            'lighthouse-desktop-cls'   => 'Cumulative Layout Shift',
-            'lighthouse-desktop-acc'   => 'Accessibility',
-            'lighthouse-desktop-seo'   => 'SEO Score',
-        ],
-
-        'Load Speed (Real Users)' => [
-            'load_time_mobile'     => 'Mobile Avg Load Time',
-            'load_time_desktop'    => 'Desktop Avg Load Time',
-            'speed-mobile-target'  => 'Mobile On Target',
-            'speed-desktop-target' => 'Desktop On Target',
-        ],
-
-		'GA4 Traffic' => [
-			'ga4-sessions-7'    => 'Sessions (1wk)',
-			'ga4-pageviews-7'   => 'Pageviews (1wk)',
-			'ga4-engagement-7'  => 'Engagement Rate (1wk)',
-			'ga4-sessions-30'   => 'Sessions (1mo)',
-			'ga4-pageviews-30'  => 'Pageviews (1mo)',
-			'ga4-engagement-30' => 'Engagement Rate (1mo)',
-			'ga4-sessions-90'   => 'Sessions (3mo)',
-			'ga4-pageviews-90'  => 'Pageviews (3mo)',
-			'ga4-engagement-90' => 'Engagement Rate (3mo)',
-			'ga4-sessions-180'    => 'Sessions (6mo)',
-			'ga4-pageviews-180'   => 'Pageviews (6mo)',
-			'ga4-engagement-180'  => 'Engagement Rate (6mo)',
-			'ga4-sessions-365'    => 'Sessions (1yr)',
-			'ga4-pageviews-365'   => 'Pageviews (1yr)',
-			'ga4-engagement-365'  => 'Engagement Rate (1yr)',
-			'ga4-phone-30'      => 'Phone Clicks (1mo)',
-			'ga4-email-30'      => 'Email Clicks (1mo)',
-		],
-
-        'Search Console' => [
-			'console-impressions-30'  => 'Impressions (1mo)',
-			'console-clicks-30'       => 'Clicks (1mo)',
-			'console-ctr-30'          => 'CTR (1mo)',
-			'console-position-30'     => 'Avg Position (1mo)',
-			'console-impressions-90'  => 'Impressions (3mo)',
-			'console-clicks-90'       => 'Clicks (3mo)',
-			'console-ctr-90'          => 'CTR (3mo)',
-			'console-position-90'     => 'Avg Position (3mo)',
-			'console-impressions-180' => 'Impressions (6mo)',
-			'console-clicks-180'      => 'Clicks (6mo)',
-			'console-ctr-180'         => 'CTR (6mo)',
-			'console-position-180'    => 'Avg Position (6mo)',
-			'console-impressions-365' => 'Impressions (12m)',
-			'console-clicks-365'      => 'Clicks (12m)',
-			'console-ctr-365'         => 'CTR (12m)',
-			'console-position-365'    => 'Avg Position (12m)',
-		],
-
-		'Backlinks' => [
-		    'back-total-links' 		=> 'Total Links',
-		    'back-domains'     		=> 'Linking Domains',
-		    'links-local-links'    	=> 'Local Links',
-		    'links-industry-links'	=> 'Industry Links',
-		    'links-social-links'     	=> 'Social Media',
-		    'links-directory-links'  	=> 'Directories',
-		    'links-press-links'      	=> 'Media / Press',
-		],
-
-		'Citations' => [
-			'cite-total-citations' 	=> 'Total Citations',
-			'cite-key-citations'	=> 'Key Citations',
-			'cite-citation-score'	=> 'Citation Score',
-	   ],
-
-	   'Page Indexing' => [
-		'index-pages-indexed'    => 'Pages Indexed',
-		'index-404-errors'       => '404 Errors',
-		'index-redirect-errors'  => 'Redirect Errors',
-		'index-crawled-not'      => 'Crawled (not indexed)',
-		'index-videos-indexed'   => 'Videos Indexed',
-		'index-videos-not'   	=> 'Videos (not indexed)',
-		],
-
-        'Google Business Profile' 	=> [
-            'google-reviews'       	=> 'Reviews',
-            'google-rating'        	=> 'Rating',
-            'gmb-impressions-90'      	=> 'Impressions (3mo)',
-            'gmb-calls-90'            	=> 'Call Clicks (3mo)',
-            'gmb-website-clicks-90'   	=> 'Website Clicks (3mo)',
-            'gmb-impressions-180'      	=> 'Impressions (6mo)',
-            'gmb-calls-180'            	=> 'Call Clicks (6mo)',
-            'gmb-website-clicks-180'   	=> 'Website Clicks (6mo)',
-            'gbp-profile-strength' => 'Profile Strength',
-        ],
-
-        'Google Ads' => [
-            'ads-spend-30'       => 'Ad Spend (1mo)',
-            'ads-clicks-30'      => 'Ad Clicks (1mo)',
-            'ads-conversions-30' => 'Conversions (1mo)',
-            'ads-cpa-30'         => 'Cost Per Conversion',
-        ],
-
-        'Content' => [
-            'content-freshness' => 'Days Since Last Update',
-            'blog'              => 'Blog Posts',
-            'jobsites'          => 'Job Sites',
-            'landing'           => 'Landing Pages',
-            'galleries'         => 'Galleries',
-            'testimonials'      => 'Testimonials',
-            'testimonials-pct-30'  => 'Testimonials Seen (1mo)',
-            'coupon-pct-30'        => 'Coupon Seen (1mo)',
-            'finance-pct-30'       => 'Financing Seen (1mo)',
-            'testimonials-pct-90'  => 'Testimonials Seen (3mo)',
-            'coupon-pct-90'        => 'Coupon Seen (3mo)',
-            'finance-pct-90'       => 'Financing Seen (3mo)',
-        ],
-
-        'Miscellaneous' => [
-            'wave'     		=> 'Wave Accessibility',
-            'html'			=> 'HTML Verified',
-            'schema' 		=> 'Schema Verified',
-            'browserstack'	=> 'Browser Stack',
-        ],
-
-
-    ];
-
-    // -------------------------------------------------------
-    // Render
-    // -------------------------------------------------------
-    $manualFields = [
-		'back-total-links',
-		'back-domains',
-		'links-links',
-		'links-local-links',
-		'links-industry-links',
-		'links-social-links',
-		'links-directory-links',
-		'links-press-links',
-		'index-pages-indexed',
-		'cite-total-citations',
-		'cite-key-citations',
-		'cite-citation-score',
-		'index-404-errors',
-		'index-redirect-errors',
-		'index-crawled-not',
-		'index-videos-indexed',
-		'index-videos-not',
-		'console-indexed',
-		'gmb-impressions-90',
-		'gmb-calls-90',
-		'gmb-website-clicks-90',
-		'gmb-impressions-180',
-		'gmb-calls-180',
-		'gmb-website-clicks-180',
-		'gbp-profile-strength',
-        	'ads-spend-30',
-		'ads-clicks-30',
-		'ads-conversions-30',
-		'ads-cpa-30',
-		'wave',
-		'html',
-		'schema',
-		'browserstack',
-	];
-
-	$lastDate       = !empty($siteAudit) ? max(array_keys($siteAudit)) : null;
-	$nextAudit      = get_option('bp_audit_next');
-
-	$auditGenerated = $nextAudit
-		? 'Next audit due: ' . date('M j, Y', $nextAudit)
-		: '';
-
-	$page  = '<div class="wrap">';   // <-- = not .=
-	$page .= '<h1 style="font-size: 28px; font-weight: bold;">Site Audit</h1>';
-    $page .= '<p style="font-size: 18px; margin-top:-5px; color:#888">' . esc_html($auditGenerated) . '</p>';
-
-    $page .= '[clear height="20px"]';
-    $page .= '<div class="scroll-stats">';
-    $page .= '[section][layout class="stats ' . $siteType . '"][col]';
-
-    if (!empty($siteAudit)) {
-
-        $siteAudit = array_reverse($siteAudit, true);
-        $dates     = array_keys($siteAudit);
-        $colCount  = count($dates) + 1;
-		$latestDate = $dates[0]; // most recent date
-
-        $page .= '<table class="bp-audit-table">';
-
-		// Header row — dates
-		$page .= '<thead><tr><th class="row-label">Metric</th>';
-		foreach ($dates as $date) {
-			$page .= '<th><span class="month">' . date('M j', strtotime($date)) . '</span><br>'
-				. date('Y', strtotime($date))
-				. '<br><a class="bp-delete-audit-date" data-date="' . esc_attr($date) . '" style="color:#cc0000;cursor:pointer;font-size:11px;">✕ delete</a></th>';
-		}
-		$page .= '</tr></thead><tbody>';
-
-		$alt        = 0;
-		$latestDate = $dates[0];
-
-		foreach ($sections as $sectionTitle => $fields) {
-
-			$alt = $alt === 0 ? 1 : 0;
-
-			$page .= '<tr><td colspan="' . $colCount . '" class="headline color-' . $alt . '">'
-				. $sectionTitle . '</td></tr>';
-
-			foreach ($fields as $key => $label) {
-
-				$page .= '<tr><td class="subheadline color-' . $alt . '">' . bp_format_metric_label($label) . '</td>';
-
-				foreach ($dates as $date) {
-					$val = $siteAudit[$date][$key] ?? '—';
-					if (in_array($key, $manualFields) && $date === $dates[0]) {
-						// Only make the most recent column editable
-						$page .= '<td class="stat color-' . $alt . ' ' . esc_attr($key) . ' editable" '
-								. 'data-key="' . esc_attr($key) . '" '
-								. 'data-date="' . esc_attr($date) . '">'
-								. esc_html($val) . '</td>';
-					} else {
-						$page .= '<td class="stat color-' . $alt . ' ' . esc_attr($key) . '">'
-								. esc_html($val) . '</td>';
-					}
-				}
-
-				$page .= '</tr>';
-			}
-		}
-
-		// Notes row
-		$notes = get_option('bp_audit_notes') ?: '';
-		if (is_array($notes)) $notes = implode("\n", array_column($notes, 'text'));
-		if (!$notes) $notes = '♦ ' . date('Y-m-d') . ' » Add your first note.';
-		$page .= '<tr><td class="subheadline color-0" style="vertical-align:top">Notes</td>';
-		$cols = count($dates) <= 10 ? count($dates) : 10;
-		$page .= '<td colspan="' . $cols . '" class="stat color-0">';
-		$page .= '<textarea id="bp-audit-notes" rows="6" '
-			  . 'style="width:100%;font-size:inherit;padding:4px;">'
-			  . esc_html($notes) . '</textarea>';
-		$page .= '</td></tr>';
-		$page .= '</tbody></table>';
-
-		$page .= '<style>span.disclaimer{font-size:85%; font-weight:normal; opacity:0.6; float:right;}</style>';
-
+	if ( function_exists( 'bp_audit_ai_render' ) ) {
+		bp_audit_ai_render();
 	} else {
-        $page .= '<p>No audit data yet. The table will populate automatically after the first chron run.</p>';
-    }
-
-    $page .= '[/col][/layout][/section]</div></div>';
-
-    $page = str_ireplace(['>false</td>', '>Array</td>', '>N/A</td>', '>n/a</td>', '>N/A%</td>', '> </td>', '></td>'], '>—</td>', $page);
-    $page = str_replace(')</span>—</td>', ')</span></td>', $page);
-
-    echo do_shortcode($page);
-
-	echo '<script>
-	const bpAudit = {
-		ajaxUrl: "' . admin_url('admin-ajax.php') . '",
-		nonce:   "' . wp_create_nonce('bp_audit_nonce') . '"
-	};
-	document.addEventListener("DOMContentLoaded", function() {
-
-		document.querySelectorAll(".bp-audit-table td.editable").forEach(td => {
-			td.style.cursor = "pointer";
-			td.title = "Click to edit";
-			td.addEventListener("click", function() {
-				if (this.querySelector("input")) return;
-				const current = this.textContent.trim() === "—" ? "" : this.textContent.trim();
-				const key     = this.dataset.key;
-				const date    = this.dataset.date;
-				this.innerHTML = "<input type=\'text\' value=\'" + current + "\' style=\'width:80px;font-size:inherit;padding:2px 4px;\' data-key=\'" + key + "\' data-date=\'" + date + "\'>";
-				const input = this.querySelector("input");
-				input.focus();
-				input.select();
-				input.addEventListener("blur", function() {
-					saveAuditField(this.dataset.key, this.dataset.date, this.value, td);
-				});
-				input.addEventListener("keydown", function(e) {
-					if (e.key === "Enter") this.blur();
-					if (e.key === "Escape") td.textContent = current || "—";
-				});
-			});
-		});
-
-		document.querySelectorAll(".bp-delete-audit-date").forEach(link => {
-			link.addEventListener("click", function() {
-				if (!confirm("Delete audit data for " + this.dataset.date + "?")) return;
-				const data = new FormData();
-				data.append("action", "bp_delete_audit_date");
-				data.append("nonce",  bpAudit.nonce);
-				data.append("date",   this.dataset.date);
-				fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
-					.then(r => r.json())
-					.then(r => { if (r.success) location.reload(); });
-			});
-		});
-
-		const notesArea = document.getElementById("bp-audit-notes");
-		if (notesArea) {
-		    notesArea.addEventListener("blur", function() {
-			   const data = new FormData();
-			   data.append("action", "bp_save_audit_note");
-			   data.append("nonce",  bpAudit.nonce);
-			   data.append("note",   this.value);
-			   fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
-				  .then(r => r.json())
-				  .then(r => {
-					 notesArea.style.borderColor = r.success ? "green" : "red";
-					 setTimeout(() => notesArea.style.borderColor = "", 2000);
-				  });
-		    });
-		}
-	});
-
-	function saveAuditField(key, date, value, td) {
-		const data = new FormData();
-		data.append("action", "bp_save_audit_field");
-		data.append("nonce",  bpAudit.nonce);
-		data.append("key",    key);
-		data.append("date",   date);
-		data.append("value",  value);
-		fetch(bpAudit.ajaxUrl, { method: "POST", body: data })
-			.then(r => r.json())
-			.then(r => { td.textContent = r.success ? (value || "—") : "⚠ Error"; })
-			.catch(() => { td.textContent = "⚠ Error"; });
+		echo '<p>The audit module (functions-site-audit-ai.php) is missing.</p>';
 	}
-	</script>';
-	exit();
+
+	echo '</div>';
 }
 
 

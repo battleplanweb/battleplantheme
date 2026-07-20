@@ -38,7 +38,7 @@ if ( $is_god && ! $impersonating ) {
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_expense_overview' ];
 	$role_label = 'Administrator';
 } else {
 	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
@@ -122,12 +122,12 @@ $nav = [];
 
 $nav[] = [ 'slug' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'show' => true ];
 
-// Direct messages between users. Available to every signed-in Site Pulse user.
-$nav[] = [ 'slug' => 'messages', 'label' => 'Chat', 'icon' => 'chat', 'show' => true ];
+// Direct messages between users. Gated by view_chat (granted to everyone by default) so access can be
+// restricted per-role like any other screen.
+$nav[] = [ 'slug' => 'messages', 'label' => 'Chat', 'icon' => 'chat', 'show' => in_array( 'view_chat', $caps, true ) ];
 
-// Action Items — its own top-level item (sits under Messages). Shown to everyone: items can now be
-// created from messages for any user, not just report-access roles.
-$nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'tasks', 'show' => true ];
+// Action Items — its own top-level item. Gated by view_action_items (granted to everyone by default).
+$nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'tasks', 'show' => in_array( 'view_action_items', $caps, true ) ];
 
 // Reports are now data-driven: one "{Report} Reports" viewing tab per report this user can view-all, and
 // "My Reports" when they can submit any. Gated on the per-report caps (legacy caps honored too).
@@ -143,6 +143,10 @@ foreach ( $sp_report_templates as $sp_t ) {
 	if ( ! $sp_can_submit_any && in_array( site_pulse_report_submit_cap( (string) $sp_t['slug'] ), $caps, true ) ) $sp_can_submit_any = true;
 }
 $cap_reports_access = $sp_can_submit_any || ! empty( $sp_report_children );
+// Re-derive the "can view someone else's reports" gate from the dynamic per-report view caps (the old
+// static view_gm_reports / view_supervisor_reports caps no longer exist), so god + everyone gets the
+// panels their nav tabs point at. Panel gates below use $sp_can_submit_any / $cap_view_other_reports.
+$cap_view_other_reports = ! empty( $sp_report_children );
 
 $sp_report_nav_children = array_merge(
 	[ [ 'slug' => 'reports-my', 'label' => 'My Reports', 'show' => $sp_can_submit_any ] ],
@@ -158,19 +162,30 @@ $nav[] = [
 	'children' => $sp_report_nav_children,
 ];
 
+// Each expense screen has its OWN capability now, so they can be granted/restricted independently.
+// manage_mileage (an admin cap) still reveals everything. The parent shows if ANY expense cap is present.
+$cap_mileage_manage = in_array( 'manage_mileage', $caps, true );
+$cap_x_mileage  = in_array( 'submit_mileage', $caps, true ) || $cap_mileage_manage;
+$cap_x_tolls    = in_array( 'view_tolls', $caps, true ) || $cap_mileage_manage;
+$cap_x_vehicle  = in_array( 'view_vehicle_expenses', $caps, true ) || $cap_mileage_manage;
+$cap_x_meals    = in_array( 'view_business_meals', $caps, true ) || $cap_mileage_manage;
+$cap_x_shop     = in_array( 'view_competitive_shopping', $caps, true ) || $cap_mileage_manage;
+$cap_x_other    = in_array( 'view_other_expenses', $caps, true ) || $cap_mileage_manage;
+$cap_x_overview = in_array( 'view_expense_overview', $caps, true ) || $cap_mileage_manage;
+$cap_expense_any = $cap_x_mileage || $cap_x_tolls || $cap_x_vehicle || $cap_x_meals || $cap_x_shop || $cap_x_other || $cap_x_overview;
 $nav[] = [
 	'slug'  => 'mileage',
 	'label' => 'Expense Report',
 	'icon'  => 'dollar-sign',
-	'show'  => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ),
+	'show'  => $cap_expense_any,
 	'children' => [
-		[ 'slug' => 'mileage',           'label' => 'Mileage',          'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'mileage-tolls',     'label' => 'Tolls',            'show' => in_array( 'submit_mileage', $caps ) ],
-		[ 'slug' => 'vehicle-expenses',  'label' => 'Vehicle Expenses', 'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'business-meals',    'label' => 'Business Meals',   'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'competitive-shopping', 'label' => 'Competitive Shopping', 'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'other-expenses',    'label' => 'Other Expenses',   'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'expense-report',    'label' => 'Overview',         'show' => in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ],
+		[ 'slug' => 'mileage',           'label' => 'Mileage',          'show' => $cap_x_mileage ],
+		[ 'slug' => 'mileage-tolls',     'label' => 'Tolls',            'show' => $cap_x_tolls ],
+		[ 'slug' => 'vehicle-expenses',  'label' => 'Vehicle Expenses', 'show' => $cap_x_vehicle ],
+		[ 'slug' => 'business-meals',    'label' => 'Business Meals',   'show' => $cap_x_meals ],
+		[ 'slug' => 'competitive-shopping', 'label' => 'Competitive Shopping', 'show' => $cap_x_shop ],
+		[ 'slug' => 'other-expenses',    'label' => 'Other Expenses',   'show' => $cap_x_other ],
+		[ 'slug' => 'expense-report',    'label' => 'Overview',         'show' => $cap_x_overview ],
 	],
 ];
 
@@ -262,7 +277,7 @@ $nav[] = [
 	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ),
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
-		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
 		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
 		[ 'slug' => 'review-settings', 'label' => 'Reviews',        'icon' => 'star',    'show' => in_array( 'manage_reviews', $caps ) && ! $is_review_hub ],
@@ -536,7 +551,7 @@ $sp_widgets['actions'] = [
 if ( $cap_reports_access ) {
 	$sp_widgets['reports'] = [
 		'title'          => 'My Recent Reports',
-		'default_hidden' => ! in_array( 'submit_reports', $caps, true ),
+		'default_hidden' => ! $sp_can_submit_any,
 		'html'           => $sp_widget_head( 'My Recent Reports', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="reports-my">View All &rarr;</button>', 'reports', 'file' )
 			. '<div class="sp-card-body sp-widget-body" id="sp-widget-reports-body"><div class="sp-loading"></div></div>',
 	];
@@ -625,24 +640,24 @@ $printPage .= '</div>';
 $printPage .= '</section>';
 
 // Messages Panel — direct messages between users. Two-pane: conversation list + active thread.
-$printPage .= '<section class="sp-panel" id="sp-panel-messages">';
-$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Chat</h2>';
-$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-btn">+ New Message</button>';
-$printPage .=   '</div>';
-$printPage .=   '<div class="sp-messenger" id="sp-messenger">';
-$printPage .=     '<div class="sp-card sp-msg-list" id="sp-msg-list"></div>';
-$printPage .=     '<div class="sp-card sp-msg-thread" id="sp-msg-thread"></div>';
-$printPage .=   '</div>';
-$printPage .= '</section>';
+if ( in_array( 'view_chat', $caps, true ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-messages">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Chat</h2>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-btn">+ New Message</button>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-messenger" id="sp-messenger">';
+	$printPage .=     '<div class="sp-card sp-msg-list" id="sp-msg-list"></div>';
+	$printPage .=     '<div class="sp-card sp-msg-thread" id="sp-msg-thread"></div>';
+	$printPage .=   '</div>';
+	$printPage .= '</section>';
+}
 
 // My Reports Panel
-if ( in_array( 'submit_reports', $caps ) ) {
+if ( $sp_can_submit_any ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-my">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Stores', 'My Reports' );
-	if ( in_array( 'submit_reports', $caps ) ) {
-		$printPage .= '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-new-report-btn">+ New Report</button>';
-	}
+	$printPage .= '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-new-report-btn">+ New Report</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-report-filters">';
 	$printPage .=     '<select id="sp-filter-template" class="sp-select"><option value="">All Report Types</option></select>';
@@ -669,9 +684,8 @@ if ( $cap_view_other_reports ) {
 	$printPage .= '</section>';
 }
 
-// Action Items Panel — top-level, visible to every signed-in user (the data endpoint always scopes
-// to at least the viewer's own items).
-{
+// Action Items Panel — gated by view_action_items (granted to everyone by default).
+if ( in_array( 'view_action_items', $caps, true ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-action-items">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Action Items</h2>';
 	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-action-item-btn">+ Add Action Item</button>';
@@ -839,7 +853,7 @@ if ( $cap_import_cards ) {
 
 // Expense Report cover page — composes Sections A–F into one report with the Summary of
 // Expenses (totals by GL account) and Total Due to Employee. Data loads lazily on activation.
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+if ( $cap_x_overview ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-expense-report">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Overview' ) . '</div>';
 	$printPage .=   '<div class="sp-meta-bar"><div class="sp-rep-intro">Everything from every section, totalled for the period — the same layout as your printed expense report. Use the period filter to pick a pay period, then export to PDF.</div></div>';
@@ -849,7 +863,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 }
 
 // Mileage Panel
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+if ( $cap_x_mileage ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Expense Report','Mileage' );
@@ -885,7 +899,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 
 // Reconcile Tolls Panel — upload a toll-authority CSV, then AI matches each charge
 // to the legs of the days you logged trips. Review the matches, then apply.
-if ( in_array( 'submit_mileage', $caps ) ) {
+if ( $cap_x_tolls ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-tolls">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Tolls' ) . '</div>';
 	$printPage .=   '<div class="sp-meta-bar"><div class="sp-toll-intro">Upload the CSV export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
@@ -900,8 +914,8 @@ if ( in_array( 'submit_mileage', $caps ) ) {
 	$printPage .= '</section>';
 }
 
-// Mileage Map Panel
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+// Mileage Map Panel (reached from the Mileage screen's Map button — shares the mileage capability).
+if ( $cap_x_mileage ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-map">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Mileage Map' ) . '</div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-mileage-map-toolbar">';
@@ -916,7 +930,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 }
 
 // Vehicle Expenses Panel (Section B of the expense report). Data loads lazily on activation.
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+if ( $cap_x_vehicle ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-vehicle-expenses">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Expense Report','Vehicle Expenses' );
@@ -931,7 +945,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 }
 
 // Business Meals Panel (Section C of the expense report). Data loads lazily on activation.
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+if ( $cap_x_meals ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-business-meals">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Expense Report','Business Meals' );
@@ -946,7 +960,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 }
 
 // Competitive Shopping Panel (Section D of the expense report). Data loads lazily on activation.
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+if ( $cap_x_shop ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-competitive-shopping">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Expense Report','Competitive Shopping' );
@@ -961,7 +975,7 @@ if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) 
 }
 
 // Other Expenses Panel (Section E of the expense report). Data loads lazily on activation.
-if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
+if ( $cap_x_other ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-other-expenses">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
 	$printPage .=     $sp_crumb( 'Expense Report','Other Expenses' );
@@ -1344,7 +1358,7 @@ if ( in_array( 'manage_users', $caps ) ) {
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-users-content"></div>';
 	$printPage .= '</section>';
 }
-if ( in_array( 'manage_settings', $caps ) ) {
+if ( in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-tiers">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Roles' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-tiers-content"></div>';

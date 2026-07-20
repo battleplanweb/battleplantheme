@@ -134,6 +134,10 @@
 	--button-border-hover:                                     1px solid var(--sp-accent-darkest);
 	--button-transform-hover:                                  none;
 	--button-box-shadow-hover:                                 1px 1px 3px rgba(0, 0, 0, 0.20);
+
+	--card-border-radius:                                      24px;
+	--card-padding:                                            2em;
+
 }
 
 /*==============================================================================
@@ -1135,18 +1139,6 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 /*==============================================================================
   Cards, tiles & panels
 ==============================================================================*/
-
-/* Ask-AI answer block. */
-/* Shared small-card recipe: white surface, soft border, subtle shadow, card padding. Add `sp-card-sm`
-   to an element to use it (report answers, survey cards, import cards). */
-.sp-card-sm {
-	background:                                                var(--sp-bg-white);
-	border:                                                    1px solid var(--sp-border);
-	border-radius:                                             var(--sp-radius);
-	padding:                                                   16px 20px;
-	box-shadow:                                                var(--sp-shadow-sm);
-}
-
 .sp-modal.sp-dir-detail {
 	max-width:                                                 500px;
 }
@@ -1177,19 +1169,37 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 
 .sp-card {
 	background:                                                var(--white);
-	border-radius:                                             24px;
-	padding:                                                   0;
+	border-radius:                                             var(--card-border-radius);
+	padding:                                                   var(--card-padding);
 	box-shadow:                                                1px 1px 3px var(--sp-button-shadow);
 	border:                                                    1px solid var(--sp-secondary-color);
 	overflow:                                                  hidden;
 }
 
+.sp-card-sm {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   16px 20px;
+	box-shadow:                                                var(--sp-shadow-sm);
+}
+
 .sp-card-header,
-.sp-card.sp-table-card thead {
+.sp-card.sp-table-card thead,
+.sp-card-footer,
+.sp-review-reply {
 	background:                                                var(--sp-secondary-lightest);
-	gap:                                                       10px;
-	padding:                                                   10px 20px;
+	gap:                                                       calc(var(--card-padding) * 0.5);
+	padding:                                                   calc(var(--card-padding) * 0.5) var(--card-padding);
 	border-bottom:                                             1px solid var(--sp-secondary-color);
+	width:                                                     calc(100% + (var(--card-padding) * 2));
+	margin:                                                    calc(-1 * var(--card-padding)) 0 var(--card-padding) calc(-1 * var(--card-padding));
+}
+
+.sp-card-footer,
+.sp-review-reply {
+	margin:                                                    var(--card-padding) 0 calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding));
+	border-bottom:                                             none;
 }
 
 .sp-card-header h3,
@@ -1213,11 +1223,6 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	border-bottom:                                             1px solid var(--sp-secondary-light);
 }
 
-.sp-card.sp-table-card thead tr th:first-of-type,
-.sp-card.sp-table-card tbody tr td:first-of-type {
-	padding-left:                                              32px;
-}
-
 .sp-card.sp-table-card tbody tr:first-of-type td {
 	padding-top:                                               8px;
 }
@@ -1235,16 +1240,15 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	line-height:                                               1;
 }
 
-.sp-card-body {
-	padding:                                                   12px 10px;
-}
 
 .sp-card-item {
-	padding:                                                   10px;
-	margin:                                                    5px 0;
+	/* mileage and other expenses do not need padding
+	padding:                                                   calc(var(--card-padding) * 0.5);
+	*/
+	margin:                                                    calc(var(--card-padding) * 0.5) 0;
 	border:                                                    1px solid transparent;
-	box-shadow:                                                var(--sp-shadow-sm);
 }
+
 
 .sp-card-body .sp-button {
 	cursor:                                                    pointer;
@@ -1253,6 +1257,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 }
 
 .sp-card-body .sp-button:hover,
+.sp-card-body .sp-button:focus,
 .sp-card-body .sp-button.active,
 .sp-card-body .sp-button.tab-focus {
 	border:                                                    1px solid var(--sp-secondary-color);
@@ -1286,7 +1291,8 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-tile {
 	background:                                                var(--sp-secondary-lightest);
 	border-radius:                                             var(--sp-radius-sm);
-	padding:                                                   10px 20px;
+	padding:                                                   calc(var(--card-padding) * 0.5);
+	margin:                                                    var(--card-padding) 0;
 	box-shadow:                                                var(--sp-shadow-sm);
 	border:                                                    1px solid var(--sp-secondary-dark);
 	text-align:                                                left;
@@ -1360,15 +1366,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	color:                                                     var(--sp-text);
 }
 
-.sp-modal .sp-card-header {
-	background:                                                transparent;
-	border-bottom:                                             none;
-	padding:                                                   0;
-	margin-bottom:                                             16px;
-}
-
 .sp-modal h3 {
-	margin:                                                    0 0 8px;
 	font-size:                                                 20px;
 	font-weight:                                               bold;
 	color:                                                     var(--sp-text);
@@ -1393,16 +1391,6 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	margin-top:                                                20px;
 	padding-top:                                               16px;
 	border-top:                                                1px solid var(--sp-border);
-}
-
-.sp-card.sp-report-form-wrap .sp-card-body,
-.sp-card.sp-report-detail-wrap .sp-card-body {
-	padding:                                                   32px;
-}
-
-.sp-card.sp-report-form-wrap .sp-card-item {
-	border:                                                    1px solid transparent;
-	padding:                                                   0;
 }
 
 .sp-tile.sp-stat-tile {
@@ -1446,7 +1434,8 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 
 .sp-field-list {
 	display:                                                   grid;
-	gap:                                                       4px;
+	gap:                                                       calc(var(--card-padding) * 0.5);
+	margin:                                                    calc(var(--card-padding) * 0.5) 0;
 }
 
 .sp-field-item {
@@ -1455,9 +1444,11 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	align-items:                                               center;
 	gap:                                                       8px;
 	padding:                                                   12px 14px;
-	background:                                                var(--sp-bg);
+	background:                                                var(--sp-secondary-lightest);
 	border-radius:                                             var(--sp-radius-sm);
 	font-size:                                                 var(--font-size-text);
+	border:                                                    1px solid var(--sp-secondary-color);
+	border-left:                                               4px solid var(--sp-secondary-color);
 }
 
 .sp-field-item.sp-field-archived {
@@ -1535,10 +1526,6 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	border-radius:                                             var(--sp-radius-sm);
 	cursor:                                                    pointer;
 	position:                                                  relative;
-}
-
-.sp-form-group {
-	margin-bottom:                                             20px;
 }
 
 .sp-input,
@@ -1735,6 +1722,10 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	grid-template-columns:                                     repeat(auto-fill, minmax(270px, 1fr));
 }
 
+.sp-reports-list .sp-tile {
+	margin:                                                    0;
+}
+
 /* "View More" pager — spans every column of the 4-up reports grid and centers its button. */
 .sp-reports-more {
 	grid-column:                                               1 / -1;
@@ -1874,6 +1865,10 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	display:                                                   grid;
 	grid-template-columns:                                     repeat(auto-fit, minmax(180px, 1fr));
 	gap:                                                       16px;
+}
+
+.sp-form-group {
+	margin:                                                    var(--card-padding);
 }
 
 .sp-report-form-wrap label,
@@ -2078,6 +2073,9 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 .sp-mileage-stops {
 	display:                                                   grid;
 	gap:                                                       14px;
+	border:                                                    1px solid var(--sp-secondary-light);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   var(--card-padding);
 }
 
 .sp-mileage-stop {
@@ -2440,7 +2438,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 	grid-template-areas:                                       "avatar main right";
 	align-items:                                               start;
 	gap:                                                       14px;
-	padding:                                                   12px 20px;
 }
 
 .sp-review-headmain {
@@ -2487,6 +2484,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-review-headright .sp-review-tags {
 	width:                                                     100%;
 	justify-content:                                           flex-end;
+	margin-top:                                                0;
 }
 
 .sp-review-tag-pos {
@@ -2532,6 +2530,117 @@ input[type="file"].sp-input::file-selector-button:hover {
 	white-space:                                               pre-wrap;
 }
 
+/* "EDIT:" flag prefixed to a review the reviewer changed after posting. */
+.sp-review-edited {
+	font-weight:                                               700;
+	color:                                                     var(--sp-accent-dark);
+	letter-spacing:                                            0.02em;
+}
+
+/* Access / System Roles page (Settings → Roles) — cards with a per-module capability grid. */
+.sp-arole-list { display: flex; flex-direction: column; gap: 16px; }
+.sp-arole-card {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   16px 20px;
+}
+.sp-arole-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sp-arole-head .sp-arole-name { flex: 1 1 200px; min-width: 160px; font-weight: 600; }
+.sp-arole-head .sp-arole-type,
+.sp-arole-head .sp-arole-module { flex: 0 0 auto; width: auto; }
+.sp-arole-head .sp-tier-count { flex: 0 0 auto; color: var(--sp-text-secondary); font-size: var(--font-size-sm); }
+.sp-arole-note { margin: 0; }
+.sp-arole-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.sp-arole-modgroup {
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   15px 14px 30px;
+}
+.sp-arole-modhead {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       8px;
+	margin-bottom:                                             10px;
+	padding-bottom:                                            8px;
+	border-bottom:                                             1px solid var(--sp-border);
+}
+.sp-arole-modtitle {
+	font-weight:                                               700;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text);
+}
+.sp-arole-modquick { display: flex; gap: 4px; }
+.sp-arole-modquick .sp-btn { padding: 2px 10px; font-size: var(--font-size-sm); }
+.sp-arole-modcaps { display: flex; flex-direction: column; gap: 10px; }
+.sp-tier-cap.sp-cap-admin { color: var(--sp-accent-dark); }
+
+/* Role card head (name + order + delete) reuses the access-role head layout. */
+.sp-arole-head .sp-tier-name { flex: 1 1 200px; min-width: 160px; }
+.sp-arole-head .sp-tier-badge { flex: 0 0 auto; }
+.sp-arole-head .sp-tier-count { flex: 0 0 auto; }
+
+/* Per-page Grant/Restrict bar (God + System Admin only), pinned to the top of each gated page. */
+.sp-page-access-bar {
+	background:                                                var(--sp-accent-lightest);
+	border:                                                    1px solid var(--sp-accent-light);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   8px 14px;
+	margin-bottom:                                             16px;
+}
+.sp-pa-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sp-pa-inner + .sp-pa-inner { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--sp-accent-light); }
+.sp-pa-label {
+	font-weight:                                               700;
+	font-size:                                                 var(--font-size-sm);
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+	color:                                                     var(--sp-accent-dark);
+}
+.sp-pa-cap { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--sp-text-secondary); }
+.sp-pa-picker { position: relative; }
+.sp-pa-toggle {
+	cursor:                                                    pointer;
+	text-align:                                                left;
+	min-width:                                                 120px;
+	padding:                                                   5px 10px !important;
+}
+.sp-pa-panel {
+	position:                                                  absolute;
+	z-index:                                                   40;
+	top:                                                       calc(100% + 4px);
+	left:                                                      0;
+	width:                                                     260px;
+	max-width:                                                 80vw;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	box-shadow:                                                0 8px 24px rgba(0,0,0,0.14);
+	padding:                                                   8px;
+}
+.sp-pa-search { margin-bottom: 6px; width: 100%; }
+.sp-pa-list { max-height: 260px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 2px; }
+.sp-pa-row {
+	display:                                                   flex;
+	align-items:                                               start;
+	gap:                                                       8px;
+	padding:                                                   6px 8px 6px 32px;
+	border-radius:                                             var(--sp-radius-xs);
+	cursor:                                                    pointer;
+}
+.sp-pa-row:hover { background: var(--sp-accent-lightest); }
+.sp-pa-row input { flex: 0 0 auto; margin: 0; }
+.sp-pa-name {
+	font-size:                                                 var(--font-size-sm);
+	white-space:                                               nowrap;
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+	color:                                                     var(--sp-text);
+}
+
 .sp-review-stars {
 	color:                                                     var(--sp-primary-color);
 	font-size:                                                 20px;
@@ -2562,11 +2671,9 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-review-reply {
-	margin:                                                    12px 0 0;
-	padding:                                                   15px;
 	background:                                                var(--sp-secondary-lightest);
 	border-top:                                                1px solid var(--sp-secondary-light);
-	border-radius:                                             none;
+	border-radius:                                             0;
 }
 
 .sp-review-reply-label {
@@ -2663,6 +2770,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	flex-direction:                                            column;
 	align-items:                                               flex-end;
 	gap:                                                       8px;
+	margin-top:                                                0;
 }
 
 .sp-review-rating {
@@ -3584,6 +3692,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius);
 	background:                                                var(--sp-bg-white);
+	padding:                                                   0;
 }
 
 .sp-msg-empty {
@@ -3655,11 +3764,13 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-msg-bubbles {
 	flex:                                                      1 1 auto;
 	overflow-y:                                                auto;
-	padding:                                                   16px;
 	display:                                                   flex;
 	flex-direction:                                            column;
 	gap:                                                       8px;
+	width:                                                     calc(100% + (2 * var(--card-padding)));
 	margin-top:                                                1px;
+	margin-left:                                               calc(-1 * var(--card-padding));
+	padding:                                                   var(--card-padding);
 }
 
 .sp-msg-bubble { max-width: 72%; position: relative; }
@@ -3761,6 +3872,12 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-attach-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
+/* Rotate-left / rotate-right controls in the image viewer, grouped just left of Download. */
+.sp-attach-rotate,
+.sp-attach-rotate:hover {
+	font-size:                                                 1.4em; line-height: 1;
+}
+
 .sp-msg-reply-sender { font-weight: 700; opacity: 0.95; }
 
 .sp-msg-reply-snippet { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.8; }
@@ -3796,6 +3913,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	background:                                                var(--sp-secondary-lightest);
 	border-top:                                                1px solid var(--sp-secondary-color);
 	padding:                                                   12px;
+	margin-top:                                                0;
 }
 
 .sp-msg-group-tag,
@@ -3819,6 +3937,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	align-items:                                               center;
 	justify-content:                                           space-between;
 	gap:                                                       14px;
+	margin-bottom:                                             0;
 }
 
 .sp-msg-avatar {
@@ -4127,14 +4246,6 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	text-align:                                                center;
 	gap:                                                       12px;
 	padding:                                                   22px 16px 18px;
-}
-
-/* Photo + body are self-styled; neutralize the card-body tagger's auto card-item boxing. */
-.sp-dir-card .sp-card-body > .sp-card-item {
-	margin:                                                    0;
-	padding:                                                   0;
-	border:                                                    0;
-	box-shadow:                                                none;
 }
 
 .sp-dir-card.is-inactive {
@@ -5445,6 +5556,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	display:                                                   grid;
 	grid-template-columns:                                     auto 1fr auto;
 	align-items:                                               center;
+	margin-bottom:                                             0;
 }
 
 .sp-widget-header h3 {
@@ -5463,10 +5575,13 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-widget-body {
 	max-height:                                                320px;
 	overflow-y:                                                auto;
+	width:                                                     calc(100% + (2 * var(--card-padding)));
+	margin-left:                                               calc(-1 * var(--card-padding));
 }
 
 .sp-dashboard-widgets .sp-card-item:not(.sp-card-grid):not(.sp-widget-empty):not(.sp-widgetdir-filters):not(.sp-widgetdir-searchrow) {
 	border-bottom:                                             1px solid var(--sp-secondary-light);
+	margin:                                                    calc(var(--card-padding) * 0.5);
 }
 
 /*==============================================================================
@@ -5652,6 +5767,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 /* The table can be wider than a phone — let the card scroll horizontally. */
 .sp-forms-panel .sp-table-card {
 	overflow-x:                                                auto;
+	padding:                                                   0;
 }
 
 .sp-forms-table {
@@ -6057,10 +6173,9 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 
 /* Tiers run ACROSS as side-by-side columns; each column's caps stack DOWN. */
 .sp-tier-list {
-	display:                                                   grid;
-	grid-template-columns:                                     repeat(auto-fill, minmax(300px, 1fr));
+	display:                                                   flex;
+	flex-direction:                                            column;
 	gap:                                                       16px;
-	align-items:                                               start;
 }
 
 .sp-tier-card {
@@ -7234,3 +7349,145 @@ body.sp-printing-mileage .sp-notification-panel {
 		animation:                                                none;
 	}
 }
+
+/* "Which report?" chooser — shown when a user can submit more than one report type. */
+.sp-report-type-choices {
+	display:                                                   grid;
+	gap:                                                       12px;
+	padding:                                                   4px 0 8px;
+}
+
+.sp-report-type-choice {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               flex-start;
+	gap:                                                       4px;
+	width:                                                     100%;
+	text-align:                                                left;
+	padding:                                                   16px 18px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	cursor:                                                    pointer;
+	transition:                                                border-color 0.15s, box-shadow 0.15s, transform 0.05s;
+}
+
+.sp-report-type-choice:hover {
+	border-color:                                              var(--sp-accent-color);
+	box-shadow:                                                0 4px 14px rgba(0,0,0,0.08);
+}
+
+.sp-report-type-choice:active { transform: translateY(1px); }
+
+.sp-report-type-choice-name {
+	font-size:                                                 var(--font-size-lg);
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+}
+
+.sp-report-type-choice-desc {
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+}
+
+/* Auto-calculated "Math" report field — read-only, visibly derived. */
+.sp-math-field {
+	font-weight:                                               600;
+	background:                                                rgba(0,0,0,0.035);
+	cursor:                                                    default;
+}
+
+/* Action-item photo attachments — thumbnail strip at the bottom of the card, click to enlarge. */
+.sp-action-item-attachments {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	margin-top:                                                12px;
+}
+
+.sp-action-attach { position: relative; }
+
+.sp-action-attach-thumb {
+	display:                                                   block;
+	width:                                                     64px;
+	height:                                                    64px;
+	padding:                                                   0;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	overflow:                                                  hidden;
+	cursor:                                                    pointer;
+	background:                                                var(--sp-bg-white);
+}
+
+.sp-action-attach-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.sp-action-attach-thumb:hover { border-color: var(--sp-accent-color); }
+
+.sp-action-attach-file { display: grid; place-items: center; color: var(--sp-text-secondary); }
+
+.sp-action-attach-remove {
+	position:                                                  absolute;
+	top:                                                       -6px;
+	right:                                                     -6px;
+	width:                                                     20px;
+	height:                                                    20px;
+	padding:                                                   0;
+	border:                                                    none;
+	border-radius:                                             var(--sp-radius-circle);
+	background:                                                var(--sp-primary-color);
+	color:                                                     #fff;
+	font-size:                                                 14px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	display:                                                   grid;
+	place-items:                                               center;
+	box-shadow:                                                0 1px 3px rgba(0,0,0,0.3);
+}
+
+.sp-action-attach-btn.sp-uploading { opacity: 0.6; pointer-events: none; }
+
+/* Photo section inside the Add/Edit Action Item modal — thumbnail strip above a left-aligned button. */
+.sp-aai-photos-strip { display: flex; flex-wrap: wrap; gap: 10px; }
+.sp-aai-photos-strip:not(:empty) { margin-bottom: 10px; }
+
+/* Row action icon buttons (e.g. Users table edit/delete) — always side-by-side, never stacked. */
+.sp-row-actions { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-end; align-items: center; }
+
+/* Multi-option confirm dialog (spChoiceDialog) — e.g. delete-for-everyone vs just-remove-me. */
+.sp-choice-dialog { max-width: 460px; }
+.sp-choice-msg { margin: 4px 0 16px; color: var(--sp-text); }
+.sp-choice-actions { display: flex; flex-direction: column; gap: 10px; }
+.sp-choice-actions .sp-btn { width: 100%; }
+
+/* In-thread chat search (find) bar — sits between the header and the message scroller. */
+.sp-msg-search-bar {
+	display:                                                   flex;
+	flex:                                                      0 0 auto;
+	align-items:                                               center;
+	gap:                                                       8px;
+	padding:                                                   8px 12px;
+	border-bottom:                                             1px solid var(--sp-border);
+	background:                                                var(--sp-bg-white);
+}
+.sp-msg-search-bar[hidden] { display: none; }  /* the class's display:flex would otherwise beat [hidden] */
+.sp-msg-search-bar .sp-msg-search-input { flex: 1 1 auto; min-width: 0; }
+
+/* Search icon buttons (magnifier + prev/next/close) share the trash can's outline-circle look. */
+.sp-msg-search-btn,
+.sp-msg-search-bar .sp-icon-btn {
+	--button-color:                                            var(--sp-accent-color);
+	--button-background:                                       var(--white);
+	--button-border:                                           1px solid var(--sp-accent-color);
+	--button-color-hover:                                      var(--sp-accent-dark);
+	--button-background-hover:                                 var(--sp-accent-lightest);
+	--button-border-hover:                                     1px solid var(--sp-accent-dark);
+}
+.sp-msg-search-count {
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+	white-space:                                               nowrap;
+	min-width:                                                 42px;
+	text-align:                                                right;
+}
+mark.sp-msg-search-hit { background: #ffe066; color: #1a1a1a; border-radius: 2px; padding: 0 1px; }
+mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow: 0 0 0 2px rgba(255,159,28,0.45); }

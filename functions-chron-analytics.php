@@ -25,6 +25,20 @@ function bp_run_chron_analytics(bool $force = false): void {
         error_log('Clarity collect failed: ' . $e->getMessage());
     }
 
+    // Core Web Vitals lab (PageSpeed) — its own 3-day self-gate; independent of GA4.
+    try {
+        bp_cwv_collect_lab();
+    } catch (\Throwable $e) {
+        error_log('CWV lab collect failed: ' . $e->getMessage());
+    }
+
+    // Audit-derived metrics (Search Console, backlinks, content counts, GBP reviews) — 3-day self-gate.
+    try {
+        bp_collect_audit_metrics();
+    } catch (\Throwable $e) {
+        error_log('Audit metrics collect failed: ' . $e->getMessage());
+    }
+
     $ga4 = bp_ga4_client();
     if (!$ga4) return;
 
@@ -1131,6 +1145,268 @@ function bp_ga4_collect_achievements_history(BetaAnalyticsDataClient $client, $p
     if ($eventsD) update_option('bp_ga4_events_history_daily',  $eventsD, false);
     if ($eventsW) update_option('bp_ga4_events_history_weekly', $eventsW, false);
     return true;
+}
+
+/**
+ * Lighthouse (lab) collector. Every ~3 days per site (its own self-gate, so a manual "refresh stats"
+ * doesn't fire a slow ~30s call), pull PageSpeed Insights v5 for the home URL on mobile + desktop across
+ * ALL four categories, and store the trend of every score/metric the Analytics "Lighthouse" chart plots:
+ * the four category scores (Performance, Accessibility, Best Practices, SEO) plus the five performance
+ * metrics (FCP, Speed Index, LCP, TBT, CLS). One PSI call per strategy runs Lighthouse once and scores
+ * all categories. Stored incrementally per strategy so a mid-run PHP timeout still persists what we got.
+ * Store: bp_cwv_lab_history[YYYYMMDD][metric] = ['m'=>mobile, 'd'=>desktop]. metric ∈ perf/acc/best/seo
+ * (0–100), fcp/si/lcp (seconds), tbt (ms), cls (unitless).
+ */
+function bp_cwv_collect_lab(): bool {
+    $force = (bool) get_option('bp_force_cwv_lab', false);
+    if ($force) delete_option('bp_force_cwv_lab');
+    if (!$force) {
+        $next = (int) get_option('bp_cwv_lab_next', 0);
+        if ($next > 0 && time() < $next) return false;
+    }
+    update_option('bp_cwv_lab_time', time(), false);
+    update_option('bp_cwv_lab_next', time() + 3 * DAY_IN_SECONDS + rand(0, 6 * HOUR_IN_SECONDS), false);
+
+    if (!defined('_PLACES_API') || !_PLACES_API) return false;
+    $url   = home_url('/');
+    $today = date('Ymd');
+    $any   = false;
+    foreach (['mobile' => 'm', 'desktop' => 'd'] as $strategy => $short) {
+        $api  = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' . urlencode($url)
+              . '&strategy=' . $strategy
+              . '&category=performance&category=accessibility&category=best-practices&category=seo'
+              . '&key=' . _PLACES_API;
+        $resp = wp_remote_get($api, ['timeout' => 60]);
+        if (is_wp_error($resp)) continue;
+        $data   = json_decode(wp_remote_retrieve_body($resp), true);
+        $lh     = $data['lighthouseResult'] ?? null;
+        if (!is_array($lh)) continue;
+        $audits = $lh['audits']     ?? [];
+        $cats   = $lh['categories'] ?? [];
+        $num = function ($k) use ($audits) { return isset($audits[$k]['numericValue']) ? (float) $audits[$k]['numericValue'] : null; };
+        $scr = function ($k) use ($cats) { return isset($cats[$k]['score']) && $cats[$k]['score'] !== null ? (int) round(((float) $cats[$k]['score']) * 100) : null; };
+
+        $fcp = $num('first-contentful-paint');    // ms
+        $si  = $num('speed-index');               // ms
+        $lcp = $num('largest-contentful-paint');  // ms
+        $tbt = $num('total-blocking-time');       // ms
+        $cls = $num('cumulative-layout-shift');   // unitless
+        $vals = [
+            'perf' => $scr('performance'),
+            'acc'  => $scr('accessibility'),
+            'best' => $scr('best-practices'),
+            'seo'  => $scr('seo'),
+            'fcp'  => $fcp !== null ? round($fcp / 1000, 2) : null,   // ms → s
+            'si'   => $si  !== null ? round($si  / 1000, 2) : null,   // ms → s
+            'lcp'  => $lcp !== null ? round($lcp / 1000, 2) : null,   // ms → s
+            'tbt'  => $tbt !== null ? (int) round($tbt) : null,       // ms
+            'cls'  => $cls !== null ? round($cls, 3) : null,          // unitless
+        ];
+
+        // Store incrementally after each strategy, so a mid-run PHP timeout still persists what we got.
+        $store = get_option('bp_cwv_lab_history');
+        if (!is_array($store)) $store = [];
+        if (!isset($store[$today]) || !is_array($store[$today])) $store[$today] = [];
+        foreach ($vals as $mk => $v) {
+            if ($v === null) continue;
+            $store[$today][$mk][$short] = $v;
+            $any = true;
+        }
+        krsort($store);
+        $cut = date('Ymd', strtotime('-520 days'));
+        foreach (array_keys($store) as $k) if ((string) $k < $cut) unset($store[$k]);
+        update_option('bp_cwv_lab_history', $store, false);
+    }
+    return $any;
+}
+
+/**
+ * Audit-derived metrics on a 3-day cadence (Search Console, backlinks, content counts, GBP reviews) →
+ * their own time-series options, graphed on the Analytics page. Mirrors bp_cwv_collect_lab: one shared
+ * self-gate, each sub-collector in its own try/catch so one failure can't sink the rest. The heavier
+ * Site Audit still runs its full ~90-day pass separately; this just keeps the graph-worthy numbers fresh.
+ */
+function bp_collect_audit_metrics(): void {
+    $force = (bool) get_option('bp_force_audit_metrics', false);
+    if ($force) delete_option('bp_force_audit_metrics');
+    if (!$force) {
+        $next = (int) get_option('bp_audit_metrics_next', 0);
+        if ($next > 0 && time() < $next) return;
+    }
+    update_option('bp_audit_metrics_time', time(), false);
+    update_option('bp_audit_metrics_next', time() + 3 * DAY_IN_SECONDS + rand(0, 6 * HOUR_IN_SECONDS), false);
+
+    foreach (['bp_content_collect_counts', 'bp_gbp_collect_stats', 'bp_gbp_collect_performance', 'bp_gsc_collect_totals', 'bp_gsc_collect_links', 'bp_kw_collect_bands'] as $fn) {
+        try { $fn(); } catch (\Throwable $e) { error_log("$fn failed: " . $e->getMessage()); }
+    }
+}
+
+/** Shared helper: store a daily-keyed snapshot/series into an option, ksort + cap length. */
+function bp_audit_metric_store(string $optKey, string $dayKey, array $rec, int $keep = 400): void {
+    if (!$rec) return;
+    $store = get_option($optKey);
+    if (!is_array($store)) $store = [];
+    $store[$dayKey] = $rec;
+    ksort($store);
+    if (count($store) > $keep) $store = array_slice($store, -$keep, null, true);
+    update_option($optKey, $store, false);
+}
+
+/** Shared helper: mint a Search Console access token from the GA4 service account (webmasters.readonly). */
+function bp_gsc_token() {
+    // bp_get_google_access_token lives in functions-chron-helpers.php, which the manual "refresh stats"
+    // path doesn't load — pull it in so GSC works on every invocation, not just the nightly orchestrator.
+    if (!function_exists('bp_get_google_access_token')) {
+        $f = get_template_directory() . '/functions-chron-helpers.php';
+        if (file_exists($f)) require_once $f;
+    }
+    if (!defined('GA4_SERVICE_ACCOUNT_JSON') || !function_exists('bp_get_google_access_token')) return null;
+    $credentials = json_decode(base64_decode(GA4_SERVICE_ACCOUNT_JSON), true);
+    if (!is_array($credentials)) return null;
+    return bp_get_google_access_token($credentials, ['https://www.googleapis.com/auth/webmasters.readonly']) ?: null;
+}
+
+/** Search Console — per-day clicks / impressions / position over the trailing ~90 days (US), merge-appended.
+ *  CTR is derived at render time from clicks ÷ impressions. Store: bp_gsc_totals_history[YYYYMMDD]. */
+function bp_gsc_collect_totals(): void {
+    $token = bp_gsc_token();
+    if (!$token) return;
+    $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', get_bloginfo('url'));
+    $body = wp_json_encode([
+        'startDate'             => date('Y-m-d', strtotime('-93 days')),
+        'endDate'               => date('Y-m-d', strtotime('-1 day')),
+        'dimensions'            => ['date'],
+        'rowLimit'              => 1000,
+        'dimensionFilterGroups' => [['filters' => [['dimension' => 'country', 'operator' => 'equals', 'expression' => 'usa']]]],
+    ]);
+    $resp = wp_remote_post('https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($siteUrl) . '/searchAnalytics/query', [
+        'timeout' => 20,
+        'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
+        'body'    => $body,
+    ]);
+    if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) return;
+    $data  = json_decode(wp_remote_retrieve_body($resp), true);
+    $store = get_option('bp_gsc_totals_history');
+    if (!is_array($store)) $store = [];
+    foreach ($data['rows'] ?? [] as $row) {
+        $d = str_replace('-', '', $row['keys'][0] ?? '');   // YYYY-MM-DD → YYYYMMDD
+        if (strlen($d) !== 8) continue;
+        $store[$d] = [
+            'clicks'      => (int) ($row['clicks'] ?? 0),
+            'impressions' => (int) ($row['impressions'] ?? 0),
+            'position'    => round((float) ($row['position'] ?? 0), 1),
+        ];
+    }
+    ksort($store);
+    if (count($store) > 400) $store = array_slice($store, -400, null, true);
+    update_option('bp_gsc_totals_history', $store, false);
+}
+
+/** Search Console Links — total backlinks (Σ per-domain link counts) + linking-domain count, 3-day snapshot.
+ *  Uses the URL-prefix property form the audit uses. GSC refreshes link data slowly, so expect flat runs.
+ *  Store: bp_gsc_links_history[YYYYMMDD] = ['backlinks'=>, 'domains'=>]. */
+function bp_gsc_collect_links(): void {
+    $token = bp_gsc_token();
+    if (!$token) return;
+    $siteUrl = get_bloginfo('url') . '/';
+    $resp = wp_remote_get('https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($siteUrl) . '/links/topLinkers', [
+        'timeout' => 20,
+        'headers' => ['Authorization' => 'Bearer ' . $token],
+    ]);
+    if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) return;
+    $data = json_decode(wp_remote_retrieve_body($resp), true);
+    $backlinks = 0; $domains = 0;
+    foreach ($data['topLinkers'] ?? [] as $l) {
+        if (empty($l['domain'])) continue;
+        $domains++;
+        $backlinks += (int) ($l['total'] ?? 0);
+    }
+    if ($domains === 0 && $backlinks === 0) return;
+    bp_audit_metric_store('bp_gsc_links_history', date('Ymd'), ['backlinks' => $backlinks, 'domains' => $domains]);
+}
+
+/** Content counts — published Blog / Jobsites / Galleries / Testimonials, 3-day snapshot.
+ *  Store: bp_content_history[YYYYMMDD] = ['blog'=>, 'jobsites'=>, 'galleries'=>, 'testimonials'=>]. */
+function bp_content_collect_counts(): void {
+    $map = ['blog' => 'post', 'pages' => 'page', 'jobsites' => 'jobsite_geo', 'galleries' => 'galleries', 'testimonials' => 'testimonials'];
+    $rec = [];
+    foreach ($map as $key => $type) {
+        if (!post_type_exists($type)) continue;
+        $rec[$key] = (int) (wp_count_posts($type)->publish ?? 0);
+    }
+    // Images in the media library — sum the image/* mime buckets (skip the nested 'trash' object).
+    $images = 0;
+    foreach ((array) wp_count_attachments() as $mime => $n) {
+        if (is_scalar($n) && strpos((string) $mime, 'image/') === 0) $images += (int) $n;
+    }
+    $rec['images'] = $images;
+    bp_audit_metric_store('bp_content_history', date('Ymd'), $rec);
+}
+
+/** GBP reviews + rating — snapshot the values Chron A keeps in bp_gbp_update (summed across locations).
+ *  Store: bp_gbp_stats_history[YYYYMMDD] = ['reviews'=>, 'rating'=>]. */
+function bp_gbp_collect_stats(): void {
+    $info = get_option('bp_gbp_update') ?: [];
+    if (!is_array($info) || !$info) return;
+    $ci   = customer_info();
+    $pids = function_exists('ci_normalize_pids') ? ci_normalize_pids($ci['pid'] ?? []) : array_filter((array) ($ci['pid'] ?? []));
+    // No pid configured? Fall back to whatever GBP locations Chron A actually synced into bp_gbp_update.
+    if (!$pids) $pids = array_keys($info);
+    $reviews = 0; $weighted = 0.0;
+    foreach ($pids as $pid) {
+        if (!isset($info[$pid]['google-reviews'])) continue;
+        $r  = (int) $info[$pid]['google-reviews'];
+        $rt = (float) ($info[$pid]['google-rating'] ?? 0);
+        $reviews  += $r;
+        $weighted += $rt * $r;
+    }
+    if ($reviews <= 0) return;
+    bp_audit_metric_store('bp_gbp_stats_history', date('Ymd'), ['reviews' => $reviews, 'rating' => round($weighted / $reviews, 1)]);
+}
+
+/** GBP Performance — impressions / call clicks / website clicks / direction requests, as a recent daily
+ *  series pulled through the GBP hub (which holds the business.manage token + this site's location id).
+ *  Merge-appends the per-day map the hub returns. Store: bp_gbp_perf_history[YYYYMMDD]. */
+function bp_gbp_collect_performance(): void {
+    if (!function_exists('bpgbp_client_is_configured') || !bpgbp_client_is_configured()) return;
+    if (!function_exists('bpgbp_client_get')) return;
+    $resp = bpgbp_client_get('performance');
+    if (is_wp_error($resp) || empty($resp['ok']) || empty($resp['metrics']) || !is_array($resp['metrics'])) return;
+    $store = get_option('bp_gbp_perf_history');
+    if (!is_array($store)) $store = [];
+    foreach ($resp['metrics'] as $ymd => $rec) {
+        if (strlen((string) $ymd) !== 8 || !is_array($rec)) continue;
+        $store[(string) $ymd] = [
+            'impressions' => (int) ($rec['impressions'] ?? 0),
+            'calls'       => (int) ($rec['calls'] ?? 0),
+            'website'     => (int) ($rec['website'] ?? 0),
+            'directions'  => (int) ($rec['directions'] ?? 0),
+        ];
+    }
+    ksort($store);
+    if (count($store) > 400) $store = array_slice($store, -400, null, true);
+    update_option('bp_gbp_perf_history', $store, false);
+}
+
+/** Keyword rankings — snapshot how many tracked keywords currently sit in each Google rank band
+ *  (1–3 / 4–10 / 11–20 / 21+), from bp_kw_history (DataForSEO, Chron D). Each keyword's CURRENT rank is
+ *  the latest date in its history; not-ranking (rank ≤ 0) is excluded. Store: bp_kw_bands_history[YYYYMMDD]. */
+function bp_kw_collect_bands(): void {
+    $history = get_option('bp_kw_history');
+    if (!is_array($history) || !$history) return;
+    $b = ['b1' => 0, 'b2' => 0, 'b3' => 0, 'b4' => 0];
+    foreach ($history as $kh) {
+        if (!is_array($kh) || !$kh) continue;
+        ksort($kh);                       // dates ascending
+        $rank = (int) end($kh);           // most recent reading
+        if ($rank <= 0) continue;         // not ranking → not counted
+        if     ($rank <= 3)  $b['b1']++;
+        elseif ($rank <= 10) $b['b2']++;
+        elseif ($rank <= 20) $b['b3']++;
+        else                 $b['b4']++;
+    }
+    if ($b['b1'] + $b['b2'] + $b['b3'] + $b['b4'] === 0) return;
+    bp_audit_metric_store('bp_kw_bands_history', date('Ymd'), $b);
 }
 
 /**

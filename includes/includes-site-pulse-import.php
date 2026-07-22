@@ -20,9 +20,12 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 /* ───────────────────────── helpers ───────────────────────── */
 
-// GOD-only, never while impersonating. Sends a JSON error + returns false if not allowed.
+// Gated on the import_data capability (NOT hard-wired to God) so it matches the nav/panel gate and
+// can be granted to any role/individual. Resolves the effective user, so impersonation is respected
+// (a god viewing-as someone gets exactly that user's access) and gods pass via their all-caps grant.
+// Sends a JSON error + returns false if not allowed.
 function sp_import_gate(): bool {
-	if ( site_pulse_is_god( get_current_user_id() ) && ! site_pulse_is_impersonating() ) return true;
+	if ( site_pulse_user_can( site_pulse_effective_user_id(), 'import_data' ) ) return true;
 	wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	return false;
 }

@@ -303,7 +303,7 @@ function site_pulse_ajax_get_surveys(): void {
 			'dim_distributions' => (object) array_map( fn( $d ) => (object) $d, $dim_dist ),
 		],
 		'can_manage'     => site_pulse_user_can( $user_id, 'manage_surveys' ) || site_pulse_god_can_override(),
-		'is_god'         => site_pulse_god_can_override(), // delete is god-only — gate the button on this
+		'can_delete'     => site_pulse_user_can( $user_id, 'delete_surveys' ) || site_pulse_god_can_override(), // delete requires the delete_surveys cap (or god)
 		'archived'       => $archived,                                  // which list this is (0 active, 1 archived)
 		'archived_count' => (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $arch_tbl a JOIN $table s ON s.id = a.survey_id WHERE a.user_id = %d", $user_id ) ),
 	] );
@@ -353,8 +353,8 @@ add_action( 'wp_ajax_site_pulse_delete_survey', 'site_pulse_ajax_delete_survey' 
 function site_pulse_ajax_delete_survey(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 
-	// Delete is god-only (battleplanweb), even for users who hold manage_surveys.
-	if ( ! site_pulse_god_can_override() ) {
+	// Delete requires the dedicated delete_surveys capability (grantable to any role/individual), or god.
+	if ( ! ( site_pulse_user_can( site_pulse_effective_user_id(), 'delete_surveys' ) || site_pulse_god_can_override() ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
 

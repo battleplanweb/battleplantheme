@@ -735,8 +735,9 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-analytics">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Analytics</h2></div>';
 
-	// Report AI search (GOD only during rollout). Non-god still sees the "Coming Soon" placeholder.
-	if ( $eff_is_god ) {
+	// Report AI search — grantable via the view_ai_insights capability (god always passes). Users
+	// without it still see the "Coming Soon" placeholder.
+	if ( $eff_is_god || in_array( 'view_ai_insights', $caps, true ) ) {
 		$printPage .=   '<div class="sp-reports-ai" id="sp-reports-ai">';
 		$printPage .=     '<div class="sp-reports-ai-bar">';
 		$printPage .=       '<input type="search" id="sp-reports-ai-q" class="sp-input sp-reports-ai-q" placeholder="Search by keyword, or ask a question…">';

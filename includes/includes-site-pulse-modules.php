@@ -51,7 +51,7 @@ function site_pulse_modules(): array {
 			'default' => true,
 		],
 		'mileage' => [
-			'label'   => 'Mileage &amp; Tolls',
+			'label'   => 'Expense Report',
 			'desc'    => 'Mileage logging, reimbursement reports, and NTTA toll reconciliation.',
 			'caps'    => [ 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_expense_overview', 'manage_mileage' ],
 			'default' => true,
@@ -71,7 +71,7 @@ function site_pulse_modules(): array {
 		'surveys' => [
 			'label'   => 'Comment Cards',
 			'desc'    => 'Collects customer comment cards forwarded in from the public restaurant sites — ratings, comments, and per-location breakdowns. Shown as a tab under Customer Feedback.',
-			'caps'    => [ 'view_surveys', 'manage_surveys' ],
+			'caps'    => [ 'view_surveys', 'manage_surveys', 'delete_surveys' ],
 			'default' => false,
 		],
 		'directory' => [

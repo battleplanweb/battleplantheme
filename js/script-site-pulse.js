@@ -629,6 +629,8 @@ function activatePanel(panelId) {
 
 /* ---- Per-page Grant/Restrict bar (God + System Admin only) — edits the same access-role caps + overrides ---- */
 
+let _spPaOpen = false; // remembers whether the "Grant Permissions" bar is expanded, across panel nav
+
 function spUpdatePageAccessBar(panelId) {
 	if (!D.isSystemAdmin) return;
 	const main = document.getElementById('sp-main');
@@ -681,15 +683,38 @@ function spRenderPageAccessBar(bar, panelId, d) {
 			+ '</div></div>';
 	};
 
-	let html = '';
+	let rowsHtml = '';
 	(d.permissions || []).forEach(p => {
-		html += '<div class="sp-pa-inner">';
-		html += `<span class="sp-pa-label">Permission: <span class="sp-pa-cap">${esc(p.cap_label)}</span></span>`;
-		html += pickerHtml('role', 'Roles', p.roles, 'id', p.cap);
-		html += pickerHtml('user', 'People', p.users, 'user_id', p.cap);
-		html += '</div>';
+		rowsHtml += '<div class="sp-pa-inner">';
+		rowsHtml += `<span class="sp-pa-label">Permission: <span class="sp-pa-cap">${esc(p.cap_label)}</span></span>`;
+		rowsHtml += pickerHtml('role', 'Roles', p.roles, 'id', p.cap);
+		rowsHtml += pickerHtml('user', 'People', p.users, 'user_id', p.cap);
+		rowsHtml += '</div>';
 	});
-	bar.innerHTML = html;
+
+	// Collapse the whole bar behind one "Grant Permissions" button — it's God/System-Admin only and was
+	// obnoxious always-open, especially on mobile. _spPaOpen (module-level) remembers the open/closed
+	// choice across panel navigation so it doesn't re-collapse mid-task.
+	const caret = '<svg class="sp-pa-caret" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+	const nPerm = (d.permissions || []).length;
+	bar.innerHTML =
+		`<button type="button" class="sp-pa-master-toggle${_spPaOpen ? ' open' : ''}" aria-expanded="${_spPaOpen ? 'true' : 'false'}">`
+		+ '<span class="sp-pa-master-label">Grant Permissions</span>'
+		+ ( nPerm ? `<span class="sp-pa-count">${nPerm}</span>` : '' )
+		+ caret
+		+ '</button>'
+		+ `<div class="sp-pa-body"${_spPaOpen ? '' : ' hidden'}>${rowsHtml}</div>`;
+
+	const master = $('.sp-pa-master-toggle', bar);
+	const body = $('.sp-pa-body', bar);
+	master?.addEventListener('click', (e) => {
+		e.stopPropagation();
+		_spPaOpen = !_spPaOpen;
+		if (body) body.hidden = !_spPaOpen;
+		master.classList.toggle('open', _spPaOpen);
+		master.setAttribute('aria-expanded', _spPaOpen ? 'true' : 'false');
+		if (!_spPaOpen) $$('.sp-pa-panel', bar).forEach(p => p.hidden = true); // collapsing also closes any open picker
+	});
 
 	const setAccess = async (kind, cap, id, grant) => {
 		try {
@@ -9196,7 +9221,7 @@ async function pushAgencyTestimonial(site, id, btn, withPhoto) {
 let spSurveys        = [];
 let spSurveyDims     = {};   // canonical dimension key => label (display order)
 let spSurveyCanManage = false;
-let spSurveyIsGod    = false; // delete is god-only
+let spSurveyCanDelete = false; // delete requires the delete_surveys cap (or god)
 let spSurveyViewArchived = false; // viewing the archived list vs the active one
 let spSurveyArchivedCount = 0;
 let _spSurveyWired    = false;
@@ -9250,7 +9275,7 @@ async function loadSurveys() {
 		spSurveys        = res.data.surveys || [];
 		spSurveyDims     = res.data.dimensions || {};
 		spSurveyCanManage = !!res.data.can_manage;
-		spSurveyIsGod    = !!res.data.is_god;
+		spSurveyCanDelete    = !!res.data.can_delete;
 		spSurveyArchivedCount = res.data.archived_count || 0;
 		updateSurveyArchiveToggle();
 		populateSurveyLocations(res.data.locations || []);
@@ -9367,8 +9392,8 @@ function renderSurveyCard(s) {
 
 	// Archive (text) shows for everyone who can view; Edit (pencil) for managers; Delete (trash) god-only.
 	const archiveBtn = `<button type="button" class="unique sp-btn sp-btn-ghost sp-survey-archive-btn" data-id="${s.id}">${spSurveyViewArchived ? 'Restore' : 'Archive'}</button>`;
-	const editBtn = (spSurveyCanManage || spSurveyIsGod) ? iconBtn('edit', 'sp-survey-edit-btn', `data-id="${s.id}"`) : '';
-	const del = spSurveyIsGod ? iconBtn('delete', 'sp-survey-del-btn', `data-id="${s.id}"`) : '';
+	const editBtn = (spSurveyCanManage || spSurveyCanDelete) ? iconBtn('edit', 'sp-survey-edit-btn', `data-id="${s.id}"`) : '';
+	const del = spSurveyCanDelete ? iconBtn('delete', 'sp-survey-del-btn', `data-id="${s.id}"`) : '';
 
 	return (
 		`<div class="sp-card-sm sp-survey-card" data-id="${s.id}">` +

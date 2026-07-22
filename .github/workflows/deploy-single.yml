@@ -33,3 +33,7 @@ jobs:
           REMOTE_PATH: "wp-content/themes/battleplantheme/"
           PHP_LINT: TRUE
           CACHE_CLEAR: ${{ github.event.inputs.cache_clear }}
+
+      # Warm the compiled-CSS rebuild before real traffic (see deploy-standard.yml for why).
+      - name: Warm CSS rebuild — ${{ github.event.inputs.wpe_env }}
+        run: curl -s -o /dev/null "https://${{ github.event.inputs.wpe_env }}.wpengine.com/?cb=${{ github.run_id }}" || true

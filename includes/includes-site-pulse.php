@@ -1820,6 +1820,7 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_notifications' => 'Manage notifications',
 		'manage_api_keys'      => 'Manage API keys',
 		'manage_surveys'       => 'Manage comment cards',
+		'delete_surveys'       => 'Delete comment cards',
 		'manage_reviews'       => 'Manage reviews &amp; replies',
 		'manage_directory'     => 'Manage company directory',
 		'manage_emails'        => 'Manage customer emails',
@@ -10681,9 +10682,8 @@ function site_pulse_ajax_admin_save_toll_settings(): void {
 add_action( 'wp_ajax_site_pulse_admin_test_toll_api', 'site_pulse_ajax_admin_test_toll_api' );
 function site_pulse_ajax_admin_test_toll_api(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_god_can_override() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
+	// Match the sibling save-toll-settings gate: a mileage admin (manage_mileage) can test the API too, not only god.
+	if ( ! site_pulse_mileage_admin_check() ) return;
 
 	$key = site_pulse_tollguru_key();
 	if ( ! $key ) {
@@ -10763,9 +10763,8 @@ function site_pulse_ajax_admin_test_toll_api(): void {
 add_action( 'wp_ajax_site_pulse_admin_test_toll_polyline', 'site_pulse_ajax_admin_test_toll_polyline' );
 function site_pulse_ajax_admin_test_toll_polyline(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_god_can_override() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
+	// Match the sibling save-toll-settings gate: a mileage admin (manage_mileage) can test the API too, not only god.
+	if ( ! site_pulse_mileage_admin_check() ) return;
 
 	$key = site_pulse_tollguru_key();
 	if ( ! $key ) {
@@ -10858,9 +10857,8 @@ function site_pulse_ajax_admin_test_toll_polyline(): void {
 add_action( 'wp_ajax_site_pulse_admin_test_mileage_api', 'site_pulse_ajax_admin_test_mileage_api' );
 function site_pulse_ajax_admin_test_mileage_api(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_god_can_override() ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
+	// Match the sibling save-mileage/toll gate: a mileage admin (manage_mileage) can test the API too, not only god.
+	if ( ! site_pulse_mileage_admin_check() ) return;
 
 	$key = site_pulse_mileage_google_key();
 

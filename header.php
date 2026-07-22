@@ -79,26 +79,38 @@
 		// before </head>. header.php runs before the body, so it can't know the page's real hero;
 		// emitting the accumulated bp_preload_images heroes here preloaded the home hero on every
 		// page (incl. pages that never show it). So we skip everything but site-bg.
+		// Preload the site background RESPONSIVELY: emit both variants with mutually-exclusive
+		// media queries so the browser fetches only the one matching the viewport. A device-
+		// specific choice here (is_mobile) gets baked into EverCache and served to the wrong
+		// device — that's what produced the "preloaded but not used" warnings (a mobile-baked
+		// phone preload served to desktop). Media-gated preloads are cache-safe: the non-matching
+		// link never fetches, so there's no warning on either device. Breakpoint 576 matches the
+		// phone html::before rule in style-site.css.
 		$preload_images = get_option('bp_preload_images', []);
-		$preload_key    = is_mobile() ? 'mobile' : 'desktop';
 		$base_url       = get_site_url() . '/wp-content/uploads/';
-		$site_bg        = $preload_images[$preload_key]['site-bg'] ?? null;
+		$upload_basedir = wp_upload_dir()['basedir'];
 
-		if ( $site_bg ) :
-			$file           = is_array($site_bg) ? $site_bg['file'] : $site_bg;
-			$upload_basedir = wp_upload_dir()['basedir'];
+		$bg_variants = array(
+			'desktop' => '(min-width: 577px)',
+			'mobile'  => '(max-width: 576px)',
+		);
+
+		foreach ( $bg_variants as $bg_key => $bg_media ) :
+			$site_bg = $preload_images[$bg_key]['site-bg'] ?? null;
+			if ( ! $site_bg ) continue;
+			$file = is_array($site_bg) ? $site_bg['file'] : $site_bg;
 
 			// Only emit if the file is actually on disk (never preload a 404'd background).
-			if ( is_file( $upload_basedir . '/' . ltrim($file, '/') ) ) :
-				?>
-				<link
-					rel="preload"
-					as="image"
-					href="<?php echo esc_url( $base_url . ltrim($file, '/') ); ?>"
-					fetchpriority="high">
-				<?php
-			endif;
-		endif;
+			if ( ! is_file( $upload_basedir . '/' . ltrim($file, '/') ) ) continue;
+			?>
+			<link
+				rel="preload"
+				as="image"
+				href="<?php echo esc_url( $base_url . ltrim($file, '/') ); ?>"
+				media="<?php echo esc_attr( $bg_media ); ?>"
+				fetchpriority="high">
+			<?php
+		endforeach;
 
 	?>
 

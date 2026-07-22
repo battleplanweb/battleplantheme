@@ -167,3 +167,10 @@ jobs:
           REMOTE_PATH: "wp-content/themes/battleplantheme/"
           PHP_LINT: TRUE
           CACHE_CLEAR: TRUE
+
+      # Warm the compiled-CSS rebuild before real traffic. bp_build_css_core() regenerates
+      # dist/core-*.min.css lazily on the first pageload after a deploy, so there is a brief
+      # window where the freshly-versioned CSS URL 404s. One request from the runner triggers
+      # that rebuild now; the ?cb=<run_id> cache-buster forces it past Cloudflare to origin.
+      - name: Warm CSS rebuild — ${{ matrix.wpe_env }}
+        run: curl -s -o /dev/null "https://${{ matrix.wpe_env }}.wpengine.com/?cb=${{ github.run_id }}" || true

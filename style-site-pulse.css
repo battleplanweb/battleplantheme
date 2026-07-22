@@ -496,8 +496,7 @@ input[type="radio"] {
 	   works on whatever --sp-primary-color the user/AI picks: a bright soft glow through the
 	   UPPER-MIDDLE, then a strong darkening toward the bottom so the gradient reads clearly.
 	   Inset shadows sit behind the nav content. */
-	box-shadow:                                                inset 0 210px 190px -140px rgba(255,255,255,0.16),
-	                                                           inset 0 -300px 240px -130px rgba(0,0,0,0.45);
+	box-shadow:                                                inset 0 -300px 240px -130px rgba(0,0,0,0.45);
 }
 
 .sp-sidebar-header {
@@ -2585,11 +2584,51 @@ input[type="file"].sp-input::file-selector-button:hover {
 
 /* Per-page Grant/Restrict bar (God + System Admin only), pinned to the top of each gated page. */
 .sp-page-access-bar {
+	margin-bottom:                                             16px;
+}
+/* Collapsed default: the whole bar is just this pill button. */
+.sp-pa-master-toggle {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	cursor:                                                    pointer;
+	font-weight:                                               700;
+	font-size:                                                 var(--font-size-sm);
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+	color:                                                     var(--sp-accent-dark);
+	background:                                                var(--sp-accent-lightest);
+	border:                                                    1px solid var(--sp-accent-light);
+	border-radius:                                             var(--sp-radius-pill);
+	padding:                                                   7px 14px;
+}
+.sp-pa-master-toggle:hover,
+.sp-pa-master-toggle.active,
+.sp-pa-master-toggle.tab-focus {
+	background:                                                var(--sp-accent-light);
+}
+.sp-pa-count {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	min-width:                                                 18px;
+	height:                                                    18px;
+	padding:                                                   0 5px;
+	font-size:                                                 11px;
+	font-weight:                                               700;
+	color:                                                     var(--sp-bg-white);
+	background:                                                var(--sp-accent-color);
+	border-radius:                                             var(--sp-radius-pill);
+}
+.sp-pa-caret { transition: transform 0.15s ease; }
+.sp-pa-master-toggle.open .sp-pa-caret { transform: rotate(180deg); }
+/* Expanded body: the accent card that used to always show now only appears when opened. */
+.sp-pa-body {
+	margin-top:                                                8px;
 	background:                                                var(--sp-accent-lightest);
 	border:                                                    1px solid var(--sp-accent-light);
 	border-radius:                                             var(--sp-radius-sm);
 	padding:                                                   8px 14px;
-	margin-bottom:                                             16px;
 }
 .sp-pa-inner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .sp-pa-inner + .sp-pa-inner { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--sp-accent-light); }
@@ -6335,10 +6374,19 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	margin-right:                                              8px;
 }
 
-.sp-perm-cell input {
-	width:                                                     16px;
-	height:                                                    16px;
-	margin:                                                    0;
+.sp-perm-grid .sp-perm-cell input {
+	/* Two global checkbox systems fight over these: Site Pulse absolute-positions every checkbox
+	   (left:0/top:0), and the forms CSS makes them appearance:none with an ::after checkmark anchored
+	   by inset:0. Neither suits a 2-column grid. position:relative keeps each checkbox in its own grid
+	   cell (no overlap) AND anchors its ::after checkmark INSIDE the box — otherwise a checked box's
+	   check escapes to the nearest positioned ancestor and renders as one giant check flung to the
+	   row's right. Higher specificity (.sp-perm-grid …) beats both global input[type=checkbox] rules. */
+	position:                                                  relative !important;
+	inset:                                                     auto !important;
+	transform:                                                 none !important;
+	width:                                                     16px !important;
+	height:                                                    16px !important;
+	margin:                                                    0 !important;
 	accent-color:                                              var(--sp-accent-color);
 }
 
@@ -7086,6 +7134,11 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	.sp-modal-backdrop {
 		padding:                                                  0;
 	}
+
+	.sp-sidebar {
+		box-shadow:                                               inset 0 -300px 240px -130px rgba(0, 0, 0, 0.25);
+	}
+
 
 	.sp-modal {
 		padding:                                                  22px;

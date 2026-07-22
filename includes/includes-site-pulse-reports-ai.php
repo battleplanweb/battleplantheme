@@ -210,7 +210,7 @@ function sp_reports_digest_cron(): void {
 add_action( 'wp_ajax_site_pulse_reports_digest_batch', 'site_pulse_ajax_reports_digest_batch' );
 function site_pulse_ajax_reports_digest_batch(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! ( site_pulse_user_can( site_pulse_effective_user_id(), 'view_ai_insights' ) || site_pulse_god_can_override() ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	$res = sp_reports_digest_batch( 20 );
 	if ( $res['error'] && 0 === $res['done'] ) wp_send_json_error( [ 'message' => $res['error'] ] );
@@ -225,7 +225,7 @@ function site_pulse_ajax_reports_digest_batch(): void {
 add_action( 'wp_ajax_site_pulse_reports_search', 'site_pulse_ajax_reports_search' );
 function site_pulse_ajax_reports_search(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! ( site_pulse_user_can( site_pulse_effective_user_id(), 'view_ai_insights' ) || site_pulse_god_can_override() ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	global $wpdb;
 	$rt = sp_reports_table();
@@ -327,7 +327,7 @@ function sp_reports_digest_block( array $row ): string {
 add_action( 'wp_ajax_site_pulse_reports_ask', 'site_pulse_ajax_reports_ask' );
 function site_pulse_ajax_reports_ask(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! ( site_pulse_user_can( site_pulse_effective_user_id(), 'view_ai_insights' ) || site_pulse_god_can_override() ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	if ( ! site_pulse_get_api_key() ) wp_send_json_error( [ 'message' => 'No AI API key configured.' ] );
 
 	$question = trim( sanitize_textarea_field( wp_unslash( $_POST['q'] ?? '' ) ) );

@@ -95,8 +95,7 @@ function battleplan_clear_wpe_cache_ajax() {
 		$results[] = 'CF: not configured';
 	}
 
-	// Compiled CSS — wipe the child theme's /dist folder so style-site.css recompiles
-	// fresh on the next front-end pageload (rebuild is content-hash-gated via dist/*.sig).
+	// Compiled CSS — wipe the child theme's /dist folder so nothing stale survives.
 	$dist = get_stylesheet_directory() . '/dist';
 	if ( is_dir( $dist ) ) {
 		$removed = bp_rrmdir( $dist );
@@ -104,6 +103,15 @@ function battleplan_clear_wpe_cache_ajax() {
 	} else {
 		$results[] = 'dist: none';
 	}
+
+	// Re-warm immediately: rebuild the compiled CSS now, in this same request, instead of
+	// leaving /dist empty for the next pageload. An empty dist is the missing-CSS window that
+	// makes a freshly-versioned CSS URL 404 — the very thing this button should PREVENT, not
+	// cause. The just-deleted .sig files guarantee a full, clean recompile from source.
+	$warmed = array();
+	if ( function_exists( 'bp_build_css_core' ) ) { bp_build_css_core(); $warmed[] = 'core'; }
+	if ( function_exists( 'bp_build_site_css' ) ) { bp_build_site_css(); $warmed[] = 'site'; }
+	$results[] = $warmed ? 'dist: rebuilt (' . implode( '+', $warmed ) . ')' : 'dist: no rebuild fn';
 
 	wp_send_json_success( array( 'message' => implode( ' · ', $results ) ) );
 }

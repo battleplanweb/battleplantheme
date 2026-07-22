@@ -38,9 +38,9 @@
 .testimonials-generic-icon .testimonial-initials {
 	position:                                                  absolute;
 	font-family:                                               var(--font-primary);
-	top:                                                       50%;
+	top:                                                       0%;
 	left:                                                      50%;
-	transform:                                                 translate(-50%, -15%);
+	transform:                                                 translate(-50%, 60%);
 	text-align:                                                center;
 	font-size:                                                 var(--font-size-h1);
 	font-weight:                                               bold;

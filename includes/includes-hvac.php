@@ -645,7 +645,9 @@ function bp_employment_default_autoreply($ctx) {
 function battleplan_mass_product_update() {
 	$customer_info = customer_info();
 
-	if ( $customer_info['site-brand'] == 'american standard' || (is_array($customer_info['site-brand']) && in_array('american standard', $customer_info['site-brand'])) ) :
+	$msBrand = $customer_info['site-brand'] ?? '';
+	$msBrands = is_array($msBrand) ? array_map(fn($b) => strtolower(trim($b)), $msBrand) : [strtolower(trim((string)$msBrand))];
+	if ( in_array('american standard', $msBrands, true) ) :
 
 		if ( get_option( 'product-update-may-2022' ) != 'completed' ) :
 			require_once get_template_directory() . '/includes/includes-mass-site-update.php';

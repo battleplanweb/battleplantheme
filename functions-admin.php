@@ -104,7 +104,24 @@ function battleplan_reorderAdminBar() {
 // Create additional admin pages
 add_action( 'admin_menu', 'battleplan_admin_menu' );
 function battleplan_admin_menu() {
-	$auditTime          = get_option('bp_audit_time')        ? timeElapsed(get_option('bp_audit_time'),        1, 'all', 'full') . ' ago' : 'Never';
+	// Prefer the stamped bp_audit_time; fall back to the newest STORED report so audits run before
+	// bp_audit_time existed still show a date instead of "Never". Read each report's own 'date'
+	// field (a full 'Y-m-d H:i:s' from current_time('mysql')) and take the max that's a real past
+	// time — never the raw array KEY, which on partial/legacy data can be a non-datetime that
+	// strtotime() mis-anchors to "today" and fakes a recent time on a site that never audited.
+	$auditTs = (int) get_option('bp_audit_time');
+	if ( ! $auditTs ) {
+		$auditHist = get_option('bp_site_audit_ai_history');
+		if ( is_array($auditHist) ) {
+			$floor = strtotime('2020-01-01');
+			foreach ( $auditHist as $rpt ) {
+				$d  = is_array($rpt) ? (string) ( $rpt['date'] ?? '' ) : '';
+				$ts = ( strlen($d) >= 10 ) ? (int) strtotime($d) : 0;   // require a full date, not a bare time
+				if ( $ts > $floor && $ts <= time() && $ts > $auditTs ) $auditTs = $ts;
+			}
+		}
+	}
+	$auditTime          = $auditTs ? timeElapsed($auditTs, 1, 'all', 'full') . ' ago' : 'Never';
 	$chronGbpTime       = get_option('bp_chron_a_time')      ? timeElapsed(get_option('bp_chron_a_time'),      1, 'all', 'full') . ' ago' : 'Never';
 	$chronGbpApiTime    = get_option('bp_chron_a_api_time')  ? timeElapsed(get_option('bp_chron_a_api_time'),  1, 'all', 'full') . ' ago' : 'Never';
 	$chronHouseTime     = get_option('bp_chron_b_time')      ? timeElapsed(get_option('bp_chron_b_time'),      1, 'all', 'full') . ' ago' : 'Never';
@@ -120,7 +137,7 @@ function battleplan_admin_menu() {
 		add_submenu_page( 'index.php',	'GBP Sync',          		'GBP Sync <div class="admin-note">'.$chronGbpApiTime.'</div>',    	'manage_options', 	 'chron-gbp',       		 'battleplan_chron_gbp_status' );
 		add_submenu_page( 'index.php',	'Analytics',   				'Stats <div class="admin-note">'.$chronAnalyticsTime.'</div>',	'manage_options', 	 'chron-analytics', 		 'battleplan_chron_analytics_status' );
 		add_submenu_page( 'index.php',	'Site Audit',          		'Audit <div class="admin-note">'.$auditTime.'</div>',        	'manage_options', 	 'site-audit',      		 'battleplan_site_audit' );
-		add_submenu_page( 'index.php',	'⚙️ Run Audit',       		'&nbsp;└&nbsp;Run Audit',      										'manage_options', 	'run-audit',         		'battleplan_force_run_audit' );
+		// 'Run Audit' submenu removed — the audit page itself now carries the Run/Resume Audit button.
 	endif;
 
 	// Analytics dashboard — client-facing (stats viewers + admins), not just battleplanweb
@@ -352,6 +369,27 @@ function bp_an_keywords_payload(): ?array {
 		[ 'key' => 'b3', 'label' => '11–20', 'cls' => 'kw3' ],
 		[ 'key' => 'b4', 'label' => '21+',   'cls' => 'kw4' ],
 	] ], $grains );
+}
+
+// "Send Check-in" test button (Analytics footer) — force-runs the customer check-in and emails it to
+// you now, bypassing the send throttle. The check-in file only loads during the analytics cron, so we
+// require it here.
+add_action('admin_post_bp_send_checkin', 'bp_send_checkin_now');
+function bp_send_checkin_now(): void {
+	if (!current_user_can('manage_options')) wp_die('Not allowed.');
+	check_admin_referer('bp_send_checkin');
+	$f = get_template_directory() . '/functions-customer-checkins.php';
+	if (file_exists($f)) require_once $f;
+	if (function_exists('bp_customer_email_force'))  bp_customer_email_force();   // clear throttles
+	if (function_exists('bp_run_customer_checkins')) bp_run_customer_checkins();
+	wp_safe_redirect(add_query_arg('bp_checkin', 'sent', admin_url('index.php?page=bp-analytics')));
+	exit;
+}
+add_action('admin_notices', 'bp_send_checkin_notice');
+function bp_send_checkin_notice(): void {
+	if (($_GET['bp_checkin'] ?? '') !== 'sent' || !current_user_can('manage_options')) return;
+	$to = defined('BP_EMAIL_RECIPIENT') ? BP_EMAIL_RECIPIENT : 'your inbox';
+	echo '<div class="notice notice-success is-dismissible"><p><strong>Check-in generated.</strong> If there were wins to report, an email is on its way to <strong>' . esc_html($to) . '</strong> (the AI progress summary can take a few seconds). Nothing sends if there was nothing positive to say yet.</p></div>';
 }
 
 function bp_analytics_page() {
@@ -1231,6 +1269,8 @@ function battleplan_admin_footer_text() {
 		$printFooter .= '<a class="button" href="' . esc_url('//app.serpfox.com/shared/'.$customer_info['serpfox']) . '" target="_blank" rel="noopener">Keywords</a>';
 	}
 
+	$printFooter .= '<a class="button" href="' . esc_url( wp_nonce_url( admin_url('admin-post.php?action=bp_send_checkin'), 'bp_send_checkin' ) ) . '" title="Generate the customer check-in now and email it to yourself (bypasses the send throttle)">Send Check-in</a>';
+
 	$printFooter .= '<button type="button" id="bp-clear-cache-btn" class="button" data-nonce="' . esc_attr( wp_create_nonce('bp_clear_wpe_cache') ) . '">Clear Cache</button>';
 
 	$printFooter .= '</div><div style="justify-self:end; margin-bottom:15px;">';
@@ -2038,10 +2078,12 @@ function battleplan_auto_add_image_category($attachment_id) {
 // The audit can't run inside a single request (crawl + PageSpeed renders + a Claude call blow the
 // gateway timeout — that was the 502). It's now driven step-by-step from the Site Audit screen, so
 // this action just sends you there; the Run Audit button on that page does the work.
-function battleplan_force_run_audit() {
-    wp_safe_redirect(admin_url('index.php?page=site-audit'));
-    exit;
-}
+// Orphaned when the '└ Run Audit' submenu was removed (the Run/Resume button lives on the audit page
+// now). Kept commented for reference in case a direct redirect entry point is ever wanted again.
+// function battleplan_force_run_audit() {
+//     wp_safe_redirect(admin_url('index.php?page=site-audit'));
+//     exit;
+// }
 
 function battleplan_chron_gbp_status() {
     update_option('bp_chron_a_time', time());
@@ -2477,33 +2519,34 @@ function battleplan_clear_hvac($all=false) {
 	$keepPages = array ('home', 'contact-us', 'product-overview');
 	$keepElements = array ('site-header', 'widgets');
 
-	$elements = get_posts( array('post_type'=>'elements', 'numberposts'=>-1) );
-	$pages = get_posts( array('post_type'=>'page', 'numberposts'=>-1) );
-	$landing = get_posts( array('post_type'=>'landing', 'numberposts'=>-1) );
-	$testimonials = get_posts( array('post_type'=>'testimonials', 'numberposts'=>-1) );
-	$galleries = get_posts( array('post_type'=>'galleries', 'numberposts'=>-1) );
-	$jobsites = get_posts( array('post_type'=>'jobsite_geo', 'numberposts'=>-1) );
-	$posts = get_posts( array('post_type'=>'post', 'numberposts'=>-1) );
-	$woo_products = get_posts( array('post_type'=>'product', 'numberposts'=>-1) );
-	$woo_orders = get_posts( array('post_type'=>'shop_order', 'numberposts'=>-1) );
 	$users = get_users( array('fields' => array('ID', 'user_login'),));
 
 	if ( $all == true ) :
-		$products = get_posts( array('post_type'=>'products', 'numberposts'=>-1) );
-		foreach ($products as $post) wp_delete_post( $post->ID, true );
 		array_push($deleteImgs, 'products');
 		if (in_array('product-overview', $keepPages)) unset($keepPages[array_search('product-overview', $keepPages)]);
 	endif;
 
-	foreach ($elements as $post) if ( !in_array( $post->post_name, $keepElements) ) wp_delete_post( $post->ID, true );
-	foreach ($pages as $post) if ( !in_array( $post->post_name, $keepPages) ) wp_delete_post( $post->ID, true );
-	foreach ($landing as $post) wp_delete_post( $post->ID, true );
-	foreach ($testimonials as $post) wp_delete_post( $post->ID, true );
-	foreach ($galleries as $post) wp_delete_post( $post->ID, true );
-	foreach ($jobsites as $post) wp_delete_post( $post->ID, true );
-	foreach ($posts as $post) wp_delete_post( $post->ID, true );
-	foreach ($woo_products as $post) wp_delete_post( $post->ID, true );
-	foreach ($woo_orders as $post) wp_delete_post( $post->ID, true );
+	// Pages + Elements: keep only the core ones, delete everything else (ANY status, incl. drafts).
+	foreach ( get_posts( array('post_type'=>'page', 'numberposts'=>-1, 'post_status'=>'any') ) as $post )
+		if ( !in_array( $post->post_name, $keepPages) ) wp_delete_post( $post->ID, true );
+	foreach ( get_posts( array('post_type'=>'elements', 'numberposts'=>-1, 'post_status'=>'any') ) as $post )
+		if ( !in_array( $post->post_name, $keepElements) ) wp_delete_post( $post->ID, true );
+
+	// Every OTHER post type — sweep ALL custom post types, not a hardcoded few, so a copied site
+	// can't carry over jobsites, testimonials, galleries, landing pages, posts, WooCommerce data,
+	// or any CPT a previous build registered. WP-core infrastructure types are skipped; 'page' and
+	// 'elements' are handled above; the HVAC 'products' library survives CLEAR HVAC (CLEAR ALL removes it).
+	$keepTypes = apply_filters('bp_clear_keep_post_types', array(
+		'page','elements','attachment','nav_menu_item','wp_block','wp_template','wp_template_part',
+		'wp_navigation','wp_global_styles','wp_font_family','wp_font_face','revision','customize_changeset',
+		'oembed_cache','user_request','custom_css','acf-field-group','acf-field'
+	), $all);
+	foreach ( get_post_types( array(), 'names' ) as $ptype ) {
+		if ( in_array( $ptype, $keepTypes, true ) ) continue;
+		if ( $ptype === 'products' && !$all ) continue;   // HVAC product library kept unless CLEAR ALL
+		foreach ( get_posts( array('post_type'=>$ptype, 'numberposts'=>-1, 'post_status'=>'any') ) as $post )
+			wp_delete_post( $post->ID, true );
+	}
 
 	foreach ($users as $user) :
 	 	if ($user->user_login !== 'battleplanweb') :
@@ -2539,13 +2582,49 @@ function battleplan_clear_hvac($all=false) {
 		wp_reset_postdata();
 	endif;
 
+	// Saved Site Audits (reports, notes, run state, screenshots) — so a copied site starts clean.
+	bp_clear_audit_data();
+
 	header("Location: /wp-admin/");
 	exit();
 }
 
+// Wipe all saved Site-Audit data: the report history, last-run stamp, reviewer notes, any
+// in-progress run/stage state, and the on-disk screenshot folders (uploads/bp-audit/*). Self-
+// contained (deletes options + files directly) so it works whether or not the audit module file
+// is loaded. Called by Clear HVAC/ALL and Launch Site so a copied or freshly-launched site never
+// inherits the source site's audits.
+function bp_clear_audit_data() {
+	foreach ( array(
+		'bp_site_audit_ai_history', 'bp_audit_time', 'bp_audit_notes',
+		'bp_site_audit_run', 'bp_site_audit_stage', 'bp_site_audit_details'
+	) as $opt ) {
+		delete_option( $opt );
+	}
+
+	$up = wp_upload_dir();
+	if ( empty( $up['error'] ) ) {
+		$base = trailingslashit( $up['basedir'] ) . 'bp-audit';
+		if ( is_dir( $base ) ) {
+			foreach ( (array) glob( $base . '/*' ) as $entry ) {
+				if ( is_dir( $entry ) ) {
+					foreach ( (array) glob( $entry . '/*' ) as $f ) @unlink( $f );
+					@rmdir( $entry );
+				} else {
+					@unlink( $entry );
+				}
+			}
+			@rmdir( $base );
+		}
+	}
+}
+
 function battleplan_launch_site() {
 	delete_option('bp_gbp_update');
-	delete_option('bp_site_audit_details');
+
+	// Clear any audits carried over from the site this was copied from (also removes the legacy
+	// bp_site_audit_details key this used to delete on its own).
+	bp_clear_audit_data();
 
 	updateOption('bp_chron_time', 0);
 	updateOption('bp_launch_date', date('Y-m-d'));

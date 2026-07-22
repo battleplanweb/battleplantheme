@@ -11,7 +11,20 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (typeof originalGtag === 'function') originalGtag.apply(this, args);
 	};
 
+	// Form submissions — script-forms.js dispatches bp:form:sent on a successful send
+	document.addEventListener('bp:form:sent', e => {
+		const formID = (e.target && e.target.getAttribute('data-form-id')) || 'contact';
+		if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: 'conversion-form-' + formID });
+	});
+
 	window.addEventListener("load", () => {
+
+		// Primary-form modal openers count as an intent micro-conversion.
+		// Must run before the .track-clicks pass below so the class is already set.
+		getObjects('.modal-btn').forEach(btn => {
+			btn.classList.add('track-clicks');
+			btn.setAttribute('data-action', 'form-open');
+		});
 
 		// Track phone & email clicks
 		const trackClicks = getObjects('.track-clicks');

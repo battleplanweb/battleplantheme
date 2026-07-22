@@ -71,58 +71,33 @@
 	<?php bp_meta_tags(); ?>
 
 	<?php
+		// Head-time preload is emitted ONLY for the site-wide CSS body background (`site-bg`),
+		// which genuinely appears on every page and can be the LCP on hero-less pages. The
+		// per-page hero/parallax LCP is handled by the cache-safe injector in functions-grid.php
+		// (bp_register_hero_preload / bp_inject_hero_preload) — it records the FIRST hero that
+		// actually renders in THIS page's body and injects one fetchpriority="high" preload right
+		// before </head>. header.php runs before the body, so it can't know the page's real hero;
+		// emitting the accumulated bp_preload_images heroes here preloaded the home hero on every
+		// page (incl. pages that never show it). So we skip everything but site-bg.
 		$preload_images = get_option('bp_preload_images', []);
 		$preload_key    = is_mobile() ? 'mobile' : 'desktop';
 		$base_url       = get_site_url() . '/wp-content/uploads/';
+		$site_bg        = $preload_images[$preload_key]['site-bg'] ?? null;
 
-		if ( !empty($preload_images[$preload_key]) ) :
-			$has_parallax = false;
-			foreach ( $preload_images[$preload_key] as $key => $entry ) :
-				if ( $key !== 'site-bg' ) $has_parallax = true;
-			endforeach;
-
-			$first          = true;
-			$pruned         = false;
+		if ( $site_bg ) :
+			$file           = is_array($site_bg) ? $site_bg['file'] : $site_bg;
 			$upload_basedir = wp_upload_dir()['basedir'];
-			foreach ( $preload_images[$preload_key] as $key => $entry ) :
-				$file          = is_array($entry) ? $entry['file'] : $entry;
-				$attachment_id = is_array($entry) ? ( $entry['attachment_id'] ?? 0 ) : 0;
-				$url           = $base_url . ltrim($file, '/');
 
-				// bp_preload_images is an accumulate-only cache: an image later deleted or renamed
-				// leaves a ghost entry that would preload a 404. Skip AND drop any entry whose file
-				// no longer exists on disk (self-heals the option on the next uncached render).
-				if ( ! is_file( $upload_basedir . '/' . ltrim($file, '/') ) ) :
-					unset( $preload_images[$preload_key][$key] );
-					$pruned = true;
-					continue;
-				endif;
-
-				$density       = ( is_mobile() && is_array($entry) && !empty($entry['srcset']) );
-					$srcset        = $density ? $entry['srcset'] : ( ( !is_mobile() && $attachment_id ) ? wp_get_attachment_image_srcset($attachment_id, 'full') : '' );
-				// Drop candidates whose files are missing (e.g. a removed image crop still
-				// listed in attachment metadata) so we never preload a 404'd LCP image.
-				if ( $srcset ) $srcset = bp_prune_missing_srcset( $srcset );
-
-				if ( $key === 'site-bg' ) :
-					$priority = $has_parallax ? 'low' : 'high';
-				else :
-					$priority = $first ? 'high' : 'low';
-					$first    = false;
-				endif;
+			// Only emit if the file is actually on disk (never preload a 404'd background).
+			if ( is_file( $upload_basedir . '/' . ltrim($file, '/') ) ) :
 				?>
 				<link
 					rel="preload"
 					as="image"
-					href="<?php echo esc_url($url); ?>"
-					<?php echo $srcset ? 'imagesrcset="' . esc_attr($srcset) . '"' : ''; ?>
-					<?php echo ( $srcset && ! $density ) ? 'imagesizes="100vw"' : ''; ?>
-					fetchpriority="<?php echo $priority; ?>">
+					href="<?php echo esc_url( $base_url . ltrim($file, '/') ); ?>"
+					fetchpriority="high">
 				<?php
-			endforeach;
-
-			// Persist the ghost-entry cleanup once (only when something was actually dropped).
-			if ( $pruned ) update_option( 'bp_preload_images', $preload_images, true );
+			endif;
 		endif;
 
 	?>

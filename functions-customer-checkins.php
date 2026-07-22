@@ -58,14 +58,18 @@ function bp_run_customer_checkins() {
         $sections['reviews'] = $reviewHighlights;
     }
 
-    $kwHighlights = bp_analyze_keyword_highlights($throttleDays);
-    if (!empty($kwHighlights)) {
-        $sections['keywords'] = $kwHighlights;
-    }
-
-    $highlights = bp_analyze_stats_highlights($throttleDays);
-    if (!empty($highlights)) {
-        $sections['stats'] = $highlights;
+    // AI progress report — replaces the old traffic/keyword "stats" sections (which led with vanity metrics
+    // like impressions). We compute the outcome numbers exactly, then Claude writes a positives-only,
+    // owner-friendly progress narrative from them. (bp_analyze_stats_highlights / bp_analyze_keyword_highlights
+    // are retained but no longer wired in — the AI report supersedes them.)
+    $progressLast = (int) get_option('bp_progress_email_last_sent', 0);
+    if ((time() - $progressLast) >= (86400 * $throttleDays)) {
+        $facts    = bp_checkin_collect_facts();
+        $progress = bp_checkin_ai_progress($facts, $customer_info);
+        if ($progress !== '') {
+            $sections['progress'] = $progress;
+            update_option('bp_progress_email_last_sent', time());
+        }
     }
 
     if (!empty($sections)) {
@@ -810,6 +814,230 @@ function bp_analyze_review_highlights() {
 }
 
 /*--------------------------------------------------------------
+# AI Progress Report — the whole gamut of stats, positives only
+--------------------------------------------------------------*/
+
+/**
+ * Gather the outcome metrics from everything the dashboard collects into an exact, factual brief. Numbers
+ * are COMPUTED here (never left to the model to invent). We include the real trend direction for each —
+ * the AI is instructed to surface only the positives, so a flat/down number simply goes unmentioned.
+ * Leads and business actions come first because that's what a business owner actually cares about.
+ */
+function bp_checkin_collect_facts(): string {
+    $facts = [];
+
+    // ---- Leads / conversions (the headline) ----
+    $content = get_option('bp_ga4_content_clean');
+    if (is_array($content)) {
+        $sumConv = function ($window) use ($content) {
+            $t = 0;
+            foreach ($content as $k => $m) {
+                if (strncmp((string) $k, 'conversion-', 11) !== 0 || !is_array($m)) continue;
+                $t += (int) ($m["sessions-{$window}"] ?? 0);
+            }
+            return $t;
+        };
+        $leads30 = $sumConv(30);
+        $leads90 = $sumConv(90);
+        $calls30 = (int) ($content['conversion-phone-call']['sessions-30'] ?? 0);
+        if ($leads30 > 0 || $leads90 > 0) {
+            $facts[] = "Website leads (tracked phone-call clicks, form submissions and other conversions): {$leads30} in the last 30 days; {$leads90} in the last 90 days.";
+            if ($calls30 > 0) $facts[] = "Of those, {$calls30} were phone-call clicks in the last 30 days.";
+            // Only state an acceleration % off a MEANINGFUL base — a jump from 1→2 leads is "+100%"
+            // and reads as hollow. Below the floor the absolute lead counts above still stand on their own.
+            $priorMonthly = $leads90 > $leads30 ? (int) round(($leads90 - $leads30) / 2) : 0;
+            if ($priorMonthly >= 4 && $leads30 >= 8 && $leads30 > $priorMonthly) {
+                $up = (int) round(($leads30 - $priorMonthly) / $priorMonthly * 100);
+                if ($up >= 10) $facts[] = "Leads are accelerating — the last 30 days ({$leads30}) is running {$up}% ahead of the prior two-month average (~{$priorMonthly}/month).";
+            }
+        }
+    }
+
+    // ---- Traffic trends ----
+    $daily = get_option('bp_ga4_daily_clean');
+    if (is_array($daily) && $daily) {
+        $dates  = array_keys($daily);
+        $anchor = bp_ymd_to_ts($dates[0]);
+        $sumD   = function ($a, $b, $metric) use ($daily, $anchor) {
+            $t = 0;
+            for ($i = $a; $i <= $b; $i++) $t += (int) ($daily[date('Ymd', strtotime("-{$i} days", $anchor))][$metric] ?? 0);
+            return $t;
+        };
+        // A percentage is only trustworthy when the prior period had a real base of visits (≥30);
+        // otherwise a 5→7 blip becomes a misleading "+40%".
+        foreach ([['the last 30 days', 0, 29, 30, 59], ['the last 90 days', 0, 89, 90, 179], ['the last 12 months', 0, 364, 365, 729]] as $p) {
+            $cur = $sumD($p[1], $p[2], 'engagedSessions');
+            $prev = $sumD($p[3], $p[4], 'engagedSessions');
+            if ($prev >= 30 && $cur > $prev) {
+                $up = (int) round(($cur - $prev) / $prev * 100);
+                if ($up >= 8) $facts[] = "Engaged website visits are up {$up}% over {$p[0]} ({$cur}) vs. the prior equal period ({$prev}).";
+            }
+        }
+        $cur30 = $sumD(0, 29, 'engagedSessions');
+        $yoy30 = $sumD(365, 394, 'engagedSessions');
+        if ($yoy30 >= 30 && $cur30 > $yoy30) {
+            $up = (int) round(($cur30 - $yoy30) / $yoy30 * 100);
+            if ($up >= 8) $facts[] = "Vs. the same 30-day window one year ago, engaged visits are up {$up}% ({$cur30} vs {$yoy30}).";
+        }
+    }
+
+    // ---- Keyword rankings + movement ----
+    if (function_exists('bp_kw_tracked') && function_exists('bp_kw_history')) {
+        $tracked = bp_kw_tracked();
+        $hist    = bp_kw_history();
+        if ($tracked && $hist) {
+            $top3 = 0; $p1 = 0;
+            foreach ($tracked as $key => $kw) {
+                if (empty($hist[$key])) continue;
+                $kh = $hist[$key]; krsort($kh); $rank = (int) reset($kh);
+                if ($rank < 1) continue;
+                if ($rank <= 3)  $top3++;
+                if ($rank <= 10) $p1++;
+            }
+            if ($p1 >= 3) $facts[] = "Keyword rankings: {$p1} tracked keywords rank on page 1 of Google" . ($top3 > 0 ? ", {$top3} of them in the top 3" : '') . '.';
+        }
+    }
+    $bands = get_option('bp_kw_bands_history');
+    if (is_array($bands) && count($bands) >= 2) {
+        ksort($bands);
+        $bk        = array_keys($bands);
+        $latest    = $bands[end($bk)];
+        $target    = date('Ymd', strtotime('-30 days', strtotime((string) end($bk))));
+        $earlier   = null;
+        foreach ($bands as $ymd => $rec) if ((string) $ymd <= $target) $earlier = $rec;
+        if ($earlier) {
+            $nowTop3 = (int) ($latest['b1'] ?? 0);  $wasTop3 = (int) ($earlier['b1'] ?? 0);
+            $nowP1   = (int) (($latest['b1'] ?? 0) + ($latest['b2'] ?? 0));  $wasP1 = (int) (($earlier['b1'] ?? 0) + ($earlier['b2'] ?? 0));
+            if ($nowTop3 > $wasTop3)   $facts[] = 'Ranking gains: ' . ($nowTop3 - $wasTop3) . " more keyword(s) climbed into Google's top 3 over the last month (now {$nowTop3}).";
+            elseif ($nowP1 > $wasP1)   $facts[] = 'Ranking gains: ' . ($nowP1 - $wasP1) . " more keyword(s) moved onto page 1 over the last month (now {$nowP1}).";
+        }
+    }
+
+    // ---- Google Search clicks (never impressions) + top terms ----
+    $gsc = get_option('bp_gsc_totals_history');
+    if (is_array($gsc) && $gsc) {
+        $win = function ($from, $to) use ($gsc) {
+            $c = 0;
+            foreach ($gsc as $ymd => $rec) {
+                $d = (int) ((time() - strtotime((string) $ymd)) / 86400);
+                if ($d >= $to && $d <= $from) $c += (int) ($rec['clicks'] ?? 0);
+            }
+            return $c;
+        };
+        $c28 = $win(30, 3);
+        if ($c28 > 0) {
+            $line = "Google Search sent {$c28} clicks to the site in the last ~4 weeks";
+            $c56  = $win(58, 31);
+            // Only append the "up X%" when the prior 4 weeks had enough clicks (≥15) for the % to mean something.
+            if ($c56 >= 15 && $c28 > $c56) { $up = (int) round(($c28 - $c56) / $c56 * 100); if ($up >= 10) $line .= ", up {$up}% from the prior 4 weeks"; }
+            $facts[] = $line . '.';
+        }
+    }
+    $gscQ = get_option('bp_gsc_top_queries');
+    if (is_array($gscQ) && $gscQ) {
+        $byClicks = [];
+        foreach ($gscQ as $q => $p) { $mc = (int) ($p['month']['clicks'] ?? 0); if ($mc > 0) $byClicks[$q] = $mc; }
+        arsort($byClicks);
+        $qs = [];
+        foreach (array_slice($byClicks, 0, 4, true) as $q => $c) $qs[] = "\"{$q}\" ({$c} clicks)";
+        if ($qs) $facts[] = 'Top search terms bringing people to the site: ' . implode(', ', $qs) . '.';
+    }
+
+    // ---- Google Business Profile actions (calls / directions / clicks = leads) ----
+    $gbp = get_option('bp_gbp_perf_history');
+    if (is_array($gbp) && $gbp) {
+        $sumG = function ($metric) use ($gbp) {
+            $t = 0;
+            foreach ($gbp as $ymd => $rec) {
+                $d = (int) ((time() - strtotime((string) $ymd)) / 86400);
+                if ($d >= 3 && $d <= 33) $t += (int) ($rec[$metric] ?? 0);
+            }
+            return $t;
+        };
+        $parts = [];
+        if (($n = $sumG('calls')) > 0)      $parts[] = "{$n} calls";
+        if (($n = $sumG('directions')) > 0) $parts[] = "{$n} direction requests";
+        if (($n = $sumG('website')) > 0)    $parts[] = "{$n} website clicks";
+        if ($parts) $facts[] = 'From the Google Business Profile in the last ~30 days: ' . implode(', ', $parts) . ' — direct actions from people ready to reach out.';
+    }
+
+    // ---- Content growth ----
+    $ch = get_option('bp_content_history');
+    if (is_array($ch) && count($ch) >= 2) {
+        ksort($ch);
+        $ck      = array_keys($ch);
+        $latest  = $ch[end($ck)];
+        $target  = date('Ymd', strtotime('-90 days', strtotime((string) end($ck))));
+        $earlier = null;
+        foreach ($ch as $ymd => $rec) if ((string) $ymd <= $target) $earlier = $rec;
+        if ($earlier) {
+            $adds = [];
+            foreach (['jobsites' => 'jobsite posts', 'blog' => 'blog posts', 'galleries' => 'gallery items'] as $k => $lbl) {
+                $g = (int) ($latest[$k] ?? 0) - (int) ($earlier[$k] ?? 0);
+                if ($g > 0) $adds[] = "{$g} new {$lbl}";
+            }
+            if ($adds) $facts[] = 'Content added to the site in the last 90 days: ' . implode(', ', $adds) . '.';
+        }
+    }
+
+    return implode("\n", $facts);
+}
+
+/**
+ * Turn the factual brief into a warm, positive progress narrative via Claude. Positives only — the owner
+ * should feel good about the momentum. Numbers are taken verbatim from the brief (the model is told not to
+ * invent any). Returns HTML body (no heading), or '' if there's nothing to say / no API key / an error.
+ */
+function bp_checkin_ai_progress(string $facts, array $customer): string {
+    if (trim($facts) === '') return '';
+
+    $key = defined('ANTHROPIC_API_KEY') ? ANTHROPIC_API_KEY
+         : (defined('BP_ANTHROPIC_API_KEY') ? BP_ANTHROPIC_API_KEY
+         : (getenv('ANTHROPIC_API_KEY') ?: getenv('BP_ANTHROPIC_API_KEY')));
+    if (!$key) return '';
+
+    $model = defined('BP_CHECKIN_AI_MODEL') ? BP_CHECKIN_AI_MODEL
+           : (defined('BP_AUDIT_AI_MODEL') ? BP_AUDIT_AI_MODEL : 'claude-sonnet-4-6');
+
+    $name = $customer['name'] ?? 'the business';
+    $type = (!empty($customer['service-type']) && is_array($customer['service-type']))
+          ? ' (' . implode(', ', array_slice($customer['service-type'], 0, 2)) . ')' : '';
+
+    $system = "You write short, upbeat website progress updates for local service-business owners. Your ONE job is to make the owner feel genuinely good about how their website and online presence are performing.\n\nRULES:\n1. POSITIVES ONLY. Highlight wins, growth and momentum. Silently skip anything flat or down — never mention a decline or a weak number.\n2. LEAD WITH BUSINESS RESULTS: leads, phone calls, form submissions, and Google Business actions (calls, directions, website clicks). These matter far more than traffic. NEVER lead with, or dwell on, raw impressions or 'reach'.\n3. USE ONLY THE NUMBERS PROVIDED. Do not invent, extrapolate, or state any figure that isn't in the data. If a specific number isn't given, speak qualitatively instead.\n4. Warm, plain-English, encouraging, concrete. Talk like a helpful partner, not a report. No jargon, no hype clichés, no emoji.\n5. Output clean HTML only: 2–4 short <p> paragraphs, optionally ONE <ul> of the standout wins, ending on a brief encouraging line. Do NOT include a heading/title (one is added separately). No markdown, no <html>/<body> wrappers.";
+
+    $user = "Write a positive progress update for {$name}{$type}. Pick the strongest, most meaningful wins from the data below and weave them into an encouraging update the owner will be happy to read:\n\n{$facts}";
+
+    $resp = wp_remote_post('https://api.anthropic.com/v1/messages', [
+        'timeout' => 45,
+        'headers' => [
+            'x-api-key'         => $key,
+            'anthropic-version' => '2023-06-01',
+            'content-type'      => 'application/json',
+        ],
+        'body' => wp_json_encode([
+            'model'      => $model,
+            'max_tokens' => 1200,
+            'system'     => $system,
+            'messages'   => [['role' => 'user', 'content' => $user]],
+        ]),
+    ]);
+    if (is_wp_error($resp)) { error_log('bp_checkin_ai_progress: ' . $resp->get_error_message()); return ''; }
+
+    $code = (int) wp_remote_retrieve_response_code($resp);
+    $body = json_decode(wp_remote_retrieve_body($resp), true);
+    if ($code !== 200) {
+        if (function_exists('bp_ai_model_alert')) bp_ai_model_alert($code, $body, $model, 'Customer check-in');
+        error_log("bp_checkin_ai_progress: Claude HTTP {$code}");
+        return '';
+    }
+
+    $text = '';
+    foreach ($body['content'] ?? [] as $blk) if (($blk['type'] ?? '') === 'text') $text .= $blk['text'];
+    $text = trim(preg_replace('/^\s*```(?:html)?\s*|\s*```\s*$/', '', $text));
+    return $text;
+}
+
+/*--------------------------------------------------------------
 # Email Builder
 --------------------------------------------------------------*/
 
@@ -822,6 +1050,13 @@ function bp_send_checkin_email(string $toEmail, string $name, array $sections) {
     $body .= "<p>Here's the latest check-in summary for <strong>{$name}</strong>. ";
     $body .= "Review each section below and decide what's worth passing along to the client.</p>";
     $body .= "<hr>";
+
+    // ---- AI Progress Report (positives only — the headline) ----
+    if (isset($sections['progress'])) {
+        $body .= "<h2 style='color:#2980b9;'>📈 Your Progress</h2>";
+        $body .= $sections['progress'];   // Claude-written HTML narrative
+        $body .= "<hr>";
+    }
 
     // ---- Content Freshness ----
     if (isset($sections['freshness'])) {
@@ -1240,4 +1475,5 @@ function bp_customer_email_force() {
     delete_option('bp_jobsite_geo_commend_last_sent');
     delete_option('bp_stats_email_last_sent');
     delete_option('bp_kw_email_last_sent');
+    delete_option('bp_progress_email_last_sent');
 }

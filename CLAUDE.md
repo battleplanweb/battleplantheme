@@ -565,6 +565,14 @@ Note: `logo-top`, `logo-mid`, `logo-bot` are three logo variants that display at
      style="aspect-ratio:480/539" />
 ```
 
+### Archive images — the first one loads eagerly (don't "fix" this back)
+
+`[build-archive]` gives the **first archive image rendered on a page** `loading="eager"` + `fetchpriority="high"`; every one after it stays lazy. WordPress core's LCP heuristic spends its "don't lazy-load this one" budget on the **site logo** (the first image in the document), which leaves the actual largest above-the-fold image — the first archive card — both lazy *and* unprioritised. On a mobile archive that image is the LCP, so it was being deferred on every archive page fleet-wide.
+
+The counter (`$bpArchiveImgCount` in [functions-shortcodes.php](functions-shortcodes.php)) is a request-scoped `static`, deliberately **page-scoped rather than per-archive** — exactly one image should ever claim `fetchpriority="high"`, even when several archive blocks render on the same page. Only the image-producing branches increment it, so a text-only card can't consume the slot.
+
+Applies to every archive: posts, galleries, testimonials, products, jobsite_geo.
+
 ### Mockup placeholder
 
 When building mockup/draft markup before the real images are picked, point **every** `<img src="…">` (the logo excepted) at one of these placeholders, chosen by the image's aspect ratio:
@@ -586,7 +594,7 @@ Glendon swaps to the real image filenames once the design is locked. Don't inven
 ### [btn] — Button
 ```
 [btn link="/page/" align="center" size="100" class="" fancy="false" icon="false"
-     new-tab="false" get-biz="" ada="" start="" end="" track="" onclick=""]Button Text[/btn]
+     new-tab="false" get-biz="" ada="" start="" end="" track="" click="" onclick=""]Button Text[/btn]
 ```
 - `fancy` → adds fancy button style (value = style variant, e.g. `"1"`)
 - `icon` → icon slug (e.g. `"chevron-right"`) appended to button text
@@ -594,6 +602,23 @@ Glendon swaps to the real image filenames once the design is locked. Don't inven
 - `graphic` → image filename from uploads, shown as button icon
 - `get-biz` → pulls link from customer_info field
 - `ada` → adds screen-reader-only text for accessibility
+- `track` → **impression** tracking: sets `data-track`, fires `track-{value}` once the button scrolls into view
+- `click` → **click** tracking: puts `.track-clicks` + `data-action` on the `<a>`, firing `conversion-{value}` on click. Use for CTAs you want counted as conversions — `[btn link="/contact/" click="book-appointment"]` → `conversion-book-appointment`
+
+### Conversion tracking — name it `conversion-*` and it reports itself
+
+The analytics cron (`bp_ga4_collect_achievements_history()` in [functions-chron-analytics.php](functions-chron-analytics.php)) harvests **any** GA4 `unlock_achievement` whose `achievement_id` starts with `conversion-` (or `track-`) — so a new conversion needs **zero GA4 configuration**. Name it correctly and it appears in the dashboard on the next nightly run.
+
+What fires automatically, fleet-wide (all in [js/script-tracking.js](js/script-tracking.js)):
+| Event | Source |
+|---|---|
+| `conversion-phone-call` | `[get-biz info="phone-link" / "area-phone" / "mm-bar-phone"]` — the phone shortcodes emit `.track-clicks` themselves |
+| `conversion-form-{form-id}` | successful form send — listens for the `bp:form:sent` CustomEvent dispatched by [js/script-forms.js](js/script-forms.js), reads the form's `data-form-id` |
+| `conversion-form-open` | `.modal-btn` — the primary-form modal opener (mobile bar contact button, any `modal-btn`) |
+
+**A hand-written `<a href="tel:…">` is invisible to all of this.** Only the `[get-biz]` phone shortcodes carry `.track-clicks` — which is the usual reason a site under-reports calls. Same for buttons: use `[btn]` with `click=""`, not a raw `<a>`.
+
+To track anything else, put `class="track-clicks" data-action="whatever"` on it — no JS needed, the existing listener picks it up.
 
 **Always prefer `[btn]` over raw `<a>` for buttons.** If the markup is `<a href="/contact-us/">Contact Us</a>`, write it as `[btn link="/contact-us/"]Contact Us[/btn]` — picks up framework button styles automatically.
 
@@ -689,6 +714,22 @@ Beyond the basics, these are commonly used:
 - `phone-link` → phone as a tracked clickable link (used inline in body copy)
 - `phone-notrack` → plain phone link, no tracking class
 - `mm-bar-phone` → mobile menu bar phone button format
+
+### Writing SEO titles & descriptions (audits) — use shortcodes, never hard-code
+
+The framework SEO module runs shortcodes on stored SEO title/description values and then strips any HTML (`bp_seo_render_value()` in [includes/includes-seo.php](includes/includes-seo.php) — resolve `%%vars%%` → `do_shortcode()` → `wp_strip_all_tags()`). So a `[get-biz]` shortcode resolves at render time, and even a tracked phone *link* collapses to just its number. **When authoring SEO titles and meta descriptions during a site audit, use these shortcodes instead of typing the values in — the meta stays correct if the business's city, phone, brand, or founding date ever changes.**
+
+| Element | Use | Renders |
+|---|---|---|
+| City | `[get-biz info="city"]` | e.g. `Alba` |
+| State | `[get-biz info="state-abbr"]` | e.g. `TX` |
+| Phone | `[get-biz info="area-phone"]` | formatted number, link stripped to text (e.g. `(469) 230-0781`) |
+| Years of experience | `[get-years start="YYYY"]` | e.g. `25 years` — **always ASK for the start year each audit; don't infer it** (see below) |
+| Primary brand | `[get-biz info="site-brand" array="0"]` | first `site-brand` entry |
+
+Two gotchas:
+- **`site-brand` values are often lowercase slugs** (`amana`, `goodman`) because they double as logo-file keys. `[get-biz info="site-brand" array="0"]` outputs them verbatim, so it may render lowercase in a title — check the site's `site-brand` values and, if they're slugs, type the brand name directly instead.
+- **Never infer the experience start year — ASK every audit.** `customer_info['year']` is unreliable for this: it may be the *website* launch, the business's founding, or unrelated to the experience being advertised (a brand-new company can legitimately claim the owner's decades in the trade). There's usually a real business start date, but sometimes the number comes from the owner's personal experience. Because you can't tell which from the config, **ask the operator for the correct `start` year on each audit before writing an experience claim.** `[get-years start="…"]` counts to the current year and auto-updates, which is exactly why the anchor year has to be right.
 
 ---
 
@@ -1689,3 +1730,50 @@ A god (Odin) can impersonate any user ("view as"). **The hard rule:** while impe
 4. **JS-side god UI:** gate on `D.userCaps` (effective) or `D.isGod` — both are already impersonation-aware (`sitePulseData.isGod` is set from `site_pulse_god_can_override()`). Never re-derive "is god" in JS from anything else.
 
 Caps/roles, nav, panels, widgets, and the JS localization all read the effective user, so anything built on caps inherits impersonation for free. The only ways to break it are (1) checking the raw current user for caps, or (2) a raw `is_god()` bypass — don't do either. Module on/off still shows real state on Settings → Modules (don't route that through the override).
+
+---
+
+## AI Chat + SMS handoff (Twilio A2P) — "never miss a lead" module
+
+A website chat widget where a Claude-powered assistant helps visitors, captures leads, and (with explicit opt-in) moves the conversation to SMS so the contractor can take over from where the AI left off. Framework-native; **per-client Twilio number + A2P 10DLC brand** (their phone + legal identity). Shared Anthropic key.
+
+### Files
+`includes/includes-ai-chat.php` (config, REST `/message` + `/consent`, Claude call, tools) · `includes/includes-ai-chat-sms.php` (DB tables, inbound webhook `/sms-inbound`, human-takeover relay) · `includes/includes-ai-chat-reviews.php` · `prompts/prompts-ai-chat.php` (system prompt + industry blocks) · `js/script-ai-chat.js` · `style-ai-chat.css`. Loaded when `bp_module_on($ai_chat)`.
+
+### Turning it on — `ai_chat` option (in `functions-site.php`)
+```php
+update_option( 'ai_chat', array(
+    'install'        => 'true',
+    'vertical'       => '',            // hvac|plumbing|roofing|electrical|'' (generic); '' = generic block, put specifics in the knowledge file
+    'model'          => 'opus',        // 'opus' (best, recommended for live leads) or 'haiku'
+    'greeting'       => '{greeting}. Thanks for stopping by …',  // OPENING BUBBLE. {greeting} → time-of-day salutation (client-side)
+    'launcher'       => 'Chat with us',
+    'contractor_sms' => '+1XXXXXXXXXX', // where leads text + where the human takes over
+    'twilio_sid'     => 'AC…',          // Account SID — SAME across all clients under the one ISV account
+    'twilio_number'  => '+1XXXXXXXXXX', // the client's own local number (differs per client)
+    'privacy_url'    => '/privacy-policy/',
+    // 'terms_url', 'text_consent' (consent-card override) optional
+) );
+```
+- **wp-config.php** (per site): `define('BP_TWILIO_TOKEN', '…')` (secret — same token as every client under the ISV account) and an Anthropic key (`ANTHROPIC_API_KEY`/`BP_ANTHROPIC_API_KEY`). Optional `BP_CHAT_WEBHOOK_URL` if Cloudflare rewrites break Twilio signature validation (403 on inbound).
+- **Render gate:** the bubble only appears when `bp_chat_ready()` passes = Anthropic key **+** Twilio sid/token/number **+** `contractor_sms`. Missing `BP_TWILIO_TOKEN` or the Anthropic key = no bubble (the #1 "why isn't it showing" cause).
+- **Knowledge base:** `ai-chat-knowledge.md` in the **child-theme root** auto-loads by convention (no option needed). `company_knowledge` is INLINE TEXT (never a filename); the file-path key is `knowledge_file`.
+- **Greeting is config, not AI:** the opening bubble is `ai_chat['greeting']` localized into the page — the knowledge file only shapes the AI's *replies*. Tone rules (no emojis, direct) go in the knowledge file; the opener goes in `greeting`.
+
+### Opt-in / consent flow (A2P-compliant, deterministic)
+AI collects name + email + mobile, then a fixed **consent card** (Yes/No) shows the disclosure (brand, freq varies, msg&data rates, STOP/HELP) + Privacy/Terms links. **Only "Yes" sends a text**; consent audit (`consent_at`/`consent_ip`) is recorded first. Firing is deterministic — a safety net auto-shows the card after any lead with a valid mobile (`bp_chat_offer_text_consent`), so it never depends on the model remembering.
+
+### Human-takeover relay (SMS)
+On Yes, the contractor gets a text with the chat transcript; the **AI keeps covering the customer until the contractor's first reply**, then goes silent (`human_at`). Customer texts forward to the contractor prefixed with their name; the contractor replies to the Twilio number and it relays to the "active" customer (`bp_chat_active_conv`, a per-site option). Single number = one live customer at a time (dedicated per-customer numbers is the planned upgrade). Set the **inbound webhook** to `https://{domain}/wp-json/bp-chat/v1/sms-inbound`.
+
+### Twilio A2P 10DLC onboarding (per client) — current console menu
+Everything nests under **one ISV account** (yours): Customer Profile → **Brand** → **Campaign** → **Messaging Service** (+ number + webhook). Account SID + Auth Token are shared; only the number differs per client.
+1. **Register the Brand** — menu path **Trust Hub → Registrations → Create A2P Brand** (the console search bar is useless here — it only returns docs, never the console page; navigate the left menu). Choose "create a new Brand" + "create a new compliance profile" (each client LLC is its own legal entity — never reuse yours). LLCs → **Standard** brand (needs EIN); no-EIN/low-volume → Sole Proprietor.
+2. **Campaign:** use case **Customer Care**; opt-in type **Web Form**; paste the opt-in description + the public **Google Doc of opt-in screenshots** (Twilio can't upload images — the Doc link goes in the Message Flow field) + Privacy/Terms URLs; **sample messages** must include the brand name, STOP, and "msg & data rates may apply"; **opt-in confirmation message** = the opening SMS; **no opt-in keywords** (web-form opt-in). Twilio's generic "unable to verify" pre-check is advisory — submitting is fine when it flags nothing specific.
+3. **Number + Messaging Service:** the menu item is **Numbers & senders** (Twilio renamed "Phone Numbers") → **Overview** → **Buy a number** (US, area code, SMS-capable) — or buy it inside **Messaging → Services → [service] → Sender Pool → Add Senders**. Create one **Messaging Service per client**, add the number to its **Sender Pool**, link the campaign.
+4. **Inbound webhook:** **Messaging → Services → [service] → (Settings) → Send a webhook**, HTTP **POST**, URL `https://{domain}/wp-json/bp-chat/v1/sms-inbound`.
+
+The reusable screenshot Doc + full A2P notes live in the auto-memory (`reference_a2p_optin_screenshots_doc`). Texts are carrier-filtered until the campaign is **approved**; pre-approval, test SMS to a **Verified Caller ID**.
+
+### Deploy gotcha — option sync
+`ai_chat` is written to the DB by `battleplan_updateSiteOptions()`. Some sites **call that function directly at the end of `functions-site.php`** (syncs on every load — just deploy + purge). Others only run it via the **nightly housekeeping cron (Chron B)** — there, a deploy does NOT update the DB until the cron runs; force it with `wp option update bp_force_chron_b 1` then load a page (as `battleplanweb` to bypass the lock), or patch directly (`wp option patch update ai_chat greeting "…"`). Either way **purge cache** — the greeting is baked into cached HTML.

@@ -906,6 +906,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			arr.forEach(function (v) { tot += v; });
 			if (tot > 0) slices.push({ label: s.key, value: tot, cls: s.cls });
 		});
+		// Order the donut + legend by share, largest first (Direct on top when it dominates).
+		// Each slice keeps its own .cls, so colors stay bound to their channel after sorting.
+		slices.sort(function (a, b) { return b.value - a.value; });
 		drawDonut(pieC, slices);
 	}
 

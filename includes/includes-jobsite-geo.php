@@ -1377,9 +1377,9 @@ add_action('template_redirect', function () {
 
 	$id = get_queried_object_id();
 
-	// Let anyone who can edit the job still view/preview it (techs, managers, admins); only the
-	// public + crawlers get funneled to the /service/ page.
-	if ( is_preview() || current_user_can( 'edit_post', $id ) ) return;
+	// Redirect EVERYONE, logged-in editors included — a jobsite single has no meaningful public
+	// page (it only feeds the /service/ landing pages), so no one needs the bare view. Editing is
+	// unaffected: it happens in wp-admin (post.php?action=edit), which template_redirect never fires on.
 
 	// 1) the job's own service+town term (most-populated one if it carries more than one)
 	$services = get_the_terms( $id, 'jobsite_geo-services' );

@@ -282,13 +282,26 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
-	if (!empty($customer_info['service-areas']) && is_array($customer_info['service-areas'])) {
+	// Requires jobsite_geo as well as service-areas: the page's whole job is to give crawlers
+	// a path to the /service/{service--city-st}/ pages. Without the module those pages don't
+	// exist, so the page rendered blank and the footer linked to it from every page. Sites in
+	// that state get it cleaned up by the else branch below.
+	if (!empty($customer_info['service-areas']) && is_array($customer_info['service-areas']) && bp_module_on(get_option('jobsite_geo'))) {
 		if (is_null(get_page_by_path('areas-we-serve', OBJECT, 'universal'))) {
 			wp_insert_post(['post_title' => 'Areas We Serve', 'post_content' => '[get-service-areas]', 'post_status' => 'publish', 'post_type' => 'universal']);
 		}
 	} else {
+		// Unpublish rather than force-delete. The old wp_delete_post($id, true) skipped the
+		// trash entirely — fine when the page is our auto-generated [get-service-areas] stub,
+		// but this branch now also fires on jobsite_geo-off sites, and force-deleting would
+		// destroy any hand-written content someone put on that page with no way back. Drafting
+		// takes it out of the footer + sitemap (bp_footer_areas is gated too) and is reversible.
+		// Only touch a currently-published page so a manually re-published one isn't re-drafted
+		// on every run beyond the first — and if the auto-stub was already trashed, leave it.
 		$getPage = get_page_by_path('areas-we-serve', OBJECT, 'universal');
-		if ($getPage) wp_delete_post($getPage->ID, true);
+		if ($getPage && $getPage->post_status === 'publish') {
+			wp_update_post(['ID' => $getPage->ID, 'post_status' => 'draft']);
+		}
 	}
 
 	$eventCalendar = get_option('event_calendar');

@@ -169,6 +169,14 @@ button.bp-chat-send:disabled {
 	cursor:                                                    default;
 }
 
+button.bp-chat-close,
+button.bp-chat-close:hover,
+button.bp-chat-close.active,
+button.bp-chat-close.tab-focus {
+	padding:                                                   3px 10px 5px 12px;
+	font-family:                                               var(--font-text);
+}
+
 /* ---- Log ---- */
 .bp-chat-log {
 	flex:                                                      1 1 auto;

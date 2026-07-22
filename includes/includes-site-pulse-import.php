@@ -205,10 +205,89 @@ function site_pulse_call_claude_document( string $pdf_b64, string $prompt, strin
  * Image sibling of site_pulse_call_claude_document: a base64 image + a text prompt → model reply.
  * `$media_type` is the exact image MIME the API expects (image/jpeg | image/png).
  */
+/**
+ * Ensure an image is in a format Claude's vision API accepts (JPEG/PNG/GIF/WebP).
+ *
+ * The card importer sends the browser's raw file (an iPhone photo is HEIC) and forces
+ * media_type to image/jpeg for anything non-PNG — so HEIC bytes reach Claude mislabeled
+ * as JPEG and the API 400s ("could not read this card"). We sniff the ACTUAL bytes (the
+ * caller's declared media_type is unreliable) and, if it isn't a format Claude supports,
+ * transcode to JPEG via Imagick. Mutates $b64 + $media_type in place.
+ *
+ * Returns false only when the image is unsupported AND can't be converted (no Imagick /
+ * no HEIC delegate) — the caller then surfaces a clear error instead of a raw API 400.
+ */
+function site_pulse_prepare_image_for_claude( string &$b64, string &$media_type ): bool {
+	$supported = [ 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ];
+
+	$bin = base64_decode( $b64, true );
+	if ( $bin === false || $bin === '' ) return false;
+
+	// Sniff the real type from the bytes.
+	$sniff = '';
+	if ( function_exists( 'finfo_open' ) && ( $f = finfo_open( FILEINFO_MIME_TYPE ) ) ) {
+		$sniff = (string) finfo_buffer( $f, $bin );
+		finfo_close( $f );
+	}
+	// Older libmagic builds don't recognise HEIC/HEIF — fall back to the ISO-BMFF
+	// 'ftyp' brand in the file header (bytes 4–8 = "ftyp", 8–12 = brand).
+	if ( $sniff === '' || $sniff === 'application/octet-stream' ) {
+		if ( strlen( $bin ) > 12 && substr( $bin, 4, 4 ) === 'ftyp' ) {
+			$brand = substr( $bin, 8, 4 );
+			if ( in_array( $brand, [ 'heic', 'heix', 'heim', 'heis', 'hevc', 'hevx', 'mif1', 'msf1', 'heif' ], true ) ) {
+				$sniff = 'image/heic';
+			}
+		}
+	}
+
+	// Already a format Claude accepts → just make the declared type honest.
+	if ( in_array( $sniff, $supported, true ) ) { $media_type = $sniff; return true; }
+
+	// Couldn't identify it, but the caller claims a supported type → trust the caller
+	// (leaves genuine JPEG/PNG that libmagic occasionally mis-sniffs alone).
+	if ( $sniff === '' && in_array( $media_type, $supported, true ) ) return true;
+
+	// Anything else (HEIC/HEIF/AVIF/TIFF/BMP…) → transcode to JPEG via Imagick.
+	if ( ! class_exists( 'Imagick' ) ) return false;
+	try {
+		$im = new Imagick();
+		$im->readImageBlob( $bin );
+		if ( ! $im->valid() ) { $im->destroy(); return false; }
+		$im->autoOrient();                       // bake the iPhone rotation flag into pixels
+		$w = $im->getImageWidth();
+		$h = $im->getImageHeight();
+		if ( max( $w, $h ) > 1568 ) {            // Claude downscales anything larger anyway
+			$scale = 1568 / max( $w, $h );
+			$im->resizeImage( (int) round( $w * $scale ), (int) round( $h * $scale ), Imagick::FILTER_LANCZOS, 1 );
+		}
+		$im->setImageFormat( 'jpeg' );
+		$im->setImageCompressionQuality( 85 );
+		$im->stripImage();
+		$jpeg = $im->getImageBlob();
+		$im->clear();
+		$im->destroy();
+		if ( $jpeg === '' ) return false;
+		$b64        = base64_encode( $jpeg );
+		$media_type = 'image/jpeg';
+		return true;
+	} catch ( Exception $e ) {
+		if ( function_exists( 'site_pulse_log' ) ) {
+			site_pulse_log( 'ai_error', 'Image transcode for Claude vision failed', [ 'error' => $e->getMessage() ] );
+		}
+		return false;
+	}
+}
+
 function site_pulse_call_claude_image( string $img_b64, string $media_type, string $prompt, string $system = '', array $opts = [], &$debug = null ): ?string {
 	$debug   = null;
 	$api_key = site_pulse_get_api_key();
 	if ( ! $api_key ) { $debug = 'No API key configured.'; return null; }
+
+	// iPhone HEIC (and other formats Claude can't read) → transcode to JPEG first.
+	if ( ! site_pulse_prepare_image_for_claude( $img_b64, $media_type ) ) {
+		$debug = 'Unsupported image format — could not convert it for AI reading (server needs Imagick with HEIC support).';
+		return null;
+	}
 
 	$body = [
 		'model'      => $opts['model']      ?? 'claude-sonnet-4-6',

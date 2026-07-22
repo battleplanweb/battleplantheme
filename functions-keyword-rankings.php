@@ -525,16 +525,60 @@ function bp_kw_apply_synonyms_to_service(string $service, array $synonyms): arra
 
 // Parse a jobsite-services term slug: '{service-slug}--{city-slug}-{state}'.
 // Example: 'air-conditioner-repair--st-louis-mo' → ['service' => 'air conditioner repair', 'city' => 'st louis', 'state' => 'mo']
+// Raw jobsite service-area term slugs ('emory-tx', 'grand-saline-tx'), sorted LONGEST first
+// so a multi-word city ('grand-saline-tx') matches before any shorter suffix ('saline-tx').
+// Used to split LEGACY single-dash service slugs where the service/city boundary is ambiguous.
+function bp_kw_area_location_slugs(): array {
+	static $slugs = null;
+	if ($slugs !== null) return $slugs;
+	$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, 'fields' => 'slugs']);
+	$slugs = [];
+	foreach (is_wp_error($terms) ? [] : (array) $terms as $slug) {
+		$slug  = strtolower(trim((string) $slug));
+		$parts = explode('-', $slug);
+		if (count($parts) < 2 || strlen(end($parts)) !== 2) continue; // must look like city-…-st
+		$slugs[] = $slug;
+	}
+	usort($slugs, function ($a, $b) { return strlen($b) - strlen($a); });
+	return $slugs;
+}
+
+// Split a jobsite_geo-services term slug into {service, city, state}. Handles BOTH slug formats:
+//   canonical  service--city-st        (double dash cleanly separates the halves)
+//   legacy     service-city-st         (all single dashes — boundary is ambiguous)
+// Legacy sites never got the '--' canonicalization, so their service terms were silently
+// unparseable here and every jobsite keyword was dropped from tracking. For those, we resolve
+// the boundary by matching the tail against known service-area slugs (longest first), so the
+// keyword system works regardless of slug format — no URL changes required.
 function bp_kw_parse_service_term_slug(string $slug): array {
 	$blank = ['service' => '', 'city' => '', 'state' => ''];
-	if (strpos($slug, '--') === false) return $blank;
-	[$service_slug, $location_slug] = array_pad(explode('--', $slug, 2), 2, '');
-	$service = trim(str_replace('-', ' ', $service_slug));
-	$words   = array_values(array_filter(explode('-', $location_slug)));
-	if (!$words) return $blank;
-	$state = strtolower(array_pop($words));
-	$city  = trim(implode(' ', $words));
-	return ['service' => $service, 'city' => $city, 'state' => $state];
+	$slug  = strtolower(trim($slug));
+	if ($slug === '') return $blank;
+
+	// Canonical double-dash format.
+	if (strpos($slug, '--') !== false) {
+		[$service_slug, $location_slug] = array_pad(explode('--', $slug, 2), 2, '');
+		$service = trim(str_replace('-', ' ', $service_slug));
+		$words   = array_values(array_filter(explode('-', $location_slug)));
+		if (!$words) return $blank;
+		$state = strtolower(array_pop($words));
+		$city  = trim(implode(' ', $words));
+		return ($service && $city && $state) ? ['service' => $service, 'city' => $city, 'state' => $state] : $blank;
+	}
+
+	// Legacy single-dash: strip a known 'city-…-st' area suffix; the remainder is the service.
+	foreach (bp_kw_area_location_slugs() as $area) {
+		$suffix = '-' . $area;
+		if (substr($slug, -strlen($suffix)) !== $suffix) continue;
+		$service_slug = substr($slug, 0, -strlen($suffix));
+		$loc_words    = explode('-', $area);
+		$state        = strtolower(array_pop($loc_words));
+		$city         = trim(implode(' ', $loc_words));
+		$service      = trim(str_replace('-', ' ', $service_slug));
+		if ($service && $city && $state) return ['service' => $service, 'city' => $city, 'state' => $state];
+	}
+
+	return $blank;
 }
 
 // One query for all jobsite-services term stats — returns map of term_id → ['count', 'last_post'].
@@ -865,6 +909,14 @@ function bp_kw_test_serp(string $keyword): array {
 	$response = bp_kw_dfs_request('/v3/serp/google/organic/live/regular', $payload);
 	$task     = $response['tasks'][0] ?? null;
 	$result   = $task['result'][0] ?? null;
+
+	// Where did OUR site land? Run the same parser the cron uses over the full result set
+	// (all 100 depth, not just the top-30 table below) for a definitive best organic rank +
+	// map-pack position, instead of eyeballing the truncated table.
+	$domain   = preg_replace('/^www\./', '', bp_kw_site_domain());
+	$place_id = customer_info()['pid'] ?? null;
+	$parsed   = bp_kw_parse_serp_response($response, $domain, $place_id);
+
 	return [
 		'status_code'    => $response['status_code'] ?? 0,
 		'status_message' => $response['status_message'] ?? '',
@@ -872,6 +924,10 @@ function bp_kw_test_serp(string $keyword): array {
 		'task_message'   => $task['status_message'] ?? '',
 		'device'         => $device,
 		'items'          => $result['items'] ?? [],
+		'rank'           => (int) ($parsed['rank'] ?? 0),
+		'rank_url'       => (string) ($parsed['url'] ?? ''),
+		'rank_type'      => (string) ($parsed['type'] ?? ''),
+		'map_rank'       => (int) ($parsed['map_rank'] ?? 0),
 	];
 }
 
@@ -2139,6 +2195,28 @@ function bp_kw_render_admin_page(): void {
 					&nbsp;|&nbsp; <strong>Task status:</strong> <?php echo (int) $test_result['task_status']; ?>
 					<?php if ($test_result['task_message']) echo ' — ' . esc_html($test_result['task_message']); ?>
 					&nbsp;|&nbsp; <strong>Items returned:</strong> <?php echo count($test_result['items']); ?></p>
+
+					<?php
+					$_r = (int) ($test_result['rank'] ?? 0);
+					$_m = (int) ($test_result['map_rank'] ?? 0);
+					$_parts = [];
+					if ($_r > 0) {
+						$_t = (string) ($test_result['rank_type'] ?? '');
+						$_parts[] = 'organic #' . $_r . ($_t && $_t !== 'organic' ? ' (' . esc_html($_t) . ')' : '');
+					}
+					if ($_m > 0) $_parts[] = 'map pack #' . $_m;
+					?>
+					<p style="font-size:15px;margin:6px 0;">
+						<strong>Your rank:</strong>
+						<?php if ($_parts) : ?>
+							<strong style="color:#28a745;"><?php echo implode(' &middot; ', $_parts); ?></strong>
+							<?php if (!empty($test_result['rank_url'])) : ?>
+								<br><span style="color:#888;font-size:12px;"><?php echo esc_html($test_result['rank_url']); ?></span>
+							<?php endif; ?>
+						<?php else : ?>
+							<strong style="color:#dc3545;">not in top 100</strong>
+						<?php endif; ?>
+					</p>
 
 					<?php if (!empty($test_result['items'])) : ?>
 						<table class="widefat striped" style="font-size:11px;margin-top:6px;">

@@ -383,6 +383,91 @@ function ci_build_hours($periods, $wkdesc): array {
 # Schema Builder
 --------------------------------------------------------------*/
 
+/**
+ * Map a customer_info['business-type'] value onto a REAL schema.org type.
+ *
+ * business-type was authored as a loose, lowercase site-category label ("restaurant",
+ * "tattooshop", "electrician") and was previously passed straight through as the JSON-LD
+ * @type. schema.org types are case-sensitive and finite, so "restaurant" is not a type at
+ * all — Google can't classify the node, which kills the LocalBusiness rich result AND any
+ * aggregateRating stars hanging off it. A fleet survey found 57 of 75 sites in that state.
+ *
+ * Anything already a valid type passes through unchanged (case-insensitively canonicalised).
+ * Anything unrecognised falls back to LocalBusiness, which is always valid and always
+ * accepted — deliberately preferred over guessing a narrower type wrong.
+ */
+function bp_schema_type_map(): array {
+	return apply_filters('bp_schema_type_map', [
+		// case-only fixes
+		'restaurant'    => 'Restaurant',
+		'electrician'   => 'Electrician',
+		'plumber'       => 'Plumber',
+		'physician'     => 'Physician',
+		'motel'         => 'Motel',
+		'resort'        => 'Resort',
+		'clothingstore' => 'ClothingStore',
+		'bookstore'     => 'BookStore',
+		'localbusiness' => 'LocalBusiness',
+		'organization'  => 'Organization',
+		// label -> nearest real type
+		'tattooshop'    => 'TattooParlor',
+		'professional'  => 'ProfessionalService',
+		'realestate'    => 'RealEstateAgent',
+		'automotive'    => 'AutomotiveBusiness',
+		'autobody'      => 'AutoBodyShop',
+		'government'    => 'GovernmentOffice',
+		'fitness'       => 'HealthClub',
+		'musician'      => 'MusicGroup',
+		'chiropractor'  => 'MedicalBusiness',
+		'landscaper'    => 'HomeAndConstructionBusiness',
+		'stone'         => 'HomeAndConstructionBusiness',
+		'industrial'    => 'LocalBusiness',
+		'agriculture'   => 'LocalBusiness',
+		'animals'       => 'LocalBusiness',
+		'firesafety'    => 'LocalBusiness',
+		'publicfigure'  => 'Organization',
+		// LearningResource is a CreativeWork, not an org — wrong node entirely
+		'learningresource' => 'EducationalOrganization',
+	]);
+}
+
+/** Known-good schema.org types we accept as-is (canonical casing). */
+function bp_schema_valid_types(): array {
+	return apply_filters('bp_schema_valid_types', [
+		'LocalBusiness', 'Organization', 'ProfessionalService', 'GeneralContractor',
+		'HomeAndConstructionBusiness', 'HVACBusiness', 'RoofingContractor', 'Electrician',
+		'Plumber', 'HousePainter', 'Locksmith', 'MovingCompany', 'SelfStorage',
+		'Restaurant', 'FoodEstablishment', 'CafeOrCoffeeShop', 'BarOrPub', 'Bakery',
+		'Store', 'ClothingStore', 'BookStore', 'PetStore', 'HardwareStore',
+		'AutomotiveBusiness', 'AutoBodyShop', 'AutoRepair', 'AutoDealer',
+		'HealthAndBeautyBusiness', 'TattooParlor', 'BeautySalon', 'HairSalon', 'DaySpa',
+		'MedicalBusiness', 'Physician', 'Dentist', 'VeterinaryCare',
+		'SportsClub', 'HealthClub', 'ExerciseGym',
+		'RealEstateAgent', 'LegalService', 'Attorney', 'AccountingService',
+		'Motel', 'Hotel', 'Resort', 'LodgingBusiness',
+		'EntertainmentBusiness', 'ChildCare', 'EducationalOrganization',
+		'GovernmentOffice', 'MusicGroup', 'TravelAgency', 'Florist',
+	]);
+}
+
+/** Normalise any business-type label to a valid schema.org type (LocalBusiness fallback). */
+function bp_schema_normalize_type($type): string {
+	$type = preg_replace('/\s+/', '', (string) $type);
+	if ($type === '') return 'LocalBusiness';
+
+	$lc = strtolower($type);
+
+	// Already a valid type (any casing) — return the canonical form.
+	foreach (bp_schema_valid_types() as $valid) {
+		if (strtolower($valid) === $lc) return $valid;
+	}
+
+	$map = bp_schema_type_map();
+	if (isset($map[$lc])) return $map[$lc];
+
+	return 'LocalBusiness';
+}
+
 function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info = [], array $opts = []): array {
 	$opts += [
 		'include_aggregate_rating' => true,
@@ -393,7 +478,7 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
 	$name = $ci['name'] ?? get_bloginfo('name');
 	$bt   = $ci['business-type'] ?? '';
 	$type = is_array($bt) ? ($bt[0] ?? '') : $bt;
-	$type = trim($type) === '' ? 'LocalBusiness' : preg_replace('/\s+/', '', $type);
+	$type = bp_schema_normalize_type($type);
 
 	if (!empty($ci['site-type']) && strtolower((string)$ci['site-type']) === 'hvac') {
 		$type = 'HVACBusiness';

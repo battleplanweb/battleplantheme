@@ -355,7 +355,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'before'=>'false', 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'onclick'=>'' ), $atts );
+	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'before'=>'false', 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'click'=>'', 'onclick'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
 	$align = esc_attr($a['align']) !== 'center' ? " button-".esc_attr($a['align']) : '';
 	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
@@ -417,6 +417,13 @@ function battleplan_buildButton( $atts, $content = null ) {
 	}
 	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking != '' ) $class .= " tracking";
+
+	// click="x" → a tracked conversion click (fires conversion-x via script-tracking.js).
+	// Lands on the <a> ONLY — $class goes on the wrapper div too, and a .track-clicks
+	// wrapper would catch the bubbled click and double-count it.
+	$clickTrack = esc_attr($a['click']) !== '' ? ' data-action="'.esc_attr($a['click']).'"' : '';
+	$clickClass = $clickTrack !== '' ? ' track-clicks' : '';
+
 	$onclick = esc_attr($a['onclick']);
 	$inlineBtnID = 'btn_'.str_replace('/', '', $link);
 
@@ -433,7 +440,7 @@ function battleplan_buildButton( $atts, $content = null ) {
         </script>' :
 	'';
 
-	return $script.'<div class="block block-button span-'.$size.$class.$align.'"'.$tracking.$style.'><a id="'.$inlineBtnID.'" '.$target.' href="'.$link.'" class="button'.$class.'">'.do_shortcode($content).$ada.'</a></div>';
+	return $script.'<div class="block block-button span-'.$size.$class.$align.'"'.$tracking.$style.'><a id="'.$inlineBtnID.'" '.$target.' href="'.$link.'" class="button'.$class.$clickClass.'"'.$clickTrack.'>'.do_shortcode($content).$ada.'</a></div>';
 }
 
 // Resolve a button link to a human-readable destination name for the auto-ada label on
@@ -581,7 +588,6 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 	$attachment_id = $hasImage ? attachment_url_to_postid(site_url().$image) : 0;
 	$alt_text = $attachment_id ? get_post_meta($attachment_id, '_wp_attachment_image_alt', true) : '';
-	$preload_images = get_option('bp_preload_images', []);
 
 	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
 
@@ -617,15 +623,11 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 			// Record the FIRST hero image as the page's LCP image for the cache-safe head preload
 			// (bp_register_hero_preload / the ob injector below). This is what actually lands the
-			// preload in the head; the bp_preload_images accumulator can't (header runs before body).
+			// preload in the head — scoped to THIS page's real hero, not an accumulated site-wide set.
 			bp_register_hero_preload( $oneUrl );
 
-			// Preload the exact file we paint (single size → plain href, no srcset needed).
-			$preload_images['mobile'][$image] = basename($oneUrl);
-			update_option('bp_preload_images', $preload_images, true);
-
 			$hasContent = trim($content) !== '';
-			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ' background-image:url(' . $oneUrl . ');background-size:cover;background-position:center ' . $posX . ';';
+			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ' background-image:url(' . $oneUrl . ');background-size:cover;background-position:'.$posX.' center;';
 		} else {
 			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;';
 		}
@@ -644,14 +646,6 @@ function battleplan_buildParallax( $atts, $content = null ) {
 			$desktopExt = array_pop($desktopSrc);
 			$desktopBase = preg_replace('/-\d+x\d+$/', '', implode('.', $desktopSrc));
 
-			if ( !isset($preload_images['desktop'][$image]) ) :
-				$preload_images['desktop'][$image] = [
-					'file'          => ltrim(basename($image), '/'),
-					'attachment_id' => $attachment_id,
-				];
-				update_option('bp_preload_images', $preload_images, true);
-			endif;
-
 			$dataAttrs     = ' data-parallax="scroll" data-img-width="' . $imgW . '" data-img-height="' . $imgH . '" data-holder-height="'.$height.'" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '" data-fixed="' . $fixed . '" data-image-src="' . $image . '" data-img-base="' . $desktopBase . '" data-img-ext="' . $desktopExt . '"';
 			$parallaxClass = ' ' . $type . '-parallax';
 
@@ -659,7 +653,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 				// the preload targets) so the LCP image paints on first byte — instead of waiting for the
 				// load-bg-img JS to apply it after DOMContentLoaded. The parallax scroll effect still runs
 				// on top and only nudges background-position on scroll; it no longer gates first paint.
-				$bgStyle       = ' background-image:url(' . $image . '); background-size:cover; background-position:center ' . $posX . ';';
+				$bgStyle       = ' background-image:url(' . $image . '); background-size:cover; background-position:'.$posX.' center;';
 		} else {
 			$dataAttrs     = '';
 			$parallaxClass = '';
@@ -855,10 +849,11 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 	if ( $type == "customer-care" ) : $addClass = ' widget-image'; $addHide = 'customer-care'; endif;
 	if ( $type == "customer-care" && $content == null ) :
-		if ( (!is_array( $brand ) && $brand == 'american standard' ) || ( is_array( $brand ) && $brand[0] == 'american standard' )) : $content = '[get-customer-care]';
-		elseif ( (!is_array( $brand ) && $brand == 'ruud' ) || ( is_array( $brand ) && $brand[0] == 'ruud' )) : $content = '[ruud-pro-partner]';
-		elseif ( (!is_array( $brand ) && $brand == 'comfortmaker' ) || ( is_array( $brand ) && $brand[0] == 'comfortmaker' )) : $content = '[get-comfortmaker-elite-dealer]';
-		elseif ( (!is_array( $brand ) && $brand == 'tempstar' ) || ( is_array( $brand ) && $brand[0] == 'tempstar' )) : $content = '[get-tempstar-elite-dealer]';
+		$careBrand = strtolower( trim( is_array( $brand ) ? ( $brand[0] ?? '' ) : (string) $brand ) );
+		if     ( $careBrand == 'american standard' ) : $content = '[get-customer-care]';
+		elseif ( $careBrand == 'ruud' )              : $content = '[ruud-pro-partner]';
+		elseif ( $careBrand == 'comfortmaker' )      : $content = '[get-comfortmaker-elite-dealer]';
+		elseif ( $careBrand == 'tempstar' )          : $content = '[get-tempstar-elite-dealer]';
 		endif;
 	endif;
 

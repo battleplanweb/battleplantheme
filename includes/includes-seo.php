@@ -158,6 +158,19 @@ function bp_seo_resolve_vars( string $template, array $ctx = [] ): string {
 	return trim($out);
 }
 
+/**
+ * Prepare a stored SEO value for output: resolve %%vars%%, then run content shortcodes
+ * (so [get-biz …] etc. work in the SEO title/description — no hard-coded phone numbers),
+ * strip any HTML they emit (titles + meta must be plain text; this reduces the tracked
+ * phone link to just its number) and collapse whitespace.
+ */
+function bp_seo_render_value( string $raw, array $ctx = [] ): string {
+	if ( $raw === '' ) return '';
+	$out = bp_seo_resolve_vars( $raw, $ctx );
+	if ( strpos( $out, '[' ) !== false ) $out = do_shortcode( $out );
+	return trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $out ) ) );
+}
+
 /*--------------------------------------------------------------
 # §2. Title
 # Templates mirror the old cron's wpseo_titles exactly.
@@ -201,7 +214,7 @@ function bp_seo_document_title( $title ) {
 	if ( is_singular() ) {
 		$override = get_post_meta( get_queried_object_id(), BP_SEO_TITLE, true );
 		if ( $override !== '' ) {
-			return bp_seo_resolve_vars( $override );
+			return bp_seo_render_value( $override );
 		}
 	}
 
@@ -209,7 +222,7 @@ function bp_seo_document_title( $title ) {
 	if ( ( is_category() || is_tag() || is_tax() ) && ( $term = get_queried_object() ) instanceof WP_Term ) {
 		$ctx['title'] = $term->name;
 		$tOverride    = get_term_meta( $term->term_id, BP_SEO_TITLE, true ); // imported term SEO title
-		if ( $tOverride !== '' ) return bp_seo_resolve_vars( $tOverride, $ctx );
+		if ( $tOverride !== '' ) return bp_seo_render_value( $tOverride, $ctx );
 	}
 
 	$built = bp_seo_resolve_vars( bp_seo_title_template(), $ctx );
@@ -227,11 +240,11 @@ function bp_seo_document_title( $title ) {
 function bp_seo_description(): string {
 	if ( is_singular() ) {
 		$d = get_post_meta( get_queried_object_id(), BP_SEO_DESC, true );
-		if ( $d !== '' ) return bp_seo_resolve_vars( wp_strip_all_tags( $d ) );
+		if ( $d !== '' ) return bp_seo_render_value( $d );
 	}
 	if ( ( is_category() || is_tag() || is_tax() ) && ( $t = get_queried_object() ) instanceof WP_Term ) {
 		$td = get_term_meta( $t->term_id, BP_SEO_DESC, true );          // imported term SEO desc
-		if ( $td !== '' )                 return bp_seo_resolve_vars( wp_strip_all_tags( $td ), ['title' => $t->name] );
+		if ( $td !== '' )                 return bp_seo_render_value( $td, ['title' => $t->name] );
 		if ( ! empty($t->description) )   return wp_strip_all_tags( $t->description );
 	}
 	if ( is_front_page() || is_home() ) {
@@ -264,15 +277,38 @@ function bp_seo_is_noindex(): bool {
 	return (bool) apply_filters('bp_seo_noindex', $noindex, get_queried_object());
 }
 
+/**
+ * /tech/ (jobsite_geo-techs) renders (unlike /service-area/ & /service-type/, which 301 to
+ * /service/). Policy is that ONLY /service/ is a crawl surface, so nofollow the tech archives:
+ * their links funnel to /jobsites/ singles that 301 to /service/, and /areas-we-serve/ already
+ * gives crawlers a clean path to those /service/ pages. Everything else stays noindex,follow.
+ */
+add_filter('bp_seo_nofollow', function ($nofollow, $obj) {
+	if ( is_tax('jobsite_geo-techs') ) return true;
+	return $nofollow;
+}, 10, 2);
+
 /** Feed the robots meta via core's wp_robots() (WP 5.7+). */
 add_filter('wp_robots', 'bp_seo_wp_robots', 20);
 function bp_seo_wp_robots( array $robots ) {
 	if ( bp_seo_defer() ) return $robots;
 
 	if ( bp_seo_is_noindex() ) {
-		$robots['noindex']  = true;
-		$robots['nofollow'] = true;
-		unset($robots['index'], $robots['follow']);
+		$robots['noindex'] = true;
+		unset($robots['index']);
+
+		// noindex does NOT imply nofollow. Several noindexed views exist precisely to route
+		// crawlers to content that SHOULD rank — /areas-we-serve/ is how Google discovers the
+		// /service/{service--city-st}/ jobsite pages, and the noindexed jobsite_geo taxonomies
+		// link onward to them too. Blanket-nofollowing every noindex view cut those paths.
+		// Default to follow; opt a specific view back into nofollow via the filter.
+		if ( apply_filters('bp_seo_nofollow', false, get_queried_object()) ) {
+			$robots['nofollow'] = true;
+			unset($robots['follow']);
+		} else {
+			$robots['follow'] = true;
+			unset($robots['nofollow']);
+		}
 	} else {
 		$robots['index']  = true;
 		$robots['follow'] = true;
@@ -348,8 +384,8 @@ function bp_seo_head_meta() {
 	$ogDesc  = $desc;
 	if ( is_singular() ) {
 		$id = get_queried_object_id();
-		if ( ( $v = get_post_meta($id, BP_SEO_OG_TITLE, true) ) !== '' ) $ogTitle = bp_seo_resolve_vars($v);
-		if ( ( $v = get_post_meta($id, BP_SEO_OG_DESC,  true) ) !== '' ) $ogDesc  = wp_strip_all_tags($v);
+		if ( ( $v = get_post_meta($id, BP_SEO_OG_TITLE, true) ) !== '' ) $ogTitle = bp_seo_render_value($v);
+		if ( ( $v = get_post_meta($id, BP_SEO_OG_DESC,  true) ) !== '' ) $ogDesc  = bp_seo_render_value($v);
 	}
 
 	echo "\n<!-- Battle Plan SEO -->\n";
@@ -439,6 +475,12 @@ function bp_seo_schema_graph() {
 	if ( ! is_array($org) ) $org = [];
 	if ( ! empty($org) ) {
 		unset($org['@context']);                    // context lives at graph root
+		// customer_info['schema'] is a STORED blob (built by the GBP cron), so a site whose
+		// schema predates the type normaliser still carries a raw business-type label as
+		// @type. Coerce on the way out so the fix lands immediately, not on the next cron.
+		if ( isset($org['@type']) && function_exists('bp_schema_normalize_type') ) {
+			$org['@type'] = bp_schema_normalize_type($org['@type']);
+		}
 		$org['@id'] = home_url('#organization');
 		$org = bp_seo_narrow_area_service($org);
 		$org = bp_seo_narrow_area_jobsite($org);
@@ -751,7 +793,7 @@ function bp_seo_metabox_render( $post ) {
 	<div class="bp-seo-field">
 		<label for="bp_seo_title">SEO Title <span class="bp-seo-hint">— blank uses: <?php echo $tTpl; ?></span></label>
 		<input type="text" id="bp_seo_title" name="<?php echo BP_SEO_TITLE; ?>" value="<?php echo $g(BP_SEO_TITLE); ?>" placeholder="<?php echo $tTpl; ?>">
-		<span class="bp-seo-hint">You can use %%title%%, %%sitename%%, %%sep%% (<?php echo esc_html($sep); ?>), %%primary_category%%.</span>
+		<span class="bp-seo-hint">You can use %%title%%, %%sitename%%, %%sep%% (<?php echo esc_html($sep); ?>), %%primary_category%% — and shortcodes like [get-biz info="area-phone"].</span>
 	</div>
 	<div class="bp-seo-field">
 		<label for="bp_seo_desc">Meta Description</label>

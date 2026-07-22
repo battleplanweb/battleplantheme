@@ -2025,6 +2025,105 @@ function battleplan_strip_EXIF_data($upload) {
     return $upload;
 }
 
+/*--------------------------------------------------------------
+# iPhone HEIC/HEIF support (site-wide)
+#
+# WordPress core doesn't list HEIC in get_allowed_mime_types(), so
+# wp_check_filetype_and_ext() returns an empty ext/type for a .heic upload.
+# Every uploader that validates that way — the Media Library AND all the Site
+# Pulse photo fields (directory, action items, messages, reviews, profile) —
+# then bounces the file as "not permitted / not a valid image", which is the
+# iPhone upload failure. The extension is in each handler's allowlist; it's the
+# real-MIME check that fails.
+#
+# Fix: register the type so the gate accepts it, then transcode it to JPEG on
+# the way in (via Imagick, the same path jobsite-geo uses) so downstream code,
+# thumbnails, and browsers get a displayable file — never a raw .heic. All of it
+# is gated on the server actually being able to READ HEIC (Imagick + libheif);
+# if it can't, we leave the type unregistered rather than accept a file we can't
+# process (a clear rejection beats a broken, undisplayable upload).
+--------------------------------------------------------------*/
+
+// True only when this server's Imagick can decode HEIC/HEIF. Cached per request.
+function bp_can_process_heic() {
+    static $can = null;
+    if ( $can !== null ) return $can;
+    $can = false;
+    if ( class_exists( 'Imagick' ) ) {
+        try {
+            $can = ( ! empty( Imagick::queryFormats( 'HEIC' ) ) || ! empty( Imagick::queryFormats( 'HEIF' ) ) );
+        } catch ( Exception $e ) {
+            $can = false;
+        }
+    }
+    return $can;
+}
+
+// Let WordPress accept HEIC/HEIF uploads (only where we can convert them).
+add_filter( 'upload_mimes', 'bp_allow_heic_mimes' );
+function bp_allow_heic_mimes( $mimes ) {
+    if ( ! bp_can_process_heic() ) return $mimes;
+    $mimes['heic']  = 'image/heic';
+    $mimes['heif']  = 'image/heif';
+    $mimes['heics'] = 'image/heic-sequence';
+    $mimes['heifs'] = 'image/heif-sequence';
+    return $mimes;
+}
+
+// wp_check_filetype_and_ext() gates its result against core's allowed-mimes map and
+// returns empty for HEIC even with the extension whitelisted. Fill it back in so the
+// Site Pulse handlers (which reject on empty ext/type) let the file through.
+add_filter( 'wp_check_filetype_and_ext', 'bp_fix_heic_filetype', 10, 4 );
+function bp_fix_heic_filetype( $data, $file, $filename, $mimes ) {
+    if ( ! empty( $data['ext'] ) && ! empty( $data['type'] ) ) return $data;
+    if ( ! bp_can_process_heic() ) return $data;
+    $ext = strtolower( pathinfo( (string) $filename, PATHINFO_EXTENSION ) );
+    if ( in_array( $ext, [ 'heic', 'heif' ], true ) ) {
+        $data['ext']  = $ext;
+        $data['type'] = 'image/' . $ext;
+    }
+    return $data;
+}
+
+// Transcode HEIC/HEIF uploads to JPEG once WP has moved the file into place.
+// wp_handle_upload applies this as a FILTER on its return array, so updating
+// file/url/type here is seen by every caller (Media Library + Site Pulse's
+// wp_handle_upload photo fields). Priority 20 so it runs AFTER jobsite-geo's own
+// HEIC→WebP converter (priority 10, scoped to jobsite posts) — on a jobsite upload
+// the type is already image/webp by now and this no-ops; everywhere else it catches
+// the HEIC and hands back a .jpg.
+add_filter( 'wp_handle_upload', 'bp_transcode_heic_upload', 20 );
+function bp_transcode_heic_upload( $upload ) {
+    if ( empty( $upload['file'] ) || empty( $upload['type'] ) ) return $upload;
+    if ( ! in_array( $upload['type'], [ 'image/heic', 'image/heif' ], true ) ) return $upload;
+    if ( ! class_exists( 'Imagick' ) || ! file_exists( $upload['file'] ) ) return $upload;
+
+    try {
+        $im = new Imagick( $upload['file'] );
+        if ( ! $im->valid() ) { $im->destroy(); return $upload; }
+        $im->autoOrient();                       // bake the iPhone rotation flag into pixels
+        $im->setImageFormat( 'jpeg' );
+        $im->setImageCompressionQuality( 90 );
+        $im->stripImage();                        // drop metadata (incl. the now-stale flag)
+
+        $new_file = preg_replace( '/\.[^.\/]+$/', '.jpg', $upload['file'] );
+        $new_url  = preg_replace( '/\.[^.\/]+$/', '.jpg', $upload['url'] );
+        $im->writeImage( $new_file );
+        $im->clear();
+        $im->destroy();
+
+        if ( file_exists( $new_file ) && filesize( $new_file ) > 100 ) {
+            if ( $new_file !== $upload['file'] ) @unlink( $upload['file'] );
+            $upload['file'] = $new_file;
+            $upload['url']  = $new_url;
+            $upload['type'] = 'image/jpeg';
+        }
+    } catch ( Exception $e ) {
+        error_log( 'HEIC upload transcode failed: ' . $e->getMessage() );
+    }
+    return $upload;
+}
+
 // Highlights menu option based on the post type of the current page and the title attribute given to the menu button in Appearance->Menus
 add_filter('nav_menu_css_class', 'battleplan_current_type_nav_class', 10, 2 );
 function battleplan_current_type_nav_class($classes, $item) {
@@ -3247,6 +3346,11 @@ add_filter('bp_footer_terms', function($out, $customer_info) {
 }, 10, 2);
 
 add_filter('bp_footer_areas', function($out, $customer_info) {
+	// Only meaningful with jobsite_geo: the page exists to route crawlers to the
+	// /service/{service--city-st}/ pages. Without that module there are no jobsite
+	// pages to link to, so the footer link led somewhere with nothing on it.
+	if ( ! bp_module_on( get_option('jobsite_geo') ) ) return $out;
+
 	if ($pg = get_page_by_path('areas-we-serve', OBJECT, 'universal'))
 		return ' • <a href="'.get_permalink($pg->ID).'">Areas We Serve</a>';
 }, 10, 2);

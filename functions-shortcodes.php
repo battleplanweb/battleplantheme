@@ -17,10 +17,11 @@ function battleplan_getBizInfo($atts, $content = null) {
 	], (array) customer_info());
 
 	$a = shortcode_atts([
-		'info' => 'name',
-		'icon' => '',
-		'left' => '0',
-		'top'  => '0'
+		'info'  => 'name',
+		'icon'  => '',
+		'left'  => '0',
+		'top'   => '0',
+		'array' => ''
 	], $atts);
 
 	$data = $a['info'];
@@ -79,9 +80,21 @@ function battleplan_getBizInfo($atts, $content = null) {
 	# GENERIC FIELD
 	--------------------------------------------------------------*/
 
-	return isset($customer_info[$data])
-		? $icon.esc_html($customer_info[$data])
-		: '';
+	if (!isset($customer_info[$data])) return '';
+
+	$value = $customer_info[$data];
+
+	// If the field is an array, pull the requested element (default first).
+	// array="0" grabs the first, array="1" the second, etc. — works with
+	// associative keys too (e.g. array="prop-id" on google-tags). A non-array
+	// field ignores the array attr and just returns its single value.
+	if (is_array($value)) {
+		$index = $a['array'] !== '' ? $a['array'] : 0;
+		$value = $value[$index] ?? reset($value);
+		if (is_array($value)) $value = implode(', ', $value);   // e.g. service-areas → "City, State"
+	}
+
+	return $icon.esc_html($value);
 }
 
 
@@ -393,7 +406,7 @@ add_shortcode( 'get-hours', 'battleplan_addBusinessHours' );
 function battleplan_addBusinessHours( $atts, $content = null ) {
 	bp_inline_minified_css( get_template_directory() . '/style-hours.css' );
 
-	$a = shortcode_atts( array( 'direction'=>'vert', 'start'=>'sun', 'abbr'=>'true', 'wkday1'=>'', 'wkday2'=>'', 'mon1'=>'', 'mon2'=>'', 'tue1'=>'', 'tue2'=>'', 'wed1'=>'', 'wed2'=>'', 'thu1'=>'', 'thu2'=>'', 'fri1'=>'', 'fri2'=>'', 'sat1'=>'', 'sat2'=>'', 'sun1'=>'', 'sun2'=>'',  ), $atts );
+	$a = shortcode_atts( array( 'direction'=>'vert', 'start'=>'sun', 'abbr'=>'true', 'combine'=>'false', 'wkday1'=>'', 'wkday2'=>'', 'mon1'=>'', 'mon2'=>'', 'tue1'=>'', 'tue2'=>'', 'wed1'=>'', 'wed2'=>'', 'thu1'=>'', 'thu2'=>'', 'fri1'=>'', 'fri2'=>'', 'sat1'=>'', 'sat2'=>'', 'sun1'=>'', 'sun2'=>'',  ), $atts );
 	$direction = esc_attr($a['direction']) == "vert" ? "vert" : "horz";
 	$days = esc_attr($a['wkday1']) !== "" ? array('weekdays', 'saturday') : array('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
 	if ( esc_attr($a['start']) == "sun" || esc_attr($a['start']) == "sunday" ) :
@@ -426,23 +439,101 @@ function battleplan_addBusinessHours( $atts, $content = null ) {
 		endif;
 	endif;
 
-	$buildHours = '<div class="office-hours '.$direction.'">';
+	// Day label map: short-start, short-end, long-start, long-end (a range collapses when start === end)
+	$dayLabels = array(
+		'weekdays'  => array( 'Mon', 'Fri', 'Monday',    'Friday'    ),
+		'sunday'    => array( 'Sun', 'Sun', 'Sunday',    'Sunday'    ),
+		'monday'    => array( 'Mon', 'Mon', 'Monday',    'Monday'    ),
+		'tuesday'   => array( 'Tue', 'Tue', 'Tuesday',   'Tuesday'   ),
+		'wednesday' => array( 'Wed', 'Wed', 'Wednesday', 'Wednesday' ),
+		'thursday'  => array( 'Thu', 'Thu', 'Thursday',  'Thursday'  ),
+		'friday'    => array( 'Fri', 'Fri', 'Friday',    'Friday'    ),
+		'saturday'  => array( 'Sat', 'Sat', 'Saturday',  'Saturday'  ),
+	);
+
+	// combine: "true" merges only ADJACENT matching days (Sun-Mon), "all" also merges scattered ones (Sun, Thu & Sat)
+	$combine = esc_attr( $a['combine'] );
+	$abbr    = esc_attr( $a['abbr'] ) === 'true';
+
+	// Strip any leading "Day: " label once, up front, so rows can be compared
+	$rows = array();
 
 	foreach ( $days as $day ) :
 
-		$removeDay  = strpos( $getHours[$day],  ': ' );
-		$removeDay2 = strpos( $getHours2[$day], ': ' );
+		$raw1 = $getHours[$day]  ?? '';
+		$raw2 = $getHours2[$day] ?? '';
 
-		$hours  = $removeDay  !== false ? substr( $getHours[$day],  $removeDay  + 2 ) : $getHours[$day];
-		$hours2 = $removeDay2 !== false ? substr( $getHours2[$day], $removeDay2 + 2 ) : $getHours2[$day];
+		$removeDay  = strpos( $raw1, ': ' );
+		$removeDay2 = strpos( $raw2, ': ' );
 
-		if ( esc_attr( $a['wkday1'] ) !== '' && $day === 'weekdays' ) :
-			$buildHours .= '<div class="row row-mon row-tue row-wed row-thu row-fri">';
-			$printDay = esc_attr( $a['abbr'] ) === 'true' ? 'Mon-Fri' : 'Monday - Friday';
-		else :
-			$buildHours .= '<div class="row row-' . substr( $day, 0, 3 ) . '">';
-			$printDay = esc_attr( $a['abbr'] ) === 'true' ? substr( $day, 0, 3 ) : $day;
+		$hours  = $removeDay  !== false ? substr( $raw1, $removeDay  + 2 ) : $raw1;
+		$hours2 = $removeDay2 !== false ? substr( $raw2, $removeDay2 + 2 ) : $raw2;
+
+		// Roll this day into a matching row: the previous one only, or any of them when combining all
+		$match = -1;
+
+		if ( $combine === 'true' || $combine === 'all' ) :
+			foreach ( ( $combine === 'all' ? array_keys( $rows ) : array( count( $rows ) - 1 ) ) as $i ) :
+				if ( isset( $rows[$i] ) && $rows[$i]['hours'] === $hours && $rows[$i]['hours2'] === $hours2 ) :
+					$match = $i;
+					break;
+				endif;
+			endforeach;
 		endif;
+
+		if ( $match > -1 ) :
+			$rows[$match]['days'][] = $day;
+		else :
+			$rows[] = array( 'days' => array( $day ), 'hours' => $hours, 'hours2' => $hours2 );
+		endif;
+
+	endforeach;
+
+	// Label a group of days: runs of adjacent days collapse to a range, the rest list out ("Sun, Tue-Thu & Sat")
+	$labelDays = function( $groupDays ) use ( $days, $dayLabels, $abbr ) {
+		$parts = array();
+		$run   = array();
+
+		$flush = function() use ( &$parts, &$run, $dayLabels, $abbr ) {
+			if ( ! $run ) return;
+			$start = $abbr ? $dayLabels[ $run[0] ][0] : $dayLabels[ $run[0] ][2];
+			$end   = $abbr ? $dayLabels[ end( $run ) ][1] : $dayLabels[ end( $run ) ][3];
+			$parts[] = $start === $end ? $start : ( $abbr ? $start . '-' . $end : $start . ' - ' . $end );
+			$run = array();
+		};
+
+		$prevIdx = null;
+
+		foreach ( $groupDays as $day ) :
+			$idx = array_search( $day, $days, true );
+			if ( $prevIdx !== null && $idx !== $prevIdx + 1 ) $flush();
+			$run[]   = $day;
+			$prevIdx = $idx;
+		endforeach;
+
+		$flush();
+
+		if ( count( $parts ) < 2 ) return $parts ? $parts[0] : '';
+
+		$last = array_pop( $parts );
+		return implode( ', ', $parts ) . ' & ' . $last;
+	};
+
+	$buildHours = '<div class="office-hours '.$direction.'">';
+
+	foreach ( $rows as $row ) :
+
+		$hours  = $row['hours'];
+		$hours2 = $row['hours2'];
+
+		$classes = array();
+		foreach ( $row['days'] as $day ) :
+			$classes[] = $day === 'weekdays' ? 'row-mon row-tue row-wed row-thu row-fri' : 'row-' . substr( $day, 0, 3 );
+		endforeach;
+
+		$buildHours .= '<div class="row ' . implode( ' ', $classes ) . '">';
+
+		$printDay = $labelDays( $row['days'] );
 
 		$buildHours .= ( $hours && $hours2 )
 			? '<div class="col-day row-2">' . esc_html( $printDay ) . '</div>'
@@ -483,7 +574,13 @@ function battleplan_get_service_areas() {
 		'hide_empty' => false
 	]);
 
-	if (is_wp_error($city_terms)) return '';
+	// The jobsite_geo-service-areas taxonomy only exists when the jobsite_geo module is
+	// installed; elsewhere get_terms() returns "Invalid taxonomy". Returning '' here rendered
+	// a silently blank page, discarding the customer_info['service-areas'] list read below.
+	// The auto-created /areas-we-serve/ page is now gated on jobsite_geo, so this mainly
+	// covers hand-placing [get-service-areas] on a site without the module: cities still
+	// render, just as plain text with no /service/ links (has_services stays false).
+	if (is_wp_error($city_terms)) $city_terms = [];
 
 	$cities = [];  // city-slug => [display, slug]
 
@@ -833,7 +930,7 @@ add_filter('posts_request', function($sql, $query) {
 // Insert Espanol (Spanish Translation) Button
 add_shortcode( 'get-translator', 'battleplan_translator' );
 function battleplan_translator($atts, $content = null) {
-	bp_enqueue_script( 'battleplan-translator', 'script-translator', ['jquery'] );
+	bp_enqueue_script( 'battleplan-translator', 'script-translator', ['battleplan-script-helpers'] );
 	bp_inline_minified_css( get_template_directory() . '/style-translator.css' );
 
 	?><script async nonce="<?php echo _BP_NONCE; ?>" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script><?php
@@ -860,6 +957,17 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$titlePos = esc_attr($a['title_pos']);
 	$metaPos = esc_attr($a['meta_pos']);
 	$lazy = esc_attr($a['lazy']) === "true" || esc_attr($a['lazy']) === "lazy" ? "lazy" : "eager";
+
+	// LCP: the first archive card is almost always the largest above-the-fold image, but
+	// WordPress core spends its "don't lazy-load this one" budget on the site logo (the first
+	// image in the document), so the real content image ends up lazy AND unprioritised —
+	// the visitor waits on a deferred fetch for the thing that defines the page.
+	// Count archive images rendered this request and let the first load eagerly at high
+	// priority. Deliberately page-scoped, not per-archive: exactly one image should ever
+	// claim fetchpriority="high", even when several archive blocks render on one page.
+	// Only image-producing branches touch the counter, so a text-only card can't eat the slot.
+	static $bpArchiveImgCount = 0;
+
 	$showDate = esc_attr($a['show_date']);
 	$showAuthor = esc_attr($a['show_author']);
 	$showSocial = esc_attr($a['show_social']);
@@ -925,7 +1033,11 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			$width = $image[1];
 			$height = $image[2];
 
-			$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']<img class="image-'.$type.' img-archive '.$tags[0].'-img" src = "'.$image[0].'" loading="'.$lazy.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" srcset="'.$imgSet.'" sizes="'.get_srcset($width).'" alt="'.readMeta(get_the_ID($picID), "_wp_attachment_image_alt", true).'">[/img]');
+			$isFirstImg  = ( $bpArchiveImgCount++ === 0 );
+			$imgLoading  = $isFirstImg ? 'eager' : $lazy;
+			$imgPriority = $isFirstImg ? ' fetchpriority="high"' : '';
+
+			$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']<img class="image-'.$type.' img-archive '.$tags[0].'-img" src = "'.$image[0].'" loading="'.$imgLoading.'"'.$imgPriority.' width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" srcset="'.$imgSet.'" sizes="'.get_srcset($width).'" alt="'.readMeta(get_the_ID($picID), "_wp_attachment_image_alt", true).'">[/img]');
 		endwhile; wp_reset_postdata(); endif;
 
 		if ( $textSize == "" ) :
@@ -937,7 +1049,11 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$thumbW = $meta['sizes'][$size]['width'];
 		$thumbH = $meta['sizes'][$size]['height'];
 
-		$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, array( 'loading' => $lazy, 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]');
+		$isFirstImg = ( $bpArchiveImgCount++ === 0 );
+		$thumbAttr  = array( 'loading' => $isFirstImg ? 'eager' : $lazy, 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH );
+		if ( $isFirstImg ) $thumbAttr['fetchpriority'] = 'high';
+
+		$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, $thumbAttr ).'[/img]');
 		if ( $textSize == "" ) :
 			$textSize = getTextSize($picSize);
 		endif;
@@ -2096,7 +2212,7 @@ function battleplan_getRSS( $atts, $content = null ) {
 // Display Count-Up widget
  add_shortcode("get-countup", "battleplan_countUp");
  function battleplan_countUp($atts, $content) {
- 	 bp_enqueue_script( 'battleplan-count-up', 'script-count-up', ['jquery'] );
+ 	 bp_enqueue_script( 'battleplan-count-up', 'script-count-up', ['battleplan-script-helpers'] );
 
 	 $a = shortcode_atts( array( 'name'=>'', 'start'=>'0', 'end'=>'0', 'decimals'=>'0', 'duration'=>'5', 'delay'=>'0', 'waypoint'=>'85%', 'easing'=>'easeOutExpo', 'grouping'=>'true', 'separator'=>',', 'decimal'=>'.', 'prefix'=>'', 'suffix'=>'' ), $atts );
 	 $id = strtolower(esc_attr($a['name']));
@@ -2129,7 +2245,7 @@ function battleplan_getRSS( $atts, $content = null ) {
 // Display Count-Down widget
  add_shortcode("get-countdown", "battleplan_countDown");
  function battleplan_countDown($atts, $content) {
-	bp_enqueue_script( 'battleplan-count-down', 'script-count-down', ['jquery'] );
+	bp_enqueue_script( 'battleplan-count-down', 'script-count-down', ['battleplan-script-helpers'] );
 
 	$a = shortcode_atts( array( 'month'=>'', 'date'=>'', 'year'=>'', 'hour'=>'', 'minute'=>'', 'separator'=>', ', 'offset'=>'0', 'class'=>'' ), $atts );
 

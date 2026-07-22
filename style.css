@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v44.4
+Version: v44.5
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -539,6 +539,22 @@ input.paypal-amount {
 	display:                                                   block;
 	width:                                                     100%;
 	height:                                                    30px;
+}
+
+/* Noisy Background
+--------------------------------------------- */
+.noisy::after {
+	--grain-blend:                                             overlay;
+	--grain-amount:                                            0.35;
+
+	content:                                                   "";
+	position:                                                  absolute;
+	inset:                                                     0;
+	pointer-events:                                            none;
+	z-index:                                                   1;
+	background:                                                url('/wp-content/themes/battleplantheme/common/graphics/noise-128.webp') repeat;
+	mix-blend-mode:                                            var(--grain-blend);
+	opacity:                                                   var(--grain-amount);
 }
 
 

@@ -79,6 +79,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		const containerObj = getObject(containerSel);
 		if (!containerObj) return;
 
+		// Resolve the uploads base defensively. If site_dir.upload_dir_uri is missing/empty at
+		// runtime (e.g. Rocket Loader deferred the inline localize), `${site_dir.upload_dir_uri}/x`
+		// collapses to a ROOT '/x' request and 404s. Fall back to the standard uploads path so the
+		// URL is never rooted; bail entirely if we somehow still have no base or filename.
+		const uploadBase = ((window.site_dir && site_dir.upload_dir_uri) || '/wp-content/uploads').replace(/\/+$/, '');
+		if (!uploadBase || !filename) return;
+
 		const isSVG = filename.startsWith('svg#');
 		const svgObj = isSVG ? document.querySelector(filename.replace('svg', '')) : null;
 
@@ -107,7 +114,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				'width': '100%',
 				'zIndex': '-1',
 				'pointerEvents': 'none',
-				'backgroundImage': `url('${site_dir.upload_dir_uri}/${filename}')`,
+				'backgroundImage': `url('${uploadBase}/${filename}')`,
 				'backgroundSize': 'cover',
 				'backgroundPosition': `${posX} center`,
 				'backgroundRepeat': 'no-repeat',
@@ -159,7 +166,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 				'height': `${imageH}px`,
 				'zIndex': '-1',
 				'pointerEvents': 'none',
-				'backgroundImage': `url('${site_dir.upload_dir_uri}/${filename}')`,
+				'backgroundImage': `url('${uploadBase}/${filename}')`,
 				'backgroundSize': `${imageW}px ${imageH}px`,
 				'backgroundPosition': `${posX} 0`,
 				'backgroundRepeat': 'no-repeat',

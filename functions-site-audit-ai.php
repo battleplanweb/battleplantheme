@@ -205,17 +205,36 @@ function bp_audit_analyze_page( string $url ): array {
 		}
 	}
 
-	// Structured data types present.
-	$schema = [];
-	foreach ( $xp->query( '//script[@type="application/ld+json"]' ) as $s ) {
-		$j = json_decode( trim( $s->textContent ), true );
-		if ( ! is_array( $j ) ) continue;
-		$stack = ( isset( $j['@graph'] ) && is_array( $j['@graph'] ) ) ? $j['@graph'] : [ $j ];
-		foreach ( $stack as $item ) {
-			if ( empty( $item['@type'] ) ) continue;
-			$t = is_array( $item['@type'] ) ? implode( '/', $item['@type'] ) : (string) $item['@type'];
-			$schema[ $t ] = true;
+	// Structured data types present. Detection has to be bulletproof — a false "no schema" is worse
+	// than useless, it makes the whole audit look wrong. Walk JSON-LD (incl. nested @graph and any
+	// depth of nested @type), and fall back to microdata (itemtype) so a plugin that emits schema.org
+	// markup the non-JSON way still counts.
+	$schema      = [];
+	$jsonld_seen = 0;
+	$collect_type = static function ( $node ) use ( &$collect_type, &$schema ) {
+		if ( ! is_array( $node ) ) return;
+		if ( ! empty( $node['@type'] ) ) {
+			foreach ( (array) $node['@type'] as $t ) {
+				$t = trim( (string) $t );
+				if ( '' !== $t ) $schema[ $t ] = true;
+			}
 		}
+		foreach ( $node as $v ) { if ( is_array( $v ) ) $collect_type( $v ); }
+	};
+	foreach ( $xp->query( '//script[@type="application/ld+json"]' ) as $s ) {
+		$jsonld_seen++;
+		$raw = trim( (string) $s->textContent );
+		$j   = json_decode( $raw, true );
+		if ( ! is_array( $j ) ) {
+			// DOMDocument can HTML-decode entities inside the script; retry on the decoded string.
+			$j = json_decode( html_entity_decode( $raw, ENT_QUOTES ), true );
+		}
+		if ( is_array( $j ) ) $collect_type( $j );
+	}
+	// Microdata fallback (itemscope + itemtype="https://schema.org/LocalBusiness" …).
+	foreach ( $xp->query( '//*[@itemtype]/@itemtype' ) as $a ) {
+		$t = trim( basename( (string) $a->nodeValue ) );
+		if ( '' !== $t ) $schema[ $t ] = true;
 	}
 
 	$host = parse_url( home_url(), PHP_URL_HOST );
@@ -244,7 +263,8 @@ function bp_audit_analyze_page( string $url ): array {
 		'tel_links'          => $xp->query( '//a[starts-with(@href,"tel:")]' )->length,
 		'mailto_links'       => $xp->query( '//a[starts-with(@href,"mailto:")]' )->length,
 		'ctas'               => array_slice( array_keys( $ctas ), 0, 12 ),
-		'schema_types'       => array_slice( array_keys( $schema ), 0, 10 ),
+		'schema_types'       => array_slice( array_keys( $schema ), 0, 12 ),
+		'has_schema'         => ! empty( $schema ),
 		'links_internal'     => $in,
 		'links_external'     => $out,
 		'html_kb'            => (int) round( strlen( $html ) / 1024 ),
@@ -332,69 +352,383 @@ function bp_audit_ai_call( string $system, string $user, array $images = [], int
 --------------------------------------------------------------*/
 
 /**
- * Everything the NIGHTLY CHRON already collected, compacted into the facts worth reasoning over.
- * The audit collects none of this itself — it just reads the chron's stores (day-keyed history
- * options), taking the most recent slice of each so the prompt stays tight.
+ * The audit's fact sheet — a DECISION-READY digest of what the nightly chron already collected.
+ *
+ * The model is bad at arithmetic buried in a big JSON blob and good at judgement, so we do ALL the
+ * maths here: every metric arrives normalised (percentages, not raw counts), over the WIDEST window
+ * available, with a trend vs the previous period and a plain-words sample-size verdict. The raw
+ * option blobs are deliberately NOT passed through — the model should read conclusions, not go
+ * digging and re-derive numbers it gets wrong.
  */
 function bp_audit_ai_facts(): array {
 
-	// Newest entry (or newest N entries) of a day-keyed history option.
-	$recent = static function ( string $opt, int $n = 1 ) {
-		$v = get_option( $opt );
-		if ( ! is_array( $v ) || ! $v ) return null;
-		ksort( $v );
-		return ( 1 === $n ) ? end( $v ) : array_slice( $v, -$n, null, true );
+	$opt = static fn( string $k ) => get_option( $k );
+
+	// A YYYYMMDD day-stamp N days before "today" (site time). Strings compare correctly by date.
+	$ymd = static fn( int $back = 0 ) => date( 'Ymd', (int) current_time( 'timestamp' ) - $back * DAY_IN_SECONDS );
+
+	// Percentage-change label. Sub-3% reads "flat" so noise isn't dressed up as a trend; a rise
+	// from zero reads "new".
+	$trend = static function ( $cur, $prev ) {
+		$cur = (float) $cur; $prev = (float) $prev;
+		if ( $prev <= 0 ) return $cur > 0 ? 'new' : '—';
+		$d = (int) round( ( $cur - $prev ) / $prev * 100 );
+		if ( abs( $d ) < 3 ) return 'flat';
+		return ( $d > 0 ? '+' : '' ) . $d . '%';
 	};
-	$plain = static function ( string $opt ) {
-		$v = get_option( $opt );
-		return ( is_array( $v ) && $v ) ? $v : null;
+
+	// Plain-words sample verdict. Every metric that rests on a count carries one so the model can't
+	// build a conclusion on "1 session in 7 days".
+	$sample = static function ( int $n, int $ok = 100, int $thin = 30 ) {
+		if ( $n >= $ok )   return 'ok';
+		if ( $n >= $thin ) return "modest ({$n}) — directional only";
+		return "TOO FEW ({$n}) — not enough to conclude anything";
 	};
-	$cap = static fn( $v, int $n ) => is_array( $v ) ? array_slice( $v, 0, $n, true ) : $v;
 
-	$f = [];
+	// Sum FLOW fields (per-day counts: clicks, calls…) over the last $days and the preceding equal
+	// window, from a YYYYMMDD-keyed history. Returns cur/prev sums + how many days were present.
+	$flow = static function ( $hist, int $days, array $fields ) use ( $ymd ) {
+		$cur = array_fill_keys( $fields, 0.0 ); $prev = array_fill_keys( $fields, 0.0 );
+		$curN = 0; $prevN = 0;
+		if ( is_array( $hist ) ) {
+			$c0 = $ymd( $days ); $p0 = $ymd( $days * 2 ); $t = $ymd( 0 );
+			foreach ( $hist as $k => $rec ) {
+				$key = preg_replace( '/\D/', '', (string) $k );
+				if ( strlen( $key ) < 8 || ! is_array( $rec ) ) continue;
+				$key = substr( $key, 0, 8 );
+				if ( $key > $t ) continue;
+				if ( $key >= $c0 )     { foreach ( $fields as $f ) $cur[ $f ]  += (float) ( $rec[ $f ] ?? 0 ); $curN++; }
+				elseif ( $key >= $p0 ) { foreach ( $fields as $f ) $prev[ $f ] += (float) ( $rec[ $f ] ?? 0 ); $prevN++; }
+			}
+		}
+		return [ 'cur' => $cur, 'prev' => $prev, 'cur_days' => $curN, 'prev_days' => $prevN ];
+	};
 
-	// ── Traffic & on-site behaviour (GA4) ──────────────────────────────────
-	$f['traffic_rollups']  = $plain( 'bp_ga4_rollups_clean' );
-	$f['top_pages']        = $cap( $recent( 'bp_ga4_pages_history' ), 12 );
-	$f['top_locations']    = $cap( $recent( 'bp_ga4_locations_history' ), 12 );
-	$f['traffic_channels'] = $cap( $recent( 'bp_ga4_channel_history' ), 12 );
-	$f['key_events']       = $cap( $recent( 'bp_ga4_events_history' ), 15 );
-	$f['scroll_depth']     = $recent( 'bp_ga4_scroll_history' );
-	$f['real_user_speed']  = $plain( 'bp_ga4_speed_clean' );
+	// Latest snapshot of a STOCK history (cumulative totals: backlinks, review count, band counts,
+	// content counts) plus the entry nearest $days ago, for a delta.
+	$stock = static function ( $hist, int $days ) use ( $ymd ) {
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		$norm = [];
+		foreach ( $hist as $k => $rec ) {
+			$key = preg_replace( '/\D/', '', (string) $k );
+			if ( strlen( $key ) >= 8 && is_array( $rec ) ) $norm[ substr( $key, 0, 8 ) ] = $rec;
+		}
+		if ( ! $norm ) return null;
+		ksort( $norm );
+		$keys   = array_keys( $norm );
+		$latest = end( $keys );
+		$target = $ymd( $days ); $prevKey = null;
+		foreach ( $keys as $key ) { if ( $key <= $target ) $prevKey = $key; }
+		return [ 'now' => $norm[ $latest ], 'then' => $prevKey !== null ? $norm[ $prevKey ] : null ];
+	};
 
-	// ── How they're actually viewing it ───────────────────────────────────
-	// Design critique is meaningless without this: the screenshots show a viewport, and only the
-	// device mix says whether that viewport is what most visitors really see.
-	$f['device_mix']        = $cap( $plain( 'bp_ga4_devices_clean' ), 10 );
-	$f['screen_resolutions'] = $cap( $plain( 'bp_ga4_resolution_clean' ), 20 );
-	$f['device_by_width']   = $plain( 'bp_ga4_device_width_clean' );
-	$f['browsers']          = $cap( $plain( 'bp_ga4_browsers_clean' ), 10 );
-	$f['referrers']         = $cap( $plain( 'bp_ga4_referrers_clean' ), 20 );
+	// Newest period of a period-keyed [period => [k=>v]] option (monthly YYYYMM, etc.).
+	$latest_period = static function ( $hist ) {
+		if ( ! is_array( $hist ) || ! $hist ) return null;
+		$keys = array_keys( $hist ); sort( $keys );
+		$k = end( $keys );
+		return is_array( $hist[ $k ] ?? null ) ? $hist[ $k ] : null;
+	};
 
-	// ── Search Console ────────────────────────────────────────────────────
-	$f['search_console_last_30_days'] = $recent( 'bp_gsc_totals_history', 30 );
-	$f['top_search_queries']          = $cap( $plain( 'bp_gsc_top_queries' ), 20 );
-	$f['backlinks']                   = $recent( 'bp_gsc_links_history' );
+	$drop = static fn( array $a ) => array_filter( $a, static fn( $v ) => ! is_null( $v ) );
 
-	// ── Speed (lab / Lighthouse) ──────────────────────────────────────────
-	$f['pagespeed_lab_recent'] = $recent( 'bp_cwv_lab_history', 3 );
+	$s = [];
 
-	// ── Keywords ──────────────────────────────────────────────────────────
-	$f['keyword_bands_recent'] = $recent( 'bp_kw_bands_history', 3 );
-	if ( function_exists( 'bp_kw_tracked' ) ) {
-		$kw = bp_kw_tracked();
-		if ( is_array( $kw ) && $kw ) $f['tracked_keywords'] = array_slice( $kw, 0, 25 );
+	/* ---- Traffic & engagement (GA4 rollups) ------------------------------- */
+	$engaged30 = 0.0;
+	$roll = $opt( 'bp_ga4_rollups_clean' );
+	if ( is_array( $roll ) && is_array( $roll['this_month'] ?? null ) ) {
+		$tm = $roll['this_month']; $lm = $roll['last_month'] ?? null; $tq = $roll['this_quarter'] ?? null;
+		$sess      = (int) ( $tm['sessions'] ?? 0 );
+		$engaged30 = (float) ( $tm['engagedSessions'] ?? 0 );
+		$s['traffic'] = $drop( [
+			'window'            => 'last 30 days (vs previous 30)',
+			'sessions'          => $sess,
+			'sessions_trend'    => is_array( $lm ) ? $trend( $sess, $lm['sessions'] ?? 0 ) : null,
+			'sessions_last_90d' => is_array( $tq ) ? (int) ( $tq['sessions'] ?? 0 ) : null,
+			'engaged_rate'      => round( (float) ( $tm['engagementRate'] ?? 0 ) ) . '%',
+			'avg_session_sec'   => round( (float) ( $tm['avgSessionDuration'] ?? 0 ) ),
+			'pages_per_session' => round( (float) ( $tm['pagesPerSession'] ?? 0 ), 1 ),
+			'new_visitor_pct'   => round( (float) ( $tm['newUserPct'] ?? 0 ) ) . '%',
+			'sample'            => $sample( $sess ),
+		] );
 	}
 
-	// ── Google Business Profile ───────────────────────────────────────────
-	$f['google_business']       = $plain( 'bp_gbp_update' );
-	$f['google_business_stats'] = $recent( 'bp_gbp_stats_history' );
+	/* ---- Traffic sources (channel mix, latest month) ---------------------- */
+	$chan = $latest_period( $opt( 'bp_ga4_channel_history' ) );
+	if ( is_array( $chan ) ) {
+		$by = []; $tot = 0;
+		foreach ( $chan as $name => $rec ) { $c = (int) ( $rec['sessions'] ?? 0 ); if ( $c > 0 ) { $by[ $name ] = $c; $tot += $c; } }
+		if ( $tot > 0 ) {
+			arsort( $by );
+			$mix = [];
+			foreach ( array_slice( $by, 0, 6, true ) as $name => $c ) $mix[ $name ] = round( $c / $tot * 100 ) . '%';
+			$s['traffic_sources'] = [ 'window' => 'latest month, share of sessions', 'mix' => $mix ];
+		}
+	}
 
-	// ── Content inventory + UX signals (Microsoft Clarity) ────────────────
-	$f['content_counts'] = $recent( 'bp_content_history' );
-	$f['clarity_ux']     = $recent( 'bp_clarity_history' );
+	/* ---- Leads & tracked components (GA4 achievement events) -------------- */
+	$content = $opt( 'bp_ga4_content_clean' );
+	if ( is_array( $content ) ) {
+		$leads = []; $comps = []; $lead_total_30 = 0;
+		foreach ( $content as $id => $w ) {
+			if ( ! is_array( $w ) ) continue;
+			$s30 = (int) ( $w['sessions-30'] ?? 0 ); $s90 = (int) ( $w['sessions-90'] ?? 0 );
+			if ( 0 === strpos( (string) $id, 'conversion-' ) ) {
+				$leads[ ucwords( str_replace( '-', ' ', substr( $id, 11 ) ) ) ] = [ 'last_30d' => $s30, 'last_90d' => $s90 ];
+				$lead_total_30 += $s30;
+			} elseif ( 0 === strpos( (string) $id, 'track-' ) ) {
+				$reach = $engaged30 > 0 ? round( $s30 / $engaged30 * 100 ) . '% of engaged visitors' : null;
+				$comps[ ucwords( str_replace( '-', ' ', substr( $id, 6 ) ) ) ] = $drop( [ 'last_30d' => $s30, 'last_90d' => $s90, 'reach' => $reach ] );
+			}
+		}
+		if ( $leads ) {
+			$s['leads'] = [
+				'note'      => 'phone / email / form conversions — the numbers that matter most to the owner',
+				'total_30d' => $lead_total_30,
+				'per_week'  => round( $lead_total_30 / 4.3, 1 ),
+				'by_type'   => $leads,
+				'sample'    => $sample( $lead_total_30, 20, 5 ),
+			];
+		}
+		if ( $comps ) $s['tracked_components'] = [ 'note' => 'how many visitors reached these on-page elements', 'by_element' => $comps ];
+	}
 
-	return array_filter( $f, static fn( $v ) => ! is_null( $v ) && $v !== [] && $v !== '' );
+	/* ---- Search Console (28-day flows, impression-weighted position) ------ */
+	$gsc = $opt( 'bp_gsc_totals_history' );
+	if ( is_array( $gsc ) ) {
+		$aggr = static function ( int $startBack, int $endBack ) use ( $gsc, $ymd ) {
+			$older = $ymd( $startBack ); $newer = $ymd( $endBack );
+			$c = 0; $i = 0; $pw = 0.0;
+			foreach ( $gsc as $k => $r ) {
+				$key = preg_replace( '/\D/', '', (string) $k );
+				if ( strlen( $key ) < 8 || ! is_array( $r ) ) continue;
+				$key = substr( $key, 0, 8 );
+				if ( $key >= $older && $key < $newer ) {
+					$c += (int) ( $r['clicks'] ?? 0 ); $i += (int) ( $r['impressions'] ?? 0 );
+					$pw += (float) ( $r['position'] ?? 0 ) * (int) ( $r['impressions'] ?? 0 );
+				}
+			}
+			return [ 'clicks' => $c, 'impr' => $i, 'pos' => $i > 0 ? round( $pw / $i, 1 ) : null ];
+		};
+		$cur = $aggr( 28, 0 ); $prev = $aggr( 56, 28 );
+		if ( $cur['impr'] > 0 ) {
+			$s['search_console'] = $drop( [
+				'window'         => 'last 28 days (vs previous 28)',
+				'clicks'         => $cur['clicks'],
+				'clicks_trend'   => $trend( $cur['clicks'], $prev['clicks'] ),
+				'impressions'    => $cur['impr'],
+				'ctr'            => round( $cur['clicks'] / max( 1, $cur['impr'] ) * 100, 1 ) . '%',
+				'avg_position'   => $cur['pos'],
+				'position_trend' => ( $cur['pos'] && $prev['pos'] ) ? ( $cur['pos'] < $prev['pos'] ? 'improving' : ( $cur['pos'] > $prev['pos'] ? 'slipping' : 'flat' ) ) : null,
+				'sample'         => $sample( $cur['clicks'], 30, 5 ),
+			] );
+		}
+	}
+
+	/* ---- Keyword rankings (band snapshot + ~30-day move) ------------------ */
+	$kb = $stock( $opt( 'bp_kw_bands_history' ), 30 );
+	if ( $kb && is_array( $kb['now'] ) ) {
+		$now = $kb['now']; $then = is_array( $kb['then'] ) ? $kb['then'] : [];
+		$page1 = (int) ( $now['b1'] ?? 0 ) + (int) ( $now['b2'] ?? 0 );
+		$s['keyword_rankings'] = $drop( [
+			'window'           => 'tracked keywords, now (vs ~30 days ago)',
+			'top_3'            => (int) ( $now['b1'] ?? 0 ),
+			'first_page'       => $page1,
+			'pos_11_20'        => (int) ( $now['b3'] ?? 0 ),
+			'pos_21_plus'      => (int) ( $now['b4'] ?? 0 ),
+			'first_page_trend' => $then ? $trend( $page1, (int) ( $then['b1'] ?? 0 ) + (int) ( $then['b2'] ?? 0 ) ) : null,
+		] );
+	}
+	if ( function_exists( 'bp_kw_tracked' ) ) {
+		$kw = bp_kw_tracked();
+		if ( is_array( $kw ) && $kw ) {
+			if ( ! isset( $s['keyword_rankings'] ) ) $s['keyword_rankings'] = [];
+			$s['keyword_rankings']['total_tracked'] = count( $kw );
+		}
+	}
+
+	/* ---- Backlinks -------------------------------------------------------- */
+	$bl = $stock( $opt( 'bp_gsc_links_history' ), 30 );
+	if ( $bl && is_array( $bl['now'] ) ) {
+		$s['backlinks'] = $drop( [
+			'window'          => 'now (vs ~30 days ago)',
+			'total_backlinks' => (int) ( $bl['now']['backlinks'] ?? 0 ),
+			'linking_domains' => (int) ( $bl['now']['domains'] ?? 0 ),
+			'backlinks_trend' => is_array( $bl['then'] ) ? $trend( $bl['now']['backlinks'] ?? 0, $bl['then']['backlinks'] ?? 0 ) : null,
+		] );
+	}
+
+	/* ---- Google Business Profile (performance flow + reviews stock) ------- */
+	$perf = $flow( $opt( 'bp_gbp_perf_history' ), 30, [ 'calls', 'website', 'directions', 'impressions' ] );
+	$gbp  = [];
+	if ( $perf['cur_days'] > 0 ) {
+		$gbp = [
+			'window'             => 'last 30 days (vs previous 30)',
+			'phone_calls'        => (int) $perf['cur']['calls'],
+			'calls_trend'        => $trend( $perf['cur']['calls'], $perf['prev']['calls'] ),
+			'website_clicks'     => (int) $perf['cur']['website'],
+			'direction_requests' => (int) $perf['cur']['directions'],
+			'profile_views'      => (int) $perf['cur']['impressions'],
+		];
+	}
+	$rev = $stock( $opt( 'bp_gbp_stats_history' ), 30 );
+	if ( $rev && is_array( $rev['now'] ) ) {
+		$gbp['review_count'] = (int) ( $rev['now']['reviews'] ?? 0 );
+		$gbp['avg_rating']   = round( (float) ( $rev['now']['rating'] ?? 0 ), 1 );
+		if ( is_array( $rev['then'] ) ) {
+			$gained = (int) ( $rev['now']['reviews'] ?? 0 ) - (int) ( $rev['then']['reviews'] ?? 0 );
+			if ( 0 !== $gained ) $gbp['new_reviews_30d'] = $gained;
+		}
+	} elseif ( is_array( $gu = $opt( 'bp_gbp_update' ) ) ) {
+		if ( isset( $gu['google-reviews'] ) ) $gbp['review_count'] = (int) $gu['google-reviews'];
+		if ( isset( $gu['google-rating'] ) )  $gbp['avg_rating']   = round( (float) $gu['google-rating'], 1 );
+	}
+	if ( $gbp ) $s['google_business'] = $gbp;
+
+	/* ---- Site speed (Lighthouse lab, latest run, MOBILE, pre-judged) ------ */
+	$labh = $opt( 'bp_cwv_lab_history' );
+	if ( is_array( $labh ) && $labh ) {
+		ksort( $labh );
+		$latest = end( $labh );
+		if ( is_array( $latest ) ) {
+			$mo    = static fn( $k ) => isset( $latest[ $k ]['m'] ) ? $latest[ $k ]['m'] : null;
+			$judge = static function ( $v, $good, $poor, $higher_better = false ) {
+				if ( $v === null ) return null;
+				if ( $higher_better ) return $v >= $good ? 'good' : ( $v >= $poor ? 'needs work' : 'poor' );
+				return $v <= $good ? 'good' : ( $v <= $poor ? 'needs work' : 'poor' );
+			};
+			$row = static fn( $v, $verdict, $unit = '' ) => $v === null ? null : [ 'value' => $v . $unit, 'rating' => $verdict ];
+			$lab = $drop( [
+				'note'           => 'Google Lighthouse, MOBILE (the experience most visitors get)',
+				'performance'    => $row( $mo( 'perf' ), $judge( $mo( 'perf' ), 90, 50, true ) ),
+				'largest_paint'  => $row( $mo( 'lcp' ),  $judge( $mo( 'lcp' ),  2.5, 4.0 ), 's' ),
+				'layout_shift'   => $row( $mo( 'cls' ),  $judge( $mo( 'cls' ),  0.1, 0.25 ) ),
+				'blocking_time'  => $row( $mo( 'tbt' ),  $judge( $mo( 'tbt' ),  200, 600 ), 'ms' ),
+				'first_paint'    => $row( $mo( 'fcp' ),  $judge( $mo( 'fcp' ),  1.8, 3.0 ), 's' ),
+				'speed_index'    => $row( $mo( 'si' ),   $judge( $mo( 'si' ),   3.4, 5.8 ), 's' ),
+				'accessibility'  => $row( $mo( 'acc' ),  $judge( $mo( 'acc' ),  90, 50, true ) ),
+				'best_practices' => $row( $mo( 'best' ), $judge( $mo( 'best' ), 90, 50, true ) ),
+				'seo'            => $row( $mo( 'seo' ),  $judge( $mo( 'seo' ),  90, 50, true ) ),
+			] );
+			if ( count( $lab ) > 1 ) $s['site_speed_lab'] = $lab;
+		}
+	}
+
+	/* ---- Content inventory (+ ~90-day growth) ----------------------------- */
+	$ch = $stock( $opt( 'bp_content_history' ), 90 );
+	if ( $ch && is_array( $ch['now'] ) ) {
+		$now = $ch['now']; $then = is_array( $ch['then'] ) ? $ch['then'] : [];
+		$inv = [ 'window' => 'now (vs ~90 days ago)' ];
+		foreach ( [ 'pages' => 'pages', 'blog' => 'blog_posts', 'jobsites' => 'jobsite_pages', 'galleries' => 'galleries', 'testimonials' => 'testimonials', 'images' => 'images' ] as $k => $label ) {
+			if ( ! isset( $now[ $k ] ) ) continue;
+			$inv[ $label ] = (int) $now[ $k ];
+			if ( isset( $then[ $k ] ) && (int) $then[ $k ] !== (int) $now[ $k ] ) {
+				$diff = (int) $now[ $k ] - (int) $then[ $k ];
+				$inv[ $label . '_change' ] = ( $diff > 0 ? '+' : '' ) . $diff;
+			}
+		}
+		$s['content_inventory'] = $inv;
+	}
+
+	/* ---- Behaviour signals (Microsoft Clarity, 30-day rates) -------------- */
+	$cl = $flow( $opt( 'bp_clarity_history' ), 30, [ 'sessions', 'rage', 'dead', 'quickback', 'scriptErr', 'scrollDepth' ] );
+	if ( $cl['cur_days'] > 0 && $cl['cur']['sessions'] > 0 ) {
+		$ses  = $cl['cur']['sessions'];
+		$rate = static fn( $n ) => round( $n / $ses * 100, 1 ) . '%';
+		$s['user_frustration'] = $drop( [
+			'window'            => 'last 30 days',
+			'sessions_measured' => (int) $ses,
+			'rage_clicks'       => $rate( $cl['cur']['rage'] ),
+			'dead_clicks'       => $rate( $cl['cur']['dead'] ),
+			'quick_backs'       => $rate( $cl['cur']['quickback'] ),
+			'js_errors'         => $rate( $cl['cur']['scriptErr'] ),
+			'avg_scroll_depth'  => round( $cl['cur']['scrollDepth'] / $cl['cur_days'] ) . '%',
+			'sample'            => $sample( (int) $ses ),
+			'guide'             => 'rage / dead / quick-back under ~3% is healthy; higher points to a real UX problem',
+		] );
+	}
+
+	/* ---- Device mix (which render to judge the design on) ----------------- */
+	$dev = $opt( 'bp_ga4_devices_clean' );
+	if ( is_array( $dev ) && $dev ) {
+		$counts = []; $tot = 0;
+		foreach ( $dev as $d => $m ) {
+			if ( ! is_array( $m ) ) continue;
+			$c = (int) ( $m['sessions-90'] ?? 0 );
+			if ( $c > 0 ) { $counts[ strtolower( (string) $d ) ] = $c; $tot += $c; }
+		}
+		if ( $tot > 0 ) {
+			arsort( $counts );
+			$pct = [];
+			foreach ( $counts as $d => $c ) $pct[ $d ] = round( $c / $tot * 100 ) . '%';
+			$lead = array_key_first( $pct );
+			$s['device_mix'] = [
+				'window'   => 'last 90 days',
+				'split'    => $pct,
+				'dominant' => $lead . ' at ' . $pct[ $lead ],
+				'total'    => $tot,
+				'guide'    => $tot < 300
+					? "SMALL SAMPLE ({$tot}) — directional, but still judge the design on the {$lead} render most visitors see."
+					: "Judge the design first on {$lead} — that is what most visitors actually see.",
+			];
+		}
+	}
+
+	/* ---- Named context (qualitative — names only, no maths) --------------- */
+	$pages_month = $latest_period( $opt( 'bp_ga4_pages_history' ) );
+	if ( is_array( $pages_month ) ) {
+		arsort( $pages_month );
+		$s['top_pages'] = array_slice( array_keys( $pages_month ), 0, 10 );
+	}
+	$tq = $opt( 'bp_gsc_top_queries' );
+	if ( is_array( $tq ) ) {
+		$q = [];
+		foreach ( $tq as $query => $per ) {
+			$m = $per['quarter'] ?? ( $per['month'] ?? null );
+			if ( is_array( $m ) ) $q[] = $drop( [ 'query' => $query, 'clicks' => (int) ( $m['clicks'] ?? 0 ), 'position' => $m['position'] ?? null ] );
+			if ( count( $q ) >= 15 ) break;
+		}
+		if ( $q ) $s['top_search_queries'] = $q;
+	}
+
+	return array_filter( $s, static fn( $v ) => ! is_null( $v ) && $v !== [] && $v !== '' );
+}
+
+/**
+ * Pre-digest the page crawl so the model reads conclusions instead of scanning 8 raw page objects.
+ * Schema especially must be stated up front — a false "no schema" is the kind of error that makes
+ * the whole audit look untrustworthy.
+ */
+function bp_audit_pages_digest( array $pages ): array {
+	$n = 0; $with_schema = 0; $types = []; $issues = [];
+	foreach ( $pages as $p ) {
+		if ( ! is_array( $p ) || empty( $p['url'] ) || ! empty( $p['error'] ) ) continue;
+		$n++;
+		if ( ! empty( $p['has_schema'] ) ) {
+			$with_schema++;
+			foreach ( (array) ( $p['schema_types'] ?? [] ) as $t ) $types[ $t ] = true;
+		}
+		$flags = [];
+		if ( empty( $p['meta_description'] ) )            $flags[] = 'no meta description';
+		if ( 0 === (int) ( $p['h1_count'] ?? 0 ) )        $flags[] = 'no H1';
+		elseif ( (int) $p['h1_count'] > 1 )               $flags[] = (int) $p['h1_count'] . ' H1s';
+		if ( (int) ( $p['word_count'] ?? 0 ) < 300 )      $flags[] = 'thin copy (' . (int) ( $p['word_count'] ?? 0 ) . ' words)';
+		if ( (int) ( $p['images_missing_alt'] ?? 0 ) > 0 )$flags[] = (int) $p['images_missing_alt'] . ' images missing alt';
+		if ( empty( $p['has_schema'] ) )                  $flags[] = 'no structured data';
+		if ( empty( $p['has_viewport'] ) )                $flags[] = 'no mobile viewport tag';
+		if ( $flags ) $issues[ $p['url'] ] = $flags;
+	}
+	$schema_line = $with_schema > 0
+		? "Structured data IS present on {$with_schema} of {$n} crawled pages. Types found: "
+			. implode( ', ', array_slice( array_keys( $types ), 0, 12 ) )
+			. '. Do NOT claim the site lacks schema.'
+		: "No structured data (JSON-LD or microdata) was found on any of the {$n} crawled pages.";
+	return [
+		'pages_crawled'   => $n,
+		'schema'          => $schema_line,
+		'per_page_issues' => $issues ?: 'none flagged',
+	];
 }
 
 
@@ -426,6 +760,11 @@ function bp_audit_ai_store( array $report, int $keep = 40 ): void {
 	ksort( $h );
 	if ( count( $h ) > $keep ) $h = array_slice( $h, -$keep, null, true );
 	update_option( 'bp_site_audit_ai_history', $h, false );
+
+	// Stamp the last-audit time the Dashboard menu reads (functions-admin.php shows
+	// "Audit  {elapsed} ago"). Without this it always read "Never" — bp_audit_time was
+	// referenced by the menu but never written anywhere.
+	update_option( 'bp_audit_time', time(), false );
 }
 
 /**
@@ -442,7 +781,7 @@ function bp_audit_stage( string $stage ): void {
  * Build the Claude prompt. Split out of the runner so the all-in-one path and the stepped
  * browser-driven path can't drift apart.  Returns [ system, user ].
  */
-function bp_audit_ai_prompt( array $pages, array $facts ): array {
+function bp_audit_ai_prompt( array $pages, array $facts, int $shot_count = 0 ): array {
 	$ci       = function_exists( 'customer_info' ) ? customer_info() : [];
 	$business = [
 		'name'     => get_bloginfo( 'name' ),
@@ -453,28 +792,62 @@ function bp_audit_ai_prompt( array $pages, array $facts ): array {
 		'location' => is_array( $ci ) ? trim( ( $ci['city'] ?? '' ) . ' ' . ( $ci['state'] ?? '' ) ) : '',
 	];
 
+	// Be honest about whether we actually captured screenshots this run. Telling the model it was "shown
+	// screenshots" when the capture failed is exactly what makes it hallucinate a visual critique (e.g.
+	// "the hero buries the phone" on a site whose header shows the phone at the very top).
+	if ( $shot_count > 0 ) {
+		$screenshot_rules =
+			  "- You are shown {$shot_count} REAL SCREENSHOTS (above the fold) — the home page and ONE secondary "
+			. "page, each in mobile and desktop. This site is built from two templates: the home page looks one "
+			. "way and every secondary page looks another, so the secondary page you see represents all of them. "
+			. "Critique what you actually see: visual hierarchy, whether the offer and primary CTA are obvious in "
+			. "the first screen, contrast/legibility, spacing/crowding, image quality, brand consistency, and how "
+			. "mobile vs desktop compare.\n"
+			. "- GROUND EVERY VISUAL CLAIM in what is genuinely visible. Do NOT state that an element is missing, "
+			. "buried, or below the fold unless the screenshot plainly shows that. The site header — logo, phone "
+			. "number and primary CTA — normally sits at the VERY TOP of the first screen; look there before ever "
+			. "claiming the phone or a CTA is hard to find. If you cannot clearly see something, make no claim "
+			. "about it either way.\n"
+			. "- WEIGHT YOUR DESIGN CRITIQUE BY THE REAL DEVICE MIX (see `device_mix` in the data). Judge the "
+			. "render most visitors actually see first, and name the split when it drives a recommendation.\n"
+			. "- The screenshots are above-the-fold only; page STRUCTURE (headings, CTAs, copy volume, images/alt, "
+			. "schema, links) covers the rest of each page and covers 8 pages, not 2. Don't claim to have seen "
+			. "further down a page, and don't assume an unscreenshotted page differs from the secondary template "
+			. "you were shown.\n";
+	} else {
+		$screenshot_rules =
+			  "- NO SCREENSHOTS were captured this run — you CANNOT see the pages. Do NOT critique visual layout, "
+			. "hierarchy, above-the-fold placement, imagery, colour or spacing; you have no image, and inventing "
+			. "such a critique is a serious error. Base UX/Design judgments ONLY on the crawled PAGE STRUCTURE "
+			. "(headings, CTA counts, image counts and alt text), and note in the summary that the visual design "
+			. "could not be assessed this run.\n";
+	}
+
 	$system = "You are a senior web strategist auditing a small-business marketing website. You combine "
 		. "three lenses: conversion-rate optimisation, UX/usability, and visual design & layout — always "
 		. "grounded in the data provided.\n\n"
 		. "Rules:\n"
 		. "- Be specific and practical. Name the actual page, heading, or number you're reacting to.\n"
+		. "- THE DATA IS ALREADY COMPUTED FOR YOU. Every number in MEASURED DATA is final: the percentages, "
+		. "the `_trend` values, the `rating` verdicts and the `sample` notes were all calculated in code. Do "
+		. "NOT recompute a ratio from raw counts, do NOT contradict a stated percentage, and never do arithmetic "
+		. "of your own — your job is to INTERPRET these figures, not re-derive them. Read a value like "
+		. "\"62% mobile\" or \"calls +18%\" as a given fact.\n"
 		. "- Never invent metrics. If something isn't in the data, don't claim it; you may note it's missing.\n"
+		. "- RESPECT THE SAMPLE VERDICTS. Every count-based metric carries a `sample` field. When it says "
+		. "'TOO FEW' or 'directional only', you MUST NOT build a conclusion on that metric — say plainly the "
+		. "data is still too thin to judge it. Always prefer the widest window shown (90-day over 30-day); never "
+		. "reason from a single day or a handful of sessions.\n"
+		. "- STRUCTURED DATA: trust the CRAWL DIGEST `schema` line. If it says schema IS present, treat it as "
+		. "present and do not claim the site is missing schema; only raise missing schema if the digest says none "
+		. "was found.\n"
+		. "- Use the CRAWL DIGEST `per_page_issues` as your ready-made checklist of concrete on-page problems — "
+		. "cite the specific page and flag rather than inventing issues.\n"
 		. "- Judge like a prospective customer landing on the site, not like a checklist.\n"
 		. "- Prioritise by likely revenue impact for a small business, not by ease.\n"
 		. "- Write for the business owner: plain English, no jargon dumps.\n"
-		. "- You are shown REAL SCREENSHOTS (above the fold) of the home page and ONE secondary page, each "
-		. "in BOTH mobile and desktop. This site is built from two templates — the home page looks one way "
-		. "and every secondary page looks another — so the secondary page you see represents all of them. "
-		. "Critique what you actually see: visual hierarchy, whether the offer and primary CTA are obvious "
-		. "in the first screen, contrast and legibility, spacing/crowding, image quality, brand consistency, "
-		. "and how the mobile and desktop versions compare.\n"
-		. "- WEIGHT YOUR DESIGN CRITIQUE BY THE REAL DEVICE MIX in `device_mix` / `screen_resolutions`. If most "
-		. "visitors are on desktop, judge the desktop render first and say so; if most are on mobile, the "
-		. "reverse. Name the actual split when it drives a recommendation.\n"
-		. "- The screenshots are above-the-fold only; page STRUCTURE (headings, CTAs, copy volume, images/alt, "
-		. "schema, links) covers the rest of each page and covers 8 pages, not 2. Don't claim to have seen "
-		. "further down the page, and don't assume an unscreenshotted page looks different from the "
-		. "secondary template you were shown.\n\n"
+		. $screenshot_rules
+		. "\n"
 		. "Return ONLY valid JSON (no markdown fence), shaped exactly:\n"
 		. '{"summary":"2-4 sentence executive read","scores":{"ux":0-100,"conversion":0-100,"design":0-100,"content":0-100,"seo":0-100,"performance":0-100},'
 		. '"doing_well":[{"area":"UX|Conversion|Design & Layout|Content|SEO|Performance","title":"short","detail":"why it works, cite the evidence"}],'
@@ -494,9 +867,14 @@ function bp_audit_ai_prompt( array $pages, array $facts ): array {
 			. "doing_well/improve item. Do not re-baseline just because you'd have judged it differently.";
 	}
 
+	$digest = bp_audit_pages_digest( $pages );
+
 	$user = "BUSINESS\n" . wp_json_encode( $business, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
-		. "\n\nMEASURED DATA\n" . wp_json_encode( $facts, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
-		. "\n\nPAGE STRUCTURE (crawled)\n" . wp_json_encode( $pages, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+		. "\n\nMEASURED DATA — already computed; the trends, percentages, ratings and sample verdicts are FINAL. "
+		. "Interpret them, do not recompute them.\n" . wp_json_encode( $facts, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+		. "\n\nCRAWL DIGEST — conclusions from the page crawl (read this for schema + on-page issues)\n"
+		. wp_json_encode( $digest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+		. "\n\nPAGE STRUCTURE (per crawled page, supporting detail)\n" . wp_json_encode( $pages, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
 		. $anchor
 		. "\n\nAudit this site: what is it doing well, and where can it improve?";
 
@@ -703,7 +1081,7 @@ function bp_audit_run_step() {
 			];
 		}
 
-		[ $system, $user ] = bp_audit_ai_prompt( $pages, $facts );
+		[ $system, $user ] = bp_audit_ai_prompt( $pages, $facts, count( $images ) );
 		$raw    = bp_audit_ai_call( $system, $user, $images );
 		$report = bp_audit_ai_finish(
 			$raw,
@@ -872,6 +1250,179 @@ function bp_audit_ajax_step(): void {
 
 
 /*--------------------------------------------------------------
+# Fix notes — "here's what I actually did about this", per audit item
+--------------------------------------------------------------*/
+
+/** All saved notes: [key => ['text'=>string, 'date'=>'Y-m-d', 'ts'=>int]]. */
+function bp_audit_notes(): array {
+	$n = get_option( 'bp_audit_notes' );
+	return is_array( $n ) ? $n : [];
+}
+
+/** Stable per-item key: report date + item title, so it survives re-renders and any reordering. */
+function bp_audit_note_key( string $report_date, string $title ): string {
+	return substr( md5( $report_date . '|' . $title ), 0, 16 );
+}
+
+/** The per-item note UI — a saved, date-stamped note (with Edit/Delete), or an empty box to add one. */
+function bp_audit_note_box( string $key, $note ): string {
+	$has = is_array( $note ) && ! empty( $note['text'] );
+	$txt = $has ? (string) $note['text'] : '';
+	$lbl = $has ? date_i18n( 'M j, Y', strtotime( (string) $note['date'] ) ) : '';
+
+	$h  = '<div class="bp-audit-note" data-key="' . esc_attr( $key ) . '" style="margin:8px 0 2px;">';
+	$h .= '<div class="bp-an-note-view" style="' . ( $has ? '' : 'display:none;' ) . 'background:#f6f7f7;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;padding:8px 10px;font-size:13px;line-height:1.5;">';
+	// Date (and controls) sit on their own line so the note's first line/bullet starts clean beneath it.
+	$h .= '<div style="margin-bottom:5px;">';
+	$h .= '<strong class="bp-an-note-date">' . esc_html( $lbl ) . '</strong>';
+	$h .= ' <button type="button" class="button-link bp-an-note-edit" style="margin-left:8px;">Edit</button>';
+	$h .= ' <button type="button" class="button-link bp-an-note-del" style="color:#b32d2e;margin-left:4px;">Delete</button>';
+	$h .= '</div>';
+	$h .= '<div class="bp-an-note-text">' . nl2br( esc_html( $txt ) ) . '</div>';
+	$h .= '</div>';
+	$h .= '<div class="bp-an-note-form" style="' . ( $has ? 'display:none;' : '' ) . '">';
+	$h .= '<textarea class="bp-an-note-input" rows="2" placeholder="What did you do about this?" style="width:min(100%,800px);height:min(200px,20vh);font-size:13px;">' . esc_textarea( $txt ) . '</textarea>';
+	$h .= '<div style="margin-top:4px;"><button type="button" class="button button-small bp-an-note-save">Save note</button>';
+	$h .= '<button type="button" class="button-link bp-an-note-cancel" style="margin-left:10px;' . ( $has ? '' : 'display:none;' ) . '">Cancel</button></div>';
+	$h .= '</div></div>';
+	return $h;
+}
+
+add_action( 'wp_ajax_bp_audit_note', 'bp_audit_ajax_note' );
+function bp_audit_ajax_note(): void {
+	if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( [ 'error' => 'Not allowed.' ], 403 );
+	check_ajax_referer( 'bp_audit_note', 'nonce' );
+
+	$key = sanitize_key( (string) ( $_POST['key'] ?? '' ) );
+	if ( '' === $key ) wp_send_json_error( [ 'error' => 'Missing key.' ] );
+
+	$notes = bp_audit_notes();
+
+	if ( 'delete' === (string) ( $_POST['mode'] ?? '' ) ) {
+		unset( $notes[ $key ] );
+		update_option( 'bp_audit_notes', $notes, false );
+		wp_send_json_success( [ 'deleted' => true ] );
+	}
+
+	$text = trim( sanitize_textarea_field( wp_unslash( (string) ( $_POST['text'] ?? '' ) ) ) );
+	if ( '' === $text ) wp_send_json_error( [ 'error' => 'Nothing to save.' ] );
+
+	// Keep the ORIGINAL entry date when editing — it records when the work was actually done.
+	$date          = (string) ( $notes[ $key ]['date'] ?? current_time( 'Y-m-d' ) );
+	$notes[ $key ] = [ 'text' => $text, 'date' => $date, 'ts' => (int) current_time( 'timestamp' ) ];
+	update_option( 'bp_audit_notes', $notes, false );
+
+	wp_send_json_success( [ 'text' => $text, 'date' => $date, 'label' => date_i18n( 'M j, Y', strtotime( $date ) ) ] );
+}
+
+/**
+ * Remove one item from a stored report — for findings that are irrelevant, or already covered by another
+ * fix. Matches by the same date+title key the notes use, searches both lists, and drops the item's note
+ * too (it has nothing left to describe). Permanent: the item is deleted from the saved report.
+ */
+add_action( 'wp_ajax_bp_audit_item_delete', 'bp_audit_ajax_item_delete' );
+function bp_audit_ajax_item_delete(): void {
+	if ( ! current_user_can( 'manage_options' ) ) wp_send_json_error( [ 'error' => 'Not allowed.' ], 403 );
+	check_ajax_referer( 'bp_audit_note', 'nonce' );
+
+	$date = trim( (string) wp_unslash( $_POST['date'] ?? '' ) );
+	$key  = sanitize_key( (string) ( $_POST['key'] ?? '' ) );
+	if ( '' === $date || '' === $key ) wp_send_json_error( [ 'error' => 'Missing item.' ] );
+
+	$history = get_option( 'bp_site_audit_ai_history' );
+	if ( ! is_array( $history ) || ! isset( $history[ $date ] ) ) wp_send_json_error( [ 'error' => 'Report not found.' ] );
+
+	$report  = (array) $history[ $date ];
+	$removed = false;
+	foreach ( [ 'improve', 'doing_well' ] as $list ) {
+		if ( empty( $report[ $list ] ) || ! is_array( $report[ $list ] ) ) continue;
+		$kept = [];
+		foreach ( $report[ $list ] as $it ) {
+			if ( bp_audit_note_key( $date, (string) ( $it['title'] ?? '' ) ) === $key ) { $removed = true; continue; }
+			$kept[] = $it;
+		}
+		$report[ $list ] = array_values( $kept );
+	}
+	if ( ! $removed ) wp_send_json_error( [ 'error' => 'Item not found in that report.' ] );
+
+	$history[ $date ] = $report;
+	update_option( 'bp_site_audit_ai_history', $history, false );
+
+	$notes = bp_audit_notes();
+	if ( isset( $notes[ $key ] ) ) { unset( $notes[ $key ] ); update_option( 'bp_audit_notes', $notes, false ); }
+
+	wp_send_json_success( [ 'deleted' => true ] );
+}
+
+/** One delegated handler for every note box on the screen (incl. those inside collapsed history). */
+function bp_audit_notes_script(): void {
+	static $done = false;
+	if ( $done ) return;
+	$done = true;
+	?>
+	<script>
+	(function(){
+		var AJAX = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
+		    NONCE = <?php echo wp_json_encode( wp_create_nonce( 'bp_audit_note' ) ); ?>;
+		function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+		function post(data, cb){
+			var b = new URLSearchParams(data); b.append('nonce', NONCE);
+			fetch(AJAX, { method:'POST', credentials:'same-origin', body:b })
+				.then(function(r){ return r.json(); })
+				.then(cb)
+				.catch(function(){ alert('Could not reach the server — please try again.'); });
+		}
+		document.addEventListener('click', function(ev){
+			// Remove an entire audit item (irrelevant, or already covered by another fix).
+			var del = ev.target.closest('.bp-audit-item-del');
+			if (del) {
+				ev.preventDefault();
+				var li = del.closest('.bp-audit-item'); if (!li) return;
+				if (!confirm('Remove this item from the audit?\n\nThis permanently deletes it from the saved report, along with any note on it.')) return;
+				post({ action:'bp_audit_item_delete', date:li.dataset.date, key:li.dataset.key }, function(res){
+					if (!res || !res.success) return alert((res && res.data && res.data.error) || 'Could not remove that item.');
+					li.style.transition = 'opacity .15s'; li.style.opacity = '0';
+					setTimeout(function(){ if (li.parentNode) li.parentNode.removeChild(li); }, 150);
+				});
+				return;
+			}
+
+			var box = ev.target.closest('.bp-audit-note'); if (!box) return;
+			var view   = box.querySelector('.bp-an-note-view'),
+			    form   = box.querySelector('.bp-an-note-form'),
+			    input  = box.querySelector('.bp-an-note-input'),
+			    cancel = box.querySelector('.bp-an-note-cancel');
+
+			if (ev.target.closest('.bp-an-note-edit'))   { ev.preventDefault(); view.style.display='none'; form.style.display=''; input.focus(); return; }
+			if (ev.target.closest('.bp-an-note-cancel')) { ev.preventDefault(); form.style.display='none'; view.style.display='';  return; }
+
+			if (ev.target.closest('.bp-an-note-del')) {
+				ev.preventDefault();
+				if (!confirm('Delete this note?')) return;
+				post({ action:'bp_audit_note', mode:'delete', key:box.dataset.key }, function(res){
+					if (!res || !res.success) return alert('Delete failed.');
+					input.value = ''; box.querySelector('.bp-an-note-text').innerHTML = '';
+					view.style.display='none'; form.style.display=''; cancel.style.display='none';
+				});
+				return;
+			}
+			if (ev.target.closest('.bp-an-note-save')) {
+				ev.preventDefault();
+				var t = (input.value || '').trim(); if (!t) { input.focus(); return; }
+				post({ action:'bp_audit_note', mode:'save', key:box.dataset.key, text:t }, function(res){
+					if (!res || !res.success) return alert((res && res.data && res.data.error) || 'Save failed.');
+					box.querySelector('.bp-an-note-date').textContent = res.data.label;
+					box.querySelector('.bp-an-note-text').innerHTML   = esc(res.data.text).replace(/\n/g,'<br>');
+					form.style.display='none'; view.style.display=''; cancel.style.display='';
+				});
+			}
+		});
+	})();
+	</script>
+	<?php
+}
+
+/*--------------------------------------------------------------
 # Admin render (used by the Site Audit screen)
 --------------------------------------------------------------*/
 
@@ -920,7 +1471,11 @@ function bp_audit_ai_render_report( array $r ): void {
 		echo '</div>';
 	}
 
-	$block = static function ( string $heading, array $items, bool $is_improve ) {
+	// Per-item "what I did" notes hang off the report's own date + the item title (see bp_audit_note_key).
+	$rdate = (string) ( $r['date'] ?? '' );
+	$notes = bp_audit_notes();
+
+	$block = static function ( string $heading, array $items, bool $is_improve ) use ( $rdate, $notes ) {
 		if ( ! $items ) return;
 		echo '<h3 style="margin:18px 0 8px;">' . esc_html( $heading ) . '</h3>';
 		echo '<ul style="margin:0;padding:0;list-style:none;">';
@@ -930,13 +1485,21 @@ function bp_audit_ai_render_report( array $r ): void {
 			$badge = ( $is_improve && $pri )
 				? sprintf( '<span style="display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:%s;color:#fff;font-size:10px;text-transform:uppercase;letter-spacing:.05em;">%s</span>', esc_attr( $pcol ), esc_html( $pri ) )
 				: '';
-			echo '<li style="padding:10px 0;border-bottom:1px solid #f0f0f1;">';
+			$ikey = bp_audit_note_key( $rdate, (string) ( $it['title'] ?? '' ) );
+			printf(
+				'<li class="bp-audit-item" data-key="%s" data-date="%s" style="padding:10px 0;border-bottom:1px solid #f0f0f1;">',
+				esc_attr( $ikey ), esc_attr( $rdate )
+			);
+			// Drop an item that's irrelevant, or already handled by another fix.
+			echo '<button type="button" class="bp-audit-item-del" title="Remove this item from the audit" aria-label="Remove this item from the audit" style="float:right;margin-left:10px;padding:0 4px;border:0;background:none;color:#b32d2e;font-size:18px;line-height:1.2;cursor:pointer;">&times;</button>';
 			printf(
 				'<div style="font-weight:600;">%s%s <span style="font-weight:400;color:#667085;font-size:12px;">&middot; %s</span></div>',
 				esc_html( (string) ( $it['title'] ?? '' ) ), $badge, esc_html( (string) ( $it['area'] ?? '' ) )
 			);
 			if ( ! empty( $it['detail'] ) ) echo '<div style="margin-top:3px;line-height:1.55;">' . esc_html( (string) $it['detail'] ) . '</div>';
 			if ( ! empty( $it['action'] ) ) echo '<div style="margin-top:4px;color:#1a7f37;"><strong>Fix:</strong> ' . esc_html( (string) $it['action'] ) . '</div>';
+			// Log what you actually did about this fix — date-stamped, editable, deletable.
+			if ( $is_improve ) echo bp_audit_note_box( $ikey, $notes[ $ikey ] ?? null );
 			echo '</li>';
 		}
 		echo '</ul>';
@@ -974,6 +1537,9 @@ function bp_audit_ai_render(): void {
 	echo '<h2 style="margin:0 0 6px;">Latest audit</h2>';
 	bp_audit_ai_render_report( (array) $latest );
 	echo '</div>';
+
+	// One delegated script covers every note box on the page, including past reports below.
+	bp_audit_notes_script();
 
 	// Everything before the latest, newest first, collapsed.
 	$past = $history;

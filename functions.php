@@ -1625,6 +1625,10 @@ $ai_chat = get_option('ai_chat');
 if ( bp_module_on($ai_chat) ) {
 	require_once get_template_directory().'/includes/includes-ai-chat.php';
 }
+$home_base = get_option('home_base');
+if ( bp_module_on($home_base) ) {
+	require_once get_template_directory().'/includes/includes-home-base.php';
+}
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
 if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_directory().'/includes/includes-hvac.php';

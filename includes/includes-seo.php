@@ -238,6 +238,12 @@ function bp_seo_document_title( $title ) {
  * unless set). Stored values may carry %%vars%% (Yoast allowed them), so we resolve.
  */
 function bp_seo_description(): string {
+	// Short-circuit, mirroring pre_get_document_title — lets a template that already
+	// built a better description for the view (e.g. jobsite_geo /service/ archives)
+	// supply it without having to store term meta.
+	$pre = apply_filters('bp_seo_pre_description', '');
+	if ( $pre !== '' ) return $pre;
+
 	if ( is_singular() ) {
 		$d = get_post_meta( get_queried_object_id(), BP_SEO_DESC, true );
 		if ( $d !== '' ) return bp_seo_render_value( $d );
@@ -789,15 +795,20 @@ function bp_seo_metabox_render( $post ) {
 		.bp-seo-field input[type=text],.bp-seo-field textarea{width:100%}
 		.bp-seo-field .bp-seo-hint{color:#646970;font-weight:400;font-size:12px}
 		.bp-seo-row{display:flex;gap:24px}
+		.bp-seo-tokens{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:5px 0 0}
+		.bp-seo-tokens .bp-seo-hint{margin-right:2px}
+		.bp-seo-tok{cursor:pointer;font-size:11px;line-height:1.6;font-family:Consolas,Monaco,monospace;color:#2271b1;background:#f0f6fc;border:1px solid #c3d9ed;border-radius:3px;padding:1px 6px}
+		.bp-seo-tok:hover{background:#2271b1;border-color:#2271b1;color:#fff}
 	</style>
 	<div class="bp-seo-field">
 		<label for="bp_seo_title">SEO Title <span class="bp-seo-hint">— blank uses: <?php echo $tTpl; ?></span></label>
 		<input type="text" id="bp_seo_title" name="<?php echo BP_SEO_TITLE; ?>" value="<?php echo $g(BP_SEO_TITLE); ?>" placeholder="<?php echo $tTpl; ?>">
-		<span class="bp-seo-hint">You can use %%title%%, %%sitename%%, %%sep%% (<?php echo esc_html($sep); ?>), %%primary_category%% — and shortcodes like [get-biz info="area-phone"].</span>
+		<?php bp_seo_token_bar('bp_seo_title', $sep); ?>
 	</div>
 	<div class="bp-seo-field">
 		<label for="bp_seo_desc">Meta Description</label>
 		<textarea id="bp_seo_desc" name="<?php echo BP_SEO_DESC; ?>" rows="3"><?php echo $g(BP_SEO_DESC); ?></textarea>
+		<?php bp_seo_token_bar('bp_seo_desc', $sep); ?>
 	</div>
 	<div class="bp-seo-row">
 		<div class="bp-seo-field" style="flex:1">
@@ -824,6 +835,55 @@ function bp_seo_metabox_render( $post ) {
 		<label for="bp_seo_og_desc">Social Description <span class="bp-seo-hint">— blank uses meta description</span></label>
 		<textarea id="bp_seo_og_desc" name="<?php echo BP_SEO_OG_DESC; ?>" rows="2"><?php echo $g(BP_SEO_OG_DESC); ?></textarea>
 	</div>
+	<?php bp_seo_token_script(); ?>
+	<?php
+}
+
+// Clickable variable/shortcode chips that insert into $target at the cursor.
+function bp_seo_token_bar( $target, $sep ) {
+	$tokens = [
+		'%%title%%'            => '',
+		'%%sitename%%'         => '',
+		'%%sep%%'              => " ({$sep})",
+		'%%primary_category%%' => '',
+		'[get-biz info="name"]'       => '',
+		'[get-biz info="city"]'       => '',
+		'[get-biz info="state-abbr"]' => '',
+		'[get-biz info="area-phone"]' => '',
+		'[get-years start="xxxx"]'    => '',
+	];
+	echo '<div class="bp-seo-tokens"><span class="bp-seo-hint">Click to insert:</span>';
+	foreach ( $tokens as $tok => $note ) {
+		printf(
+			'<button type="button" class="bp-seo-tok" data-target="%s" data-token="%s">%s</button>',
+			esc_attr($target), esc_attr($tok), esc_html($tok . $note)
+		);
+	}
+	echo '</div>';
+}
+
+function bp_seo_token_script() {
+	static $done = false;
+	if ( $done ) return;
+	$done = true;
+	?>
+	<script>
+	document.addEventListener('click', function(e){
+		var b = e.target.closest ? e.target.closest('.bp-seo-tok') : null;
+		if ( ! b ) return;
+		e.preventDefault();
+		var f = document.getElementById(b.dataset.target), t = b.dataset.token;
+		if ( ! f ) return;
+		var s = f.selectionStart, n = f.selectionEnd;
+		if ( s === null || typeof s === 'undefined' ) { s = n = f.value.length; }
+		f.value = f.value.slice(0, s) + t + f.value.slice(n);
+		var p = t.indexOf('xxxx'); // drop the cursor on the year placeholder, ready to overtype
+		f.focus();
+		if ( p > -1 ) f.setSelectionRange(s + p, s + p + 4);
+		else          f.setSelectionRange(s + t.length, s + t.length);
+		f.dispatchEvent(new Event('input', {bubbles:true}));
+	});
+	</script>
 	<?php
 }
 

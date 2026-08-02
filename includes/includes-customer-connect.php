@@ -1,18 +1,17 @@
 <?php
-require_once get_template_directory() . '/includes/includes-home-base-pwa.php';
-require_once get_template_directory() . '/includes/includes-home-base-equipment.php';
-require_once get_template_directory() . '/includes/includes-home-base-push.php';
-require_once get_template_directory() . '/includes/includes-home-base-admin.php';
+require_once get_template_directory() . '/includes/includes-customer-connect-pwa.php';
+require_once get_template_directory() . '/includes/includes-customer-connect-equipment.php';
+require_once get_template_directory() . '/includes/includes-customer-connect-push.php';
 
-/* Battle Plan Web Design — Home Base
+/* Battle Plan Web Design — Customer Connect
    ---------------------------------------------------------------------------
    A PUBLIC-facing, white-labeled companion app for a client's *customers*
    (e.g. the homeowners an HVAC contractor serves). Installs per-site like
    Site Pulse, deploys on the client's own website, and is completely
    INDEPENDENT of Site Pulse — a site may run either, both, or neither with no
    cross-dependency. Any shared primitives (VAPID push crypto, OKLCH color
-   engine) are COPIED into this module (namespaced hb_*), never required from
-   Site Pulse, so Home Base loads and runs whether or not Site Pulse is on.
+   engine) are COPIED into this module (namespaced cc_*), never required from
+   Site Pulse, so Customer Connect loads and runs whether or not Site Pulse is on.
 
    Audience separation: customers live in their OWN tables (never wp_users) and
    authenticate with a one-time code (SMS where Twilio is configured, email
@@ -27,20 +26,17 @@ require_once get_template_directory() . '/includes/includes-home-base-admin.php'
 # Database (tables + versioned upgrade)
 # Customer Helpers
 # OTP: request + verify (SMS/email)
-# REST API (home-base/v1)
+# REST API (customer-connect/v1)
 # Front-end App Page (auto-create + chrome strip + assets)
 --------------------------------------------------------------*/
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'HOME_BASE_DB_VERSION', '1.1' );
+define( 'CUSTOMER_CONNECT_DB_VERSION', '1.1' );
 
 // Front-end app slug (a `universal` CPT post auto-created below). One page; the
 // PWA is a client-side SPA that talks to the REST API, so login/app are one URL.
-if ( ! defined( 'HOME_BASE_SLUG' ) ) define( 'HOME_BASE_SLUG', 'home-base' );
-
-// The client's staff dashboard (a separate full-screen app, WP-user authed).
-if ( ! defined( 'HOME_BASE_ADMIN_SLUG' ) ) define( 'HOME_BASE_ADMIN_SLUG', 'home-base-admin' );
+if ( ! defined( 'CUSTOMER_CONNECT_SLUG' ) ) define( 'CUSTOMER_CONNECT_SLUG', 'customer-connect' );
 
 
 /*--------------------------------------------------------------
@@ -48,47 +44,53 @@ if ( ! defined( 'HOME_BASE_ADMIN_SLUG' ) ) define( 'HOME_BASE_ADMIN_SLUG', 'home
 --------------------------------------------------------------*/
 
 /**
- * The whole module config (the `home_base` site_option array), set in
+ * The whole module config (the `customer_connect` site_option array), set in
  * functions-site.php via battleplan_updateSiteOptions() / update_option().
  */
-function hb_config(): array {
-	return get_option( 'home_base', [] );
+function cc_config(): array {
+	return get_option( 'customer_connect', [] );
 }
 
 /**
  * Read a single config value with a default. Keys are flat option keys.
  */
-function hb_get( string $key, $default = '' ) {
-	$cfg = hb_config();
+function cc_get( string $key, $default = '' ) {
+	// Prefer a Site Pulse setting (the staff-editable source of truth, Settings → Customer Connect)
+	// when present; otherwise fall back to the functions-site.php install option, then the default.
+	if ( function_exists( 'site_pulse_get_setting' ) ) {
+		$sp = site_pulse_get_setting( 'cc_' . $key, '' );
+		if ( $sp !== '' ) return $sp;
+	}
+	$cfg = cc_config();
 	$val = $cfg[ $key ] ?? $default;
 	return $val === '' ? $default : $val;
 }
 
 /** Customer-facing product name (white-label; each client overrides). */
-function hb_app_name(): string {
-	return (string) hb_get( 'app_name', 'Home Base' );
+function cc_app_name(): string {
+	return (string) cc_get( 'app_name', 'Customer Connect' );
 }
 
 /** The contractor's business name shown under the app name. */
-function hb_company_name(): string {
-	return (string) hb_get( 'company_name', get_bloginfo( 'name' ) );
+function cc_company_name(): string {
+	return (string) cc_get( 'company_name', get_bloginfo( 'name' ) );
 }
 
 /**
  * Anthropic key — reuse the framework helper if present, else the constants.
  * (Used by the AI troubleshooter phase; defined here so all phases share it.)
  */
-function hb_api_key(): string {
+function cc_api_key(): string {
 	if ( function_exists( 'bp_ai_alt_api_key' ) ) return bp_ai_alt_api_key();
 	if ( defined( 'BP_ANTHROPIC_API_KEY' ) && BP_ANTHROPIC_API_KEY ) return BP_ANTHROPIC_API_KEY;
 	if ( defined( 'ANTHROPIC_API_KEY' )    && ANTHROPIC_API_KEY )    return ANTHROPIC_API_KEY;
 	return '';
 }
 
-/** Prefixed table name: {prefix}home_base_{name}. */
-function hb_table( string $name ): string {
+/** Prefixed table name: {prefix}customer_connect_{name}. */
+function cc_table( string $name ): string {
 	global $wpdb;
-	return $wpdb->prefix . 'home_base_' . $name;
+	return $wpdb->prefix . 'customer_connect_' . $name;
 }
 
 
@@ -98,16 +100,16 @@ function hb_table( string $name ): string {
 
 /**
  * Signing secret for customer bearer tokens + OTP hashing. Prefers a
- * wp-config.php constant (HOME_BASE_SECRET); otherwise a persisted random
+ * wp-config.php constant (CUSTOMER_CONNECT_SECRET); otherwise a persisted random
  * secret so the module works with zero wp-config edits. Rotating the secret
  * invalidates every outstanding token (customers just re-verify once).
  */
-function hb_secret(): string {
-	if ( defined( 'HOME_BASE_SECRET' ) && HOME_BASE_SECRET ) return (string) HOME_BASE_SECRET;
-	$s = get_option( 'home_base_secret', '' );
+function cc_secret(): string {
+	if ( defined( 'CUSTOMER_CONNECT_SECRET' ) && CUSTOMER_CONNECT_SECRET ) return (string) CUSTOMER_CONNECT_SECRET;
+	$s = get_option( 'customer_connect_secret', '' );
 	if ( $s === '' ) {
 		$s = wp_generate_password( 64, true, true );
-		update_option( 'home_base_secret', $s, false );
+		update_option( 'customer_connect_secret', $s, false );
 	}
 	return $s;
 }
@@ -116,10 +118,10 @@ function hb_secret(): string {
  * Mint a bearer token for a customer id. Long-lived (90 days) — the PWA stores
  * it on the device and silently renews on each open, so OTP is once-per-device.
  */
-function hb_generate_token( int $customer_id ): string {
+function cc_generate_token( int $customer_id ): string {
 	$expires = time() + ( 90 * 24 * 60 * 60 );
 	$data    = $customer_id . '|' . $expires;
-	$sig     = hash_hmac( 'sha256', $data, hb_secret() );
+	$sig     = hash_hmac( 'sha256', $data, cc_secret() );
 	return base64_encode( $data . '|' . $sig );
 }
 
@@ -127,7 +129,7 @@ function hb_generate_token( int $customer_id ): string {
  * Verify a bearer token → the customer row (array) or false. Rejects expired,
  * tampered, blocked, or unknown-customer tokens.
  */
-function hb_verify_token( string $token ) {
+function cc_verify_token( string $token ) {
 	if ( $token === '' ) return false;
 	$decoded = base64_decode( $token, true );
 	if ( $decoded === false ) return false;
@@ -135,24 +137,24 @@ function hb_verify_token( string $token ) {
 	if ( count( $parts ) !== 3 ) return false;
 	[ $customer_id, $expires, $sig ] = $parts;
 	if ( time() > (int) $expires ) return false;
-	$expected = hash_hmac( 'sha256', $customer_id . '|' . $expires, hb_secret() );
+	$expected = hash_hmac( 'sha256', $customer_id . '|' . $expires, cc_secret() );
 	if ( ! hash_equals( $expected, $sig ) ) return false;
-	$customer = hb_get_customer( (int) $customer_id );
+	$customer = cc_get_customer( (int) $customer_id );
 	if ( ! $customer || $customer['status'] !== 'active' ) return false;
 	return $customer;
 }
 
 /**
- * Resolve the authenticated customer for a REST request from the X-HB-Token
+ * Resolve the authenticated customer for a REST request from the X-CC-Token
  * header (or an Authorization: Bearer fallback). Returns the customer row or null.
  */
-function hb_current_customer( WP_REST_Request $request ) {
-	$token = (string) $request->get_header( 'X-HB-Token' );
+function cc_current_customer( WP_REST_Request $request ) {
+	$token = (string) $request->get_header( 'X-CC-Token' );
 	if ( $token === '' ) {
 		$auth = (string) $request->get_header( 'Authorization' );
 		if ( stripos( $auth, 'Bearer ' ) === 0 ) $token = trim( substr( $auth, 7 ) );
 	}
-	$customer = hb_verify_token( $token );
+	$customer = cc_verify_token( $token );
 	return $customer ?: null;
 }
 
@@ -162,21 +164,21 @@ function hb_current_customer( WP_REST_Request $request ) {
 --------------------------------------------------------------*/
 
 /**
- * Create/upgrade all Home Base tables. Bump HOME_BASE_DB_VERSION to ship a
+ * Create/upgrade all Customer Connect tables. Bump CUSTOMER_CONNECT_DB_VERSION to ship a
  * schema change; the init hook below diffs and re-runs dbDelta.
  */
-function hb_install_db(): void {
+function cc_install_db(): void {
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	global $wpdb;
 	$charset = $wpdb->get_charset_collate();
 
-	$customers = hb_table( 'customers' );
-	$otps      = hb_table( 'otps' );
-	$equipment = hb_table( 'equipment' );
-	$subs      = hb_table( 'push_subscriptions' );
-	$requests  = hb_table( 'schedule_requests' );
-	$notifs    = hb_table( 'notifications' );
-	$ai        = hb_table( 'ai_messages' );
+	$customers = cc_table( 'customers' );
+	$otps      = cc_table( 'otps' );
+	$equipment = cc_table( 'equipment' );
+	$subs      = cc_table( 'push_subscriptions' );
+	$requests  = cc_table( 'schedule_requests' );
+	$notifs    = cc_table( 'notifications' );
+	$ai        = cc_table( 'ai_messages' );
 
 	$sql = "
 	CREATE TABLE $customers (
@@ -293,13 +295,13 @@ function hb_install_db(): void {
 	";
 
 	dbDelta( $sql );
-	update_option( 'home_base_db_version', HOME_BASE_DB_VERSION );
+	update_option( 'customer_connect_db_version', CUSTOMER_CONNECT_DB_VERSION );
 }
 
 // Run install/upgrade when the stored version lags the constant.
 add_action( 'init', function () {
-	if ( get_option( 'home_base_db_version' ) !== HOME_BASE_DB_VERSION ) {
-		hb_install_db();
+	if ( get_option( 'customer_connect_db_version' ) !== CUSTOMER_CONNECT_DB_VERSION ) {
+		cc_install_db();
 	}
 }, 5 );
 
@@ -308,7 +310,7 @@ add_action( 'init', function () {
 add_action( 'init', function () {
 	if ( wp_rand( 1, 50 ) !== 1 ) return; // ~2% of loads
 	global $wpdb;
-	$t = hb_table( 'otps' );
+	$t = cc_table( 'otps' );
 	$wpdb->query( $wpdb->prepare( "DELETE FROM $t WHERE expires_at < %s", gmdate( 'Y-m-d H:i:s', time() - 3600 ) ) );
 }, 20 );
 
@@ -318,7 +320,7 @@ add_action( 'init', function () {
 --------------------------------------------------------------*/
 
 /** Normalize a US phone to E.164-ish digits (+1XXXXXXXXXX). Returns '' if unusable. */
-function hb_normalize_phone( string $raw ): string {
+function cc_normalize_phone( string $raw ): string {
 	$digits = preg_replace( '/\D+/', '', $raw );
 	if ( $digits === '' ) return '';
 	if ( strlen( $digits ) === 10 ) $digits = '1' . $digits;
@@ -326,17 +328,17 @@ function hb_normalize_phone( string $raw ): string {
 	return '';
 }
 
-function hb_get_customer( int $id ) {
+function cc_get_customer( int $id ) {
 	global $wpdb;
-	$t   = hb_table( 'customers' );
+	$t   = cc_table( 'customers' );
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE id = %d", $id ), ARRAY_A );
 	return $row ?: null;
 }
 
 /** Find a customer by phone (preferred) or email. Returns row or null. */
-function hb_find_customer( string $phone, string $email ) {
+function cc_find_customer( string $phone, string $email ) {
 	global $wpdb;
-	$t = hb_table( 'customers' );
+	$t = cc_table( 'customers' );
 	if ( $phone !== '' ) {
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE phone = %s LIMIT 1", $phone ), ARRAY_A );
 		if ( $row ) return $row;
@@ -352,32 +354,32 @@ function hb_find_customer( string $phone, string $email ) {
  * Find-or-create a customer by phone/email. New rows are 'active' (self-register
  * base). The optional per-client CRM connector add-on can later enrich these.
  */
-function hb_upsert_customer( string $phone, string $email ): array {
+function cc_upsert_customer( string $phone, string $email ): array {
 	global $wpdb;
-	$existing = hb_find_customer( $phone, $email );
+	$existing = cc_find_customer( $phone, $email );
 	if ( $existing ) {
 		// Backfill a missing channel (e.g. verified by SMS first, later added email).
 		$patch = [];
 		if ( $phone !== '' && $existing['phone'] === '' ) $patch['phone'] = $phone;
 		if ( $email !== '' && $existing['email'] === '' ) $patch['email'] = $email;
 		if ( $patch ) {
-			$wpdb->update( hb_table( 'customers' ), $patch, [ 'id' => (int) $existing['id'] ] );
+			$wpdb->update( cc_table( 'customers' ), $patch, [ 'id' => (int) $existing['id'] ] );
 			$existing = array_merge( $existing, $patch );
 		}
 		return $existing;
 	}
 	$now = current_time( 'mysql' );
-	$wpdb->insert( hb_table( 'customers' ), [
+	$wpdb->insert( cc_table( 'customers' ), [
 		'phone'      => $phone,
 		'email'      => $email,
 		'status'     => 'active',
 		'created_at' => $now,
 	] );
-	return hb_get_customer( (int) $wpdb->insert_id );
+	return cc_get_customer( (int) $wpdb->insert_id );
 }
 
 /** Public-safe customer shape returned to the app (no internal/meta fields). */
-function hb_customer_public( array $c ): array {
+function cc_customer_public( array $c ): array {
 	return [
 		'id'         => (int) $c['id'],
 		'phone'      => $c['phone'],
@@ -397,7 +399,7 @@ function hb_customer_public( array $c ): array {
 --------------------------------------------------------------*/
 
 /** Is per-client Twilio wired up (so we can send an SMS code)? */
-function hb_sms_ready(): bool {
+function cc_sms_ready(): bool {
 	// Reuse the AI-chat Twilio resolver + sender when that module is present on
 	// the site; both read the same shared-ISV credentials. Never a hard dependency
 	// — absent it, we fall back to email OTP.
@@ -411,9 +413,9 @@ function hb_sms_ready(): bool {
  * Send a one-time code. Prefers SMS (to the normalized phone) when Twilio is
  * configured, else email. Returns the channel used ('sms'|'email') or '' on failure.
  */
-function hb_send_otp( string $phone, string $email, string $code ): string {
-	$app = hb_app_name();
-	if ( $phone !== '' && hb_sms_ready() ) {
+function cc_send_otp( string $phone, string $email, string $code ): string {
+	$app = cc_app_name();
+	if ( $phone !== '' && cc_sms_ready() ) {
 		$msg = sprintf( '%s: your verification code is %s. It expires in 10 minutes.', $app, $code );
 		if ( bp_chat_send_sms( $phone, $msg ) ) return 'sms';
 	}
@@ -430,36 +432,36 @@ function hb_send_otp( string $phone, string $email, string $code ): string {
  * Rate-limited per IP. Always returns a generic success shape (no account
  * enumeration): "we sent a code if that contact is valid."
  */
-function hb_rest_request_otp( WP_REST_Request $request ) {
+function cc_rest_request_otp( WP_REST_Request $request ) {
 	$body  = json_decode( $request->get_body(), true ) ?: [];
-	$phone = hb_normalize_phone( (string) ( $body['phone'] ?? '' ) );
+	$phone = cc_normalize_phone( (string) ( $body['phone'] ?? '' ) );
 	$email = sanitize_email( (string) ( $body['email'] ?? '' ) );
 	$email = is_email( $email ) ? $email : '';
 
 	if ( $phone === '' && $email === '' ) {
-		return new WP_Error( 'hb_missing', 'Enter a mobile number or email.', [ 'status' => 400 ] );
+		return new WP_Error( 'cc_missing', 'Enter a mobile number or email.', [ 'status' => 400 ] );
 	}
 
-	$ip = hb_client_ip();
-	if ( ! hb_rate_ok( 'otp_' . md5( $ip ), 8, HOUR_IN_SECONDS ) ) {
-		return new WP_Error( 'hb_rate', 'Too many attempts. Please try again later.', [ 'status' => 429 ] );
+	$ip = cc_client_ip();
+	if ( ! cc_rate_ok( 'otp_' . md5( $ip ), 8, HOUR_IN_SECONDS ) ) {
+		return new WP_Error( 'cc_rate', 'Too many attempts. Please try again later.', [ 'status' => 429 ] );
 	}
 
 	global $wpdb;
 	$identifier = $phone !== '' ? $phone : $email;
-	$channel    = ( $phone !== '' && hb_sms_ready() ) ? 'sms' : 'email';
+	$channel    = ( $phone !== '' && cc_sms_ready() ) ? 'sms' : 'email';
 	$code       = str_pad( (string) wp_rand( 0, 999999 ), 6, '0', STR_PAD_LEFT );
 
-	$wpdb->insert( hb_table( 'otps' ), [
+	$wpdb->insert( cc_table( 'otps' ), [
 		'identifier' => $identifier,
 		'channel'    => $channel,
-		'code_hash'  => hash_hmac( 'sha256', $code, hb_secret() ),
+		'code_hash'  => hash_hmac( 'sha256', $code, cc_secret() ),
 		'ip'         => $ip,
 		'expires_at' => gmdate( 'Y-m-d H:i:s', time() + 600 ),
 		'created_at' => current_time( 'mysql' ),
 	] );
 
-	$sent = hb_send_otp( $phone, $email, $code );
+	$sent = cc_send_otp( $phone, $email, $code );
 
 	return rest_ensure_response( [
 		'ok'         => true,
@@ -473,94 +475,94 @@ function hb_rest_request_otp( WP_REST_Request $request ) {
  * REST: POST /verify-otp — body { identifier, code }. On success mints a token,
  * find-or-creates the customer, returns token + customer profile.
  */
-function hb_rest_verify_otp( WP_REST_Request $request ) {
+function cc_rest_verify_otp( WP_REST_Request $request ) {
 	$body       = json_decode( $request->get_body(), true ) ?: [];
 	$identifier = sanitize_text_field( (string) ( $body['identifier'] ?? '' ) );
 	$code       = preg_replace( '/\D+/', '', (string) ( $body['code'] ?? '' ) );
 
 	if ( $identifier === '' || strlen( $code ) !== 6 ) {
-		return new WP_Error( 'hb_bad', 'Enter the 6-digit code.', [ 'status' => 400 ] );
+		return new WP_Error( 'cc_bad', 'Enter the 6-digit code.', [ 'status' => 400 ] );
 	}
 
 	global $wpdb;
-	$t   = hb_table( 'otps' );
+	$t   = cc_table( 'otps' );
 	$row = $wpdb->get_row( $wpdb->prepare(
 		"SELECT * FROM $t WHERE identifier = %s ORDER BY id DESC LIMIT 1", $identifier
 	), ARRAY_A );
 
-	if ( ! $row ) return new WP_Error( 'hb_none', 'Request a new code.', [ 'status' => 400 ] );
-	if ( (int) $row['attempts'] >= 5 ) return new WP_Error( 'hb_locked', 'Too many tries. Request a new code.', [ 'status' => 429 ] );
-	if ( strtotime( $row['expires_at'] . ' UTC' ) < time() ) return new WP_Error( 'hb_expired', 'That code expired. Request a new one.', [ 'status' => 400 ] );
+	if ( ! $row ) return new WP_Error( 'cc_none', 'Request a new code.', [ 'status' => 400 ] );
+	if ( (int) $row['attempts'] >= 5 ) return new WP_Error( 'cc_locked', 'Too many tries. Request a new code.', [ 'status' => 429 ] );
+	if ( strtotime( $row['expires_at'] . ' UTC' ) < time() ) return new WP_Error( 'cc_expired', 'That code expired. Request a new one.', [ 'status' => 400 ] );
 
-	$expected = hash_hmac( 'sha256', $code, hb_secret() );
+	$expected = hash_hmac( 'sha256', $code, cc_secret() );
 	if ( ! hash_equals( $row['code_hash'], $expected ) ) {
 		$wpdb->update( $t, [ 'attempts' => (int) $row['attempts'] + 1 ], [ 'id' => (int) $row['id'] ] );
-		return new WP_Error( 'hb_wrong', 'Incorrect code. Try again.', [ 'status' => 400 ] );
+		return new WP_Error( 'cc_wrong', 'Incorrect code. Try again.', [ 'status' => 400 ] );
 	}
 
 	// Consume the code.
 	$wpdb->delete( $t, [ 'identifier' => $identifier ] );
 
 	$is_email = is_email( $identifier );
-	$customer = hb_upsert_customer( $is_email ? '' : $identifier, $is_email ? $identifier : '' );
-	$wpdb->update( hb_table( 'customers' ), [ 'last_login_at' => current_time( 'mysql' ) ], [ 'id' => (int) $customer['id'] ] );
+	$customer = cc_upsert_customer( $is_email ? '' : $identifier, $is_email ? $identifier : '' );
+	$wpdb->update( cc_table( 'customers' ), [ 'last_login_at' => current_time( 'mysql' ) ], [ 'id' => (int) $customer['id'] ] );
 
 	return rest_ensure_response( [
 		'ok'       => true,
-		'token'    => hb_generate_token( (int) $customer['id'] ),
-		'customer' => hb_customer_public( $customer ),
+		'token'    => cc_generate_token( (int) $customer['id'] ),
+		'customer' => cc_customer_public( $customer ),
 	] );
 }
 
 
 /*--------------------------------------------------------------
-# REST API (home-base/v1)
+# REST API (customer-connect/v1)
 --------------------------------------------------------------*/
 
 add_action( 'rest_api_init', function () {
-	$ns = 'home-base/v1';
+	$ns = 'customer-connect/v1';
 
 	// Public (auth happens inside via OTP / rate-limit).
 	register_rest_route( $ns, '/request-otp', [
 		'methods'             => 'POST',
-		'callback'            => 'hb_rest_request_otp',
+		'callback'            => 'cc_rest_request_otp',
 		'permission_callback' => '__return_true',
 	] );
 	register_rest_route( $ns, '/verify-otp', [
 		'methods'             => 'POST',
-		'callback'            => 'hb_rest_verify_otp',
+		'callback'            => 'cc_rest_verify_otp',
 		'permission_callback' => '__return_true',
 	] );
 
-	// Authenticated (token verified in the callback via hb_current_customer()).
+	// Authenticated (token verified in the callback via cc_current_customer()).
 	register_rest_route( $ns, '/me', [
 		'methods'             => 'GET',
-		'callback'            => 'hb_rest_me',
+		'callback'            => 'cc_rest_me',
 		'permission_callback' => '__return_true',
 	] );
 	register_rest_route( $ns, '/profile', [
 		'methods'             => 'POST',
-		'callback'            => 'hb_rest_update_profile',
+		'callback'            => 'cc_rest_update_profile',
 		'permission_callback' => '__return_true',
 	] );
 } );
 
 /** GET /me — verify a stored token on app open + return the current profile. */
-function hb_rest_me( WP_REST_Request $request ) {
-	$customer = hb_current_customer( $request );
-	if ( ! $customer ) return new WP_Error( 'hb_auth', 'Not signed in.', [ 'status' => 401 ] );
+function cc_rest_me( WP_REST_Request $request ) {
+	$customer = cc_current_customer( $request );
+	if ( ! $customer ) return new WP_Error( 'cc_auth', 'Not signed in.', [ 'status' => 401 ] );
 	return rest_ensure_response( [
 		'ok'       => true,
-		'customer' => hb_customer_public( $customer ),
+		'customer' => cc_customer_public( $customer ),
 		// Silent token renewal keeps the device signed in without another OTP.
-		'token'    => hb_generate_token( (int) $customer['id'] ),
+		'token'    => cc_generate_token( (int) $customer['id'] ),
 	] );
 }
 
 /** POST /profile — customer edits their own name/address. */
-function hb_rest_update_profile( WP_REST_Request $request ) {
-	$customer = hb_current_customer( $request );
-	if ( ! $customer ) return new WP_Error( 'hb_auth', 'Not signed in.', [ 'status' => 401 ] );
+function cc_rest_update_profile( WP_REST_Request $request ) {
+	$customer = cc_current_customer( $request );
+	if ( ! $customer ) return new WP_Error( 'cc_auth', 'Not signed in.', [ 'status' => 401 ] );
 
 	$body  = json_decode( $request->get_body(), true ) ?: [];
 	$allow = [ 'first_name', 'last_name', 'address', 'city', 'state', 'zip', 'email' ];
@@ -577,10 +579,10 @@ function hb_rest_update_profile( WP_REST_Request $request ) {
 	}
 	if ( $patch ) {
 		global $wpdb;
-		$wpdb->update( hb_table( 'customers' ), $patch, [ 'id' => (int) $customer['id'] ] );
+		$wpdb->update( cc_table( 'customers' ), $patch, [ 'id' => (int) $customer['id'] ] );
 		$customer = array_merge( $customer, $patch );
 	}
-	return rest_ensure_response( [ 'ok' => true, 'customer' => hb_customer_public( $customer ) ] );
+	return rest_ensure_response( [ 'ok' => true, 'customer' => cc_customer_public( $customer ) ] );
 }
 
 
@@ -589,7 +591,7 @@ function hb_rest_update_profile( WP_REST_Request $request ) {
 --------------------------------------------------------------*/
 
 /** Best-effort client IP (behind Cloudflare/WPE proxies). */
-function hb_client_ip(): string {
+function cc_client_ip(): string {
 	foreach ( [ 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR' ] as $k ) {
 		if ( ! empty( $_SERVER[ $k ] ) ) {
 			$ip = trim( explode( ',', (string) $_SERVER[ $k ] )[0] );
@@ -600,8 +602,8 @@ function hb_client_ip(): string {
 }
 
 /** Simple transient counter rate-limit. Returns true if still under the cap. */
-function hb_rate_ok( string $key, int $max, int $window ): bool {
-	$k = 'hb_rl_' . md5( $key );
+function cc_rate_ok( string $key, int $max, int $window ): bool {
+	$k = 'cc_rl_' . md5( $key );
 	$n = (int) get_transient( $k );
 	if ( $n >= $max ) return false;
 	set_transient( $k, $n + 1, $window );
@@ -621,10 +623,9 @@ function hb_rate_ok( string $key, int $max, int $window ): bool {
 // Priority 99 so the `universal` CPT (registered in functions-cpt.php on init)
 // exists before we insert/query a post of that type.
 add_action( 'init', function () {
-	if ( get_option( 'home_base_pages_v' ) === HOME_BASE_DB_VERSION ) return;
+	if ( get_option( 'customer_connect_pages_v' ) === CUSTOMER_CONNECT_DB_VERSION ) return;
 	$pages = [
-		[ 'slug' => HOME_BASE_SLUG,       'title' => hb_app_name(),               'tpl' => 'page-home-base' ],
-		[ 'slug' => HOME_BASE_ADMIN_SLUG, 'title' => hb_app_name() . ' — Staff',  'tpl' => 'page-home-base-admin' ],
+		[ 'slug' => CUSTOMER_CONNECT_SLUG,       'title' => cc_app_name(),               'tpl' => 'page-customer-connect' ],
 	];
 	foreach ( $pages as $p ) {
 		if ( is_null( get_page_by_path( $p['slug'], OBJECT, 'universal' ) ) ) {
@@ -637,49 +638,49 @@ add_action( 'init', function () {
 			] );
 		}
 	}
-	update_option( 'home_base_pages_v', HOME_BASE_DB_VERSION );
+	update_option( 'customer_connect_pages_v', CUSTOMER_CONNECT_DB_VERSION );
 }, 99 );
 
-/** True on the Home Base app page. */
-function hb_is_app_page(): bool {
+/** True on the Customer Connect app page. */
+function cc_is_app_page(): bool {
 	global $post;
-	return $post && $post->post_name === HOME_BASE_SLUG;
+	return $post && $post->post_name === CUSTOMER_CONNECT_SLUG;
 }
 
 // Never cache the app shell (it hands out nonces + per-device state via JS).
 add_action( 'template_redirect', function () {
-	if ( ! hb_is_app_page() ) return;
+	if ( ! cc_is_app_page() ) return;
 	if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
 	nocache_headers();
 	if ( ! headers_sent() ) header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
 	add_filter( 'show_admin_bar', '__return_false' );
-	add_filter( 'body_class', function ( $c ) { $c[] = 'has-home-base'; return $c; } );
+	add_filter( 'body_class', function ( $c ) { $c[] = 'has-customer-connect'; return $c; } );
 } );
 
 // This IS a customer-facing app, so — unlike Site Pulse — it KEEPS the client's
 // brand styling. We only enqueue the app's own CSS/JS on top.
 add_action( 'wp_enqueue_scripts', function () {
-	if ( ! hb_is_app_page() ) return;
+	if ( ! cc_is_app_page() ) return;
 
-	$css = file_exists( get_template_directory() . '/style-home-base.css' )
-		? '/style-home-base.css' : '';
+	$css = file_exists( get_template_directory() . '/style-customer-connect.css' )
+		? '/style-customer-connect.css' : '';
 	if ( $css ) {
-		wp_enqueue_style( 'home-base', get_template_directory_uri() . $css, [], _BP_VERSION );
+		wp_enqueue_style( 'customer-connect', get_template_directory_uri() . $css, [], _BP_VERSION );
 	}
 
-	$js = file_exists( get_template_directory() . '/js/script-home-base.min.js' )
-		? '/js/script-home-base.min.js'
-		: ( file_exists( get_template_directory() . '/js/script-home-base.js' ) ? '/js/script-home-base.js' : '' );
+	$js = file_exists( get_template_directory() . '/js/script-customer-connect.min.js' )
+		? '/js/script-customer-connect.min.js'
+		: ( file_exists( get_template_directory() . '/js/script-customer-connect.js' ) ? '/js/script-customer-connect.js' : '' );
 	if ( $js ) {
-		wp_enqueue_script( 'home-base', get_template_directory_uri() . $js, [], _BP_VERSION, true );
-		wp_localize_script( 'home-base', 'homeBaseData', [
-			'restBase'    => esc_url_raw( rest_url( 'home-base/v1' ) ),
-			'appName'     => hb_app_name(),
-			'company'     => hb_company_name(),
-			'smsReady'    => hb_sms_ready(),
-			'pushReady'   => function_exists( 'hb_push_ready' ) ? hb_push_ready() : false,
-			'vapidPublic' => function_exists( 'hb_vapid_public' ) ? hb_vapid_public() : '',
-			'homeUrl'     => home_url( '/' . HOME_BASE_SLUG . '/' ),
+		wp_enqueue_script( 'customer-connect', get_template_directory_uri() . $js, [], _BP_VERSION, true );
+		wp_localize_script( 'customer-connect', 'customerConnectData', [
+			'restBase'    => esc_url_raw( rest_url( 'customer-connect/v1' ) ),
+			'appName'     => cc_app_name(),
+			'company'     => cc_company_name(),
+			'smsReady'    => cc_sms_ready(),
+			'pushReady'   => function_exists( 'cc_push_ready' ) ? cc_push_ready() : false,
+			'vapidPublic' => function_exists( 'cc_vapid_public' ) ? cc_vapid_public() : '',
+			'homeUrl'     => home_url( '/' . CUSTOMER_CONNECT_SLUG . '/' ),
 		] );
 	}
 }, 20 );

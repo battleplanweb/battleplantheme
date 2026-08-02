@@ -36,6 +36,32 @@ section.section-parallax-disabled > section.section {
 	grid-column:                                               1 / -1;
 }
 
+/* --- Responsive <img> hero backdrop + compositor parallax --------------------------------------
+   The [parallax] hero renders a real <img class="hero-bg" srcset sizes> (browser picks the size).
+   The drift is a transform on that <img>: Chrome uses the scroll-linked view() timeline (zero JS);
+   Firefox/older fall back to the JS nudge in script-pages.js. The img is oversized (120% tall, top
+   -10%) inside an overflow:hidden section so the ±6% drift never exposes an edge. --------------- */
+section.section-parallax {
+	position:                                                  relative;
+	isolation:                                                 isolate;
+}
+.hero-bg {
+	position:                                                  absolute;
+	inset:                                                     0;
+	width:                                                     100%;
+	height:                                                    100%;
+	object-fit:                                                cover;
+	z-index:                                                   -1;
+	transform:                                                 translateZ(0);   /* own layer: confines the object-position drift repaint */
+}
+/* Parallax drift is JS (script-pages.js): it animates object-position on .hero-bg, reproducing the
+   framework's original background-position parallax math (so existing top-y/bottom-y values are honored
+   unchanged), now on a responsive <img>. A CSS view()/scroll() timeline was tried but dies on any
+   scroll-container ancestor and can't do the large position sweeps top-y/bottom-y produce. */
+@media (prefers-reduced-motion: reduce) {
+	.hero-bg { object-position: 50% 50% !important; }
+}
+
 #masthead {
 	z-index:                                                   4000;
 }
@@ -585,9 +611,22 @@ section.section .flex.nested .flex,
 	z-index:                                                   2000;
 }
 
-.menu-clip #masthead {
-	overflow:                                                  hidden;
-	clip-path:                                                 polygon(0% 0%, 100% 0%, 100% calc(100% + 80vh), 0% calc(100% + 80vh));
+/* Menu-clip: clip the strip to its own box so the intro item animation is
+   contained (and the red over/toggle labels above the menu stay hidden).
+   script-pages.js adds .menu-revealed after 2.5s to drop the bottom edge
+   far below the strip so hover drop-downs can overflow.
+   Desktop menu only (min-width:1025px) — below that the mobile menu is used,
+   which has no desktop drop-downs to contain, so no clip is applied. */
+@media (min-width: 1025px) {
+
+	.menu-clip .menu-strip {
+		clip-path:                                             polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+	}
+
+	.menu-clip .menu-strip.menu-revealed {
+		clip-path:                                             polygon(0% 0%, 100% 0%, 100% 1000%, 0% 1000%);
+	}
+
 }
 
 .fixed-strip {

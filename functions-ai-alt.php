@@ -231,6 +231,15 @@ function bp_ai_alt_load_image_for_api($attachment_id) {
 		}
 
 		$out_mime = in_array($mime, $accepted, true) ? $mime : 'image/jpeg';
+
+		// wp_tempnam() lives in wp-admin/includes/file.php, which wp-cron never
+		// loads. This file is loaded unconditionally (front end + cron), so the
+		// call fatals the whole cron run whenever a queued image needs resizing
+		// or re-encoding. Pull the admin file in on demand.
+		if (!function_exists('wp_tempnam')) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
 		$tmp = wp_tempnam('bp-ai-alt');
 		$editor->set_quality(85);
 		$saved = $editor->save($tmp, $out_mime);

@@ -1555,7 +1555,11 @@ document.addEventListener("DOMContentLoaded", function () {
 				let labelMaxWidth = 0;
 				inputs.forEach(el => {
 					const lbl = el.querySelector(':scope > label');
-					if (lbl) labelMaxWidth = Math.max(labelMaxWidth, lbl.offsetWidth);
+					// Floating labels are position:absolute and stretch the full field width, so measuring
+					// them pins a label column as wide as the input itself. Float fields shrug that off
+					// (their CSS re-forces 1fr !important) but form-label-outside rows — radio, checkbox,
+					// file — obey it and get squeezed into a stack at the right edge. Skip them.
+					if (lbl && getComputedStyle(lbl).position !== 'absolute') labelMaxWidth = Math.max(labelMaxWidth, lbl.offsetWidth);
 				});
 				if (labelMaxWidth > 0) {
 					labelMaxWidth += 1;
@@ -2134,10 +2138,11 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 
 
-	// Allow sub-menu to appear, even if initially set to overflow:hidden
-	const menuClip = getObject('.menu-clip #masthead');
+	// Menu-clip: strip starts clipped to its own box (contains the intro
+	// animation); after 2.5s expand the clip so hover drop-downs can overflow
+	const menuClip = getObject('.menu-clip .menu-strip');
 	if (menuClip) {
-		setTimeout(() => menuClip.style.overflow = 'visible', 2500);
+		setTimeout(() => menuClip.classList.add('menu-revealed'), 2500);
 	}
 
 
@@ -2293,35 +2298,45 @@ document.addEventListener("DOMContentLoaded", function () {
 			moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
 		}
 
-		// When using parallax in #wrapper-top, determine which background to load for desktop or mobile
-		getObjects('.load-bg-img').forEach(el => {
-			const w = window.innerWidth;
-			const iw = parseInt(el.dataset.imgWidth);
-			const ih = parseInt(el.dataset.imgHeight);
-			const rawHH = (el.dataset.holderHeight || '').trim();
-			// A holder-height carrying a viewport/relative unit (e.g. "100vh" from height="full")
-			// is used VERBATIM as the min-height. parseInt-ing "100vh" would collapse the hero to
-			// 100px; the pixel-cap logic below is only meaningful for absolute px heights. (The
-			// leading match also tolerates a stray trailing "px" from older cached markup — "100vhpx".)
-			const relHH = rawHH.match(/^([\d.]+(?:vh|svh|lvh|dvh|vw|vmin|vmax|vi|vb|%|em|rem))/i);
-			const hh = parseInt(rawHH);
-			const ratio = iw && ih ? iw / ih : 2;
-			const b = el.dataset.imgBase;
-			const e = el.dataset.imgExt;
-			const dpr = window.devicePixelRatio || 1;
-			const effective = w * dpr;
-			const r = effective <= 480 ? 480 : effective <= 640 ? 640 : effective <= 960 ? 960 : effective <= 1280 ? 1280 : effective <= 1536 ? 1536 : 1920;
-			const h = Math.round(r / ratio);
-			const src = r >= iw ? `${b}.${e}` : `${b}-${r}x${h}.${e}`;
-
-			const minH = relHH ? relHH[1] : `${hh > h * 0.8 ? Math.round(h * 0.8) : hh}px`;
-
-			el.style.backgroundImage = `url(${src})`;
-			el.style.backgroundSize = 'cover';
-			el.style.height = `auto`;
-			el.style.minHeight = minH;
-			el.classList.add(`screen-${r}`);
-		 });
+		// Hero background parallax: animate object-position on the responsive <img class="hero-bg">,
+		// reproducing the framework's ORIGINAL background-position math exactly (so existing top-y /
+		// bottom-y values are honored, on any site). rAF-throttled + passive; the img sits on its own
+		// layer (.hero-bg { transform: translateZ(0) }) so the drift repaint stays isolated. Once.
+		if ( !window.__bpHeroDriftInit ) {
+			window.__bpHeroDriftInit = true;
+			const heroLayers = getObjects('.hero-bg');
+			const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+			if ( heroLayers.length && !reduceMotion ) {
+				let heroTicking = false;
+				const driftHeroes = () => {
+					const deviceH = window.innerHeight;
+					heroLayers.forEach(img => {
+						const sec = img.parentElement;
+						if (!sec) return;
+						const obj = sec.getBoundingClientRect();
+						if (obj.bottom < 0 || obj.top > deviceH) return;             // off-screen: skip
+						const objTop = obj.top, objHeight = obj.height;
+						const imageH = parseFloat(sec.dataset.imgHeight) || objHeight || 1;
+						const posX   = sec.dataset.posX || '50%';
+						const adjTop = -(parseFloat(sec.dataset.topY) || 0);
+						const adjBot = -(parseFloat(sec.dataset.bottomY) || 0);
+						const startScroll = objTop - deviceH;
+						const endScroll   = objTop + objHeight;
+						const scrollRange = endScroll - startScroll;
+						let objScroll = Math.max(0, Math.min(endScroll / scrollRange, 1));
+						objScroll = 1 - objScroll;
+						let finalPosY = (imageH + adjTop) - ((imageH + adjTop + adjBot) * objScroll);
+						finalPosY = (finalPosY / imageH) * 100;
+						img.style.objectPosition = `${posX} ${finalPosY.toFixed(2)}%`;
+					});
+					heroTicking = false;
+				};
+				const onScrollResize = () => { if (!heroTicking) { heroTicking = true; requestAnimationFrame(driftHeroes); } };
+				window.addEventListener('scroll', onScrollResize, { passive: true });
+				window.addEventListener('resize', onScrollResize, { passive: true });
+				driftHeroes();
+			}
+		}
 	};
 
 	// 9/11/25 - Father Son Home Watch - changed height to auto, minHeight to height of background.  This keeps it from cutting off content if it exists, but still keeps the background visible if no content exists

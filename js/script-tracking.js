@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	const originalGtag = window.gtag;
 	window.gtag = function (...args) {
-		console.log("📊 gtag fired:", JSON.stringify(args));
 		if (typeof originalGtag === 'function') originalGtag.apply(this, args);
 	};
 

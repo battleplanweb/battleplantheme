@@ -270,6 +270,16 @@ button.bp-chat-close.tab-focus {
 	background:                                                var(--chatbot-consent-bg);
 }
 
+.bp-chat-consent-legal {
+	margin-top:                                                0.35em;
+}
+
+.bp-chat-consent a {
+	color:                                                     inherit;
+	text-decoration:                                           underline;
+	font-weight:                                               600;
+}
+
 /* ---- Consent card (explicit SMS opt-in) ---- */
 .bp-chat-consent-card {
 	max-width:                                                 92%;

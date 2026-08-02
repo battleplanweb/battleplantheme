@@ -266,9 +266,16 @@ function site_pulse_ajax_get_surveys(): void {
 			if ( $ov >= 1 && $ov <= 5 ) $overall_dist[ $ov ]++;
 		}
 
+		// How the card arrived, for the Web/Imported pill. A WEB submission (forwarded from a public
+		// survey form) always carries the visitor's IP AND the originating site domain; the photo/
+		// upload importer sets neither (it stamps source_site = 'Imported comment card', or older ones
+		// left it null). So "no IP and no real site domain" = imported — robust even for old imports.
+		$ss_val = (string) ( $r['source_site'] ?? '' );
+		$is_web = ! empty( $r['source_ip'] ) || ( $ss_val !== '' && $ss_val !== 'Imported comment card' );
 		$surveys[] = [
 			'id'          => (int) $r['id'],
 			'location'    => $r['location'],
+			'source'      => $is_web ? 'web' : 'imported',
 			'name'        => $r['customer_name'],
 			'email'       => $r['email'],
 			'phone'       => $r['phone'],

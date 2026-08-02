@@ -34,6 +34,29 @@
 	margin-bottom:                                             2em;
 }
 
+/* Keep the map in view while the (usually longer) intro column scrolls past.
+   Only above the JS mobile cutoff (1024) — below it script-jobsite_geo.js moves
+   the map out of this holder and into the content flow, so there is nothing to
+   stick. align-self is required: a grid item stretches to the full row height by
+   default, which leaves sticky no room to travel. Override the offset per site
+   with --jobsite-map-sticky-top if the header height differs. */
+@media (min-width: 1024px) {
+	/* #page has overflow:hidden in normalize, which makes it a scroll container and
+	   silently kills position:sticky in every descendant (same trap documented in
+	   style-schedules.css). Using clip rather than visible keeps the horizontal
+	   overflow guard — clip does not create a scroll container, so sticky survives. */
+	body.jobsite_geo #page {
+		overflow-x:                                        clip;
+		overflow-y:                                        visible;
+	}
+
+	.jobsite_geo_map_holder {
+		position:                                          sticky;
+		top:                                               var(--jobsite-map-sticky-top, 120px);
+		align-self:                                        start;
+	}
+}
+
 .tax-jobsite_geo-service-areas #wrapper-bottom h2 {
 	margin-bottom:                                             0.5em;
 }

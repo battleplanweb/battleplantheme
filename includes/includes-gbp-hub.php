@@ -705,11 +705,26 @@ class BPGBP_Hub {
 		$url     = sprintf( self::REVIEW_REPLY_URL, $location, $review_id );
 		$token   = self::get_access_token();
 
-		if ( '' === $comment ) {
-			self::google_request( 'DELETE', $url, $token );
-			return array( 'deleted' => true );
+		try {
+			if ( '' === $comment ) {
+				self::google_request( 'DELETE', $url, $token );
+				return array( 'deleted' => true );
+			}
+			return self::google_request( 'PUT', $url, $token, array( 'comment' => $comment ) );
+		} catch ( Exception $e ) {
+			// Log which location/review the reply failed on (after google_request already
+			// retried). This is the diagnostic that tells the two failure modes apart:
+			// failures CLUSTERED on one location = unverified/unlinked GBP (a retry never helps,
+			// fix it in the Business Profile dashboard); SCATTERED across locations = Google
+			// backend flake. Grep the PHP error log for "[bpgbp] review reply failed".
+			error_log( sprintf(
+				'[bpgbp] review reply failed — location=%s review=%s error=%s',
+				$location,
+				$review_id,
+				$e->getMessage()
+			) );
+			throw $e;
 		}
-		return self::google_request( 'PUT', $url, $token, array( 'comment' => $comment ) );
 	}
 
 	/** Read-only accessor for the site map (key => { secret, location, label, site_url }). */
@@ -847,9 +862,26 @@ class BPGBP_Hub {
 			$args['body'] = wp_json_encode( $body );
 		}
 
-		$response = ( 'GET' === $method )
-			? wp_remote_get( $url, $args )
-			: wp_remote_request( $url, $args );
+		// Google's v4 reviews endpoints intermittently return 5xx (and the occasional network
+		// blip) under load — a valid request can 500 with "Internal error encountered" and then
+		// succeed moments later. Retry a few times with escalating backoff so a transient failure
+		// self-heals before it ever surfaces to the user. A persistent error (bad request,
+		// unverified location, etc.) still falls through to decode() and throws as before.
+		$max_attempts = 3;
+		$response     = null;
+		for ( $attempt = 1; $attempt <= $max_attempts; $attempt++ ) {
+			$response = ( 'GET' === $method )
+				? wp_remote_get( $url, $args )
+				: wp_remote_request( $url, $args );
+
+			$retryable = is_wp_error( $response )
+				|| in_array( (int) wp_remote_retrieve_response_code( $response ), array( 500, 502, 503, 504 ), true );
+
+			if ( ! $retryable || $attempt === $max_attempts ) {
+				break;
+			}
+			usleep( $attempt * 600000 ); // 0.6s, then 1.2s — brief, stays well under WPE's 60s cap.
+		}
 
 		return self::decode( $response );
 	}
@@ -1146,8 +1178,8 @@ function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
 
 	if ( '' !== $reviewer ) update_post_meta( (int) $att_id, '_wp_attachment_image_alt', $reviewer );
 
-	// File it under the "Testimonial" media category (image-categories taxonomy), like Jobsite GEO photos.
-	wp_set_object_terms( (int) $att_id, 'Testimonial', 'image-categories', true );
+	// File it under the "Testimonials" media category (image-categories taxonomy), like Jobsite GEO photos.
+	wp_set_object_terms( (int) $att_id, 'Testimonials', 'image-categories', true );
 
 	set_post_thumbnail( $post_id, (int) $att_id );
 	return 'set';

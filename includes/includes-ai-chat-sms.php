@@ -208,7 +208,7 @@ function bp_chat_normalize_phone( string $raw ): string {
 function bp_chat_text_opening( array $customer, string $name ): string {
 	$company = $customer['name'] ?? get_bloginfo( 'name' );
 	$hi      = $name !== '' ? "Hi {$name}, " : 'Hi, ';
-	return $hi . "it's {$company} — continuing our chat by text so we can help even if you step away. "
+	return $hi . "it's {$company} - continuing our chat by text so we can help even if you step away. "
 		. "Reply anytime. Msg frequency varies; msg & data rates may apply. Reply STOP to unsubscribe, HELP for help.";
 }
 
@@ -334,15 +334,39 @@ function bp_chat_forward_to_contractor( string $message, array $o ): bool {
 	return bp_chat_send_sms( $to, $message );
 }
 
-/** A compact transcript ("Customer: …" / "AI: …") for the hand-off summary. */
-function bp_chat_transcript_text( int $conv_id, int $limit = 20 ): string {
+/**
+ * A compact transcript ("Customer: …" / "AI: …") for the hand-off summary.
+ * Long conversations must not overflow the SMS body (carriers cap ~1600 chars
+ * and the send fails outright), so each line is trimmed and, when $max_chars is
+ * set, only the most recent lines that fit the budget are kept (older ones are
+ * summarized as omitted — the full transcript still lives in the DB).
+ */
+function bp_chat_transcript_text( int $conv_id, int $limit = 20, int $max_chars = 0 ): string {
 	$msgs  = bp_chat_history( $conv_id, $limit );
 	$lines = [];
 	foreach ( $msgs as $m ) {
-		$who = $m['role'] === 'assistant' ? 'AI' : 'Customer';
-		$lines[] = $who . ': ' . $m['content'];
+		$who  = $m['role'] === 'assistant' ? 'AI' : 'Customer';
+		$body = trim( (string) $m['content'] );
+		if ( strlen( $body ) > 200 ) $body = substr( $body, 0, 200 ) . '...';
+		$lines[] = $who . ': ' . $body;
 	}
-	return implode( "\n", $lines );
+
+	if ( $max_chars <= 0 ) return implode( "\n", $lines );
+
+	// Keep the most recent lines within the budget (recent context matters most
+	// for a takeover); flag that earlier lines were dropped.
+	$out = [];
+	$len = 0;
+	for ( $i = count( $lines ) - 1; $i >= 0; $i-- ) {
+		$add = strlen( $lines[ $i ] ) + 1;
+		if ( $out && $len + $add > $max_chars ) {
+			array_unshift( $out, '...(earlier messages omitted)' );
+			break;
+		}
+		array_unshift( $out, $lines[ $i ] );
+		$len += $add;
+	}
+	return implode( "\n", $out );
 }
 
 /**

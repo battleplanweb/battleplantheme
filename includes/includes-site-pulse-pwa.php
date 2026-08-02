@@ -595,6 +595,13 @@ function sp_pwa_load_gd_image( string $src ) {
 	if ( function_exists( 'wp_get_image_editor' ) ) {
 		$editor = wp_get_image_editor( $src );
 		if ( ! is_wp_error( $editor ) ) {
+			// This branch runs from wp_head on the FRONT END (icon cache cold), where
+			// wp-admin/includes/file.php is not loaded — wp_tempnam() would be undefined
+			// and fatal the page. Same trap that took down bp_ai_focus_generate_cron.
+			if ( ! function_exists( 'wp_tempnam' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
+			}
+
 			$tmp   = wp_tempnam( 'sp-pwa-icon-src' );
 			$saved = $editor->save( $tmp, 'image/png' );
 			if ( ! is_wp_error( $saved ) && ! empty( $saved['path'] ) && file_exists( $saved['path'] ) ) {

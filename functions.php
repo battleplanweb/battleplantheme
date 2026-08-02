@@ -1311,6 +1311,18 @@ function battleplan_dequeue_unwanted_stuff() {
 
 }
 
+// Accept Stripe Payments' public.css carries the checkout popup overlay styling as well as the
+// form styling we drop above. Without it the modal stripe-handler-ng.js appends on click is an
+// unstyled 300x150 iframe at the bottom of <body>, while the click handler sets
+// html{overflow:hidden} — so the page just locks and the buy button looks dead. Put the overlay
+// rules back without re-enqueueing the whole sheet.
+add_action( 'wp_head', function() {
+	if ( is_admin() ) return;
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	if ( ! is_plugin_active( 'stripe-payments/accept-stripe-payments.php' ) ) return;
+	echo '<style id="battleplan-asp-popup">.asp-popup-iframe-cont,.asp-popup-iframe{position:fixed;left:0;top:0;width:100%;height:100%;z-index:2147483647;margin:0;padding:0;border:0 none transparent;overflow:auto;-webkit-overflow-scrolling:touch!important;visibility:visible;-webkit-tap-highlight-color:transparent}.asp-popup-iframe-cont{align-items:center;justify-content:center;background:rgba(0,0,0,.3)}.asp-popup-iframe{background:rgba(0,0,0,.004)}.asp-popup-spinner-cont{text-align:center;height:85px;padding-top:10px}</style>' . "\n";
+}, 12);
+
 // Dequeue and deregister scripts that are not necessary or can be delayed to footer
 add_action('wp_enqueue_scripts', 'battleplan_dequeue_scripts', 9997);
 add_action('wp_print_footer_scripts', 'battleplan_dequeue_scripts', 9997);
@@ -1625,9 +1637,14 @@ $ai_chat = get_option('ai_chat');
 if ( bp_module_on($ai_chat) ) {
 	require_once get_template_directory().'/includes/includes-ai-chat.php';
 }
-$home_base = get_option('home_base');
-if ( bp_module_on($home_base) ) {
-	require_once get_template_directory().'/includes/includes-home-base.php';
+// Customer Connect — the customer-facing companion PWA. Loads whenever the client has installed it
+// (the customer_connect option, set in functions-site.php) — checked directly so it's deterministic on
+// the first request (functions.php runs before init, where the module-enable migration fires). The
+// STAFF side is a Site Pulse module (includes-site-pulse-customer-connect.php), auto-enabled by that
+// migration for installs that carry this option.
+$customer_connect = get_option( 'customer_connect' );
+if ( bp_module_on( $customer_connect ) ) {
+	require_once get_template_directory().'/includes/includes-customer-connect.php';
 }
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 

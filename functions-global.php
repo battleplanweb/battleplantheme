@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v44.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v44.8' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 /**
@@ -197,6 +197,16 @@ if (!defined('_IS_BOT')) define('_IS_BOT', (
 	|| (bool)$ua_bot_match
 	|| (bool)$pretends_serp_bot
 ));
+
+// Keep WP Engine's "naked 404" away from real visitors.
+// wpengine-common/plugin.php hooks template_redirect at priority 99999 and, whenever their edge
+// stamps the request with an X-Is-Bot header, prints a bare
+// "404 Not Found. We can not find the page you are looking for." and die()s — so our 404.php
+// never renders. Their edge flags ordinary browser traffic too, which left real people staring at
+// that plain-text page fleet-wide. HTTP_X_IS_BOT is the ONLY thing that switch reads, so dropping
+// the header for anything our own detector calls a human restores our 404 page while genuine bots
+// still get WPE's cheap one.
+if ( isset($_SERVER['HTTP_X_IS_BOT']) && _IS_BOT !== true ) unset($_SERVER['HTTP_X_IS_BOT']);
 
 // Block only if spam-referrer AND not a verified SERP bot
 $should_block = (!_IS_SERP_BOT && $ref_is_spam);

@@ -283,6 +283,8 @@ body.has-site-pulse .entry-content {
 	background:                                                var(--white);
 }
 
+body.has-site-pulse .wp-gr.wp-google-badge,
+body.has-site-pulse #secondary,
 body.has-site-pulse #mobile-menu-bar,
 body.has-site-pulse #mobile-menu-bar-faux {
 	display:                                                   none !important;
@@ -2084,6 +2086,13 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	align-items:                                               center;
 }
 
+/* The per-stop note ("Additional details required") drops to its own full-width line under the
+   row's fields — never crammed into a leftover grid cell at the end. (Aligns under the fields,
+   past the "1." number column.) The narrow-screen media query overrides this to span 1 / -1. */
+.sp-mileage-stop-note {
+	grid-column:                                               2 / -1;
+}
+
 .sp-mileage-stop-num,
 .sp-mileage-bookend-label {
 	font-size:                                                 var(--font-size-md);
@@ -2103,6 +2112,23 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	border-radius:                                             var(--sp-radius-sm);
 	font-weight:                                               600;
 }
+/* The END bookend's Home is clickable — end a rare non-round-trip day somewhere else. */
+.sp-mileage-end-home { cursor: pointer; }
+/* The locked-Home div is display:flex, which normally beats the [hidden] attribute — make hiding it
+   (to reveal the location picker) actually work. */
+.sp-mileage-stop-fixed .sp-mileage-stop-home[hidden] { display: none !important; }
+.sp-mileage-end-home:hover,
+.sp-mileage-end-home:focus-visible {
+	border-color:                                              var(--sp-secondary-color);
+	box-shadow:                                                0 0 0 2px var(--sp-secondary-lightest);
+	outline:                                                   none;
+}
+/* Overridden (not Home) — signal it's been changed. */
+.sp-mileage-stop-fixed .sp-mileage-stop-home.sp-mileage-end-home-changed {
+	background:                                                var(--sp-white);
+}
+.sp-mileage-end-loc-wrap { display: flex; }
+.sp-mileage-end-loc-wrap > * { width: 100%; }
 
 .checkbox-label.sp-mileage-trailer-toggle {
 	padding:                                                   8px;
@@ -2222,9 +2248,24 @@ input[type="file"].sp-input::file-selector-button:hover {
 	padding:                                                   16px 20px;
 }
 
+/* Flex so the date · meta sit left and the Analyze button (margin-left:auto) is pushed to the right. */
+.sp-toll-day-head {
+	display:                                                   flex;
+	align-items:                                               center;
+	flex-wrap:                                                 wrap;
+	row-gap:                                                   8px;
+}
+
 .sp-toll-day-date {
 	font-weight:                                               700;
 	font-size:                                                 var(--font-size-md);
+}
+
+/* Bullet between the date and the "N charges" meta (e.g. "Jun 3, 2026 · 1 charge"). */
+.sp-toll-day-sep {
+	margin:                                                    0 8px;
+	color:                                                     var(--sp-text-secondary);
+	font-weight:                                               700;
 }
 
 .sp-toll-day-head .sp-btn {
@@ -2324,6 +2365,26 @@ input[type="file"].sp-input::file-selector-button:hover {
 	color:                                                     var(--sp-success, #2e7d32);
 }
 
+/* The applied CSV total, right-aligned just above the Apply button (TollGuru comparison removed). */
+.sp-toll-applied {
+	display:                                                   flex;
+	justify-content:                                           flex-end;
+	align-items:                                               baseline;
+	gap:                                                       10px;
+	margin:                                                    14px 0 10px;
+}
+.sp-toll-applied-label {
+	font-size:                                                 var(--font-size-text);
+	color:                                                     var(--sp-text-secondary);
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.03em;
+}
+.sp-toll-applied .sp-card-value {
+	font-weight:                                               700;
+	font-size:                                                 var(--font-size-md);
+	color:                                                     var(--sp-text);
+}
+
 .sp-toll-apply-row {
 	display:                                                   flex;
 	justify-content:                                           flex-end;
@@ -2337,6 +2398,230 @@ input[type="file"].sp-input::file-selector-button:hover {
 	gap:                                                       12px;
 	margin:                                                    2px 0 12px;
 }
+
+/* Recurring Other Expenses — the "Make recurring" toggle on the form + the tap-to-add strip. */
+/* RECURRING EXPENSE: label + checkbox on ONE row. The <label> keeps the standard uppercase field-
+   label look (identical to CHARGE TO); the checkbox sits inline right after it. Override the theme's
+   absolute checkbox positioning so it flows in the row instead of overlapping the label. */
+.sp-recurring-group {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+}
+.sp-recurring-group label { margin: 0; }
+/* position:relative (not static) so the input stays in the inline flex row AND remains the containing
+   block for its own ::after checkmark — static let the checkmark size against a huge ancestor. */
+.sp-recurring-group .sp-recurring-check {
+	position:                                                  relative !important;
+	transform:                                                 none !important;
+	margin:                                                    0 !important;
+	flex:                                                      0 0 auto;
+	cursor:                                                    pointer;
+}
+.sp-recurring-strip {
+	margin:                                                    0 0 12px;
+	padding:                                                   10px 12px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg-white);
+}
+.sp-recurring-strip-title {
+	font-size:                                                 0.72em;
+	font-weight:                                               700;
+	letter-spacing:                                            0.04em;
+	text-transform:                                            uppercase;
+	color:                                                     var(--sp-text-secondary);
+	margin-bottom:                                             8px;
+}
+.sp-recurring-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.sp-recurring-chip {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	padding:                                                   4px 6px 4px 12px;
+	border:                                                    1px solid var(--sp-secondary-light);
+	border-radius:                                             999px;
+	background:                                                var(--sp-secondary-lightest);
+}
+.sp-recurring-chip-added { opacity: 0.65; }
+.sp-recurring-chip-label { font-weight: 600; color: var(--sp-text); white-space: nowrap; }
+.sp-recurring-chip-done { font-size: 0.8em; font-weight: 700; color: var(--sp-secondary-color); white-space: nowrap; }
+.sp-recurring-stop {
+	border:                                                    none;
+	background:                                                none;
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 1.15em;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	padding:                                                   0 4px;
+}
+.sp-recurring-stop:hover { color: var(--sp-danger); }
+
+/* Comment-card source pill — Web (forwarded from a public survey form) vs Imported (digitized from
+   a photo/upload). Explicit colors: it's a <span>, which markUniqueSpans exempts from color:inherit. */
+.sp-survey-source {
+	display:                                                   inline-block;
+	padding:                                                   1px 9px;
+	border-radius:                                             999px;
+	font-size:                                                 0.72em;
+	font-weight:                                               700;
+	letter-spacing:                                            0.03em;
+	text-transform:                                            uppercase;
+	white-space:                                               nowrap;
+	vertical-align:                                            middle;
+}
+
+.sp-survey-source {
+	float:                                                     right;
+	background:                                                var(--sp-secondary-lightest);
+	color:                                                     var(--sp-secondary-color);
+	border:                                                    1px solid var(--sp-secondary-light);
+	transform:                                                 translateY(-50px);
+}
+
+/* Radio group — e.g. the Business / Personal meal-type toggle on the Business Meals form. Stacked
+   one per line. The theme's native radio is position:absolute (top-left of its positioned parent),
+   so each label is position:relative with left padding to seat it. Specificity (0,2,0) beats the
+   uppercase/700 `.sp-form-group label` rule so these read as normal-case option labels, and there's
+   no hover/transition state change. */
+.sp-radio-row {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               flex-start;
+	gap:                                                       10px;
+	margin:                                                    6px 0 4px;
+}
+.sp-radio-row .sp-radio-inline {
+	position:                                                  relative;
+	display:                                                   block;
+	padding-left:                                              calc(var(--sp-checkbox-size) + 12px);
+	margin:                                                    0;
+	min-height:                                                var(--sp-checkbox-size);
+	line-height:                                               var(--sp-checkbox-size);
+	font-size:                                                 var(--font-size-md);
+	font-weight:                                               500;
+	text-transform:                                            none;
+	letter-spacing:                                            normal;
+	color:                                                     var(--sp-text);
+	background:                                                none;
+	border:                                                    none;
+	transition:                                                none;
+	cursor:                                                    pointer;
+}
+.sp-radio-row .sp-radio-inline:hover { background: none; color: var(--sp-text); }
+
+/* Expense Reports settings — Chart of Accounts + Categories editors (Settings → Expense Reports). */
+.sp-exp-acct-rows,
+.sp-exp-cat-rows {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       8px;
+	margin:                                                    0 0 10px;
+}
+.sp-exp-acct-row,
+.sp-exp-cat-row,
+.sp-exp-add-row {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	flex-wrap:                                                 wrap;
+}
+.sp-exp-acct-row .sp-exp-acct-num-in,
+.sp-exp-add-row .sp-exp-acct-num-in {
+	max-width:                                                 150px;
+}
+.sp-exp-acct-desc-edit { flex: 1 1 240px; }
+.sp-exp-cat-label      { flex: 1 1 200px; }
+.sp-exp-cat-acct       { flex: 0 1 320px; }
+.sp-exp-cat-group {
+	margin:                                                    0 0 18px;
+	padding:                                                   0 0 14px;
+	border-bottom:                                             1px solid var(--sp-border);
+}
+.sp-exp-cat-group h4 { margin: 0 0 8px; }
+.sp-exp-mileage-accts { margin-top: 6px; }
+.sp-exp-mileage-accts h4 { margin: 0 0 8px; }
+.sp-exp-mileage-accts-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(200px, 1fr));
+	gap:                                                       12px;
+	max-width:                                                 760px;
+}
+.sp-exp-mileage-acct {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       4px;
+	font-size:                                                 0.9em;
+	color:                                                     var(--sp-text-secondary);
+}
+
+/* Trip Purpose Library (Settings → Expense Reports) — responsive grid of cards, each a single row:
+   [checkbox] Name [edit] [delete]. Each row is itself a CSS grid ("auto minmax(0,1fr) auto auto")
+   so the name column reliably shrinks/ellipsizes and the buttons never overflow into the next card. */
+.sp-purpose-rows {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fill, minmax(260px, 1fr));
+	gap:                                                       10px;
+	margin:                                                    0 0 14px;
+}
+.sp-purpose-row {
+	display:                                                   grid;
+	grid-template-columns:                                     auto minmax(0, 1fr) auto auto;
+	align-items:                                               center;
+	gap:                                                       10px;
+	min-width:                                                 0;
+	overflow:                                                  hidden;
+	padding:                                                   9px 12px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg-white);
+}
+.sp-purpose-req {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	margin:                                                    0;
+	cursor:                                                    pointer;
+}
+.sp-purpose-req input { margin: 0; }
+.sp-purpose-text {
+	min-width:                                                 0;
+	font-weight:                                               600;
+	color:                                                     var(--sp-primary-darkest);
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+	white-space:                                               nowrap;
+}
+.sp-purpose-edit-input { width: 100%; min-width: 0; }
+
+/* Required-but-empty mileage fields glow soft red until filled — the required-field cue on the
+   Add-a-Day form. Selects use a JS-toggled class (.sp-loc-empty / .sp-charge-empty); the desktop
+   text inputs (Choose a location, Business purpose) glow whenever they're showing their placeholder
+   (i.e. empty) via :placeholder-shown. (This whole rule went missing at some point; restored.) */
+.sp-select.sp-loc-empty,
+.sp-select.sp-charge-empty,
+.sp-input.sp-mileage-stop-loc:placeholder-shown,
+.sp-input.sp-mileage-stop-purpose:placeholder-shown,
+.sp-input.sp-mileage-stop-note:placeholder-shown {
+	border-color:                                              rgba(208, 67, 47, 0.55);
+	box-shadow:                                                0 0 6px 1px rgba(208, 67, 47, 0.30);
+}
+.sp-select.sp-loc-empty:focus,
+.sp-select.sp-charge-empty:focus,
+.sp-input.sp-mileage-stop-loc:placeholder-shown:focus,
+.sp-input.sp-mileage-stop-purpose:placeholder-shown:focus,
+.sp-input.sp-mileage-stop-note:placeholder-shown:focus {
+	border-color:                                              var(--sp-danger);
+	box-shadow:                                                0 0 0 3px rgba(208, 67, 47, 0.20);
+}
+
+/* Add-a-purpose row: input + button inline, not stacked. */
+.sp-mileage-purpose-add {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	max-width:                                                 440px;
+}
+.sp-mileage-purpose-add .sp-input { flex: 1 1 auto; }
 
 .sp-receipt-thumb {
 	width:                                                     52px;
@@ -2607,19 +2892,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-pa-master-toggle.tab-focus {
 	background:                                                var(--sp-accent-light);
 }
-.sp-pa-count {
-	display:                                                   inline-flex;
-	align-items:                                               center;
-	justify-content:                                           center;
-	min-width:                                                 18px;
-	height:                                                    18px;
-	padding:                                                   0 5px;
-	font-size:                                                 11px;
-	font-weight:                                               700;
-	color:                                                     var(--sp-bg-white);
-	background:                                                var(--sp-accent-color);
-	border-radius:                                             var(--sp-radius-pill);
-}
 .sp-pa-caret { transition: transform 0.15s ease; }
 .sp-pa-master-toggle.open .sp-pa-caret { transform: rotate(180deg); }
 /* Expanded body: the accent card that used to always show now only appears when opened. */
@@ -2635,8 +2907,8 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-pa-label {
 	font-weight:                                               700;
 	font-size:                                                 var(--font-size-sm);
-	text-transform:                                            uppercase;
-	letter-spacing:                                            0.03em;
+	text-transform:                                            none;
+	letter-spacing:                                            0;
 	color:                                                     var(--sp-accent-dark);
 }
 .sp-pa-cap { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--sp-text-secondary); }
@@ -3030,13 +3302,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 	gap:                                                       14px;
 }
 
-/* Archive search box — sits inline in the toolbar instead of stretching full width (.sp-input is 100%). */
-.sp-survey-search {
-	flex:                                                      1 1 240px;
-	width:                                                     auto;
-	min-width:                                                 0;
-	max-width:                                                 340px;
-}
 
 /* Card header block: location (title) · date · experience/referral tags. */
 .sp-survey-top {
@@ -4284,7 +4549,6 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	align-items:                                               center;
 	text-align:                                                center;
 	gap:                                                       12px;
-	padding:                                                   22px 16px 18px;
 }
 
 .sp-dir-card.is-inactive {
@@ -4293,12 +4557,18 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-dir-photo {
 	flex:                                                      0 0 auto;
-	width:                                                     200px;
+	width:                                                     150px;
 	aspect-ratio:                                              1/1;
 	border-radius:                                             var(--sp-radius-pill);
 	background-size:                                           cover;
 	background-position:                                       center;
 	background-color:                                          var(--sp-bg);
+	margin-top:                                                0;
+	margin-bottom:                                             0;
+}
+
+.sp-modal .sp-dir-photo {
+	width:                                                     200px;
 }
 
 .sp-dir-photo-empty {
@@ -4314,6 +4584,8 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-dir-body {
 	width:                                                     100%;
 	min-width:                                                 0;
+	margin-top:                                                0;
+	margin-bottom:                                             0;
 }
 
 .sp-dir-name-row {
@@ -4326,15 +4598,18 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-dir-name {
 	font-weight:                                               700;
-	font-size:                                                 var(--font-size-xl);
+	font-size:                                                 var(--font-size-lg);
 	color:                                                     var(--sp-text);
+	line-height:                                               1.2;
 }
 
 .sp-dir-sub {
 	color:                                                     var(--sp-text-secondary);
-	font-size:                                                 var(--font-size-md);
+	font-size:                                                 calc(var(--font-size-lg) * .85);
 	margin-top:                                                3px;
+	margin-bottom:                                             15px;
 	text-align:                                                center;
+	line-height:                                               1.2;
 }
 
 .sp-dir-contacts {
@@ -4694,6 +4969,10 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	color:                                                     var(--sp-text);
 	line-height:                                               1.5;
 	margin-bottom:                                             12px;
+	/* Break long unbroken strings (e.g. a pasted URL) across lines. `anywhere` (not `break-word`)
+	   also keeps the box from stretching past its max-width, since it's factored into min-content. */
+	overflow-wrap:                                             anywhere;
+	word-break:                                                break-word;
 }
 
 .sp-action-item-who {
@@ -4776,6 +5055,8 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	font-size:                                                 13px;
 	color:                                                     var(--sp-text);
 	line-height:                                               1.5;
+	overflow-wrap:                                             anywhere;
+	word-break:                                                break-word;
 }
 
 .sp-action-item-actions {
@@ -7544,3 +7825,104 @@ body.sp-printing-mileage .sp-notification-panel {
 }
 mark.sp-msg-search-hit { background: #ffe066; color: #1a1a1a; border-radius: 2px; padding: 0 1px; }
 mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow: 0 0 0 2px rgba(255,159,28,0.45); }
+
+/* ---------------------------------------------------------------------------
+   Expense report approval workflow — submit bar/pills, queue, archive, locks
+--------------------------------------------------------------------------- */
+
+/* Submit-for-approval bar on the Overview + status pills. */
+.sp-rep-submit-bar {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       12px;
+	margin:                                                    14px 0 22px;
+	padding:                                                   14px 16px;
+	background:                                                var(--sp-primary-lightest);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+}
+.sp-submit-note { color: var(--sp-text-secondary); font-size: 13px; }
+/* Submit control lives in the Overview toolbar, next to PDF. */
+.sp-rep-submit-slot { display: inline-flex; align-items: center; gap: 8px; }
+.sp-submit-pill {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       6px;
+	padding:                                                   5px 12px;
+	border-radius:                                             var(--sp-radius-pill);
+	font-size:                                                 13px;
+	font-weight:                                               600;
+	white-space:                                               nowrap;
+}
+.sp-submit-pill-sent      { background: var(--sp-warning-light); color: var(--sp-warning); }
+.sp-submit-pill-approved  { background: var(--sp-success-light); color: var(--sp-success); }
+.sp-submit-pill-rejected  { background: var(--sp-danger-light);  color: var(--sp-danger); }
+
+/* Locked-period banner shown on the section screens. */
+.sp-locked-banner {
+	margin:                                                    0 0 14px;
+	padding:                                                   12px 14px;
+	background:                                                var(--sp-warning-light);
+	border:                                                    1px solid var(--sp-warning);
+	border-radius:                                             var(--sp-radius);
+	color:                                                     var(--sp-warning);
+	font-size:                                                 13.5px;
+	line-height:                                               1.4;
+}
+
+/* Approval queue — tappable report cards. */
+.sp-appr-list { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 22px; }
+.sp-appr-card {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       14px;
+	width:                                                     100%;
+	padding:                                                   14px 16px;
+	background:                                                #fff;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	box-shadow:                                                var(--sp-shadow-sm);
+	cursor:                                                    pointer;
+	transition:                                                border-color .12s ease, box-shadow .12s ease;
+}
+.sp-appr-card:hover { border-color: var(--sp-primary-color); box-shadow: var(--sp-shadow-lg); }
+.sp-appr-card-name  { font-weight: 600; color: var(--sp-text); }
+.sp-appr-card-sub   { font-size: 13px; color: var(--sp-text-secondary); margin-top: 2px; }
+.sp-appr-card-meta  { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; }
+.sp-appr-card-date  { font-size: 12px; color: var(--sp-text-secondary); }
+
+/* Report review — action bar + read-only report host. */
+.sp-approve-actionbar {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       12px;
+	margin-bottom:                                             10px;
+	padding:                                                   12px 14px;
+	background:                                                var(--sp-primary-lightest);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+}
+.sp-approve-actionbar-title { flex: 1 1 auto; font-weight: 600; color: var(--sp-text); min-width: 180px; }
+.sp-approve-actionbar-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.sp-appr-auto {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	margin:                                                    0 0 12px;
+	padding:                                                   10px 14px;
+	background:                                                #fff;
+	border:                                                    1px dashed var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	cursor:                                                    pointer;
+	font-size:                                                 14px;
+}
+.sp-appr-auto .sp-recurring-check { position: relative !important; transform: none !important; margin: 0 !important; flex: 0 0 auto; cursor: pointer; }
+.sp-appr-note { margin: 0 0 12px; color: var(--sp-danger); font-size: 13px; }
+.sp-approve-report { margin-top: 4px; }
+
+/* Archive rows — clickable to open, PDF button on the right. */
+.sp-arch-row { cursor: pointer; }
+.sp-arch-row:hover > td { background: var(--sp-primary-lightest); }

@@ -88,7 +88,24 @@
 		form.appendChild(sendBtn);
 		form.addEventListener('submit', function (e) { e.preventDefault(); submit(); });
 
-		var consent = el('div', 'bp-chat-consent', bpChat.consent || '');
+		// Always-visible consent notice under the input: the SMS-consent sentence,
+		// then the Privacy Policy + Terms links together on their own line below
+		// (required by A2P review).
+		var consent = el('div', 'bp-chat-consent');
+		if (bpChat.consent) consent.appendChild(document.createTextNode(bpChat.consent));
+		var consentLegal = el('div', 'bp-chat-consent-legal');
+		if (bpChat.privacyUrl) {
+			var cpa = el('a', null, 'Privacy Policy');
+			cpa.href = bpChat.privacyUrl; cpa.target = '_blank'; cpa.rel = 'noopener';
+			consentLegal.appendChild(cpa);
+		}
+		if (bpChat.privacyUrl && bpChat.termsUrl) consentLegal.appendChild(document.createTextNode(' · '));
+		if (bpChat.termsUrl) {
+			var cta = el('a', null, 'Terms & Conditions');
+			cta.href = bpChat.termsUrl; cta.target = '_blank'; cta.rel = 'noopener';
+			consentLegal.appendChild(cta);
+		}
+		consent.appendChild(consentLegal);
 
 		panel.appendChild(head);
 		panel.appendChild(log);

@@ -1,0 +1,90 @@
+/*--------------------------------------------------------------
+# Position indicators (.carousel-indicators)
+#
+# Shared dot/bar indicators. Lifted out of style-carousel.css so more than one
+# component can wear the same dots — style them once per site and every set on
+# the page matches. Used by:
+#
+#   [get-post-slider]                  → .carousel (script-carousel.js)
+#   [layout scroll="true"] · [side-by-side]  → swipe scrollers (script-scroller.js)
+#
+# Variants come from a wrapper class on the component: .carousel-dot (round),
+# .carousel-emboss (inset/raised).
+#
+# Inlined on demand by whichever shortcode builds the indicators.
+--------------------------------------------------------------*/
+
+.carousel-indicators {
+	position:                                                  relative;
+	z-index:                                                   15;
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	padding-left:                                              5%;
+	padding-right:                                             5%;
+	margin:                                                    0.5em 0 2em;
+	list-style:                                                none;
+}
+
+.carousel-indicators li {
+	position:                                                  relative;
+	flex:                                                      0 1 auto;
+	width:                                                     30px;
+	height:                                                    15px;
+	margin:                                                    0.3em 3%;
+	border-radius:                                             10px;
+	text-indent:                                               -999px;
+	background:                                                var(--button-background);
+	cursor:                                                    pointer;
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
+
+.carousel-indicators .active,
+.carousel-indicators li:hover,
+.carousel-indicators li.tab-focus {
+	background:                                                var(--button-background-hover);
+	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+}
+
+.carousel-indicators li::before,
+.carousel-indicators li::after {
+	content:                                                   "";
+	position:                                                  absolute;
+	top:                                                       -10px;
+	bottom:                                                    0;
+	left:                                                      0;
+	display:                                                   inline-block;
+	width:                                                     100%;
+	height:                                                    10px;
+}
+
+.carousel-indicators li::after {
+	top:                                                       0;
+	bottom:                                                    -15px;
+}
+
+.carousel-dot .carousel-indicators li {
+	width:                                                     17px;
+	height:                                                    17px;
+	border-radius:                                             100%;
+}
+
+.carousel-emboss .carousel-indicators li,
+.carousel-emboss .carousel-indicators .active,
+.carousel-emboss .carousel-indicators li:hover,
+.carousel-emboss .carousel-indicators li.tab-focus {
+	box-shadow:                                                inset 2px 2px 2px var(--black-low), 2px 2px 2px var(--white-low);
+}
+
+.carousel-emboss .carousel-indicators .active::after,
+.carousel-emboss .carousel-indicators li:hover::after,
+.carousel-emboss .carousel-indicators li.tab-focus::after {
+	content:                                                   '';
+	width:                                                     11px;
+	height:                                                    11px;
+	position:                                                  absolute;
+	top:                                                       3px;
+	left:                                                      3px;
+	border-radius:                                             100%;
+	background:                                                var(--button-background-hover);
+	box-shadow:                                                1px 1px 1px var(--black-low), inset 1px 1px 1px var(--white-med);
+}

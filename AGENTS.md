@@ -225,7 +225,7 @@ Delete the option to disable it. Default base template has these commented out.
     - `grid="1fr 1fr"` → two fluid equal columns
     - Use this when columns aren't simple equal/ratio shares — e.g. decorative side images flanking a fluid content column (the image cols are fixed-width, the text col takes `1fr`). For plain ratio splits, stick with dash/equal notation.
   - **Never use more than 6 columns** in dash/equal notation. Don't write `grid="1-1-1-1-1"` — use `grid="5e"`. Don't write `grid="7e"` or `grid="8e"`. (Custom track notation is exempt — it's for fixed-rail layouts, not wide column counts.)
-- `valign` → vertical alignment — values: `left`, `center`, `right` (never `middle`)
+- `valign` → **vertical** alignment (maps to `align-self` on the cols) — values: `start`, `center`, `end`, `stretch`. Default is `start`. Use **`valign="stretch"`** to make every column equal height (cards in a row line up their tops *and* bottoms — the usual choice for a row of teaser/service cards). `left`/`right` are **not** valign values (those are `align`), and `middle` isn't one either — use `center`.
 - `gap` → **do not set this attribute.** Glendon adjusts column spacing via CSS in the rare cases it's needed. Same applies to `[col]`.
 - `break` → **do not set this attribute.** Glendon adds responsive breakpoints manually if/when needed. Same applies to `[col]`.
 
@@ -246,7 +246,8 @@ Delete the option to disable it. Default base template has these commented out.
 - `h-span="N"` → the col spans **N columns** of the grid (`.col.h-span-N` → `grid-column: span N`). `v-span="N"` → spans **N rows** (`grid-row: span N`). The grid (`.flex.grid-*`) is a real CSS grid, so a single col can span multiple cells in either direction — e.g. in a `grid="1-1"`, give the heading col `h-span="2"` to make it span both columns while the rest of the cells flow normally.
 - `class="span-all"` → shorthand for "span the entire row" (`grid-column: 1 / -1`). Prefer this over `h-span="5"`/`h-span="6"` for a full-width header inside a multi-col grid — it's count-agnostic, so it keeps spanning the whole row no matter how many columns the layout has.
 - `order` → CSS order override
-- `align` / `valign` → values: `left`, `center`, `right` (never `middle`)
+- `align` → **horizontal** alignment (justify-self) — values: `left`, `center`, `right`.
+- `valign` → **vertical** alignment (align-self) — values: `start`, `center`, `end`, `stretch` (not `left`/`right`, and not `middle` — use `center`).
 - `gap` → **do not set.** Glendon tweaks via CSS only when needed.
 
 **Critical rule — wrap multi-child content in `[txt]`:**
@@ -318,6 +319,26 @@ NOT:
 **When you flatten a wrapper `<div>`, move its CSS hook with it — don't let it vanish.** If the `<div>` you're removing carried styling (a `class` with a background, a `position:relative` context, a `::before`/`::after` connector or accent, a grid/flex declaration), that class and its CSS have to land on the element that replaces it — usually the `[col]` (via `class=""`) or the `[layout]` (yes, `[layout class="x"]` works → `<div class="flex grid-… x">`). Two traps specifically:
 - **Selector drift.** A rule written as `.journey .journey-step` (descendant of the old wrapper) stops matching once the wrapper is gone. Rewrite it against the new DOM — `#section-name .journey-step`, or whatever the surviving ancestor is.
 - **Positioned pseudo-elements lose their anchor.** An absolutely-positioned `::before`/`::after` (e.g. a connector line behind a row of icons) needs a `position:relative` ancestor. If that `position:relative` lived on the deleted wrapper, re-add it to the element now carrying the class (commonly the `[layout]`). And if the pseudo-element is positioned from the top of its host, keep section headings in a *separate* `[layout]` so the decorated grid's top still aligns with its own content row, not the heading.
+
+**Linked cards — compose from framework blocks, not one big `<a>` + CSS background.** A clickable teaser/service card is a stack of framework block shortcodes inside the `[col]` — a real linked image, the label, and a real button — each a block, so no outer `[txt]` around the whole col (only the loose inline label needs its own `[txt]`):
+
+```
+[layout grid="6e" valign="stretch"]
+ [col class="span-all section-head"][txt]<h2>We're Here For All Your HVAC Needs</h2>[/txt][/col]
+
+ [col class="service-card"]
+  [img link="/air-conditioning/" ada-hidden="true"]<img src="/wp-content/uploads/service-ac.webp" alt="" width="300" height="300" style="aspect-ratio:300/300" />[/img]
+  [txt]<span class="service-icon">[get-icon type="snowflake"]</span><span class="service-label">Air Conditioning</span>[/txt]
+  [btn link="/air-conditioning/" ada="about our air conditioning service"]Learn More[/btn]
+ [/col]
+ …more service-card cols…
+[/layout]
+```
+
+Why this shape, not a single `<a class="service-link" style="background-image:url(…)">…</a>`:
+- **Real `<img>` via `[img]`, never a CSS `background-image`.** Only real `<img>` tags get alt text, width/height, lazy-loading, and — critically — the framework's media-replace / alt-sync / dimension-fix systems (all DB-walkers that look for `<img class="wp-image-…">`, not inline background URLs). A background-image is invisible to all of that.
+- **`[img link="/path/"]`** makes the image itself a link (the whole image block, no hand-written `<a>`), and **`ada-hidden="true"` + `alt=""`** hides the decorative image from screen readers since the button already provides the accessible link — otherwise AT users hit the same destination twice.
+- **`[btn link="/path/" ada="…"]` carries the real link.** When a row has many identical button labels ("Learn More"), give each a unique **`ada="…"`** (screen-reader-only text) so AT users can tell them apart — five links all reading "Learn More" is an accessibility failure. Pair with **`valign="stretch"`** on the layout so the cards are equal height regardless of label length.
 
 ### [img] — Image block wrapper
 ```

@@ -10,6 +10,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-card-impo
 require_once get_template_directory() . '/includes/includes-site-pulse-messages.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-push.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-customer-connect.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-directory.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-emails.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-customer-messages.php';
@@ -38,7 +39,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-customer-
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.55' );
+define( 'SITE_PULSE_DB_VERSION', '1.59' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -636,11 +637,39 @@ function site_pulse_install_db(): void {
 		account_code varchar(20) DEFAULT NULL,
 		amount decimal(10,2) NOT NULL DEFAULT 0,
 		receipt_path varchar(255) DEFAULT NULL,
+		meal_type varchar(20) DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY user_section (user_id, section),
 		KEY user_date (user_id, expense_date)
+	) $charset;";
+
+	// Expense report SUBMISSIONS — one row per (employee, pay period) once they hit "Submit for
+	// Approval". This is the approval/audit entity (the expense line items above stay per-line). The
+	// frozen PDF is stored in `pdf_base64` at submit time, so approval emails accounting exactly what
+	// was reviewed. status: submitted → approved (or rejected, which reopens the period for edits).
+	$sql .= "CREATE TABLE " . site_pulse_table('expense_reports') . " (
+		id bigint(20) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL,
+		period_start date NOT NULL,
+		period_end date NOT NULL,
+		period_label varchar(80) DEFAULT NULL,
+		supervisor_id int(11) NOT NULL DEFAULT 0,
+		status varchar(20) NOT NULL DEFAULT 'submitted',
+		total_amount decimal(10,2) NOT NULL DEFAULT 0,
+		submitted_at datetime DEFAULT NULL,
+		approved_at datetime DEFAULT NULL,
+		approved_by int(11) NOT NULL DEFAULT 0,
+		emailed_at datetime DEFAULT NULL,
+		reject_note text DEFAULT NULL,
+		pdf_base64 longtext DEFAULT NULL,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY user_period (user_id, period_start, period_end),
+		KEY supervisor_status (supervisor_id, status),
+		KEY status (status)
 	) $charset;";
 
 	// Uploaded Forms library — files shared company-wide, organized into repositories
@@ -725,6 +754,20 @@ add_action( 'init', function() {
 	if ( ! get_option( 'site_pulse_mileage_seeded' ) ) {
 		site_pulse_seed_mileage_locations();
 		update_option( 'site_pulse_mileage_seeded', '1' );
+	}
+
+	// One-time: drop the retired alcohol-detection column. The feature (scanner flagging + badges)
+	// was removed for too many false positives; dbDelta never drops columns, so retire it explicitly.
+	// Self-guards on its own flag and checks the column exists first.
+	if ( ! get_option( 'site_pulse_alcohol_flag_dropped' ) ) {
+		global $wpdb;
+		$tbl = site_pulse_table( 'expenses' );
+		$has = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'alcohol_flag'",
+			$tbl
+		) );
+		if ( $has ) $wpdb->query( "ALTER TABLE $tbl DROP COLUMN alcohol_flag" );
+		update_option( 'site_pulse_alcohol_flag_dropped', '1' );
 	}
 
 	// One-time: stand up the Supervisor report (independent copy of the GM report) and bring
@@ -1419,6 +1462,29 @@ function site_pulse_grant_universal_caps(): void {
 	update_option( 'site_pulse_universal_caps_v2', '1' );
 }
 
+// Section F (Travel) shipped after the v2 grant above already ran, so it needs its own one-time
+// backfill: give view_travel_expenses to every role that can already see the other expense screens
+// (i.e. has submit_mileage or manage_mileage). A dedicated flag — rather than re-running the v2
+// grant — so we don't risk re-adding one of the other six caps an admin has since removed.
+add_action( 'init', 'site_pulse_grant_travel_cap', 26 );
+function site_pulse_grant_travel_cap(): void {
+	if ( get_option( 'site_pulse_travel_cap_v1' ) ) return;
+	global $wpdb;
+	$t = site_pulse_table('roles');
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) !== $t ) return;
+	foreach ( ( $wpdb->get_results( "SELECT id, slug, capabilities FROM $t", ARRAY_A ) ?: [] ) as $r ) {
+		if ( $r['slug'] === 'god' ) continue; // god resolves dynamically
+		$caps = json_decode( (string) $r['capabilities'], true );
+		$caps = is_array( $caps ) ? $caps : [];
+		if ( in_array( 'view_travel_expenses', $caps, true ) ) continue;
+		if ( in_array( 'submit_mileage', $caps, true ) || in_array( 'manage_mileage', $caps, true ) ) {
+			$caps[] = 'view_travel_expenses';
+			$wpdb->update( $t, [ 'capabilities' => wp_json_encode( array_values( $caps ) ) ], [ 'id' => (int) $r['id'] ] );
+		}
+	}
+	update_option( 'site_pulse_travel_cap_v1', '1' );
+}
+
 
 function site_pulse_is_god( int $user_id = 0 ): bool {
 	if ( ! $user_id ) $user_id = get_current_user_id();
@@ -1643,11 +1709,12 @@ function site_pulse_enqueue_assets(): void {
 		'chartStyle'         => get_user_meta( $real_user_id, '_sp_chart_style', true ) === 'pie' ? 'pie' : 'bar',
 		// Per-user remembered Action Items sort order (importance | duedate | custom).
 		'actionSort'         => $action_sort,
-		// Google Maps JS key for the (client-side) mileage/toll maps. Prefers a dedicated
-		// browser key if set, else the main key. NOTE: this key is exposed to the browser,
-		// so it MUST be HTTP-referrer restricted in the Google Cloud Console.
+		// Google Maps JS key for the (client-side) mileage/toll maps. Browser keys ONLY — see
+		// site_pulse_maps_browser_key(). This value ends up in page source, so it must be
+		// HTTP-referrer restricted in the Google Cloud Console; it must never fall back to
+		// the server key, which can't be referrer-restricted.
 		'mapsKey'            => $post->post_name === 'site-pulse-dashboard'
-			? ( site_pulse_get_setting( 'maps_js_api_key', '' ) ?: site_pulse_mileage_google_key() )
+			? site_pulse_maps_browser_key()
 			: '',
 		// Custom icons registered through the framework `battleplan_icon_map` filter (512-viewBox,
 		// fill-based). Exposed to the JS so stat cards etc. can use any registered icon by name
@@ -1800,6 +1867,9 @@ function site_pulse_capability_catalog_all(): array {
 		'view_directory'    => 'View company directory',
 		'view_emails'       => 'View customer emails',
 		'view_customer_messages' => 'View customer messages (FB/IG)',
+		'view_customers'         => 'View customers',
+		'send_customer_push'     => 'Send customer notifications',
+		'view_schedule_requests' => 'View scheduling requests',
 		'see_superadmin'    => 'See protected admin in lists',
 		'submit_mileage'    => 'Submit mileage',
 		'view_tolls'                 => 'Tolls (reconcile)',
@@ -1807,7 +1877,10 @@ function site_pulse_capability_catalog_all(): array {
 		'view_business_meals'        => 'Business Meals',
 		'view_competitive_shopping'  => 'Competitive Shopping',
 		'view_other_expenses'        => 'Other Expenses',
+		'view_travel_expenses'       => 'Travel Expenses',
 		'view_expense_overview'      => 'Expense Report Overview',
+		'approve_expense_reports'    => 'Approve expense reports (supervisor queue)',
+		'view_approved_expense_reports' => 'View approved expense reports (archive)',
 		'import_data'       => 'Import reports &amp; comment cards',
 		// "Manage …" block, ordered to follow the admin menu.
 		'manage_users'         => 'Manage users',
@@ -1825,6 +1898,8 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_directory'     => 'Manage company directory',
 		'manage_emails'        => 'Manage customer emails',
 		'manage_customer_messages' => 'Reply to customer messages (FB/IG)',
+		'manage_customers'         => 'Manage customers',
+		'manage_schedule_requests' => 'Manage scheduling requests',
 	] );
 }
 
@@ -3068,6 +3143,101 @@ function site_pulse_ajax_admin_create_user(): void {
 	}
 }
 
+/**
+ * Link an EXISTING WordPress user to Site Pulse by giving them a user_profiles row (and adding the
+ * site_pulse_user role WITHOUT removing their existing WP roles). Unlike site_pulse_create_user()
+ * this never creates a WP account — it adopts one that already exists, e.g. a client who already
+ * logs into WordPress. Refuses if they already have a profile, or if linking straight to God.
+ */
+function site_pulse_link_existing_user( int $wp_user_id, array $data ): array {
+	$user = get_user_by( 'id', $wp_user_id );
+	if ( ! $user ) {
+		return [ 'success' => false, 'error' => 'That WordPress user no longer exists.' ];
+	}
+	if ( site_pulse_get_user_profile( $wp_user_id ) ) {
+		return [ 'success' => false, 'error' => 'That user is already a Site Pulse user.' ];
+	}
+	$role = site_pulse_get_role( (int) ( $data['role_id'] ?? 0 ) );
+	if ( $role && ( $role['slug'] ?? '' ) === 'god' ) {
+		return [ 'success' => false, 'error' => 'Grant God access from the user\'s edit screen, not here.' ];
+	}
+
+	// Additive: keep whatever WP role(s) they already have (administrator, editor, …) and just add ours.
+	$user->add_role( 'site_pulse_user' );
+
+	global $wpdb;
+	$now = current_time( 'mysql' );
+	$wpdb->insert(
+		site_pulse_table('user_profiles'),
+		[
+			'user_id'                  => $wp_user_id,
+			'role_id'                  => (int) ( $data['role_id'] ?? 0 ),
+			'location_id'              => (int) ( $data['location_id'] ?? 0 ),
+			'supervisor_id'            => (int) ( $data['supervisor_id'] ?? 0 ),
+			'mileage_home_location_id' => (int) ( $data['mileage_home_location_id'] ?? 0 ),
+			'employee_id'              => sanitize_text_field( $data['employee_id'] ?? '' ),
+			'status'                   => 'active',
+			'created_at'               => $now,
+			'updated_at'               => $now,
+		],
+		[ '%d', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%s' ]
+	);
+
+	site_pulse_log( 'user_linked', sprintf( 'Linked existing WP user %s to Site Pulse', $user->user_login ), [ 'wp_user_id' => $wp_user_id ] );
+
+	return [ 'success' => true, 'user_id' => $wp_user_id ];
+}
+
+/** WP users who are NOT yet Site Pulse users (no user_profiles row) — the candidates to link. */
+add_action( 'wp_ajax_site_pulse_admin_get_linkable_users', 'site_pulse_ajax_admin_get_linkable_users' );
+function site_pulse_ajax_admin_get_linkable_users(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_users' ) ) return;
+
+	global $wpdb;
+	$profiles = site_pulse_table( 'user_profiles' );
+	$rows = $wpdb->get_results(
+		"SELECT u.ID, u.user_login, u.user_email, u.display_name
+		 FROM {$wpdb->users} u
+		 LEFT JOIN $profiles p ON p.user_id = u.ID
+		 WHERE p.user_id IS NULL
+		 ORDER BY u.display_name ASC LIMIT 500",
+		ARRAY_A
+	) ?: [];
+
+	$users = array_map( function ( $r ) {
+		$name    = $r['display_name'] ?: $r['user_login'];
+		$details = $r['user_login'] . ( $r['user_email'] ? ' · ' . $r['user_email'] : '' );
+		return [ 'id' => (int) $r['ID'], 'label' => $name . ' (' . $details . ')' ];
+	}, $rows );
+
+	wp_send_json_success( [ 'users' => $users ] );
+}
+
+/** Adopt an existing WP user as a Site Pulse user (see site_pulse_link_existing_user). */
+add_action( 'wp_ajax_site_pulse_admin_link_user', 'site_pulse_ajax_admin_link_user' );
+function site_pulse_ajax_admin_link_user(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_users' ) ) return;
+
+	$wp_user_id = (int) ( $_POST['wp_user_id'] ?? 0 );
+	if ( $wp_user_id <= 0 ) {
+		wp_send_json_error( [ 'message' => 'Pick a WordPress user.' ] );
+	}
+	$result = site_pulse_link_existing_user( $wp_user_id, [
+		'role_id'       => (int) ( $_POST['role_id'] ?? 0 ),
+		'location_id'   => (int) ( $_POST['location_id'] ?? 0 ),
+		'supervisor_id' => (int) ( $_POST['supervisor_id'] ?? 0 ),
+		'employee_id'   => $_POST['employee_id'] ?? '',
+	] );
+
+	if ( $result['success'] ) {
+		wp_send_json_success( $result );
+	} else {
+		wp_send_json_error( [ 'message' => $result['error'] ] );
+	}
+}
+
 add_action( 'wp_ajax_site_pulse_admin_update_user', 'site_pulse_ajax_admin_update_user' );
 function site_pulse_ajax_admin_update_user(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -3663,6 +3833,7 @@ function site_pulse_page_access_map(): array {
 		'business-meals'      => 'view_business_meals',
 		'competitive-shopping'=> 'view_competitive_shopping',
 		'other-expenses'      => 'view_other_expenses',
+		'travel-expenses'     => 'view_travel_expenses',
 		'expense-report'      => 'view_expense_overview',
 		// Customer Feedback area. A page with both a view + manage cap lists both (shown as two rows).
 		'reviews'             => [ 'view_reviews', 'manage_reviews' ],
@@ -4003,6 +4174,9 @@ function site_pulse_notification_events(): array {
 		'mileage_pending'             => 'New mileage location proposed (needs approval)',
 		'mileage_approved'            => 'Mileage location approved',
 		'mileage_rejected'            => 'Mileage location rejected',
+		'expense_report_submitted'    => 'Expense report submitted for approval',
+		'expense_report_approved'     => 'Expense report approved',
+		'expense_report_rejected'     => 'Expense report sent back (rejected)',
 	] );
 }
 
@@ -4026,6 +4200,9 @@ function site_pulse_notification_events_active(): array {
 		'mileage_pending'             => 'mileage',
 		'mileage_approved'            => 'mileage',
 		'mileage_rejected'            => 'mileage',
+		'expense_report_submitted'    => 'mileage',
+		'expense_report_approved'     => 'mileage',
+		'expense_report_rejected'     => 'mileage',
 	];
 
 	// The new-destination approval flow is optional; with it off, those three events never fire.
@@ -4098,6 +4275,10 @@ function site_pulse_notification_defaults(): array {
 		'mileage_pending'             => [ 'bell' => 1, 'role:admin' => 1, 'role:owner' => 1, 'push' => 1 ],
 		'mileage_approved'            => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
 		'mileage_rejected'            => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
+		// Expense-report approval: submit → the employee's supervisor; approve/reject → the employee.
+		'expense_report_submitted'    => [ 'bell' => 1, 'supervisor' => 1, 'email' => 1, 'push' => 1 ],
+		'expense_report_approved'     => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
+		'expense_report_rejected'     => [ 'bell' => 1, 'gm' => 1, 'push' => 1 ],
 	] );
 }
 
@@ -7411,6 +7592,26 @@ function site_pulse_mileage_google_key(): string {
 	return (string) get_option( 'bp_places_api', '' );
 }
 
+/**
+ * The BROWSER-side Google key — and only ever a browser-side key.
+ *
+ * This deliberately does NOT fall back to site_pulse_mileage_google_key(), which ends at the
+ * _PLACES_API server constant. That fallback published the server key in page source on every
+ * install without a dedicated browser key, and a server key can't be HTTP-referrer restricted
+ * (referrer rules would break the server-side cURL that uses it) — i.e. it was shipping an
+ * unrestricted, harvestable key to the public.
+ *
+ * There is deliberately NO fallback at all. _JOBSITE_API isn't one either: it's referrer-locked
+ * to client marketing domains (so it wouldn't authorise on a Site Pulse host anyway) and it's
+ * scoped to Maps JavaScript API only — it has no Places entitlement to lend. Site Pulse installs
+ * that want the route map and place search set their own referrer-restricted browser key in
+ * Settings → API Keys. With no key the JS degrades quietly: ensureGoogleMaps() rejects with
+ * no-maps-key and autocomplete just shows nothing, leaving the fields fully usable.
+ */
+function site_pulse_maps_browser_key(): string {
+	return (string) site_pulse_get_setting( 'maps_js_api_key', '' );
+}
+
 function site_pulse_mileage_geocode( string $address ): ?array {
 	$key = site_pulse_mileage_google_key();
 	if ( ! $key || ! $address ) return null;
@@ -7953,6 +8154,140 @@ function site_pulse_toll_csv_clean( string $v ): string {
 // so other authorities degrade gracefully; tuned for NTTA's column names.
 // Returns rows: [ external_id, datetime (Y-m-d H:i:s|null), date (Y-m-d|null),
 // road, gantry, amount (abs float), acct ].
+/**
+ * Convert an .xlsx workbook (raw binary) to CSV text, so the toll upload can accept Excel files without
+ * a library/Composer. Reads the first worksheet with ZipArchive + SimpleXML: resolves shared strings,
+ * detects date-formatted cells (so Excel serial dates become readable date strings the parser can
+ * strtotime()), and emits a properly-quoted CSV. Returns '' if it can't be read (caller errors clearly).
+ */
+function site_pulse_xlsx_to_csv( string $bin ): string {
+	if ( ! class_exists( 'ZipArchive' ) ) return '';
+	$tmp = wp_tempnam( 'sp-toll-xlsx' );
+	if ( ! $tmp || file_put_contents( $tmp, $bin ) === false ) return '';
+
+	$csv = '';
+	$zip = new ZipArchive();
+	if ( $zip->open( $tmp ) === true ) {
+
+		// Shared strings (t="s" cells are indices into this table). A string may be a single <t> or
+		// several runs <r><t>…</t></r> that must be concatenated.
+		$shared = [];
+		$ss = $zip->getFromName( 'xl/sharedStrings.xml' );
+		if ( is_string( $ss ) && $ss !== '' ) {
+			$sx = @simplexml_load_string( $ss );
+			if ( $sx !== false ) {
+				foreach ( $sx->si as $si ) {
+					$text = isset( $si->t ) ? (string) $si->t : '';
+					if ( isset( $si->r ) ) { $text = ''; foreach ( $si->r as $r ) $text .= (string) $r->t; }
+					$shared[] = $text;
+				}
+			}
+		}
+
+		$date_styles = site_pulse_xlsx_date_styles( $zip->getFromName( 'xl/styles.xml' ) );
+
+		// First worksheet — pick the lowest-numbered sheetN.xml (robust to odd sheet naming/order).
+		$sheet_name = '';
+		for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+			$n = $zip->getNameIndex( $i );
+			if ( preg_match( '#^xl/worksheets/sheet(\d+)\.xml$#', (string) $n ) ) {
+				if ( $sheet_name === '' || strcmp( (string) $n, $sheet_name ) < 0 ) $sheet_name = (string) $n;
+			}
+		}
+		$sheet = $sheet_name !== '' ? $zip->getFromName( $sheet_name ) : $zip->getFromName( 'xl/worksheets/sheet1.xml' );
+
+		if ( is_string( $sheet ) && $sheet !== '' ) {
+			$sx = @simplexml_load_string( $sheet );
+			if ( $sx !== false && isset( $sx->sheetData ) ) {
+				$lines = [];
+				foreach ( $sx->sheetData->row as $row ) {
+					$cells  = [];
+					$max_col = -1;
+					foreach ( $row->c as $c ) {
+						$col = site_pulse_xlsx_col_index( (string) $c['r'] );
+						if ( $col < 0 ) continue;
+						$type  = (string) $c['t'];
+						$style = (string) $c['s'];
+						if ( $type === 's' ) {
+							$val = $shared[ (int) $c->v ] ?? '';
+						} elseif ( $type === 'inlineStr' ) {
+							$val = isset( $c->is->t ) ? (string) $c->is->t : '';
+						} elseif ( $type === 'b' ) {
+							$val = ( (string) $c->v === '1' ) ? 'TRUE' : 'FALSE';
+						} else {
+							$raw = isset( $c->v ) ? (string) $c->v : '';
+							$val = ( $raw !== '' && $style !== '' && is_numeric( $raw ) && isset( $date_styles[ (int) $style ] ) )
+								? site_pulse_xlsx_serial_to_datetime( (float) $raw )
+								: $raw;
+						}
+						$cells[ $col ] = $val;
+						if ( $col > $max_col ) $max_col = $col;
+					}
+					$line = [];
+					for ( $i = 0; $i <= $max_col; $i++ ) {
+						$v = (string) ( $cells[ $i ] ?? '' );
+						$line[] = preg_match( '/["\',\r\n]/', $v ) ? '"' . str_replace( '"', '""', $v ) . '"' : $v;
+					}
+					$lines[] = implode( ',', $line );
+				}
+				$csv = implode( "\n", $lines );
+			}
+		}
+		$zip->close();
+	}
+	@unlink( $tmp );
+	return $csv;
+}
+
+// 0-based column index from a cell ref like "B7" (B → 1) or "AA10" (AA → 26). -1 if unparseable.
+function site_pulse_xlsx_col_index( string $ref ): int {
+	if ( ! preg_match( '/^([A-Za-z]+)/', $ref, $m ) ) return -1;
+	$letters = strtoupper( $m[1] );
+	$n = 0;
+	for ( $i = 0, $len = strlen( $letters ); $i < $len; $i++ ) {
+		$n = $n * 26 + ( ord( $letters[ $i ] ) - 64 );
+	}
+	return $n - 1;
+}
+
+// Excel serial date/time → "Y-m-d H:i:s". Serial 25569 = 1970-01-01, so shift to a Unix timestamp.
+function site_pulse_xlsx_serial_to_datetime( float $serial ): string {
+	$unix = (int) round( ( $serial - 25569 ) * 86400 );
+	return gmdate( 'Y-m-d H:i:s', $unix );
+}
+
+// Map cell-style index → true when that style is a date/time number format, so numeric date serials get
+// formatted (not left as raw numbers strtotime can't read). Covers Excel's built-in date formats
+// (numFmtId 14-22, 45-47) and any custom numFmt whose format code contains date/time tokens.
+function site_pulse_xlsx_date_styles( $styles_xml ): array {
+	$out = [];
+	if ( ! is_string( $styles_xml ) || $styles_xml === '' ) return $out;
+	$sx = @simplexml_load_string( $styles_xml );
+	if ( $sx === false ) return $out;
+
+	$builtin_date = array_merge( range( 14, 22 ), [ 45, 46, 47 ] );
+	$custom_date  = []; // custom numFmtId => is-date
+	if ( isset( $sx->numFmts ) ) {
+		foreach ( $sx->numFmts->numFmt as $nf ) {
+			$id   = (int) $nf['numFmtId'];
+			$code = strtolower( (string) $nf['formatCode'] );
+			// Strip color/quoted literals, then look for date/time tokens.
+			$code = preg_replace( '/\[[^\]]*\]|"[^"]*"/', '', $code );
+			$custom_date[ $id ] = (bool) preg_match( '/[dmyhs]/', $code ) && ! preg_match( '/^[#0.,%\s()\-]+$/', $code );
+		}
+	}
+
+	if ( isset( $sx->cellXfs ) ) {
+		$idx = 0;
+		foreach ( $sx->cellXfs->xf as $xf ) {
+			$fmt = (int) $xf['numFmtId'];
+			if ( in_array( $fmt, $builtin_date, true ) || ! empty( $custom_date[ $fmt ] ) ) $out[ $idx ] = true;
+			$idx++;
+		}
+	}
+	return $out;
+}
+
 function site_pulse_parse_toll_csv( string $csv, ?int &$skipped = null, ?int &$dupes = null ): array {
 	$skipped = 0; // count of obviously-bogus rows auto-expelled (see ceiling check below)
 	$dupes   = 0; // count of exact-duplicate rows collapsed
@@ -8192,16 +8527,25 @@ function site_pulse_ajax_upload_toll_csv(): void {
 	}
 
 	$csv      = (string) wp_unslash( $_POST['csv'] ?? '' );
+	$xlsx_b64 = (string) wp_unslash( $_POST['xlsx_base64'] ?? '' );
 	$filename = sanitize_text_field( wp_unslash( $_POST['filename'] ?? '' ) );
-	if ( trim( $csv ) === '' ) wp_send_json_error( [ 'message' => 'No file received.' ] );
 
-	// CSV only. Enforce server-side too (the client accept= and JS check are bypassable):
-	// require a .csv name and reject anything that looks binary (xlsx/pdf/etc. carry NUL bytes).
-	if ( ! preg_match( '/\.csv$/i', $filename ) ) {
-		wp_send_json_error( [ 'message' => 'Only .csv files are accepted. Export your toll statement as CSV and try again.' ] );
-	}
-	if ( strpos( $csv, "\0" ) !== false ) {
-		wp_send_json_error( [ 'message' => "That file isn't a plain CSV (it looks like a spreadsheet or PDF). Export as CSV and try again." ] );
+	// CSV or XLSX only — nothing else. The client detects the format by CONTENT (an .xlsx is a ZIP) and
+	// sends xlsx_base64 for a workbook, else the raw text as csv. XLSX is converted to CSV rows here so
+	// the same parser runs; a non-CSV, non-xlsx binary (e.g. old .xls or a PDF) is rejected below.
+	if ( $xlsx_b64 !== '' ) {
+		if ( ( $p = strpos( $xlsx_b64, 'base64,' ) ) !== false ) $xlsx_b64 = substr( $xlsx_b64, $p + 7 );
+		$bin = base64_decode( $xlsx_b64, true );
+		if ( $bin === false || $bin === '' ) wp_send_json_error( [ 'message' => 'No file received.' ] );
+		$csv = site_pulse_xlsx_to_csv( $bin );
+		if ( trim( $csv ) === '' ) {
+			wp_send_json_error( [ 'message' => "Couldn't read any rows from that Excel file. Make sure it's the toll statement, or export it as CSV and try again." ] );
+		}
+	} else {
+		if ( trim( $csv ) === '' ) wp_send_json_error( [ 'message' => 'No file received.' ] );
+		if ( strpos( $csv, "\0" ) !== false ) {
+			wp_send_json_error( [ 'message' => "That file isn't a plain CSV or .xlsx (an old .xls, PDF, or image won't work). In your toll account, export as CSV — or open it in Excel and Save As .xlsx — then try again." ] );
+		}
 	}
 
 	$skipped_invalid = 0;
@@ -8705,6 +9049,20 @@ function site_pulse_ajax_get_mileage_report(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$user_id = site_pulse_effective_user_id();
 
+	// An approver / archive viewer can pull another employee's report by passing report_user. Only allow
+	// it when the caller is authorized for that person (their supervisor, a mileage admin, or archive viewer).
+	$target = (int) ( $_POST['report_user'] ?? 0 );
+	if ( $target && $target !== $user_id ) {
+		$cur  = get_current_user_id();
+		$prof = site_pulse_get_user_profile( $target );
+		$ok   = site_pulse_god_can_override()
+			|| site_pulse_user_can( $cur, 'manage_mileage' )
+			|| site_pulse_can_view_approved_expense_reports( $cur )
+			|| ( site_pulse_user_can( $cur, 'approve_expense_reports' ) && $prof && (int) $prof['supervisor_id'] === $cur );
+		if ( ! $ok ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+		$user_id = $target;
+	}
+
 	$start = sanitize_text_field( $_POST['start'] ?? '' );
 	$end   = sanitize_text_field( $_POST['end']   ?? '' );
 
@@ -8778,13 +9136,13 @@ function site_pulse_ajax_get_mileage_report(): void {
 	}
 
 	// Section B — vehicle expenses for the same period, so the composed PDF has everything
-	// in one round-trip. (Sections C–F will join here as they're built.)
+	// in one round-trip. (Sections C–F join below.)
 	$bwhere  = "WHERE user_id = %d AND section = 'B'";
 	$bvalues = [ $user_id ];
 	if ( $start ) { $bwhere .= " AND expense_date >= %s"; $bvalues[] = $start; }
 	if ( $end )   { $bwhere .= " AND expense_date <= %s"; $bvalues[] = $end; }
 	$vehicle = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, category, description, amount, receipt_path FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, category, description, store_number, account_code, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $bwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$bvalues
 	), ARRAY_A ) ?: [];
@@ -8795,7 +9153,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $cwhere .= " AND expense_date >= %s"; $cvalues[] = $start; }
 	if ( $end )   { $cwhere .= " AND expense_date <= %s"; $cvalues[] = $end; }
 	$meals = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, place, business_purpose, attendees, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, place, business_purpose, attendees, store_number, account_code, amount, receipt_path, meal_type FROM " . site_pulse_table('expenses') . "
 		 $cwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$cvalues
 	), ARRAY_A ) ?: [];
@@ -8806,7 +9164,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $dwhere .= " AND expense_date >= %s"; $dvalues[] = $start; }
 	if ( $end )   { $dwhere .= " AND expense_date <= %s"; $dvalues[] = $end; }
 	$shopping = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, place, business_purpose, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, place, business_purpose, attendees, store_number, account_code, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $dwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$dvalues
 	), ARRAY_A ) ?: [];
@@ -8822,8 +9180,20 @@ function site_pulse_ajax_get_mileage_report(): void {
 		...$evalues
 	), ARRAY_A ) ?: [];
 
+	// Section F — travel expenses for the same period (Date · Category · Description · Amount). Like
+	// Section B: several categories (Airfare/Hotel/Car Rental·Taxi/Meals) all rolling up to GL 91110.
+	$fwhere  = "WHERE user_id = %d AND section = 'F'";
+	$fvalues = [ $user_id ];
+	if ( $start ) { $fwhere .= " AND expense_date >= %s"; $fvalues[] = $start; }
+	if ( $end )   { $fwhere .= " AND expense_date <= %s"; $fvalues[] = $end; }
+	$travel = $wpdb->get_results( $wpdb->prepare(
+		"SELECT expense_date, category, description, account_code, amount, receipt_path FROM " . site_pulse_table('expenses') . "
+		 $fwhere ORDER BY expense_date ASC, id ASC LIMIT 500",
+		...$fvalues
+	), ARRAY_A ) ?: [];
+
 	// Surface a public receipt URL per expense line so the PDF can append the photos.
-	foreach ( [ &$vehicle, &$meals, &$shopping, &$other ] as &$_set ) {
+	foreach ( [ &$vehicle, &$meals, &$shopping, &$other, &$travel ] as &$_set ) {
 		foreach ( $_set as &$_row ) { $_row['receipt_url'] = site_pulse_receipt_url( (string) ( $_row['receipt_path'] ?? '' ) ); }
 		unset( $_row );
 	}
@@ -8841,6 +9211,21 @@ function site_pulse_ajax_get_mileage_report(): void {
 		'business_meals'      => $meals,
 		'competitive_shopping'=> $shopping,
 		'other_expenses'      => $other,
+		'travel_expenses'     => $travel,
+		'travel_categories'   => site_pulse_expense_sections()['F']['categories'],
+		// Chart of accounts + mileage→account map, so the Overview/PDF can roll the Summary of
+		// Expenses up dynamically by GL account (one line per account) and label each account.
+		'accounts'            => site_pulse_expense_accounts(),
+		'mileage_accounts'    => site_pulse_expense_mileage_accounts(),
+		// Submission/approval state for THIS exact period (drives the Overview Submit button / pill).
+		// Null when no period is selected (start+end empty) — you can only submit a defined pay period.
+		'report'              => ( function() use ( $user_id, $start, $end ) {
+			$r = site_pulse_expense_report_row( $user_id, $start, $end );
+			if ( ! $r ) return null;
+			$r = site_pulse_expense_report_public( $r );
+			return [ 'id' => (int) $r['id'], 'status' => $r['status'], 'submitted_at' => $r['submitted_at'], 'approved_at' => $r['approved_at'], 'approved_by_name' => $r['approved_by_name'] ?? '', 'reject_note' => $r['reject_note'], 'emailed_at' => $r['emailed_at'] ];
+		} )(),
+		'can_submit_report'   => ( $start !== '' && $end !== '' && $user_id === site_pulse_effective_user_id() ),
 	] );
 }
 
@@ -8849,10 +9234,12 @@ function site_pulse_ajax_get_mileage_report(): void {
 --------------------------------------------------------------*/
 
 /**
- * The expense-report sections and their categories. Each category carries the GL account code
- * the company's Summary of Expenses keys on. Sections C–F get added here as they're built.
+ * The FALLBACK/seed sections + categories (the original Rovin chart). A brand-new install seeds
+ * `expense_categories` from this; site_pulse_expense_sections() then reads that setting so an admin
+ * can re-classify per business. Section labels/structure are fixed here; only the categories are
+ * configurable. Keep this as the immutable default.
  */
-function site_pulse_expense_sections(): array {
+function site_pulse_expense_sections_defaults(): array {
 	return [
 		'B' => [
 			'label'      => 'Vehicle Expenses',
@@ -8862,6 +9249,11 @@ function site_pulse_expense_sections(): array {
 				'parking'  => [ 'label' => 'Parking',               'account' => '91300' ],
 				'repairs'  => [ 'label' => 'Company Driven Repairs', 'account' => '91310' ],
 				'trailers' => [ 'label' => 'Trailers',              'account' => '91310' ],
+				// Provisional GL: filed under 91310 (grouped on the "Personal Tolls/Trailers"
+				// summary line, i.e. Trailer/Antiques) until Rovin confirms the right account. If it
+				// changes, update this account AND the B-summary grouping in renderExpenseReport /
+				// exportMileagePDF (JS) together, so the row's account_code and its Summary line agree.
+				'parade_vehicle' => [ 'label' => 'Parade Vehicle',  'account' => '91310' ],
 			],
 		],
 		'C' => [
@@ -8887,7 +9279,184 @@ function site_pulse_expense_sections(): array {
 			// Summary of Expenses just reads "See Section E"). The UI sends a per-row account_code.
 			'categories' => [],
 		],
+		'F' => [
+			'label'      => 'Travel Expenses',
+			// The F-Travel tab breaks travel into Airfare / Hotel / Car Rental·Taxi / Meals, but the
+			// Summary of Expenses rolls them ALL up under one GL account (91110) — so this is modeled
+			// like Section B: several named categories that happen to share an account. Each line is
+			// one category + amount, and the Summary totals them together as "F - Travel Expenses".
+			'categories' => [
+				'airfare'     => [ 'label' => 'Airfare',          'account' => '91110' ],
+				'hotel'       => [ 'label' => 'Hotel',            'account' => '91110' ],
+				'car_rental'  => [ 'label' => 'Car Rental / Taxi', 'account' => '91110' ],
+				'meals'       => [ 'label' => 'Meals',            'account' => '91110' ],
+			],
+		],
 	];
+}
+
+/**
+ * The live sections + categories. Section labels/structure come from the fixed defaults; the
+ * per-section CATEGORY lists come from the admin-editable `expense_categories` setting (Settings →
+ * Expense Reports). Falls back to the default categories for any section the setting doesn't cover,
+ * so a partial/empty setting never blanks a section. Per-request cached.
+ */
+function site_pulse_expense_sections(): array {
+	static $cache = null;
+	if ( $cache !== null ) return $cache;
+
+	$defaults = site_pulse_expense_sections_defaults();
+	$stored   = json_decode( (string) site_pulse_get_setting( 'expense_categories', '' ), true );
+
+	$out = [];
+	foreach ( $defaults as $sec => $info ) {
+		$cats = $info['categories'];
+		if ( is_array( $stored ) && isset( $stored[ $sec ] ) && is_array( $stored[ $sec ] ) ) {
+			// Rebuild this section's categories from the stored [{key,label,account}] list.
+			$cats = [];
+			foreach ( $stored[ $sec ] as $c ) {
+				if ( ! is_array( $c ) ) continue;
+				$key = sanitize_key( (string) ( $c['key'] ?? '' ) );
+				if ( $key === '' ) continue;
+				$cats[ $key ] = [
+					'label'   => (string) ( $c['label'] ?? $key ),
+					'account' => (string) ( $c['account'] ?? '' ),
+				];
+			}
+		}
+		$out[ $sec ] = [ 'label' => $info['label'], 'categories' => $cats ];
+	}
+	$cache = $out;
+	return $out;
+}
+
+/**
+ * The master chart of accounts (Settings → Expense Reports), as [{number, description}]. Feeds the
+ * Section E account dropdown and the category editor's account picker. Falls back to the seeded
+ * Rovin chart's numbers if unset. Per-request cached.
+ */
+function site_pulse_expense_accounts(): array {
+	static $cache = null;
+	if ( $cache !== null ) return $cache;
+	$stored = json_decode( (string) site_pulse_get_setting( 'expense_accounts', '' ), true );
+	$out = [];
+	if ( is_array( $stored ) ) {
+		foreach ( $stored as $a ) {
+			if ( ! is_array( $a ) ) continue;
+			$num = sanitize_text_field( (string) ( $a['number'] ?? '' ) );
+			if ( $num === '' ) continue;
+			$out[] = [ 'number' => $num, 'description' => sanitize_text_field( (string) ( $a['description'] ?? '' ) ) ];
+		}
+	}
+	$cache = $out;
+	return $out;
+}
+
+/** "91200 Office Supplies" for a GL number, or just the number if it's not in the chart. */
+function site_pulse_expense_account_label( string $number ): string {
+	$number = trim( $number );
+	if ( $number === '' ) return '';
+	foreach ( site_pulse_expense_accounts() as $a ) {
+		if ( $a['number'] === $number ) {
+			return $a['description'] !== '' ? $number . ' ' . $a['description'] : $number;
+		}
+	}
+	return $number;
+}
+
+/** Which GL accounts mileage (Section A) posts to, for the dynamic Summary. Defaults all to 91310. */
+function site_pulse_expense_mileage_accounts(): array {
+	$d = [ 'reimbursement' => '91310', 'tolls' => '91310', 'trailer' => '91310' ];
+	$stored = json_decode( (string) site_pulse_get_setting( 'expense_mileage_accounts', '' ), true );
+	if ( ! is_array( $stored ) ) return $d;
+	foreach ( $d as $k => $v ) {
+		if ( ! empty( $stored[ $k ] ) ) $d[ $k ] = sanitize_text_field( (string) $stored[ $k ] );
+	}
+	return $d;
+}
+
+/**
+ * One-time seed of the expense config so a live install behaves exactly as before until an admin
+ * edits: the chart of accounts (from the Rovin workbook's Chart of Accounts tab), the per-section
+ * categories (from the fixed defaults), and the mileage→account map. Idempotent + non-destructive —
+ * each setting is only written if currently unset, and the whole thing is flag-guarded.
+ */
+add_action( 'init', 'site_pulse_seed_expense_config', 27 );
+function site_pulse_seed_expense_config(): void {
+	if ( get_option( 'site_pulse_expense_config_seeded' ) ) return;
+
+	if ( site_pulse_get_setting( 'expense_accounts', '' ) === '' ) {
+		$chart = [
+			[ 'number' => '61010', 'description' => 'COS - Food' ],
+			[ 'number' => '61040', 'description' => 'COS- Gift Products' ],
+			[ 'number' => '61090', 'description' => 'COS- Paper Goods' ],
+			[ 'number' => '74040', 'description' => 'Employee Benefits' ],
+			[ 'number' => '74046', 'description' => '401K Expenses' ],
+			[ 'number' => '74050', 'description' => 'Medical Expense - FOH' ],
+			[ 'number' => '74055', 'description' => 'Medical Expense - Kitchen' ],
+			[ 'number' => '81010', 'description' => 'Soap & Janitorial Supplies' ],
+			[ 'number' => '81015', 'description' => 'Dish Room Expense' ],
+			[ 'number' => '81020', 'description' => 'Linen Supply & Service' ],
+			[ 'number' => '81040', 'description' => 'Kitchen Operating Supplies - BOH items' ],
+			[ 'number' => '81050', 'description' => 'Replacement of Utensils - FOH items' ],
+			[ 'number' => '81060', 'description' => 'Operating Supplies - Other' ],
+			[ 'number' => '81070', 'description' => 'Repairs & Maintenance Equipment' ],
+			[ 'number' => '81080', 'description' => 'Repairs & Maintenance Kitchen Equipment' ],
+			[ 'number' => '81090', 'description' => 'Food R&D' ],
+			[ 'number' => '81095', 'description' => 'Competition R&D' ],
+			[ 'number' => '81099', 'description' => 'Sales Tax Expense' ],
+			[ 'number' => '82000', 'description' => 'Catering Expenses' ],
+			[ 'number' => '82001', 'description' => 'Catering Vehicle Repair' ],
+			[ 'number' => '82030', 'description' => 'Security Expense' ],
+			[ 'number' => '84015', 'description' => 'Employment Expense' ],
+			[ 'number' => '84040', 'description' => 'Printing' ],
+			[ 'number' => '84050', 'description' => 'Advertising - Billboards' ],
+			[ 'number' => '84055', 'description' => 'Restaurant Decorations' ],
+			[ 'number' => '84060', 'description' => 'Public Relations & Promotion' ],
+			[ 'number' => '88020', 'description' => 'Repairs & Maintenance Building' ],
+			[ 'number' => '88100', 'description' => 'Utilities - Telephone' ],
+			[ 'number' => '88110', 'description' => 'Utilities - Electricity' ],
+			[ 'number' => '88120', 'description' => 'Utilities - Gas' ],
+			[ 'number' => '88130', 'description' => 'Utilities - Water' ],
+			[ 'number' => '88200', 'description' => 'Utilities - Trash Removal' ],
+			[ 'number' => '88230', 'description' => 'Licenses - Other' ],
+			[ 'number' => '88240', 'description' => 'Pest Control' ],
+			[ 'number' => '88250', 'description' => 'Landscaping Expense' ],
+			[ 'number' => '91010', 'description' => 'Professional Fees - Legal' ],
+			[ 'number' => '91020', 'description' => 'Professional Fees - Accounting' ],
+			[ 'number' => '91025', 'description' => 'Professional Fees - Other' ],
+			[ 'number' => '91040', 'description' => 'Employee Development' ],
+			[ 'number' => '91100', 'description' => 'Fringe Hunting' ],
+			[ 'number' => '91110', 'description' => 'Meetings & Conventions (Quality Checks)' ],
+			[ 'number' => '91200', 'description' => 'Office Supplies' ],
+			[ 'number' => '91210', 'description' => 'Technology Expense' ],
+			[ 'number' => '91300', 'description' => 'Fringe-Automotive Expense' ],
+			[ 'number' => '91310', 'description' => 'Vehicle Maintenance' ],
+			[ 'number' => '91800', 'description' => 'Storage Expense' ],
+			[ 'number' => '91810', 'description' => 'Dues & Subscriptions' ],
+			[ 'number' => '92026', 'description' => 'Sales Tax Over/Short' ],
+			[ 'number' => '93010', 'description' => 'Charitable Contributions' ],
+		];
+		site_pulse_set_setting( 'expense_accounts', wp_json_encode( $chart ) );
+	}
+
+	if ( site_pulse_get_setting( 'expense_categories', '' ) === '' ) {
+		$cats = [];
+		foreach ( site_pulse_expense_sections_defaults() as $sec => $info ) {
+			$rows = [];
+			foreach ( $info['categories'] as $key => $c ) {
+				$rows[] = [ 'key' => $key, 'label' => $c['label'], 'account' => $c['account'] ];
+			}
+			$cats[ $sec ] = $rows; // E seeds as [] (no fixed categories) — preserved
+		}
+		site_pulse_set_setting( 'expense_categories', wp_json_encode( $cats ) );
+	}
+
+	if ( site_pulse_get_setting( 'expense_mileage_accounts', '' ) === '' ) {
+		site_pulse_set_setting( 'expense_mileage_accounts', wp_json_encode( [ 'reimbursement' => '91310', 'tolls' => '91310', 'trailer' => '91310' ] ) );
+	}
+
+	update_option( 'site_pulse_expense_config_seeded', '1' );
 }
 
 function site_pulse_expense_account( string $section, string $category ): string {
@@ -8918,9 +9487,9 @@ function site_pulse_expense_destinations(): array {
 }
 
 // Each expense section is its own screen with its own capability (B=Vehicle, C=Meals, D=Competitive
-// Shopping, E=Other). manage_mileage / god see all; an unknown section falls back to submit_mileage.
+// Shopping, E=Other, F=Travel). manage_mileage / god see all; an unknown section falls back to submit_mileage.
 function site_pulse_expense_section_cap( string $section ): string {
-	$map = [ 'B' => 'view_vehicle_expenses', 'C' => 'view_business_meals', 'D' => 'view_competitive_shopping', 'E' => 'view_other_expenses' ];
+	$map = [ 'B' => 'view_vehicle_expenses', 'C' => 'view_business_meals', 'D' => 'view_competitive_shopping', 'E' => 'view_other_expenses', 'F' => 'view_travel_expenses' ];
 	return $map[ $section ] ?? '';
 }
 function site_pulse_can_expense_section( int $user_id, string $section ): bool {
@@ -8958,7 +9527,434 @@ function site_pulse_ajax_get_expenses(): void {
 		'expenses'     => $rows,
 		'categories'   => $sections[ $section ]['categories'],
 		'destinations' => site_pulse_expense_destinations(), // for the "move to category" picker
+		'accounts'     => site_pulse_expense_accounts(),      // for the Section E account dropdown
+		'recurring'    => site_pulse_recurring_get( $user_id ), // this user's recurring templates (Other Expenses)
+		// Locked = a submitted/approved report overlaps this period, so the screen freezes add/edit/delete.
+		'locked'       => site_pulse_expense_range_locked( $user_id, $start, $end ),
 	] );
+}
+
+/*--------------------------------------------------------------
+# Recurring Other Expenses — per-user templates (cell phone, internet, …)
+#
+# A "recurring" expense is a saved TEMPLATE (account + description + store + usual amount), kept in
+# per-user meta (not a period-bound row). On the Other Expenses screen it shows in a strip the driver
+# TAPS to drop a pre-filled line into the current period — a normal, editable/deletable expense from
+# then on. Deleting that line removes just that period; deleting the template stops it recurring.
+--------------------------------------------------------------*/
+
+/** This user's recurring templates: [ { key, account_code, description, store_number, amount } ]. */
+function site_pulse_recurring_get( int $user_id ): array {
+	$raw = get_user_meta( $user_id, 'sp_recurring_expenses', true );
+	$out = is_array( $raw ) ? $raw : ( is_string( $raw ) && $raw !== '' ? json_decode( $raw, true ) : [] );
+	if ( ! is_array( $out ) ) return [];
+	$clean = [];
+	foreach ( $out as $t ) {
+		if ( ! is_array( $t ) || empty( $t['key'] ) ) continue;
+		$clean[] = [
+			'key'          => sanitize_key( (string) $t['key'] ),
+			'account_code' => sanitize_text_field( (string) ( $t['account_code'] ?? '' ) ),
+			'description'  => sanitize_text_field( (string) ( $t['description'] ?? '' ) ),
+			'store_number' => sanitize_text_field( (string) ( $t['store_number'] ?? '' ) ),
+			'amount'       => round( (float) ( $t['amount'] ?? 0 ), 2 ),
+		];
+	}
+	return $clean;
+}
+
+/** Upsert a template (deduped by description|account). Returns the full list. */
+function site_pulse_recurring_upsert( int $user_id, array $tpl ): array {
+	$desc = sanitize_text_field( (string) ( $tpl['description'] ?? '' ) );
+	$acct = sanitize_text_field( (string) ( $tpl['account_code'] ?? '' ) );
+	$key  = sanitize_key( strtolower( $desc !== '' ? $desc : $acct ) );
+	if ( $key === '' ) return site_pulse_recurring_get( $user_id );
+
+	$row = [
+		'key'          => $key,
+		'account_code' => $acct,
+		'description'  => $desc,
+		'store_number' => sanitize_text_field( (string) ( $tpl['store_number'] ?? '' ) ),
+		'amount'       => round( (float) ( $tpl['amount'] ?? 0 ), 2 ),
+	];
+	$list  = site_pulse_recurring_get( $user_id );
+	$found = false;
+	foreach ( $list as $i => $t ) { if ( $t['key'] === $key ) { $list[ $i ] = $row; $found = true; break; } }
+	if ( ! $found ) $list[] = $row;
+	update_user_meta( $user_id, 'sp_recurring_expenses', $list );
+	return $list;
+}
+
+function site_pulse_recurring_delete( int $user_id, string $key ): array {
+	$key  = sanitize_key( $key );
+	$list = array_values( array_filter( site_pulse_recurring_get( $user_id ), static fn( $t ) => $t['key'] !== $key ) );
+	update_user_meta( $user_id, 'sp_recurring_expenses', $list );
+	return $list;
+}
+
+add_action( 'wp_ajax_site_pulse_save_recurring', 'site_pulse_ajax_save_recurring' );
+function site_pulse_ajax_save_recurring(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! site_pulse_can_expense_section( $user_id, 'E' ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	$list = site_pulse_recurring_upsert( $user_id, [
+		'account_code' => wp_unslash( $_POST['account_code'] ?? '' ),
+		'description'  => wp_unslash( $_POST['description'] ?? '' ),
+		'store_number' => wp_unslash( $_POST['store_number'] ?? '' ),
+		'amount'       => $_POST['amount'] ?? 0,
+	] );
+	wp_send_json_success( [ 'recurring' => $list ] );
+}
+
+add_action( 'wp_ajax_site_pulse_delete_recurring', 'site_pulse_ajax_delete_recurring' );
+function site_pulse_ajax_delete_recurring(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! site_pulse_can_expense_section( $user_id, 'E' ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	$list = site_pulse_recurring_delete( $user_id, sanitize_key( (string) ( $_POST['key'] ?? '' ) ) );
+	wp_send_json_success( [ 'recurring' => $list ] );
+}
+
+/*--------------------------------------------------------------
+# Expense report approval workflow
+#
+# An employee SUBMITS a pay period (Overview → "Submit for Approval"); the browser freezes the report
+# to a PDF and posts it here. The row lands in the supervisor's "Approve Reports" queue. On APPROVE the
+# frozen PDF is emailed to accounting (Settings → Expense Reports → AP email) and the employee is
+# notified. REJECT sends it back (reopens the period for edits). A supervisor can AUTO-APPROVE a given
+# employee — their submissions approve on arrival (still shown in the queue, already approved). Approved
+# reports are archived under "Approved Reports" for anyone with the view-archive capability.
+--------------------------------------------------------------*/
+
+// The report covering a given date for a user IF it's SUBMITTED or APPROVED — i.e. the date is locked.
+// Rejected reports don't lock; they've been sent back for edits.
+function site_pulse_expense_report_for_date( int $user_id, string $date ): ?array {
+	if ( $date === '' ) return null;
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('expense_reports') . "
+		 WHERE user_id = %d AND period_start <= %s AND period_end >= %s AND status IN ( 'submitted', 'approved' )
+		 ORDER BY id DESC LIMIT 1",
+		$user_id, $date, $date
+	), ARRAY_A );
+	return $row ?: null;
+}
+
+// Does a submitted/approved report overlap [start,end] for this user? (Locks the section screens.)
+function site_pulse_expense_range_locked( int $user_id, string $start, string $end ): bool {
+	if ( $start === '' || $end === '' ) return false;
+	global $wpdb;
+	return (bool) $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table('expense_reports') . "
+		 WHERE user_id = %d AND status IN ( 'submitted', 'approved' ) AND period_start <= %s AND period_end >= %s LIMIT 1",
+		$user_id, $end, $start
+	) );
+}
+
+// The report row for an EXACT period (drives the Overview submit button / pill state). Any status.
+function site_pulse_expense_report_row( int $user_id, string $start, string $end ): ?array {
+	if ( $start === '' || $end === '' ) return null;
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE user_id = %d AND period_start = %s AND period_end = %s LIMIT 1",
+		$user_id, $start, $end
+	), ARRAY_A );
+	return $row ?: null;
+}
+
+// Strip the heavy pdf_base64 out of a row for JSON, and add display names. (PDF is fetched separately.)
+function site_pulse_expense_report_public( array $row ): array {
+	unset( $row['pdf_base64'] );
+	$row['has_pdf'] = 1; // rows always carry a PDF (frozen at submit); flag kept for the client
+	$u = get_userdata( (int) $row['user_id'] );
+	$row['user_name'] = $u ? $u->display_name : ( 'User #' . (int) $row['user_id'] );
+	if ( (int) $row['approved_by'] ) {
+		$ab = get_userdata( (int) $row['approved_by'] );
+		$row['approved_by_name'] = $ab ? $ab->display_name : '';
+	}
+	return $row;
+}
+
+// --- Permissions ---
+function site_pulse_can_approve_expense_reports( int $user_id ): bool {
+	if ( site_pulse_is_god( $user_id ) ) return true;
+	return site_pulse_user_can( $user_id, 'approve_expense_reports' ) || site_pulse_user_can( $user_id, 'manage_mileage' );
+}
+function site_pulse_can_view_approved_expense_reports( int $user_id ): bool {
+	if ( site_pulse_is_god( $user_id ) ) return true;
+	return site_pulse_user_can( $user_id, 'view_approved_expense_reports' );
+}
+// May $user_id approve/reject/open THIS report? God + mileage admins → any; a plain approver → only the
+// reports routed to them (they are the submitter's supervisor).
+function site_pulse_can_act_on_expense_report( int $user_id, array $row ): bool {
+	if ( site_pulse_god_can_override() || site_pulse_user_can( $user_id, 'manage_mileage' ) ) return true;
+	if ( ! site_pulse_user_can( $user_id, 'approve_expense_reports' ) ) return false;
+	return (int) $row['supervisor_id'] === $user_id;
+}
+
+// --- Auto-approve (per supervisor: the set of employee user-ids whose reports approve on submit) ---
+function site_pulse_expense_auto_approve_get( int $supervisor_id ): array {
+	$raw = get_user_meta( $supervisor_id, 'sp_expense_auto_approve', true );
+	$ids = is_array( $raw ) ? $raw : ( is_string( $raw ) && $raw !== '' ? json_decode( $raw, true ) : [] );
+	return is_array( $ids ) ? array_values( array_unique( array_map( 'intval', $ids ) ) ) : [];
+}
+function site_pulse_expense_auto_approve_is( int $supervisor_id, int $employee_id ): bool {
+	return in_array( $employee_id, site_pulse_expense_auto_approve_get( $supervisor_id ), true );
+}
+function site_pulse_expense_auto_approve_set( int $supervisor_id, int $employee_id, bool $on ): array {
+	$ids = array_values( array_filter( site_pulse_expense_auto_approve_get( $supervisor_id ), static fn( $i ) => $i !== $employee_id ) );
+	if ( $on ) $ids[] = $employee_id;
+	update_user_meta( $supervisor_id, 'sp_expense_auto_approve', $ids );
+	return $ids;
+}
+
+// Email the frozen PDF to accounting (Settings → Expense Reports → AP email). Returns whether it sent.
+function site_pulse_email_expense_report_to_ap( array $row ): bool {
+	$to = trim( (string) site_pulse_get_setting( 'expense_ap_email', '' ) );
+
+	// TEMP TESTING (2026-07-27) — route approval emails to Victor instead of the configured AP address.
+	// To revert to the real AP inbox (ap@babeschicken.com, set in Settings → Expense Reports), DELETE
+	// this one line.
+	$to = 'victorv@babeschicken.com';
+
+	if ( ! is_email( $to ) ) return false;
+	$b64 = (string) ( $row['pdf_base64'] ?? '' );
+	if ( ( $pos = strpos( $b64, 'base64,' ) ) !== false ) $b64 = substr( $b64, $pos + 7 );
+	$pdf = $b64 !== '' ? base64_decode( $b64 ) : false;
+	if ( $pdf === false || $pdf === '' ) return false;
+
+	$u       = get_userdata( (int) $row['user_id'] );
+	$who     = $u ? $u->display_name : ( 'User #' . (int) $row['user_id'] );
+	$label   = (string) ( $row['period_label'] ?: ( $row['period_start'] . ' – ' . $row['period_end'] ) );
+	$company = site_pulse_get_setting( 'company_name', '' ) ?: site_pulse_get_setting( 'app_name', 'Site Pulse' );
+
+	$fname = sanitize_file_name( 'Expense_Report_' . $who . '_' . $row['period_end'] . '.pdf' );
+	$dir   = get_temp_dir();
+	$path  = trailingslashit( $dir ) . wp_unique_filename( $dir, $fname );
+	if ( file_put_contents( $path, $pdf ) === false ) return false;
+
+	$total   = number_format( (float) $row['total_amount'], 2 );
+	$subject = $company . ' — Expense Report: ' . $who . ' (' . $label . ')';
+	$body    = "An expense report has been approved and is attached.\n\n"
+	         . "Employee: {$who}\nPeriod: {$label}\nTotal due to employee: \${$total}\n\n"
+	         . "Sent automatically by {$company}.";
+	$sent = wp_mail( $to, $subject, $body, [], [ $path ] );
+	@unlink( $path );
+	return (bool) $sent;
+}
+
+// Stamp a report approved, email accounting, notify the employee. Shared by manual approve + auto-approve.
+// $row MUST be a full row (includes pdf_base64). Returns [ 'emailed' => bool, 'row' => public row ].
+function site_pulse_finalize_expense_approval( array $row, int $approver_id ): array {
+	global $wpdb;
+	$now     = current_time( 'mysql' );
+	$emailed = site_pulse_email_expense_report_to_ap( $row );
+	$wpdb->update( site_pulse_table('expense_reports'), [
+		'status'      => 'approved',
+		'approved_at' => $now,
+		'approved_by' => $approver_id,
+		'emailed_at'  => $emailed ? $now : null,
+		'reject_note' => null,
+		'updated_at'  => $now,
+	], [ 'id' => (int) $row['id'] ] );
+
+	$label = (string) ( $row['period_label'] ?: $row['period_end'] );
+	$note  = $emailed ? '' : ' (accounting email not configured — set it in Settings → Expense Reports)';
+	site_pulse_dispatch_notification( 'expense_report_approved', (int) $row['user_id'],
+		'Your expense report for ' . $label . ' was approved.' . $note, (int) $row['id'], 'expense_report' );
+
+	$fresh = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", (int) $row['id'] ), ARRAY_A );
+	return [ 'emailed' => $emailed, 'row' => $fresh ? site_pulse_expense_report_public( $fresh ) : [] ];
+}
+
+// Employee submits a pay period for approval; the browser posts the frozen PDF (base64).
+add_action( 'wp_ajax_site_pulse_submit_expense_report', 'site_pulse_ajax_submit_expense_report' );
+function site_pulse_ajax_submit_expense_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! site_pulse_god_can_override() && ! site_pulse_user_can( $user_id, 'view_expense_overview' ) && ! site_pulse_user_can( $user_id, 'manage_mileage' ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$start = sanitize_text_field( $_POST['start'] ?? '' );
+	$end   = sanitize_text_field( $_POST['end'] ?? '' );
+	if ( $start === '' || $end === '' ) wp_send_json_error( [ 'message' => 'Pick a pay period before submitting.' ] );
+
+	global $wpdb;
+	$existing = site_pulse_expense_report_row( $user_id, $start, $end );
+	if ( $existing && in_array( $existing['status'], [ 'submitted', 'approved' ], true ) ) {
+		wp_send_json_error( [ 'message' => 'This period has already been submitted.' ] );
+	}
+
+	$hasE = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM " . site_pulse_table('expenses') . " WHERE user_id = %d AND expense_date BETWEEN %s AND %s", $user_id, $start, $end ) );
+	$hasM = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM " . site_pulse_table('mileage_entries') . " WHERE user_id = %d AND entry_date BETWEEN %s AND %s", $user_id, $start, $end ) );
+	if ( ! $hasE && ! $hasM ) wp_send_json_error( [ 'message' => 'There is nothing to submit for this period.' ] );
+
+	$pdf   = (string) wp_unslash( $_POST['pdf_base64'] ?? '' );
+	if ( $pdf === '' ) wp_send_json_error( [ 'message' => 'Could not build the report PDF — please try again.' ] );
+	$label = sanitize_text_field( wp_unslash( $_POST['label'] ?? '' ) );
+	$total = round( (float) ( $_POST['total'] ?? 0 ), 2 );
+	$prof  = site_pulse_get_user_profile( $user_id );
+	$sup   = $prof ? (int) $prof['supervisor_id'] : 0;
+	$now   = current_time( 'mysql' );
+
+	$data = [
+		'user_id' => $user_id, 'period_start' => $start, 'period_end' => $end, 'period_label' => $label,
+		'supervisor_id' => $sup, 'status' => 'submitted', 'total_amount' => $total, 'submitted_at' => $now,
+		'approved_at' => null, 'approved_by' => 0, 'emailed_at' => null, 'reject_note' => null,
+		'pdf_base64' => $pdf, 'updated_at' => $now,
+	];
+	if ( $existing ) {
+		$wpdb->update( site_pulse_table('expense_reports'), $data, [ 'id' => (int) $existing['id'] ] );
+		$id = (int) $existing['id'];
+	} else {
+		$data['created_at'] = $now;
+		$wpdb->insert( site_pulse_table('expense_reports'), $data );
+		$id = (int) $wpdb->insert_id;
+	}
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
+
+	// Auto-approved employee? Approve on arrival (email + notify), still shown in the queue as approved.
+	if ( $sup && site_pulse_expense_auto_approve_is( $sup, $user_id ) ) {
+		$res = site_pulse_finalize_expense_approval( $row, $sup );
+		wp_send_json_success( [ 'report' => $res['row'], 'auto_approved' => true ] );
+	}
+
+	$u   = get_userdata( $user_id );
+	$who = $u ? $u->display_name : 'An employee';
+	site_pulse_dispatch_notification( 'expense_report_submitted', $user_id,
+		$who . ' submitted an expense report for ' . ( $label ?: $end ) . ' — needs your approval.', $id, 'expense_report' );
+	wp_send_json_success( [ 'report' => site_pulse_expense_report_public( $row ), 'auto_approved' => false ] );
+}
+
+// Supervisor approves a queued report.
+add_action( 'wp_ajax_site_pulse_approve_expense_report', 'site_pulse_ajax_approve_expense_report' );
+function site_pulse_ajax_approve_expense_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	$id  = (int) ( $_POST['report_id'] ?? 0 );
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+	if ( ! site_pulse_can_act_on_expense_report( $uid, $row ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( $row['status'] === 'approved' ) wp_send_json_success( [ 'report' => site_pulse_expense_report_public( $row ), 'already' => true ] );
+	$res = site_pulse_finalize_expense_approval( $row, $uid );
+	wp_send_json_success( [ 'report' => $res['row'], 'emailed' => $res['emailed'] ] );
+}
+
+// Supervisor rejects / sends a report back (reopens the period for edits).
+add_action( 'wp_ajax_site_pulse_reject_expense_report', 'site_pulse_ajax_reject_expense_report' );
+function site_pulse_ajax_reject_expense_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid  = get_current_user_id();
+	$id   = (int) ( $_POST['report_id'] ?? 0 );
+	$note = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+	if ( ! site_pulse_can_act_on_expense_report( $uid, $row ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	$now = current_time( 'mysql' );
+	$wpdb->update( site_pulse_table('expense_reports'),
+		[ 'status' => 'rejected', 'reject_note' => $note, 'approved_at' => null, 'approved_by' => 0, 'emailed_at' => null, 'updated_at' => $now ],
+		[ 'id' => $id ] );
+	$label = (string) ( $row['period_label'] ?: $row['period_end'] );
+	$msg   = 'Your expense report for ' . $label . ' was sent back' . ( $note !== '' ? ': ' . $note : ' for edits.' );
+	site_pulse_dispatch_notification( 'expense_report_rejected', (int) $row['user_id'], $msg, $id, 'expense_report' );
+	$fresh = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
+	wp_send_json_success( [ 'report' => site_pulse_expense_report_public( $fresh ) ] );
+}
+
+// Toggle auto-approve for one employee. Turning it ON also clears any of their already-queued submissions.
+add_action( 'wp_ajax_site_pulse_set_expense_auto_approve', 'site_pulse_ajax_set_expense_auto_approve' );
+function site_pulse_ajax_set_expense_auto_approve(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	if ( ! site_pulse_can_approve_expense_reports( $uid ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	$emp = (int) ( $_POST['user_id'] ?? 0 );
+	$on  = ! empty( $_POST['on'] ) && $_POST['on'] !== '0' && $_POST['on'] !== 'false';
+	if ( ! $emp ) wp_send_json_error( [ 'message' => 'No employee specified.' ] );
+	$ids = site_pulse_expense_auto_approve_set( $uid, $emp, $on );
+	if ( $on ) {
+		global $wpdb;
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE user_id = %d AND supervisor_id = %d AND status = 'submitted'",
+			$emp, $uid ), ARRAY_A ) ?: [];
+		foreach ( $rows as $r ) site_pulse_finalize_expense_approval( $r, $uid );
+	}
+	wp_send_json_success( [ 'auto_approve' => $ids, 'on' => $on ] );
+}
+
+// The supervisor's approval queue: their team's submitted (top) + already-actioned reports.
+add_action( 'wp_ajax_site_pulse_get_expense_approvals', 'site_pulse_ajax_get_expense_approvals' );
+function site_pulse_ajax_get_expense_approvals(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	if ( ! site_pulse_can_approve_expense_reports( $uid ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	global $wpdb;
+	$t   = site_pulse_table('expense_reports');
+	$all = site_pulse_god_can_override() || site_pulse_user_can( $uid, 'manage_mileage' );
+	if ( $all ) {
+		$rows = $wpdb->get_results( "SELECT * FROM $t WHERE status IN ( 'submitted', 'approved', 'rejected' ) ORDER BY ( status = 'submitted' ) DESC, submitted_at DESC LIMIT 400", ARRAY_A ) ?: [];
+	} else {
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM $t WHERE supervisor_id = %d AND status IN ( 'submitted', 'approved', 'rejected' ) ORDER BY ( status = 'submitted' ) DESC, submitted_at DESC LIMIT 400", $uid ), ARRAY_A ) ?: [];
+	}
+	wp_send_json_success( [
+		'reports'      => array_map( 'site_pulse_expense_report_public', $rows ),
+		'auto_approve' => site_pulse_expense_auto_approve_get( $uid ),
+		'can_view_all' => $all,
+	] );
+}
+
+// The company-wide archive of APPROVED reports (special view capability).
+add_action( 'wp_ajax_site_pulse_get_approved_expense_reports', 'site_pulse_ajax_get_approved_expense_reports' );
+function site_pulse_ajax_get_approved_expense_reports(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	if ( ! site_pulse_can_view_approved_expense_reports( $uid ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	global $wpdb;
+	$t     = site_pulse_table('expense_reports');
+	$where = "WHERE status = 'approved'";
+	$vals  = [];
+	$start = sanitize_text_field( $_POST['start'] ?? '' );
+	$end   = sanitize_text_field( $_POST['end'] ?? '' );
+	$emp   = (int) ( $_POST['user'] ?? 0 );
+	if ( $start ) { $where .= " AND period_end >= %s";   $vals[] = $start; }
+	if ( $end )   { $where .= " AND period_start <= %s"; $vals[] = $end; }
+	if ( $emp )   { $where .= " AND user_id = %d";        $vals[] = $emp; }
+	$sql  = "SELECT * FROM $t $where ORDER BY approved_at DESC LIMIT 500";
+	$rows = $vals ? $wpdb->get_results( $wpdb->prepare( $sql, ...$vals ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A );
+	wp_send_json_success( [ 'reports' => array_map( 'site_pulse_expense_report_public', $rows ?: [] ) ] );
+}
+
+// Fetch a report's frozen PDF (base64) for download — owner, its approver, or an archive viewer.
+add_action( 'wp_ajax_site_pulse_get_expense_report_pdf', 'site_pulse_ajax_get_expense_report_pdf' );
+function site_pulse_ajax_get_expense_report_pdf(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	$id  = (int) ( $_POST['report_id'] ?? 0 );
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+	$own = (int) $row['user_id'] === site_pulse_effective_user_id();
+	if ( ! $own && ! site_pulse_can_act_on_expense_report( $uid, $row ) && ! site_pulse_can_view_approved_expense_reports( $uid ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+	$b64 = (string) ( $row['pdf_base64'] ?? '' );
+	if ( $b64 === '' ) wp_send_json_error( [ 'message' => 'No PDF stored for this report.' ] );
+	wp_send_json_success( [ 'pdf_base64' => $b64, 'filename' => sanitize_file_name( 'Expense_Report_' . $row['period_end'] . '.pdf' ) ] );
+}
+
+// Settings → Expense Reports: the accounting (AP) email that approved reports are sent to.
+add_action( 'wp_ajax_site_pulse_admin_save_expense_ap_email', 'site_pulse_ajax_admin_save_expense_ap_email' );
+function site_pulse_ajax_admin_save_expense_ap_email(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+	$email = sanitize_email( (string) wp_unslash( $_POST['email'] ?? '' ) );
+	if ( $email !== '' && ! is_email( $email ) ) wp_send_json_error( [ 'message' => 'Enter a valid email address.' ] );
+	site_pulse_set_setting( 'expense_ap_email', $email );
+	wp_send_json_success( [ 'email' => $email ] );
 }
 
 add_action( 'wp_ajax_site_pulse_save_expense', 'site_pulse_ajax_save_expense' );
@@ -8980,6 +9976,11 @@ function site_pulse_ajax_save_expense(): void {
 
 	$date = sanitize_text_field( $_POST['expense_date'] ?? '' );
 	if ( ! $date ) wp_send_json_error( [ 'message' => 'A date is required.' ] );
+
+	// Locked-period guard: once a period is submitted (or approved) its expenses freeze. God can override.
+	if ( ! site_pulse_god_can_override() && site_pulse_expense_report_for_date( $user_id, $date ) ) {
+		wp_send_json_error( [ 'code' => 'period_locked', 'message' => 'This pay period has been submitted for approval and can no longer be edited. Ask your supervisor to send it back if you need to change it.' ] );
+	}
 
 	$amount = round( (float) ( $_POST['amount'] ?? 0 ), 2 );
 	if ( $amount <= 0 ) wp_send_json_error( [ 'message' => 'Enter an amount greater than zero.' ] );
@@ -9003,6 +10004,9 @@ function site_pulse_ajax_save_expense(): void {
 			? site_pulse_expense_account( $section, $category )
 			: sanitize_text_field( wp_unslash( $_POST['account_code'] ?? '' ) ),
 		'amount'           => $amount,
+		// Business Meals only: 'business' or 'personal'. Personal meals have the tip removed from the
+		// reimbursed amount client-side (tip isn't reimbursed); stored for the record + report.
+		'meal_type'        => in_array( $_POST['meal_type'] ?? '', [ 'business', 'personal' ], true ) ? sanitize_text_field( $_POST['meal_type'] ) : null,
 		'updated_at'       => $now,
 	];
 
@@ -9013,6 +10017,15 @@ function site_pulse_ajax_save_expense(): void {
 		if ( ! $existing ) wp_send_json_error( [ 'message' => 'Expense not found.' ] );
 		if ( (int) $existing['user_id'] !== $user_id && ! $is_admin ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 		$old_receipt = (string) ( $existing['receipt_path'] ?? '' );
+	}
+
+	// Receipt REQUIRED on every expense (accounting policy). The row must end up with a receipt:
+	// either a new photo in this request, or (on edit) an existing one that isn't being removed.
+	// Server-side backstop for the client check, so a receiptless expense can't be saved via the API.
+	$has_new_receipt      = ! empty( $_POST['receipt'] );
+	$keeps_existing_receipt = $id && $old_receipt !== '' && empty( $_POST['receipt_remove'] );
+	if ( ! $has_new_receipt && ! $keeps_existing_receipt ) {
+		wp_send_json_error( [ 'code' => 'receipt_required', 'message' => 'A receipt photo is required for every expense. Please attach one before saving.' ] );
 	}
 
 	// Duplicate-receipt guard: on a NEW line (not an edit), block one that exactly matches an expense
@@ -9654,6 +10667,11 @@ function site_pulse_ajax_delete_expense(): void {
 	$is_admin = site_pulse_user_can( $user_id, 'manage_mileage' ) || site_pulse_god_can_override();
 	if ( $owner !== $user_id && ! $is_admin ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
+	// Locked-period guard — can't delete a line out of a submitted/approved report. God can override.
+	if ( ! site_pulse_god_can_override() && site_pulse_expense_report_for_date( $owner, (string) $row['expense_date'] ) ) {
+		wp_send_json_error( [ 'code' => 'period_locked', 'message' => 'This pay period has been submitted for approval and can no longer be edited.' ] );
+	}
+
 	$wpdb->delete( site_pulse_table('expenses'), [ 'id' => $id ] );
 	wp_send_json_success();
 }
@@ -9699,13 +10717,14 @@ function site_pulse_ajax_scan_receipt(): void {
 
 	$prompt  = "This is a photo of a receipt for a business " . strtolower( $sections[ $section ]['label'] ) . " expense. Extract:\n";
 	$prompt .= "- \"category\": the single best-fit key from this list (closest match):\n" . $cat_lines;
-	$prompt .= "- \"amount\": the TOTAL amount paid, as a plain number with no \$ or commas (e.g. 42.18)\n";
-	$prompt .= "- \"description\": a short label, ideally \"<merchant> — <item>\" (e.g. \"Shell — fuel\", \"Discount Tire — trailer tire\"), max ~60 characters\n";
-	$prompt .= "- \"place\": the merchant / restaurant / store name on its own (e.g. \"Olive Garden\", \"Shell\"), or empty string\n";
+	$prompt .= "- \"amount\": the TOTAL amount actually paid INCLUDING any tip/gratuity, as a plain number with no \$ or commas (e.g. 42.18)\n";
+	$prompt .= "- \"tip\": the tip / gratuity amount on the receipt as a plain number (a written-in tip, an auto-gratuity, or a 'Tip'/'Gratuity' line), or 0 if there is no tip. This is used to exclude the tip from personal meals — read it carefully.\n";
+	$prompt .= "- \"place\": the vendor / merchant / restaurant / store name EXACTLY as printed on the receipt (e.g. \"Olive Garden\", \"Shell\"). Read it from the receipt itself — do NOT guess, infer from a logo you're unsure of, or invent a name. If no vendor name is clearly legible on the receipt, return an empty string.\n";
+	$prompt .= "- \"description\": a short label, max ~60 characters. If a vendor name IS legible, use \"<vendor> — <item>\" (e.g. \"Shell — fuel\", \"Discount Tire — trailer tire\"); if NO vendor is legible, use just the item (e.g. \"fuel\") and do NOT invent a vendor name.\n";
 	$prompt .= "- \"date\": the receipt date as YYYY-MM-DD if visible, otherwise an empty string\n";
 	$prompt .= "- \"corners\": the four corners of the RECEIPT PAPER itself (ignore table/hand/background), as percentages of the image, ordered top-left, top-right, bottom-right, bottom-left. Format each as [x,y] where x and y are 0–100 (x across the width, y down the height). ALWAYS give four corners. If part of the receipt runs off the edge of the photo (cut off), use the spot where its edge meets the image border as that corner — clamp that coordinate to 0 or 100 (the last visible spot). Return an empty array [] ONLY if you truly cannot locate the receipt at all.\n";
 	$prompt .= "If a field can't be read, use an empty string (or 0 for amount). Pick the most likely category even if unsure.\n";
-	$prompt .= 'Return ONLY: {"category":"<key>","amount":0,"description":"","place":"","date":"","corners":[[x,y],[x,y],[x,y],[x,y]]}';
+	$prompt .= 'Return ONLY: {"category":"<key>","amount":0,"tip":0,"description":"","place":"","date":"","corners":[[x,y],[x,y],[x,y],[x,y]]}';
 
 	$debug = null;
 	$resp  = site_pulse_call_claude_vision( $image, $media_type, $prompt, $system, [ 'max_tokens' => 400, 'timeout' => 45 ], $debug );
@@ -9736,12 +10755,13 @@ function site_pulse_ajax_scan_receipt(): void {
 	}
 
 	wp_send_json_success( [
-		'category'    => $cat,
-		'amount'      => round( (float) ( $parsed['amount'] ?? 0 ), 2 ),
-		'description' => sanitize_text_field( (string) ( $parsed['description'] ?? '' ) ),
-		'place'       => sanitize_text_field( (string) ( $parsed['place'] ?? '' ) ),
-		'date'        => $date,
-		'corners'     => $corners,
+		'category'      => $cat,
+		'amount'        => round( (float) ( $parsed['amount'] ?? 0 ), 2 ),
+		'tip'           => max( 0, round( (float) ( $parsed['tip'] ?? 0 ), 2 ) ),
+		'description'   => sanitize_text_field( (string) ( $parsed['description'] ?? '' ) ),
+		'place'         => sanitize_text_field( (string) ( $parsed['place'] ?? '' ) ),
+		'date'          => $date,
+		'corners'       => $corners,
 	] );
 }
 
@@ -9856,6 +10876,10 @@ function site_pulse_ajax_save_mileage_entry(): void {
 	$end_toll     = ! empty( $_POST['end_toll'] ) ? 1 : 0;
 	$end_trailer  = ! empty( $_POST['end_trailer'] ) ? 1 : 0;
 	$end_charge   = sanitize_text_field( $_POST['end_charge'] ?? '' );
+	// Optional END-location override: most days end back at Home (a round trip), but the driver can
+	// click the locked END and pick a different final destination for the rare non-round-trip day.
+	// 0 (default) = end at Home.
+	$end_location = (int) ( $_POST['end_location'] ?? 0 );
 	if ( ! is_array( $stops_raw ) )    $stops_raw = [];
 	if ( ! is_array( $purposes_raw ) ) $purposes_raw = [];
 	if ( ! is_array( $tolls_raw ) )    $tolls_raw = [];
@@ -9898,7 +10922,11 @@ function site_pulse_ajax_save_mileage_entry(): void {
 		$seq_trailers = array_merge( [ 0 ], $stop_trailers );
 		$seq_charge   = array_merge( [ '' ], $stop_charge );
 		$seq_notes    = array_merge( [ '' ], $stop_notes );
-		if ( $auto_return ) { $seq[] = $home_id; $seq_purposes[] = ''; $seq_tolls[] = $end_toll; $seq_trailers[] = $end_trailer; $seq_charge[] = $end_charge; $seq_notes[] = ''; }
+		if ( $auto_return ) {
+			// Final destination is Home, unless the driver overrode the END with another location.
+			$final_id = ( $end_location > 0 && $end_location !== $home_id ) ? $end_location : $home_id;
+			$seq[] = $final_id; $seq_purposes[] = ''; $seq_tolls[] = $end_toll; $seq_trailers[] = $end_trailer; $seq_charge[] = $end_charge; $seq_notes[] = '';
+		}
 	} else {
 		if ( count( $stops ) < 2 ) wp_send_json_error( [ 'message' => 'At least two stops are required.' ] );
 		$seq          = $stops;
@@ -10177,6 +11205,11 @@ function site_pulse_ajax_admin_get_mileage_locations(): void {
 		'purposes'         => site_pulse_mileage_purposes(),
 		'require_approval' => site_pulse_get_setting( 'mileage_require_approval', '1' ) === '1',
 		'marker_icons'     => site_pulse_mileage_marker_icons(),
+		// Expense config editors (Chart of Accounts + Categories + mileage→account map).
+		'expense_accounts'         => site_pulse_expense_accounts(),
+		'expense_categories'       => site_pulse_expense_sections(),
+		'expense_mileage_accounts' => site_pulse_expense_mileage_accounts(),
+		'expense_ap_email'         => site_pulse_get_setting( 'expense_ap_email', '' ),
 		'period_length'    => (int) site_pulse_get_setting( 'mileage_period_length', '0' ),
 		'period_anchor'    => site_pulse_get_setting( 'mileage_period_anchor', '' ),
 		'reminders' => [
@@ -10523,6 +11556,82 @@ function site_pulse_ajax_admin_save_mileage_purposes(): void {
 	}
 	site_pulse_set_setting( 'mileage_purposes', wp_json_encode( $clean ) );
 	wp_send_json_success( [ 'purposes' => $clean ] );
+}
+
+// Chart of accounts — the master GL account list ([{number, description}]) that feeds the Section E
+// account dropdown and the category editor. Posted as a JSON string; deduped by number.
+add_action( 'wp_ajax_site_pulse_admin_save_expense_accounts', 'site_pulse_ajax_admin_save_expense_accounts' );
+function site_pulse_ajax_admin_save_expense_accounts(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$raw = json_decode( (string) wp_unslash( $_POST['accounts'] ?? '' ), true );
+	if ( ! is_array( $raw ) ) $raw = [];
+	$clean = [];
+	$seen  = [];
+	foreach ( $raw as $item ) {
+		if ( ! is_array( $item ) ) continue;
+		$num = sanitize_text_field( (string) ( $item['number'] ?? '' ) );
+		if ( $num === '' || isset( $seen[ $num ] ) ) continue;
+		$seen[ $num ] = true;
+		$clean[] = [ 'number' => $num, 'description' => sanitize_text_field( (string) ( $item['description'] ?? '' ) ) ];
+	}
+	site_pulse_set_setting( 'expense_accounts', wp_json_encode( $clean ) );
+	wp_send_json_success( [ 'accounts' => $clean ] );
+}
+
+// Per-section expense categories ({ B:[{key,label,account}], C:[…], D:[…], E:[…], F:[…] }). Existing
+// keys are preserved (so stored account_codes + receipt-scan snapping stay stable); a row with no key
+// (a newly added category) gets a slug from its label. Only the fixed sections are accepted.
+add_action( 'wp_ajax_site_pulse_admin_save_expense_categories', 'site_pulse_ajax_admin_save_expense_categories' );
+function site_pulse_ajax_admin_save_expense_categories(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$raw = json_decode( (string) wp_unslash( $_POST['categories'] ?? '' ), true );
+	if ( ! is_array( $raw ) ) $raw = [];
+
+	$out = [];
+	foreach ( array_keys( site_pulse_expense_sections_defaults() ) as $sec ) {
+		$rows  = ( isset( $raw[ $sec ] ) && is_array( $raw[ $sec ] ) ) ? $raw[ $sec ] : [];
+		$clean = [];
+		$seen  = [];
+		foreach ( $rows as $c ) {
+			if ( ! is_array( $c ) ) continue;
+			$label = sanitize_text_field( (string) ( $c['label'] ?? '' ) );
+			if ( $label === '' ) continue;
+			$key = sanitize_key( (string) ( $c['key'] ?? '' ) );
+			if ( $key === '' ) $key = sanitize_key( sanitize_title( $label ) );
+			if ( $key === '' || isset( $seen[ $key ] ) ) continue;
+			$seen[ $key ] = true;
+			$clean[] = [
+				'key'     => $key,
+				'label'   => $label,
+				'account' => sanitize_text_field( (string) ( $c['account'] ?? '' ) ),
+			];
+		}
+		$out[ $sec ] = $clean;
+	}
+	site_pulse_set_setting( 'expense_categories', wp_json_encode( $out ) );
+	wp_send_json_success( [ 'categories' => site_pulse_expense_sections() ] );
+}
+
+// Which GL accounts mileage posts to (reimbursement / tolls / trailer), so Section A joins the
+// dynamic Summary of Expenses. Posted as a JSON string.
+add_action( 'wp_ajax_site_pulse_admin_save_mileage_accounts', 'site_pulse_ajax_admin_save_mileage_accounts' );
+function site_pulse_ajax_admin_save_mileage_accounts(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$raw = json_decode( (string) wp_unslash( $_POST['mileage_accounts'] ?? '' ), true );
+	if ( ! is_array( $raw ) ) $raw = [];
+	$out = [];
+	foreach ( [ 'reimbursement', 'tolls', 'trailer' ] as $k ) {
+		$out[ $k ] = sanitize_text_field( (string) ( $raw[ $k ] ?? '91310' ) );
+		if ( $out[ $k ] === '' ) $out[ $k ] = '91310';
+	}
+	site_pulse_set_setting( 'expense_mileage_accounts', wp_json_encode( $out ) );
+	wp_send_json_success( [ 'mileage_accounts' => $out ] );
 }
 
 // Bulk-add reviewed destination candidates (from a Timeline/MileIQ import) as approved

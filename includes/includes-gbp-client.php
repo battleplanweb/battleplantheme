@@ -411,23 +411,26 @@ function bpgbp_client_build_geo_payload( WP_Post $post ): array {
 	$state = function_exists( 'get_field' ) ? trim( (string) get_field( 'state', $post->ID ) ) : '';
 
 	// Service label: the primary jobsite_geo-services term, else the site's default_service option.
+	// Those terms are stored as the canonical slug ("roofing-installation--riesel-tx"), so drop the
+	// "--{city-st}" half and humanize what's left → "Roofing Installation".
 	$service = '';
 	$terms   = get_the_terms( $post->ID, 'jobsite_geo-services' );
 	if ( $terms && ! is_wp_error( $terms ) ) {
-		$service = (string) $terms[0]->name;
+		$service = trim( explode( '--', (string) $terms[0]->name )[0] );
+		if ( function_exists( 'bp_format_service' ) ) $service = bp_format_service( $service );
 	}
 	if ( '' === $service ) {
 		$opt     = get_option( 'jobsite_geo' );
 		$service = is_array( $opt ) && ! empty( $opt['default_service'] ) ? (string) $opt['default_service'] : '';
 	}
 
-	// Headline line: "AC Repair in Allen, TX." — omit any piece that's missing.
+	// Headline lead-in: "AC Repair in Allen, TX:" — omit any piece that's missing.
 	$place = trim( $city . ( $city && $state ? ', ' : '' ) . $state );
 	$lead  = trim( $service . ( $service && $place ? ' in ' : '' ) . $place );
-	if ( '' !== $lead ) $lead = rtrim( $lead, '.' ) . '.';
+	if ( '' !== $lead ) $lead = rtrim( $lead, '.:' ) . ':';
 
 	$body    = bpgbp_client_text_summary( $post->post_content, BPGBP_CLIENT_SUMMARY_LIMIT - ( strlen( $lead ) + 2 ) );
-	$summary = trim( $lead . ( $lead && $body ? "\n\n" : '' ) . $body );
+	$summary = trim( $lead . ( $lead && $body ? ' ' : '' ) . $body );
 	$summary = bpgbp_client_text_summary( $summary, BPGBP_CLIENT_SUMMARY_LIMIT ); // final safety clamp
 
 	$payload = array(

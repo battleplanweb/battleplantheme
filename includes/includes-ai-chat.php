@@ -142,9 +142,15 @@ function bp_chat_enqueue_assets(): void {
 	$company = $customer['name'] ?? get_bloginfo( 'name' );
 	$default_greeting = "Hi! Have a question or need service? Ask me anything and I'll help.";
 
-	$default_text_consent = "{$company} can text you about your request. By tapping Yes, you agree to receive "
-		. "SMS messages from {$company} about your inquiry and appointment. Message frequency varies. "
+	$default_text_consent = "{$company} can text you about your request. By tapping Yes, you consent to receive "
+		. "customer care text messages from {$company} about your inquiry and appointment. Message frequency varies. "
 		. "Message & data rates may apply. Reply STOP to unsubscribe or HELP for help.";
+
+	// Always-visible disclosure under the input. Must (per A2P review) state SMS
+	// consent explicitly in its own sentence; the widget appends the Privacy
+	// Policy + Terms links after it.
+	$default_consent = "By providing your mobile number, you consent to receive customer care text messages from "
+		. "{$company}. Message frequency varies; msg & data rates may apply. Reply STOP to opt out.";
 
 	wp_localize_script( 'bp-ai-chat', 'bpChat', [
 		'restUrl'     => esc_url_raw( rest_url( 'bp-chat/v1/message' ) ),
@@ -152,13 +158,12 @@ function bp_chat_enqueue_assets(): void {
 		'company'     => $company,
 		'greeting'    => trim( (string) ( $o['greeting'] ?? '' ) ) ?: $default_greeting,
 		'launcher'    => trim( (string) ( $o['launcher'] ?? '' ) ) ?: 'Chat with us',
-		// Passive notice shown once under the input.
-		'consent'     => trim( (string) ( $o['consent'] ?? '' ) )
-			?: "By chatting you agree to be contacted about your request.",
+		// Always-visible SMS-consent notice under the input (links appended by the widget).
+		'consent'     => trim( (string) ( $o['consent'] ?? '' ) ) ?: $default_consent,
 		// The explicit SMS opt-in disclosure shown on the consent card before any text is sent.
 		'textConsent' => trim( (string) ( $o['text_consent'] ?? '' ) ) ?: $default_text_consent,
 		'privacyUrl'  => trim( (string) ( $o['privacy_url'] ?? '' ) ) ?: '/privacy-policy/',
-		'termsUrl'    => trim( (string) ( $o['terms_url'] ?? '' ) ),
+		'termsUrl'    => trim( (string) ( $o['terms_url'] ?? '' ) ) ?: '/terms-conditions/',
 		'consentYes'  => 'Yes, text me',
 		'consentNo'   => 'No thanks',
 	] );
@@ -512,10 +517,10 @@ function bp_chat_begin_text_thread( array &$conv, array $customer, string $raw_p
 	// (The AI keeps covering the customer until the contractor's first reply.)
 	bp_chat_active_conv_set( (int) $conv['id'] );
 	$label      = bp_chat_conv_label( $conv );
-	$transcript = bp_chat_transcript_text( (int) $conv['id'] );
-	$note       = "📱 {$label} just moved to text ({$phone}).";
+	$transcript = bp_chat_transcript_text( (int) $conv['id'], 20, 1300 );  // cap leaves ~200 chars for the fixed note text, safely under Twilio's 1600 body limit
+	$note       = "New text lead: {$label} ({$phone}).";
 	if ( $transcript !== '' ) $note .= "\n\nChat so far:\n{$transcript}";
-	$note .= "\n\nThey'll text you here. Reply to take over — I'll keep helping until you do.";
+	$note .= "\n\nThey'll text you here. Reply to take over and I'll keep helping until you do.";
 	bp_chat_forward_to_contractor( $note, bp_chat_config() );
 
 	return $ok;
@@ -590,7 +595,7 @@ function bp_chat_deliver_lead( array $lead, string $cid, array $customer, array 
 
 	$lines   = [];
 	$lines[] = "New lead from your {$company} website:";
-	$lines[] = trim( ( $lead['customer_name'] ?? 'Customer' ) . ' — ' . ( $lead['customer_phone'] ?? 'no number given' ) );
+	$lines[] = trim( ( $lead['customer_name'] ?? 'Customer' ) . ' - ' . ( $lead['customer_phone'] ?? 'no number given' ) );
 	if ( ! empty( $lead['customer_email'] ) )  $lines[] = $lead['customer_email'];
 	if ( ! empty( $lead['problem_summary'] ) ) $lines[] = $lead['problem_summary'];
 	if ( ! empty( $lead['urgency'] ) )         $lines[] = 'Urgency: ' . $lead['urgency'];

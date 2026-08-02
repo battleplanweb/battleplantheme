@@ -2439,6 +2439,7 @@ bp_admin_columns([
 		$bp_title,
 		bp_meta('job_date', 'job_date', 'Job Date', ['type' => 'date']),
 		bp_meta('address', 'address', 'Address', []),
+		bp_meta('zip', 'zip', 'ZIP', []),
 		bp_taxonomy('jobsite_geo-service-areas', 'jobsite_geo-service-areas', 'City', []),
 		bp_taxonomy('jobsite_geo-service-types', 'jobsite_geo-service-types', 'Service', []),
 		bp_meta('review', 'review', 'Review', ['type' => 'meta_exists']),

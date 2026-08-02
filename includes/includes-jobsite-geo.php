@@ -409,9 +409,11 @@ function bp_jobsite_setup($post_id, $user) {
           $new_address = $address . ', ' . $city . ', ' . $state . ' ' . $zip;
           update_post_meta($post_id, '_last_geocode_address', $new_address);
 
-     } elseif ($address !== '' && $city !== '' && $state !== '' && $zip !== '') {
+     } elseif ($address !== '' && $city !== '' && $state !== '') {
           // ── No GPS — fall back to Google API as before ────────────
-          $new_address  = $address . ', ' . $city . ', ' . $state . ' ' . $zip;
+          // ZIP is NOT required: street + city + state geocodes cleanly, and
+          // requiring it silently skipped every jobsite whose zip field was blank.
+          $new_address  = trim($address . ', ' . $city . ', ' . $state . ' ' . $zip);
           $last_address = get_post_meta($post_id, '_last_geocode_address', true);
 
           if ($new_address !== $last_address && defined('_PLACES_API') && _PLACES_API) {
@@ -530,6 +532,225 @@ add_action('bp_geo_caption_cron', function($post_id, $img_field, $cap_field) {
 	update_field($cap_field, $alt, $post_id);                 // visible caption (ACF)
 	update_post_meta($aid, '_wp_attachment_image_alt', $alt); // attachment alt
 }, 10, 3);
+
+// ---------------------------------------------------------
+// # Bridge: parented photo uploads → ACF jobsite_photo_N fields
+// ---------------------------------------------------------
+// EVERYTHING about jobsite photos (archive display, AI alt text, crop focus,
+// featured thumbnail, ranking score) reads the ACF jobsite_photo_1..4 fields.
+// Those are only populated by bp_geo_submit(), from IDs the app sends in the
+// submit payload after uploading through the custom /upload endpoint. When a
+// photo instead arrives *parented* to the post (uploaded via /wp/v2/media with a
+// post id, or added in the editor's media modal) nothing writes it into the ACF
+// fields, so it uploads and shows in "Attachments" but is invisible everywhere
+// the customer looks — and the alt-text/focus crons never fire because they're
+// gated on those same empty fields. This bridges the gap: it drops each parented
+// image into the next empty slot and schedules the same caption cron the normal
+// save path uses. Idempotent — filled slots and already-mapped images are left
+// alone, so it never fights bp_geo_submit or the Company Cam / HCP ingest.
+function bp_geo_map_children_to_acf($post_id) {
+	$post_id = (int) $post_id;
+	if (get_post_type($post_id) !== 'jobsite_geo') return 0;
+
+	$slots = [
+		'jobsite_photo_1' => 'jobsite_photo_1_alt',
+		'jobsite_photo_2' => 'jobsite_photo_2_alt',
+		'jobsite_photo_3' => 'jobsite_photo_3_alt',
+		'jobsite_photo_4' => 'jobsite_photo_4_alt',
+	];
+
+	$used  = [];
+	$empty = [];
+	foreach ($slots as $img => $cap) {
+		$val = (int) get_field($img, $post_id);
+		if ($val) $used[$val] = true; else $empty[$img] = $cap;
+	}
+	if (empty($empty)) return 0;
+
+	$children = get_children([
+		'post_parent'    => $post_id,
+		'post_type'      => 'attachment',
+		'post_mime_type' => 'image',
+		'orderby'        => 'date',
+		'order'          => 'ASC',
+		'numberposts'    => -1,
+	]);
+	if (empty($children)) return 0;
+
+	$filled = 0;
+	foreach ($empty as $img => $cap) {
+		foreach ($children as $child) {
+			$aid = (int) $child->ID;
+			if (isset($used[$aid])) continue;   // already in another slot
+
+			update_field($img, $aid, $post_id);
+			$used[$aid] = true;
+			$filled++;
+
+			// Queue AI caption/alt/focus, mirroring bp_jobsite_setup's photo loop.
+			if (trim((string) get_field($cap, $post_id)) === '') {
+				if (trim((string) get_post_meta($aid, '_wp_attachment_image_alt', true)) === '') {
+					update_post_meta($aid, '_wp_attachment_image_alt', get_the_title($post_id));
+				}
+				if (function_exists('bp_ai_alt_available') && bp_ai_alt_available()) {
+					wp_schedule_single_event(time() + 5, 'bp_geo_caption_cron', [$post_id, $img, $cap]);
+				}
+			}
+			break;
+		}
+	}
+
+	if ($filled) {
+		$thumb = (int) get_field('jobsite_photo_1', $post_id);
+		if ($thumb && !has_post_thumbnail($post_id)) set_post_thumbnail($post_id, $thumb);
+	}
+	return $filled;
+}
+
+// New photo parented to a jobsite post (REST /wp/v2/media, editor media modal) —
+// bridge it immediately. Fires with post_parent already set on the insert.
+add_action('add_attachment', function($attachment_id) {
+	$parent = (int) get_post_field('post_parent', $attachment_id);
+	if ($parent && get_post_type($parent) === 'jobsite_geo') {
+		bp_geo_map_children_to_acf($parent);
+	}
+});
+
+// Editor "Update" re-saves the (often empty) photo form fields; re-bridge after
+// ACF's own save so a plain Update repairs a post whose photos are parent-only.
+add_action('acf/save_post', function($post_id) {
+	if (!is_numeric($post_id)) return;
+	if (get_post_type($post_id) !== 'jobsite_geo') return;
+	bp_geo_map_children_to_acf((int) $post_id);
+}, 20);
+
+// One-time reconciliation: repair existing posts whose photos are parented but
+// never reached the ACF fields (invisible until now, no alt text).
+add_action('admin_init', function() {
+	if (get_option('bp_geo_photo_acf_bridge_2026_07_23') === 'completed') return;
+	$posts = get_posts([
+		'post_type'      => 'jobsite_geo',
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	]);
+	foreach ($posts as $pid) bp_geo_map_children_to_acf($pid);
+	delete_transient('bp_geo_health');
+	updateOption('bp_geo_photo_acf_bridge_2026_07_23', 'completed', false);
+});
+
+// One-time reconciliation: jobsites that never geocoded because the ZIP was blank
+// (the app had no zip field, so techs typed it onto the street line). Splits the
+// trailing ZIP back out and re-runs setup. Without this, existing posts stay
+// pinless until someone re-saves each one by hand, and the map sits on {0,0}.
+add_action('admin_init', function() {
+	if (get_option('bp_geo_zip_backfill_2026_08_01') === 'completed') return;
+
+	$posts = get_posts([
+		'post_type'      => 'jobsite_geo',
+		'post_status'    => 'any',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+		'meta_query'     => [[ 'key' => 'geocode', 'compare' => 'NOT EXISTS' ]],
+	]);
+
+	foreach ($posts as $pid) {
+		$address = trim((string) get_field('address', $pid));
+		$zip     = trim((string) get_field('zip', $pid));
+
+		if ($zip === '' && preg_match('/[\s,]+(\d{5}(?:-\d{4})?)\.?$/', $address, $m)) {
+			$prefix = substr($address, 0, strrpos($address, $m[0]));
+			if (!preg_match('/\b(?:box|apt|ste|suite|unit|#)\s*$/i', $prefix)) {
+				update_field('zip', $m[1], $pid);
+				update_field('address', rtrim($prefix, " \t,"), $pid);
+			}
+		}
+
+		// Force a re-geocode — the cached address string is what gates the API call.
+		delete_post_meta($pid, '_last_geocode_address');
+		bp_jobsite_setup($pid, wp_get_current_user());
+	}
+
+	delete_transient('bp_geo_health');
+	updateOption('bp_geo_zip_backfill_2026_08_01', 'completed', false);
+});
+
+// ---------------------------------------------------------
+// # Health check — surface silent jobsite-photo/SEO failures
+// ---------------------------------------------------------
+// Every failure in this system is invisible until someone looks at a live client
+// page: photos that never reached the ACF fields, photos with no AI alt text, or
+// jobs with no /service/ page. This scans published jobsites and shows an admin
+// notice so drift is caught in wp-admin the same day, not on a client site weeks
+// later. Result cached 1h (busted by the reconciliation) — 2 queries + a light
+// per-post loop, so the scan stays cheap even on large fleets.
+function bp_geo_health_scan() {
+	$cached = get_transient('bp_geo_health');
+	if (is_array($cached)) return $cached;
+
+	$out = ['no_photo_map' => [], 'no_alt' => [], 'no_service' => []];
+
+	$ids = get_posts([
+		'post_type'      => 'jobsite_geo',
+		'post_status'    => 'publish',
+		'posts_per_page' => -1,
+		'fields'         => 'ids',
+	]);
+	if (!$ids) { set_transient('bp_geo_health', $out, HOUR_IN_SECONDS); return $out; }
+
+	// One query: which jobsite posts have parented image children.
+	$children = get_posts([
+		'post_type'       => 'attachment',
+		'post_mime_type'  => 'image',
+		'post_status'     => 'inherit',
+		'post_parent__in' => $ids,
+		'posts_per_page'  => -1,
+		'fields'          => 'id=>parent',
+	]);
+	$has_child = array_flip(array_values($children)); // parent id => true
+
+	foreach ($ids as $pid) {
+		$photo1 = (int) get_field('jobsite_photo_1', $pid);
+
+		// Photos uploaded (parented) but never mapped into the ACF fields.
+		if (!$photo1 && isset($has_child[$pid])) $out['no_photo_map'][] = $pid;
+
+		// Mapped photo but no caption/alt (alt cron or API key broken).
+		if ($photo1) {
+			$cap   = trim((string) get_field('jobsite_photo_1_alt', $pid));
+			$alt   = trim((string) get_post_meta($photo1, '_wp_attachment_image_alt', true));
+			$title = get_the_title($pid);
+			if ($cap === '' && ($alt === '' || $alt === $title)) $out['no_alt'][] = $pid;
+		}
+
+		// No service-type term = no /service/ page (default_service unset / AI failing).
+		$types = wp_get_post_terms($pid, 'jobsite_geo-service-types', ['fields' => 'ids']);
+		if (is_wp_error($types) || empty($types)) $out['no_service'][] = $pid;
+	}
+
+	set_transient('bp_geo_health', $out, HOUR_IN_SECONDS);
+	return $out;
+}
+
+add_action('admin_notices', function() {
+	$screen = get_current_screen();
+	if (!$screen || !in_array($screen->id, ['edit-jobsite_geo', 'dashboard'], true)) return;
+	if (!current_user_can('edit_others_posts')) return;
+	if (!function_exists('bp_module_on') || !bp_module_on(get_option('jobsite_geo'))) return;
+
+	$h = bp_geo_health_scan();
+	$msgs = [];
+	if ($h['no_photo_map']) $msgs[] = count($h['no_photo_map']) . ' job(s) with uploaded photos not attached to the page';
+	if ($h['no_alt'])       $msgs[] = count($h['no_alt']) . ' job photo(s) missing AI alt text';
+	if ($h['no_service'])   $msgs[] = count($h['no_service']) . ' job(s) with no service page (missing service type)';
+	if (!$msgs) return;
+
+	printf(
+		'<div class="notice notice-warning"><p><strong>Jobsite GEO health:</strong> %s. <a href="%s">Review jobsites</a></p></div>',
+		esc_html(implode(' &middot; ', $msgs)),
+		esc_url(admin_url('edit.php?post_type=jobsite_geo'))
+	);
+});
 
 // Save important info to meta data upon publishing or updating post
 add_action('save_post', 'battleplan_saveJobsite', 10, 3);
@@ -1053,7 +1274,8 @@ add_filter('template_include', 'battleplan_jobsite_template');
 function battleplan_jobsite_template($template) {
 	if ( is_tax('jobsite_geo-service-areas') || is_tax('jobsite_geo-services') ) {
 		$template = get_template_directory() . '/archive-jobsite_geo.php';
-		$sep = ' · ';
+		// Match the site-wide SEO separator so these titles look consistent in SERPs.
+		$sep = function_exists('bp_seo_sep') ? ' ' . bp_seo_sep() . ' ' : ' · ';
 		$jobsite_term = get_queried_object();
 		$GLOBALS['jobsite_geo-service'] = get_option('jobsite_geo')['default_service'];
 
@@ -1146,6 +1368,19 @@ function battleplan_jobsite_template($template) {
 
 		add_filter('wpseo_metadesc', function($description) {
 			return isset($GLOBALS['jobsite_geo-page_desc']) && $GLOBALS['jobsite_geo-page_desc'] !== '' ? $GLOBALS['jobsite_geo-page_desc'] : $description;
+		}, 20);
+
+		// The two filters above only fire while Yoast is active. With the framework SEO
+		// module driving titles instead, these archives fell back to the raw term name —
+		// "air-conditioner-repair--sunnyvale-tx • Admirable Air • Mesquite, TX" — even
+		// though a properly formatted headline was already being built for the <h1>.
+		// Priority 30 so this lands after bp_seo_document_title() at 20.
+		add_filter('pre_get_document_title', function($title) {
+			return !empty($GLOBALS['jobsite_geo-page_title']) ? $GLOBALS['jobsite_geo-page_title'] : $title;
+		}, 30);
+
+		add_filter('bp_seo_pre_description', function($description) {
+			return !empty($GLOBALS['jobsite_geo-page_desc']) ? $GLOBALS['jobsite_geo-page_desc'] : $description;
 		}, 20);
 	}
 
@@ -2288,6 +2523,17 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 		$term_slug = bp_geo_assign_taxonomy_term( $post_id, $base_service, $city, $state, $terms_list );
 	}
 
+	// Generate the customer-facing archive intro here rather than relying on the
+	// wp_after_insert_post trigger — the term is assigned via wp_set_post_terms
+	// above, which does NOT fire a post-insert. Manual re-runs and the Company Cam
+	// / HCP deferred-cron ingest paths would otherwise leave the term intro-less.
+	if ( $term_slug ) {
+		$svc_term = get_term_by( 'slug', $term_slug, 'jobsite_geo-services' );
+		if ( $svc_term && ! get_term_meta( $svc_term->term_id, 'bp_geo_service_intro', true ) ) {
+			bp_geo_generate_term_intro( $svc_term->term_id );
+		}
+	}
+
 	// Per-publish notification removed — replaced by the daily client digest
 	// (bp_geo_send_daily_digest), which also copies battleplanweb.
 
@@ -3207,6 +3453,19 @@ function bp_geo_submit(WP_REST_Request $request) {
 
 	if (empty($customer) || empty($address) || empty($city) || empty($desc))
 		return new WP_Error('missing_fields', 'Customer name, address, city, and description are required.', ['status' => 400]);
+
+	// Older app builds (and techs typing manually) put the ZIP on the end of the
+	// street line — "Zoysia Ln. 75252". Split it back out so $zip is populated and
+	// the geocoder gets a clean street. App v28+ does this client-side too; this
+	// stays because the PWA is cached on tech phones and updates on its own schedule.
+	if ($zip === '' && preg_match('/[\s,]+(\d{5}(?:-\d{4})?)\.?$/', $address, $m)) {
+		$prefix = substr($address, 0, strrpos($address, $m[0]));
+		// Guard against "PO Box 12345" / "Unit 40506" — a box or unit number is not a ZIP.
+		if (!preg_match('/\b(?:box|apt|ste|suite|unit|#)\s*$/i', $prefix)) {
+			$zip     = $m[1];
+			$address = rtrim($prefix, " \t,");
+		}
+	}
 
 	// Normalize state — server-side safeguard in case a full name slips through
 	if (strlen($state) > 2) {

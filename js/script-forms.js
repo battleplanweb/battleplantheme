@@ -17,6 +17,33 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		initMultiStep(form, wrap);
 	}
 
+	// Phone fields: live-format to (222) 222-2222 as the visitor types, and block submit
+	// until there are 10 digits. Mirrors the server-side normalization in
+	// bp_format_field_values() so what they see is exactly what gets emailed.
+	document.querySelectorAll('form.bp-form-el input[type="tel"]').forEach(initPhone);
+
+	function initPhone(el) {
+		const sync = () => {
+			let d = el.value.replace(/\D/g, '');
+			if (d.length === 11 && d.charAt(0) === '1') d = d.slice(1);
+			d = d.slice(0, 10);
+
+			let out = '';
+			if (d.length > 6)      out = '(' + d.slice(0,3) + ') ' + d.slice(3,6) + '-' + d.slice(6);
+			else if (d.length > 3) out = '(' + d.slice(0,3) + ') ' + d.slice(3);
+			else if (d.length)     out = '(' + d;
+
+			const atEnd = el.selectionStart === el.value.length;
+			if (out !== el.value) {
+				el.value = out;
+				atEnd ? el.setSelectionRange(out.length, out.length) : null;
+			}
+			el.setCustomValidity(el.value && !/^\([2-9]\d{2}\) [2-9]\d{2}-\d{4}$/.test(el.value) ? 'Please enter a valid 10-digit phone number.' : '');
+		};
+		el.addEventListener('input', sync);
+		el.addEventListener('blur', sync);
+	}
+
 	function bindFetchSubmit(form) {
 		form.addEventListener('submit', e => {
 			// In multi-step forms the submit handler may already have prevented default

@@ -152,6 +152,7 @@ const SP_STAT_ICONS = {
 	wallet:  '<path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0H5a2 2 0 0 0-2 2z"/><path d="M3 8h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/>',
 	clock:   '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
 	items:   '<rect x="3" y="4.5" width="3.2" height="3.2" rx="0.6"/><rect x="3" y="10.4" width="3.2" height="3.2" rx="0.6"/><rect x="3" y="16.3" width="3.2" height="3.2" rx="0.6"/><path d="M9.8 6.1h11.2"/><path d="M9.8 12h11.2"/><path d="M9.8 17.9h11.2"/>',
+	plane:   '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
 };
 
 function spStatIcon(key, tint) {
@@ -250,7 +251,7 @@ const SP_CLICK_SELECTOR = 'button, a[href], [role="button"], [data-nav]';
 // Never tag these: real buttons (.sp-btn keep their own hover), and classes that carry a clickable
 // style but aren't actually clickable in every context (e.g. .sp-msg-members is a button in one
 // place and a plain container in another).
-const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer, .sp-mileage-end-trailer';
+const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer, .sp-mileage-end-trailer, .sp-radio-inline, .sp-recurring-check, .sp-appr-card, .sp-arch-row, .sp-appr-auto';
 function spTagClickable(el) {
 	if (!el || el.nodeType !== 1 || el.classList.contains('sp-button')) return;
 	if (el.closest('#wpadminbar')) return;
@@ -579,6 +580,9 @@ function activatePanel(panelId) {
 		initDirectory();
 		loadDirectory();
 	}
+	if (panelId === 'customer-connect-customers') { initCcCustomers(); loadCcCustomers(); }
+	if (panelId === 'customer-connect-send')      { initCcSend(); loadCcSegments(); }
+	if (panelId === 'customer-connect-schedule')  { initCcSchedule(); loadCcSchedule(); }
 	if (panelId === 'emails') {
 		initEmails();
 		loadEmails();
@@ -603,8 +607,17 @@ function activatePanel(panelId) {
 	if (panelId === 'other-expenses') {
 		initOtherExpenses();
 	}
+	if (panelId === 'travel-expenses') {
+		initTravelExpenses();
+	}
 	if (panelId === 'expense-report') {
 		initExpenseReport();
+	}
+	if (panelId === 'approve-expense') {
+		initApproveExpense();
+	}
+	if (panelId === 'approved-expense') {
+		initApprovedExpense();
 	}
 	if (panelId.indexOf('forms-') === 0) {
 		initFormsPanel(panelId);
@@ -672,7 +685,12 @@ function spRenderPageAccessBar(bar, panelId, d) {
 	// + a Roles picker + a People picker. Checkbox lists like the New Message / action-item people picker.
 	const pickerHtml = (kind, label, items, valKey, cap) => {
 		const nOn = items.filter(i => i.has).length;
-		const rows = items.map(i =>
+		// Granted first (checked, alphabetical), then the rest (unchecked, alphabetical). Sorted at
+		// render time only, so rows don't jump around as you check/uncheck; regroups on next open/load.
+		const sorted = [...items].sort((a, b) =>
+			(!!b.has - !!a.has) || (a.label || a.name || '').localeCompare(b.label || b.name || '')
+		);
+		const rows = sorted.map(i =>
 			`<label class="sp-pa-row"><input type="checkbox" class="sp-pa-cb" data-kind="${kind}" data-cap="${esc(cap)}" value="${i[valKey]}"${i.has ? ' checked' : ''}><span class="sp-pa-name">${esc(i.label || i.name)}</span></label>`
 		).join('');
 		return '<div class="sp-pa-picker">'
@@ -686,7 +704,7 @@ function spRenderPageAccessBar(bar, panelId, d) {
 	let rowsHtml = '';
 	(d.permissions || []).forEach(p => {
 		rowsHtml += '<div class="sp-pa-inner">';
-		rowsHtml += `<span class="sp-pa-label">Permission: <span class="sp-pa-cap">${esc(p.cap_label)}</span></span>`;
+		rowsHtml += `<span class="sp-pa-label">${esc(p.cap_label)}</span>`;
 		rowsHtml += pickerHtml('role', 'Roles', p.roles, 'id', p.cap);
 		rowsHtml += pickerHtml('user', 'People', p.users, 'user_id', p.cap);
 		rowsHtml += '</div>';
@@ -699,8 +717,7 @@ function spRenderPageAccessBar(bar, panelId, d) {
 	const nPerm = (d.permissions || []).length;
 	bar.innerHTML =
 		`<button type="button" class="sp-pa-master-toggle${_spPaOpen ? ' open' : ''}" aria-expanded="${_spPaOpen ? 'true' : 'false'}">`
-		+ '<span class="sp-pa-master-label">Grant Permissions</span>'
-		+ ( nPerm ? `<span class="sp-pa-count">${nPerm}</span>` : '' )
+		+ `<span class="sp-pa-master-label">Grant Permissions${nPerm ? ` · ${nPerm}` : ''}</span>`
 		+ caret
 		+ '</button>'
 		+ `<div class="sp-pa-body"${_spPaOpen ? '' : ' hidden'}>${rowsHtml}</div>`;
@@ -3965,6 +3982,7 @@ function initAdmin() {
 	const modulesContent = $('#sp-admin-modules-content');
 	const formsCatContent = $('#sp-admin-forms-content');
 	const aiPromptsContent = $('#sp-admin-ai-prompts-content');
+	const ccSettingsContent = $('#sp-admin-customer-connect-content');
 
 	if (usersContent) loadAdminUsers();
 	if (tiersContent) loadAdminTiers();
@@ -3976,6 +3994,7 @@ function initAdmin() {
 	if (modulesContent) loadAdminModules();
 	if (formsCatContent) loadFormSettings();
 	if (aiPromptsContent) loadAiPrompts();
+	if (ccSettingsContent) loadCcSettings();
 	if ($('#sp-admin-ai-roles-content')) loadAiRoles();
 
 	initActionItems();
@@ -4525,6 +4544,7 @@ function renderAdminUsers(wrap, data) {
 
 	let html = '<div class="sp-admin-toolbar">';
 	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-user-btn">+ Add User</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-link-user-btn">Link Existing WP User</button>';
 	// GOD only: one-click cleanup of orphaned profiles (rows whose WP login is already gone —
 	// they show with blank name/username/email).
 	if (D.isGod) {
@@ -4578,6 +4598,7 @@ function renderAdminUsers(wrap, data) {
 // Wire the Add User + Purge Orphans buttons (present in both the empty and populated states).
 function spWireUsersToolbar(wrap) {
 	$('#sp-add-user-btn')?.addEventListener('click', () => showUserForm(null, _spUsers.roles, _spUsers.locations, _spUsers.users, _spUsers.mileageLocations));
+	$('#sp-link-user-btn')?.addEventListener('click', () => showLinkUserForm(_spUsers.roles, _spUsers.locations));
 	$('#sp-god-purge-orphans')?.addEventListener('click', async (e) => {
 		const btn = e.currentTarget;
 		if (!confirm('Purge ALL orphaned profiles (users whose login no longer exists) and their leftover data? This cannot be undone.')) return;
@@ -4715,6 +4736,72 @@ function spPermGridHtml(roles, roleId, user, applyStored) {
 	});
 	h += '</div>';
 	return h;
+}
+
+// Link an EXISTING WordPress account as a Site Pulse user instead of creating a new one. Fetches WP
+// users who don't yet have a Site Pulse profile, then attaches the chosen role/location. Their WP
+// login and existing role are kept (see site_pulse_link_existing_user on the server).
+async function showLinkUserForm(roles, locations) {
+	const wrap = spFormModal();
+	wrap.innerHTML = '<div class="sp-card sp-report-form-wrap" style="margin-top:20px;"><div class="sp-loading"></div></div>';
+
+	let linkable = [];
+	try {
+		const res = await spAjax('site_pulse_admin_get_linkable_users', {});
+		if (!res.success) { wrap.innerHTML = `<div class="sp-card sp-report-form-wrap" style="margin-top:20px;"><div class="sp-empty">${esc(res.data?.message || 'Could not load users.')}</div></div>`; return; }
+		linkable = res.data.users || [];
+	} catch (e) {
+		wrap.innerHTML = '<div class="sp-card sp-report-form-wrap" style="margin-top:20px;"><div class="sp-empty">Error loading WordPress users.</div></div>';
+		return;
+	}
+
+	let html = '<div class="sp-card sp-report-form-wrap" style="margin-top:20px;">';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Link Existing WP User</h3>';
+	html += '<div class="sp-form-header-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-user-form-cancel">Cancel</button></div></div>';
+
+	if (!linkable.length) {
+		html += '<div class="sp-empty-state"><p>Every WordPress user is already a Site Pulse user.</p></div></div>';
+		wrap.innerHTML = html;
+		markUniqueSpans(wrap);
+		$$('.sp-user-form-cancel', wrap).forEach(b => b.addEventListener('click', () => closeFormModal()));
+		return;
+	}
+
+	const userOpts = linkable.map(u => `<option value="${u.id}">${esc(u.label)}</option>`).join('');
+	const roleOpts = roles.map(r => `<option value="${r.id}">${esc(r.label)}</option>`).join('');
+	const locOpts = '<option value="0">None</option>' + locations.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
+
+	html += '<form id="sp-link-user-form">';
+	html += '<p class="sp-text-secondary" style="margin:0 0 4px;">Adopt a WordPress account that already exists (e.g. a client who already logs in). Their WordPress login and existing role are kept — this only adds a Site Pulse role.</p>';
+	html += `<div class="sp-form-group"><label>WordPress user</label><select name="wp_user_id" class="sp-select" required>${userOpts}</select></div>`;
+	html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
+	html += `<div class="sp-form-group"><label>Role</label><select name="role_id" class="sp-select" required>${roleOpts}</select></div>`;
+	html += `<div class="sp-form-group"><label>Home Base</label><select name="location_id" class="sp-select">${locOpts}</select></div>`;
+	html += '</div>';
+	html += '<div class="sp-report-form-actions">';
+	html += '<button type="submit" class="unique sp-btn sp-btn-primary">Link User</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-user-form-cancel">Cancel</button>';
+	html += '</div></form></div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	$$('.sp-user-form-cancel', wrap).forEach(b => b.addEventListener('click', () => closeFormModal()));
+	$('#sp-link-user-form', wrap)?.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const form = e.currentTarget;
+		const btn = form.querySelector('button[type="submit"]');
+		if (btn) btn.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_admin_link_user', {
+				wp_user_id:  form.wp_user_id.value,
+				role_id:     form.role_id.value,
+				location_id: form.location_id.value,
+			});
+			if (res.success) { closeFormModal(); loadAdminUsers(); }
+			else { alert(res.data?.message || 'Could not link user.'); if (btn) btn.disabled = false; }
+		} catch (err) { alert('Error linking user.'); if (btn) btn.disabled = false; }
+	});
 }
 
 function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
@@ -6016,6 +6103,56 @@ function spApplyVars(vars) {
 }
 
 let spColorState = null;
+
+// Settings → Customer Connect — the white-label customer app's branding/config, saved into Site
+// Pulse settings (cc_-prefixed) which cc_get() now prefers over the functions-site.php option.
+async function loadCcSettings() {
+	const wrap = $('#sp-admin-customer-connect-content');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+	let s = {};
+	try {
+		const res = await spAjax('site_pulse_cc_get_settings', {});
+		if (!res.success) { wrap.innerHTML = '<p>Error loading Customer Connect settings.</p>'; return; }
+		s = res.data.settings || {};
+	} catch (e) { wrap.innerHTML = '<p>Error loading Customer Connect settings.</p>'; return; }
+
+	const field = (id, label, val, ph, hint) =>
+		`<div class="sp-form-group"><label>${esc(label)}</label>`
+		+ (hint ? `<p class="sp-help-text" style="margin:0 0 6px;">${hint}</p>` : '')
+		+ `<input type="text" id="sp-cc-${id}" class="sp-input" value="${esc(val || '')}" placeholder="${esc(ph || '')}"></div>`;
+
+	let html = '<div class="sp-card sp-settings-card">';
+	html += '<h3 style="margin:0 0 4px;">Customer Connect</h3>';
+	html += '<p class="sp-help-text" style="margin:0 0 16px;">Branding and config for the white-label customer app. These override what\'s set in functions-site.php. Reinstall the app on a device to see branding changes.</p>';
+	html += field('app_name', 'App name', s.app_name, 'e.g. MAK Comfort Companion');
+	html += field('company_name', 'Company name', s.company_name, 'e.g. MAK Comfort');
+	html += field('pwa_short_name', 'Home-screen label', s.pwa_short_name, 'e.g. Comfort', 'Short name shown under the installed icon (defaults to the first word of the app name).');
+	html += field('theme_color', 'Theme color', s.theme_color, '#0f766e or var(--main-red)');
+	html += field('pwa_background_color', 'Splash background', s.pwa_background_color, '#ffffff');
+	html += field('pwa_icon_url', 'App icon URL', s.pwa_icon_url, 'https://…/app-icon.png', 'Media Library URL of a square icon. Blank = the child-theme app icon / Site Icon.');
+	html += field('push_contact', 'Push contact', s.push_contact, 'mailto:you@domain.com', 'VAPID contact address for push (defaults to the site admin email).');
+	html += '<div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-cc-settings-save">Save</button><span class="sp-help-text" id="sp-cc-settings-status"></span></div>';
+	html += '</div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	$('#sp-cc-settings-save', wrap)?.addEventListener('click', async () => {
+		const btn = $('#sp-cc-settings-save', wrap);
+		const st = $('#sp-cc-settings-status', wrap);
+		const keys = ['app_name', 'company_name', 'pwa_short_name', 'theme_color', 'pwa_background_color', 'pwa_icon_url', 'push_contact'];
+		const data = {};
+		keys.forEach(k => { const el = $('#sp-cc-' + k, wrap); if (el) data[k] = el.value.trim(); });
+		btn.disabled = true;
+		if (st) st.textContent = 'Saving…';
+		try {
+			const res = await spAjax('site_pulse_cc_save_settings', data);
+			if (st) st.textContent = res.success ? 'Saved.' : (res.data?.message || 'Error.');
+		} catch (e) { if (st) st.textContent = 'Error saving.'; }
+		btn.disabled = false;
+	});
+}
 
 async function loadAdminSettings() {
 	const wrap = $('#sp-admin-settings-content');
@@ -7398,6 +7535,177 @@ async function spAjax(action, data = {}) {
 		console.error('Site Pulse: Invalid JSON response:', text.substring(0, 200));
 		throw new Error('Invalid response from server');
 	}
+}
+
+/*--------------------------------------------------------------
+# Home Base — staff side (customer roster, push composer, scheduling inbox)
+--------------------------------------------------------------*/
+
+// --- Customers roster ---
+let _spCcCustWired = false;
+let _spCcCustT = null;
+
+function initCcCustomers() {
+	if (_spCcCustWired) return;
+	$('#sp-cc-cust-search')?.addEventListener('input', () => { clearTimeout(_spCcCustT); _spCcCustT = setTimeout(loadCcCustomers, 300); });
+	$('#sp-cc-cust-clear')?.addEventListener('click', () => { const s = $('#sp-cc-cust-search'); if (s) s.value = ''; loadCcCustomers(); });
+	_spCcCustWired = true;
+}
+
+async function loadCcCustomers() {
+	const list = $('#sp-cc-customers-list');
+	if (!list) return;
+	list.innerHTML = '<div class="sp-loading"></div>';
+	try {
+		const res = await spAjax('site_pulse_cc_customers', { search: $('#sp-cc-cust-search')?.value.trim() || '' });
+		if (!res.success) { list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load customers.')}</div>`; return; }
+		const items = res.data.items || [];
+		const cnt = $('#sp-cc-cust-count');
+		if (cnt) cnt.textContent = `${items.length} ${items.length === 1 ? 'customer' : 'customers'}`;
+		if (!items.length) { list.innerHTML = '<div class="sp-empty">No customers yet.</div>'; return; }
+		list.innerHTML = items.map(ccCustCard).join('');
+		markUniqueSpans(list);
+	} catch (e) {
+		list.innerHTML = '<div class="sp-empty">Error loading customers.</div>';
+	}
+}
+
+function ccCustCard(c) {
+	const sub = c.subscribed
+		? '<span class="unique sp-status-badge sp-status-review">Subscribed</span>'
+		: '<span class="unique sp-status-badge sp-status-draft">No app</span>';
+	const meta = [c.location, c.equipment ? `${c.equipment} unit${c.equipment === 1 ? '' : 's'}` : ''].filter(Boolean).join(' &middot; ');
+	return `<div class="sp-card sp-cc-cust-card">
+		<div class="sp-card-body sp-cc-cust-body">
+			<div class="sp-cc-cust-main">
+				<span class="unique sp-cc-cust-name">${esc(c.name)}</span>
+				${c.contact ? `<span class="unique sp-cc-cust-contact">${esc(c.contact)}</span>` : ''}
+				${meta ? `<span class="unique sp-cc-cust-meta">${meta}</span>` : ''}
+			</div>
+			${sub}
+		</div>
+	</div>`;
+}
+
+// --- Push composer (segment broadcast) ---
+let _spCcSendWired = false;
+
+function initCcSend() {
+	if (_spCcSendWired) return;
+	$('#sp-cc-send-btn')?.addEventListener('click', ccSend);
+	_spCcSendWired = true;
+}
+
+async function loadCcSegments() {
+	const sel = $('#sp-cc-audience');
+	const notice = $('#sp-cc-send-notice');
+	if (!sel) return;
+	try {
+		const res = await spAjax('site_pulse_cc_segments', {});
+		if (!res.success) { sel.innerHTML = `<option value="">${esc(res.data?.message || 'Unavailable')}</option>`; return; }
+		const segs = res.data.segments || [];
+		sel.innerHTML = segs.map(s => `<option value="${esc(s.key)}">${esc(s.label)} (${s.count})</option>`).join('');
+		const ready = !!res.data.push_ready;
+		if (notice) notice.innerHTML = ready ? '' : '<div class="sp-empty">Push is not configured on this site yet.</div>';
+		const btn = $('#sp-cc-send-btn'); if (btn) btn.disabled = !ready;
+	} catch (e) {
+		sel.innerHTML = '<option value="">Error</option>';
+	}
+}
+
+async function ccSend() {
+	const btn = $('#sp-cc-send-btn');
+	const result = $('#sp-cc-send-result');
+	const setMsg = (txt, cls) => { if (result) { result.textContent = txt; result.className = 'sp-cc-send-result' + (cls ? ' ' + cls : ''); } };
+	const segment = $('#sp-cc-audience')?.value || '';
+	const title = $('#sp-cc-title')?.value.trim() || '';
+	if (!title)   { setMsg('Add a title.', 'is-error'); return; }
+	if (!segment) { setMsg('Pick an audience.', 'is-error'); return; }
+	if (btn) btn.disabled = true;
+	setMsg('Sending…', '');
+	try {
+		const res = await spAjax('site_pulse_cc_send', {
+			target: 'segment',
+			segment: segment,
+			title: title,
+			body: $('#sp-cc-body')?.value.trim() || '',
+			url: $('#sp-cc-url')?.value.trim() || '',
+		});
+		if (!res.success) {
+			setMsg(res.data?.message || 'Could not send.', 'is-error');
+		} else {
+			const d = res.data || {};
+			const got = d.delivered ?? 0, to = d.recipients ?? got;
+			setMsg(`Sent to ${got} of ${to} device${to === 1 ? '' : 's'}.`, 'is-ok');
+			['sp-cc-title', 'sp-cc-body', 'sp-cc-url'].forEach(id => { const el = $('#' + id); if (el) el.value = ''; });
+		}
+	} catch (e) {
+		setMsg('Error sending.', 'is-error');
+	}
+	if (btn) btn.disabled = false;
+}
+
+// --- Scheduling inbox ---
+let _spCcSchedWired = false;
+let _spCcSchedCanManage = false;
+
+function initCcSchedule() {
+	if (_spCcSchedWired) return;
+	$('#sp-cc-schedule-list')?.addEventListener('click', onCcSchedClick);
+	_spCcSchedWired = true;
+}
+
+async function loadCcSchedule() {
+	const list = $('#sp-cc-schedule-list');
+	if (!list) return;
+	list.innerHTML = '<div class="sp-loading"></div>';
+	try {
+		const res = await spAjax('site_pulse_cc_schedule', {});
+		if (!res.success) { list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load requests.')}</div>`; return; }
+		const items = res.data.items || [];
+		_spCcSchedCanManage = !!res.data.can_manage;
+		if (!items.length) { list.innerHTML = '<div class="sp-empty">No scheduling requests.</div>'; return; }
+		list.innerHTML = items.map(ccSchedCard).join('');
+		markUniqueSpans(list);
+	} catch (e) {
+		list.innerHTML = '<div class="sp-empty">Error loading requests.</div>';
+	}
+}
+
+function ccSchedCard(r) {
+	const when = [r.preferred_date, r.preferred_window].filter(Boolean).join(' ') || 'No preference';
+	const badge = r.status === 'new' ? 'sp-status-pending' : (r.status === 'dismissed' ? 'sp-status-draft' : 'sp-status-review');
+	const actions = _spCcSchedCanManage
+		? `<div class="sp-cc-sched-actions">
+			<button type="button" class="unique sp-btn sp-btn-ghost" data-sched="scheduled" data-id="${r.id}">Scheduled</button>
+			<button type="button" class="unique sp-btn sp-btn-ghost" data-sched="done" data-id="${r.id}">Done</button>
+			<button type="button" class="unique sp-btn sp-btn-ghost" data-sched="dismissed" data-id="${r.id}">Dismiss</button>
+		</div>` : '';
+	return `<div class="sp-card sp-cc-sched-card" data-id="${r.id}">
+		<div class="sp-card-body">
+			<div class="sp-cc-sched-head">
+				<span class="unique sp-cc-sched-name">${esc(r.customer)}</span>
+				<span class="unique sp-status-badge ${badge}">${esc(r.status)}</span>
+			</div>
+			${r.contact ? `<div class="unique sp-cc-sched-contact">${esc(r.contact)}</div>` : ''}
+			<div class="sp-cc-sched-meta">${esc(r.type || 'Service')} &middot; ${esc(when)}${r.urgency && r.urgency !== 'normal' ? ' &middot; ' + esc(r.urgency) : ''}</div>
+			${r.message ? `<div class="sp-cc-sched-msg">${esc(r.message)}</div>` : ''}
+			${actions}
+		</div>
+	</div>`;
+}
+
+async function onCcSchedClick(e) {
+	const btn = e.target.closest('[data-sched]');
+	if (!btn) return;
+	const id = btn.getAttribute('data-id');
+	const status = btn.getAttribute('data-sched');
+	btn.disabled = true;
+	try {
+		const res = await spAjax('site_pulse_cc_schedule_update', { id: id, status: status });
+		if (res.success) loadCcSchedule();
+		else btn.disabled = false;
+	} catch (err) { btn.disabled = false; }
 }
 
 /*--------------------------------------------------------------
@@ -9233,6 +9541,9 @@ function initSurveys() {
 		$('#sp-survey-refresh-btn')?.addEventListener('click', () => loadSurveys());
 		$('#sp-survey-filter-location')?.addEventListener('change', () => loadSurveys());
 		$('#sp-survey-filter-range')?.addEventListener('change', () => loadSurveys());
+		// Source (Web / Imported) is a client-side view filter — the value is already on each card, so
+		// just re-render (no refetch).
+		$('#sp-survey-filter-source')?.addEventListener('change', () => renderSurveys());
 		$('#sp-survey-archive-toggle')?.addEventListener('click', () => { spSurveyViewArchived = !spSurveyViewArchived; loadSurveys(); });
 		let _surveySearchT;
 		$('#sp-survey-search')?.addEventListener('input', () => { clearTimeout(_surveySearchT); _surveySearchT = setTimeout(() => loadSurveys(), 300); });
@@ -9359,8 +9670,12 @@ function surveyBars(dist) {
 function renderSurveys() {
 	const list = $('#sp-survey-list');
 	if (!list) return;
-	list.innerHTML = spSurveys.length
-		? spSurveys.map(renderSurveyCard).join('')
+	// Client-side Source filter (Web / Imported); '' = all. Source is 'imported' on cards without a
+	// web submission fingerprint, else 'web'.
+	const src = $('#sp-survey-filter-source')?.value || '';
+	const items = src ? spSurveys.filter(s => (s.source === 'imported' ? 'imported' : 'web') === src) : spSurveys;
+	list.innerHTML = items.length
+		? items.map(renderSurveyCard).join('')
 		: '<div class="sp-empty">No comment cards in this view.</div>';
 }
 
@@ -9395,11 +9710,17 @@ function renderSurveyCard(s) {
 	const editBtn = (spSurveyCanManage || spSurveyCanDelete) ? iconBtn('edit', 'sp-survey-edit-btn', `data-id="${s.id}"`) : '';
 	const del = spSurveyCanDelete ? iconBtn('delete', 'sp-survey-del-btn', `data-id="${s.id}"`) : '';
 
+	// How the card arrived: forwarded from a public survey form ("Web") vs digitized from a photo/
+	// upload ("Imported"). Server sends s.source = 'web' | 'imported'.
+	const imported = s.source === 'imported';
+	const sourcePill = `<span class="sp-survey-source sp-survey-source-${imported ? 'imported' : 'web'}">${imported ? 'Imported' : 'Web'}</span>`;
+
 	return (
 		`<div class="sp-card-sm sp-survey-card" data-id="${s.id}">` +
 			'<div class="sp-survey-top">' +
 				(s.location ? `<div class="sp-survey-loc">${esc(s.location)}</div>` : '') +
 				(date ? `<div class="sp-survey-date">${esc(date)}</div>` : '') +
+				sourcePill +
 				(tags ? `<div class="sp-survey-tags">${tags}</div>` : '') +
 			'</div>' +
 			`<div class="sp-survey-rates">${rows}</div>` +
@@ -9951,7 +10272,7 @@ function calcHeaderValue(calc, dateStr) {
 let mileageLocations = [];
 let mileageChargeOptions = []; // Home Bases (stores) with a Location #, for the "Charge To" picker
 let mileageRate = 0.67;
-let mileageHomeId = 0; // this driver's home-base location id (start/end bookend), 0 if unset
+let mileageHomeId = 0; // this driver's customer-connect location id (start/end bookend), 0 if unset
 let mileagePurposes = []; // editable library of common business purposes (datalist source)
 let mileageRequireApproval = true; // when false, drivers may save destinations straight to the database (global or personal)
 let mileagePeriodLength = 0;  // pay-period length in days (0 = use calendar months for the Jump menu)
@@ -9981,7 +10302,6 @@ function initMileage() {
 	$('#sp-mileage-add-btn')?.addEventListener('click', () => showMileageForm());
 	$('#sp-mileage-map-btn')?.addEventListener('click', () => activatePanel('mileage-map'));
 	$('#sp-mileage-pdf-btn')?.addEventListener('click', () => exportMileagePDF());
-	$('#sp-mileage-csv-btn')?.addEventListener('click', () => exportMileageCSV());
 	$('#sp-mileage-filter-clear')?.addEventListener('click', () => {
 		$('#sp-mileage-filter-start').value = '';
 		$('#sp-mileage-filter-end').value = '';
@@ -10327,7 +10647,9 @@ function mPeriodLabel(s, e) {
 
 // Extrapolate pay periods of `lengthDays` from an anchor date, indefinitely in both directions.
 // Returns the period containing today plus `back` earlier and `fwd` later ones, newest first.
-function computeMileagePeriods(anchorIso, lengthDays, back = 24, fwd = 1) {
+// fwd defaults to 0: the jump menus must not offer a future period — the current one is the latest
+// selectable. Callers that genuinely need the next period (e.g. the Settings preview) pass fwd=1.
+function computeMileagePeriods(anchorIso, lengthDays, back = 24, fwd = 0) {
 	const anchor = mDateFromIso(anchorIso);
 	const today = new Date(); today.setHours(0, 0, 0, 0);
 	const MS_DAY = 86400000;
@@ -10694,6 +11016,7 @@ async function autoSaveMileageEntry() {
 		stops: stopsArr, purposes: purposesArr, tolls: tollsArr, trailers: trailersArr, charge_to: chargeArr, line_notes: notesArr,
 		auto_return_home: mileageHomeId ? 1 : 0,
 		end_toll: readMileageEndToll(), end_trailer: readMileageEndTrailer(), end_charge: readMileageEndChargeTo(),
+		end_location: readMileageEndLocation(),
 	};
 
 	mileageSaving = true;
@@ -10740,6 +11063,7 @@ async function showMileageForm(entryId = 0) {
 	let endCharge = '';           // "Charge To" for the final leg home (END bookend)
 	let endToll = 0;              // toll flag on the final leg home (END bookend)
 	let endTrailer = 0;           // trailer flag on the final leg home (END bookend)
+	let endLoc = 0;               // END-location override (0 = day ends at Home / round trip)
 	let autoReturn = true;
 	if (entryId) {
 		const res = await spAjax('site_pulse_get_mileage_entry', { entry_id: entryId });
@@ -10757,11 +11081,14 @@ async function showMileageForm(entryId = 0) {
 			// form shows only the editable middle; the home start/end are re-applied by render.
 			if (mileageHomeId) {
 				if (seq.length && seq[0] === mileageHomeId) { seq = seq.slice(1); seqP = seqP.slice(1); seqT = seqT.slice(1); seqTr = seqTr.slice(1); seqC = seqC.slice(1); seqN = seqN.slice(1); }
-				if (seq.length && seq[seq.length - 1] === mileageHomeId) {
-					// the leg ARRIVING home carries the END toll/trailer/charge — keep them before stripping
+				// The final node is the END bookend — Home on a round trip, or an overridden
+				// destination on a rare non-round-trip day. Keep its toll/trailer/charge, remember the
+				// override when it isn't Home, then strip it so the form shows only the middle stops.
+				if (autoReturn && seq.length) {
 					endToll = seqT[seqT.length - 1] ? 1 : 0;
 					endTrailer = seqTr[seqTr.length - 1] ? 1 : 0;
 					endCharge = seqC[seqC.length - 1] || '';
+					if (seq[seq.length - 1] !== mileageHomeId) endLoc = seq[seq.length - 1];
 					seq = seq.slice(0, -1); seqP = seqP.slice(0, -1); seqT = seqT.slice(0, -1); seqTr = seqTr.slice(0, -1); seqC = seqC.slice(0, -1); seqN = seqN.slice(0, -1);
 				}
 			}
@@ -10783,7 +11110,7 @@ async function showMileageForm(entryId = 0) {
 		date, autoReturn,
 		stops: stops.slice(), purposes: purposes.slice(), tolls: tolls.slice(),
 		trailers: trailers.slice(), chargeTos: chargeTos.slice(), lineNotes: lineNotes.slice(),
-		endCharge, endToll, endTrailer,
+		endCharge, endToll, endTrailer, endLoc,
 	} : null;
 
 	let html = '<div class="sp-card-header sp-header-grid sp-report-form-header">';
@@ -10817,7 +11144,7 @@ async function showMileageForm(entryId = 0) {
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
 
-	renderMileageStops(stops, autoReturn, purposes, tolls, trailers, endToll, endTrailer, chargeTos, endCharge, lineNotes);
+	renderMileageStops(stops, autoReturn, purposes, tolls, trailers, endToll, endTrailer, chargeTos, endCharge, lineNotes, endLoc);
 
 	// Log Day: commit — flush any pending auto-save, then close and refresh the list.
 	$('.sp-mileage-log-btn', wrap)?.addEventListener('click', async () => {
@@ -10833,7 +11160,7 @@ async function showMileageForm(entryId = 0) {
 		clearTimeout(mileageSaveTimer);
 		if (mileageFormDirty) {
 			if (entryId && _mileageOrig) {
-				renderMileageStops(_mileageOrig.stops, _mileageOrig.autoReturn, _mileageOrig.purposes, _mileageOrig.tolls, _mileageOrig.trailers, _mileageOrig.endToll, _mileageOrig.endTrailer, _mileageOrig.chargeTos, _mileageOrig.endCharge, _mileageOrig.lineNotes);
+				renderMileageStops(_mileageOrig.stops, _mileageOrig.autoReturn, _mileageOrig.purposes, _mileageOrig.tolls, _mileageOrig.trailers, _mileageOrig.endToll, _mileageOrig.endTrailer, _mileageOrig.chargeTos, _mileageOrig.endCharge, _mileageOrig.lineNotes, _mileageOrig.endLoc);
 				const dEl = $('input[name="entry_date"]', wrap); if (dEl) dEl.value = _mileageOrig.date;
 				try { await autoSaveMileageEntry(); } catch (e) {}
 			} else if (mileageFormEntryId) {
@@ -10915,7 +11242,7 @@ function mileageChargeOptionsHtml(selected) {
 	return h;
 }
 
-function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [], trailers = [], endToll = 0, endTrailer = 0, chargeTos = [], endCharge = '', notes = []) {
+function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [], trailers = [], endToll = 0, endTrailer = 0, chargeTos = [], endCharge = '', notes = [], endLoc = 0) {
 	const wrap = $('#sp-mileage-stops');
 	if (!wrap) return;
 	const minMiddle = mileageHomeId ? 1 : 2;
@@ -11018,12 +11345,23 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-add-loc">+ Add Destination</button>';
 	html += '</div>';
 
-	// Locked round-trip END bookend — always returns to Home. The drive home can carry
-	// its own trailer flag, just like a middle stop. (Tolls come from the uploaded CSV.)
+	// END bookend — defaults to Home (round trip), but the locked Home is CLICKABLE so the rare
+	// non-round-trip day can end somewhere else. endLoc (a location id) overrides Home when set;
+	// clearing the picker reverts to Home. The drive can carry its own trailer flag like a stop.
 	if (mileageHomeId) {
+		const endOverride = endLoc ? mileageLocations.find(l => parseInt(l.id) === endLoc) : null;
+		const endName = endOverride ? endOverride.name : homeName;
 		html += '<div class="sp-mileage-stop sp-mileage-stop-fixed sp-mileage-stop-end">';
 		html += '<span class="unique sp-mileage-bookend-label">END</span>';
-		html += `<div class="sp-mileage-stop-home">${esc(homeName)}</div>`;
+		html += '<div class="sp-combo sp-mileage-end-loc-wrap">';
+		html += `<div class="sp-mileage-stop-home sp-mileage-end-home${endOverride ? ' sp-mileage-end-home-changed' : ''}" tabindex="0" role="button" title="Click to end the day somewhere other than Home">${esc(endName)}</div>`;
+		if (isMobile) {
+			html += `<select class="sp-select sp-mileage-end-loc" hidden>${locOptionsHtml(endLoc)}</select>`;
+		} else {
+			html += `<input type="text" class="sp-input sp-combo-input sp-mileage-end-loc" list="sp-mileage-loc-list" placeholder="End location (blank = Home)" autocomplete="off" value="${esc(endOverride ? endName : '')}" hidden>`;
+		}
+		html += `<input type="hidden" class="sp-mileage-end-select" value="${endLoc || 0}">`;
+		html += '</div>';
 		// The drive home is also charged to a store — required, same as the stops above.
 		html += `<select class="sp-select sp-mileage-charge sp-mileage-end-charge${endCharge === '' ? ' sp-charge-empty' : ''}" title="Charge the drive home to a store">${mileageChargeOptionsHtml(endCharge)}</select>`;
 		html += '<div class="sp-mileage-stop-purpose-cell sp-mileage-end-extras">';
@@ -11075,6 +11413,45 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		inp.addEventListener('input', apply);
 		inp.addEventListener('change', apply);
 	});
+
+	// END bookend: the locked Home is clickable — click it to reveal a location picker and end the
+	// day elsewhere (non-round-trip). Leaving it blank / unresolved reverts to Home.
+	const endWrap = $('.sp-mileage-end-loc-wrap', wrap);
+	if (endWrap) {
+		const endHome = $('.sp-mileage-end-home', endWrap);
+		const endInput = $('.sp-mileage-end-loc', endWrap);
+		const endHidden = $('.sp-mileage-end-select', endWrap);
+		const homeLabel = homeLoc ? homeLoc.name : 'Home';
+		const showEndPicker = () => {
+			if (endHome) endHome.hidden = true;
+			if (endInput) {
+				endInput.hidden = false;
+				endInput.focus();
+				if (endInput.tagName !== 'SELECT' && endInput.select) endInput.select();
+				// Pop the same location dropdown the stop pickers use (datalist / native select),
+				// right on this click — it's a user gesture, so showPicker() is allowed.
+				try { if (endInput.showPicker) endInput.showPicker(); } catch (e) {}
+			}
+		};
+		endHome?.addEventListener('click', showEndPicker);
+		endHome?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showEndPicker(); } });
+		const applyEnd = () => {
+			const id = resolveLocId(endInput.value);   // 0 when empty / Home / unrecognized → revert to Home
+			if (endHidden) endHidden.value = id;
+			if (!id) {
+				if (endInput) { endInput.value = ''; endInput.hidden = true; }
+				if (endHome) { endHome.hidden = false; endHome.textContent = homeLabel; endHome.classList.remove('sp-mileage-end-home-changed'); }
+			} else {
+				const loc = mileageLocations.find(l => parseInt(l.id) === id);
+				if (endHome) { endHome.textContent = loc ? loc.name : endInput.value; endHome.classList.add('sp-mileage-end-home-changed'); endHome.hidden = false; }
+				if (endInput) endInput.hidden = true;
+			}
+			queueMileageAutoSave();
+		};
+		endInput?.addEventListener('change', applyEnd);
+		endInput?.addEventListener('blur', applyEnd);
+	}
+
 	// Purpose change: reveal/hide that stop's note line (per the purpose's "Requires note" flag) and persist.
 	$$('.sp-mileage-stop-purpose', wrap).forEach(inp => inp.addEventListener('input', () => {
 		syncStopNote(inp.closest('.sp-mileage-stop-row'));
@@ -11107,14 +11484,14 @@ function renderMileageStops(stops, autoReturn = true, purposes = [], tolls = [],
 		const i = parseInt(b.dataset.idx);
 		s.splice(i, 1); p.splice(i, 1); t.splice(i, 1); tr.splice(i, 1); c.splice(i, 1); n.splice(i, 1);
 		while (s.length < minMiddle) { s.push(0); p.push(''); t.push(0); tr.push(0); c.push(''); n.push(''); }
-		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer(), c, readMileageEndChargeTo(), n);
+		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer(), c, readMileageEndChargeTo(), n, readMileageEndLocation());
 		updateMileageTotals();
 		queueMileageAutoSave();
 	}));
 	$('#sp-mileage-add-stop', wrap)?.addEventListener('click', () => {
 		const s = readMileageStops(), p = readMileageStopPurposes(), t = readMileageStopTolls(), tr = readMileageStopTrailers(), c = readMileageStopChargeTo(), n = readMileageStopNotes();
 		s.push(0); p.push(''); t.push(0); tr.push(0); c.push(''); n.push('');
-		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer(), c, readMileageEndChargeTo(), n);
+		renderMileageStops(s, getReturnHome(), p, t, tr, readMileageEndToll(), readMileageEndTrailer(), c, readMileageEndChargeTo(), n, readMileageEndLocation());
 	});
 	$('#sp-mileage-add-loc', wrap)?.addEventListener('click', () => showAddLocationModal());
 
@@ -11129,6 +11506,13 @@ function readMileageStops() {
 function readMileageEndChargeTo() {
 	const s = $('.sp-mileage-end-charge');
 	return s ? (s.value || '') : '';
+}
+
+// The END-location override id (0 = day ends at Home). Set when the driver clicks the locked END and
+// picks a different final destination.
+function readMileageEndLocation() {
+	const h = $('.sp-mileage-end-select');
+	return h ? (parseInt(h.value) || 0) : 0;
 }
 
 function readMileageStopChargeTo() {
@@ -11210,7 +11594,7 @@ function applyMileageQuickEntry() {
 	}
 	const minMiddle = mileageHomeId ? 1 : 2;
 	while (ids.length < minMiddle) { ids.push(0); purposes.push(''); }
-	renderMileageStops(ids, getReturnHome(), purposes, ids.map(() => 0), ids.map(() => 0), readMileageEndToll(), readMileageEndTrailer(), [], readMileageEndChargeTo(), []);
+	renderMileageStops(ids, getReturnHome(), purposes, ids.map(() => 0), ids.map(() => 0), readMileageEndToll(), readMileageEndTrailer(), [], readMileageEndChargeTo(), [], readMileageEndLocation());
 	queueMileageAutoSave();
 	if (note) {
 		if (unmatched.length) { note.hidden = false; note.textContent = `Added ${ids.filter(Boolean).length}. Couldn't match: ${unmatched.join(', ')} — add those manually below.`; }
@@ -11343,7 +11727,7 @@ function showAddLocationModal() {
 			const emptyIdx = stops.findIndex(v => !v);
 			if (emptyIdx >= 0) stops[emptyIdx] = parseInt(r.data.id);
 			else { stops.push(parseInt(r.data.id)); purposes.push(''); tolls.push(0); trailers.push(0); charge.push(''); lnotes.push(''); }
-			renderMileageStops(stops, getReturnHome(), purposes, tolls, trailers, readMileageEndToll(), readMileageEndTrailer(), charge, readMileageEndChargeTo(), lnotes);
+			renderMileageStops(stops, getReturnHome(), purposes, tolls, trailers, readMileageEndToll(), readMileageEndTrailer(), charge, readMileageEndChargeTo(), lnotes, readMileageEndLocation());
 			queueMileageAutoSave();
 			close();
 		} else {
@@ -11501,11 +11885,14 @@ function fmtReportDate(val) {
 	return `${MILEAGE_MONTHS[parseInt(m[2], 10) - 1]} ${parseInt(m[3], 10)}, ${m[1]}`;
 }
 
-async function fetchMileageReport(start, end) {
+async function fetchMileageReport(start, end, userId) {
 	// Default to the Mileage screen's date range; the Expense Report cover page passes its own.
 	if (start === undefined) start = $('#sp-mileage-filter-start')?.value || '';
 	if (end === undefined) end = $('#sp-mileage-filter-end')?.value || '';
-	const res = await spAjax('site_pulse_get_mileage_report', { start, end });
+	// An approver / archive viewer passes report_user to pull another employee's report (server-authorized).
+	const payload = { start, end };
+	if (userId) payload.report_user = userId;
+	const res = await spAjax('site_pulse_get_mileage_report', payload);
 	if (!res.success) { alert(res.data?.message || 'Could not build the report.'); return null; }
 	const label = (start || end) ? `${fmtReportDate(start) || '…'} to ${fmtReportDate(end) || '…'}` : 'All entries';
 	return { ...res.data, start, end, label };
@@ -11547,22 +11934,21 @@ async function tollUpload() {
 
 	const f = file.files[0];
 
-	// Hard gate to CSV only — the file input's accept= is just a picker hint, so enforce it.
-	const isCsv = /\.csv$/i.test(f.name) && (!f.type || /csv|text\/plain|application\/vnd\.ms-excel/i.test(f.type));
-	if (!isCsv) {
-		if (status) { status.hidden = false; status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = 'Please upload a .csv file — that\'s the export format from your toll account.'; }
-		file.value = ''; btn.disabled = true;
-		return;
-	}
-
-	const text = await f.text();
-
 	btn.disabled = true; btn.textContent = 'Uploading…';
 	if (status) { status.hidden = false; status.className = 'sp-toll-status'; status.textContent = 'Reading your toll statement…'; }
 	$('#sp-toll-days').innerHTML = '';
 
 	try {
-		const r = await spAjax('site_pulse_upload_toll_csv', { csv: text, filename: f.name });
+		// Detect the format by CONTENT, not the file name (NTTA files sometimes lack a visible
+		// extension). An .xlsx is a ZIP → first bytes are "PK". Anything else is treated as CSV text;
+		// the server validates it's really a plain CSV (rejecting .xls / PDF / etc.).
+		const buf = await f.arrayBuffer();
+		const bytes = new Uint8Array(buf);
+		const isZip = bytes.length > 3 && bytes[0] === 0x50 && bytes[1] === 0x4B; // "PK" → xlsx
+		const payload = isZip
+			? { xlsx_base64: spArrayBufferToBase64(buf), filename: f.name }
+			: { csv: new TextDecoder('utf-8').decode(buf), filename: f.name };
+		const r = await spAjax('site_pulse_upload_toll_csv', payload);
 		if (!r.success) {
 			if (status) { status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = r.data?.message || 'Upload failed.'; }
 		} else {
@@ -11571,8 +11957,17 @@ async function tollUpload() {
 	} catch (e) {
 		if (status) { status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = 'Upload failed. Please try again.'; }
 	} finally {
-		btn.disabled = false; btn.textContent = 'Upload CSV';
+		btn.disabled = false; btn.textContent = 'Upload';
 	}
+}
+
+// Base64-encode an ArrayBuffer in chunks (avoids the call-stack limit of String.fromCharCode(...bytes)).
+function spArrayBufferToBase64(buf) {
+	const bytes = new Uint8Array(buf);
+	let bin = '';
+	const CH = 0x8000;
+	for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+	return btoa(bin);
 }
 
 // The "applied" done-state body for a day, with Review (show stored result, no AI) and
@@ -11609,6 +12004,7 @@ function renderTollDays(data) {
 	days.forEach(d => {
 		h += `<div class="sp-toll-day sp-card sp-table-card${d.applied ? ' sp-toll-day-done' : ''}" data-entry="${d.entry_id}" data-total="${d.total_tolls || 0}">`;
 		h += `<div class="sp-toll-day-head"><span class="unique sp-toll-day-date">${tollFmtDate(d.date)}</span>`;
+		h += `<span class="unique sp-toll-day-sep" aria-hidden="true">·</span>`;
 		h += `<span class="unique sp-toll-day-meta">${d.applied ? 'applied' : d.txn_count + ' charge' + (d.txn_count !== 1 ? 's' : '')}</span>`;
 		if (!d.applied) h += `<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny sp-toll-analyze-btn">Analyze</button>`;
 		h += `</div>`;
@@ -11714,12 +12110,8 @@ function renderTollReview(p, card, opts) {
 	});
 	h += '</tbody></table>';
 
-	// Comparison strip + apply.
-	h += '<div class="sp-toll-compare">';
-	h += '<div class="sp-toll-compare-stat"><div class="sp-card-value" data-toll-actual>$0.00</div><div class="sp-card-label">Tolls from CSV (applied)</div></div>';
-	h += '<div class="sp-toll-compare-stat"><div class="sp-card-value" data-toll-estimate>$0.00</div><div class="sp-card-label">TollGuru estimate</div></div>';
-	h += '<div class="sp-toll-compare-stat"><div class="sp-card-value" data-toll-variance>$0.00</div><div class="sp-card-label">Difference</div></div>';
-	h += '</div>';
+	// Applied total (from the CSV), right-aligned just above the apply buttons.
+	h += '<div class="sp-toll-applied"><span class="sp-toll-applied-label">Tolls from CSV (applied)</span><span class="sp-card-value" data-toll-actual>$0.00</span></div>';
 	// Buttons: Cancel always; Apply shows immediately for a fresh/re-analyze, but in Review
 	// mode it only appears once the driver actually changes a leg assignment (then "Apply Changes").
 	const applyLabel  = mode === 'review' ? 'Apply Changes' : 'Apply to this day';
@@ -11774,23 +12166,12 @@ function tollCollapseDay(card) {
 	}
 }
 
-function tollRecalc(card, estMap) {
+function tollRecalc(card) {
 	const sels = $$('.sp-toll-assign', card);
 	let actual = 0;
-	const legs = new Set();
-	sels.forEach(s => { if (s.value) { actual += parseFloat(s.dataset.amount) || 0; legs.add(s.value); } });
-	let estimate = 0;
-	legs.forEach(id => { if (estMap[id] != null) estimate += estMap[id]; });
-	const setVal = (sel, v) => { const el = card.querySelector(sel); if (el) el.textContent = '$' + v.toFixed(2); };
-	setVal('[data-toll-actual]', actual);
-	setVal('[data-toll-estimate]', estimate);
-	const varEl = card.querySelector('[data-toll-variance]');
-	if (varEl) {
-		const diff = actual - estimate;
-		varEl.textContent = (diff >= 0 ? '+$' : '-$') + Math.abs(diff).toFixed(2);
-		varEl.classList.toggle('sp-toll-var-over', diff > 0.005);
-		varEl.classList.toggle('sp-toll-var-under', diff < -0.005);
-	}
+	sels.forEach(s => { if (s.value) actual += parseFloat(s.dataset.amount) || 0; });
+	const el = card.querySelector('[data-toll-actual]');
+	if (el) el.textContent = '$' + actual.toFixed(2);
 }
 
 async function applyTollDay(card) {
@@ -12107,11 +12488,23 @@ function spShowReceiptThumb(wrap, src) {
 	});
 }
 
-// Receipt fields to add to a save payload: a fresh photo, an explicit removal, or nothing.
+// Fields derived from the form wrap to fold into an expense save payload: the receipt (a fresh
+// photo, an explicit removal, or nothing). Called by every expense save*().
 function spReceiptPayload(wrap) {
-	if (wrap && wrap._receiptData) return { receipt: wrap._receiptData };
-	if (wrap && wrap._receiptRemove) return { receipt_remove: 1 };
-	return {};
+	const out = {};
+	if (wrap && wrap._receiptData) out.receipt = wrap._receiptData;
+	else if (wrap && wrap._receiptRemove) out.receipt_remove = 1;
+	return out;
+}
+
+// Does this expense form currently have a receipt attached? True for a freshly shot/uploaded photo,
+// or an existing receipt (shown as the thumb preview) that hasn't been removed. Receipts are REQUIRED
+// on every expense, so each save*() calls this before submitting (the server enforces it too).
+function spHasReceipt(wrap) {
+	if (!wrap) return false;
+	if (wrap._receiptData) return true;          // new photo attached this session
+	const prev = $('.sp-receipt-preview', wrap); // existing receipt shows its thumb until removed
+	return !!(prev && !prev.hidden);
 }
 
 // Full-size receipt popup (clicked from a form thumb or a list row's receipt icon).
@@ -12696,7 +13089,10 @@ function spWireReceiptScan(wrap, section, fill) {
 				wrap._receiptData = receipt; wrap._receiptRemove = false;
 				spShowReceiptThumb(wrap, receipt);
 			} catch (e) {}
-			if (scan) { fill(scan); say('✓ Receipt attached and fields filled — review, then Save.', false); }
+			if (scan) {
+				fill(scan);
+				say('✓ Receipt attached and fields filled — review, then Save.', false);
+			}
 			else { say('Receipt attached. Couldn’t auto-read it — enter the details, then Save.', false); }
 		} finally {
 			setBusy(false); input.value = ''; spHideAiSpinner();
@@ -12717,7 +13113,7 @@ function spWireReceiptScan(wrap, section, fill) {
 let _spVexp = { cats: {}, list: [], editId: 0, start: '', end: '' };
 
 // Category → stat-card icon (falls back to a wallet for anything unmapped).
-const VEXP_ICONS = { fuel: 'fuel', wash: 'wash', parking: 'parking', repairs: 'car-repairs', trailers: 'trailer' };
+const VEXP_ICONS = { fuel: 'fuel', wash: 'wash', parking: 'parking', repairs: 'car-repairs', trailers: 'trailer', parade_vehicle: 'car' };
 
 async function initVehicleExpenses() {
 	const addBtn = $('#sp-vexp-add-btn');
@@ -12771,6 +13167,25 @@ function spToast(message, ms = 3200) {
 	_spToastTimer = setTimeout(() => el.classList.remove('sp-toast-show'), ms);
 }
 
+// When a period is submitted/approved it locks: hide the "+ Add Expense" button and show a banner.
+// (Row edit/delete + save are also blocked server-side, so this is the friendly front for that.)
+function spApplyExpenseLock(prefix, locked) {
+	const addBtn = $('#sp-' + prefix + '-add-btn');
+	if (addBtn) addBtn.style.display = locked ? 'none' : '';
+	const content = $('#sp-' + prefix + '-content');
+	const host = content && content.parentElement;
+	if (!host) return;
+	let banner = host.querySelector('.sp-locked-banner-' + prefix);
+	if (locked) {
+		if (!banner) {
+			banner = document.createElement('div');
+			banner.className = 'sp-locked-banner sp-locked-banner-' + prefix;
+			banner.textContent = 'This pay period has been submitted for approval and is locked. Ask your supervisor to send it back if you need to make changes.';
+			host.insertBefore(banner, content);
+		}
+	} else if (banner) { banner.remove(); }
+}
+
 async function loadVehicleExpenses() {
 	const wrap = $('#sp-vexp-content');
 	if (!wrap) return;
@@ -12782,6 +13197,7 @@ async function loadVehicleExpenses() {
 		_spVexp.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderVehicleExpenses();
+		spApplyExpenseLock('vexp', res.data.locked);
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
 }
 
@@ -12806,7 +13222,7 @@ function renderVehicleExpenses() {
 	let grand = 0;
 
 	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-vexp-table"><thead class="sp-thead"><tr>';
-	html += '<th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th></th>';
+	html += '<th>Date</th><th>Category</th><th>Description</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
 	list.forEach(x => {
@@ -12817,6 +13233,7 @@ function renderVehicleExpenses() {
 		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
 		html += `<td>${esc(catLabel(x.category))}</td>`;
 		html += `<td>${esc(x.description || '')}</td>`;
+		html += `<td>${esc(x.store_number || '')}</td>`;
 		html += `<td class="sp-num">${fmt(amt)}</td>`;
 		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-vexp-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-vexp-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-vexp-del-btn', `data-id="${x.id}"`)}</td>`;
 		html += '</tr>';
@@ -12855,8 +13272,7 @@ function showVexpForm(x) {
 	const wrap = $('#sp-vexp-form-wrap');
 	if (!wrap) return;
 	_spVexp.editId = x ? x.id : 0;
-	wrap._receiptData = null; wrap._receiptRemove = false;
-	const d = new Date();
+	wrap._receiptData = null; wrap._receiptRemove = false;	const d = new Date();
 	const today = `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`;
 
 	wrap.innerHTML = `
@@ -12873,8 +13289,9 @@ function showVexpForm(x) {
 			<div class="sp-vexp-fields sp-card-item">
 				<div class="sp-vexp-form-grid">
 					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-vexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-					<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'B', x ? x.category : 'fuel')}</select></div>
+					<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'B', x ? x.category : (Object.keys(_spVexp.cats || {})[0] || ''))}</select></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-vexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
+					<div class="sp-form-group"><label>Charge To</label><select id="sp-vexp-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : '99')}</select></div>
 				</div>
 				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-vexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Shell — fuel"></div>
 			</div>
@@ -12896,10 +13313,10 @@ function showVexpForm(x) {
 		if (r.description) { const el = $('#sp-vexp-desc', wrap); if (el) el.value = r.description; }
 	});
 
-	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);
-	$('#sp-vexp-cancel', wrap).addEventListener('click', hideVexpForm);
+	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);	$('#sp-vexp-cancel', wrap).addEventListener('click', hideVexpForm);
 	$('#sp-vexp-save', wrap).addEventListener('click', saveVexp);
-	$('#sp-vexp-date', wrap)?.focus();
+	// No auto-focus on the date: on iOS, focusing a date input pops the calendar immediately, but
+	// most users open this form to shoot/upload a receipt — so leave the photo buttons in front.
 }
 
 function hideVexpForm() {
@@ -12939,16 +13356,201 @@ async function saveVexp() {
 	const dest = spExpDestParse($('#sp-vexp-cat')?.value);
 	const amount = parseFloat($('#sp-vexp-amount')?.value);
 	const description = $('#sp-vexp-desc')?.value || '';
+	const store_number = $('#sp-vexp-store')?.value || '';
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
+	if (!spHasReceipt($('#sp-vexp-form-wrap'))) { alert('A receipt photo is required for every expense. Use Take Photo or Upload to attach one.'); return; }
 	const btn = $('#sp-vexp-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description, store_number };
 	if (_spVexp.editId) payload.id = _spVexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-vexp-form-wrap')));
 	try {
 		const r = await spSaveExpenseGuarded(payload);
 		if (r.success) { if (dest.section !== 'B') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideVexpForm(); loadVehicleExpenses(); }
+		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
+	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
+}
+
+
+/* ---- Travel Expenses (Section F) ---- */
+// Built exactly like Vehicle Expenses (Section B): several named categories (Airfare / Hotel /
+// Car Rental·Taxi / Meals) that all post to one GL account (91110). One line = category + amount.
+let _spTrav = { cats: {}, list: [], editId: 0, start: '', end: '' };
+
+// Category → stat-card icon (unmapped keys fall back to a wallet).
+const TRAV_ICONS = { airfare: 'ticket', car_rental: 'car' };
+
+async function initTravelExpenses() {
+	const addBtn = $('#sp-trav-add-btn');
+	if (addBtn && !addBtn._wired) {
+		addBtn._wired = true;
+		addBtn.addEventListener('click', () => showTravForm());
+	}
+	const panel = $('#sp-panel-travel-expenses');
+	if (panel && !panel._filterWired) {
+		panel._filterWired = true;
+		await spEnsurePeriodConfig();
+		const [s, e] = spBuildPeriodToolbar('trav', $('#sp-trav-toolbar-wrap'), (st, en) => {
+			_spTrav.start = st; _spTrav.end = en; loadTravelExpenses();
+		}, addBtn);
+		_spTrav.start = s; _spTrav.end = e;
+	}
+	loadTravelExpenses();
+}
+
+async function loadTravelExpenses() {
+	const wrap = $('#sp-trav-content');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+	try {
+		const res = await spAjax('site_pulse_get_expenses', { section: 'F', start: _spTrav.start, end: _spTrav.end });
+		if (!res.success) { wrap.innerHTML = '<p>Error loading expenses.</p>'; return; }
+		_spTrav.cats = res.data.categories || {};
+		_spTrav.list = res.data.expenses || [];
+		_spExpDestinations = res.data.destinations || _spExpDestinations;
+		renderTravelExpenses();
+		spApplyExpenseLock('trav', res.data.locked);
+	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
+}
+
+function renderTravelExpenses() {
+	const wrap = $('#sp-trav-content');
+	if (!wrap) return;
+	const cats = _spTrav.cats, catKeys = Object.keys(cats), list = _spTrav.list;
+	const fmt = n => '$' + mileageNumFmt(n);
+	const catLabel = k => (cats[k] && cats[k].label) || k || '—';
+
+	const summary = $('#sp-trav-summary');
+
+	if (!list.length) {
+		if (summary) summary.innerHTML = '';
+		wrap.innerHTML = '<div class="sp-empty-state"><p>No travel expenses in this period. Click “+ Add Expense” to add one, or scan a receipt.</p></div>';
+		return;
+	}
+
+	// One row per expense: Date | Category | Description | Amount. All four categories roll up to
+	// the Section F total below (GL 91110).
+	const totals = {}; catKeys.forEach(k => totals[k] = 0);
+	let grand = 0;
+
+	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-trav-table"><thead class="sp-thead"><tr>';
+	html += '<th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th></th>';
+	html += '</tr></thead><tbody>';
+
+	list.forEach(x => {
+		const amt = parseFloat(x.amount) || 0;
+		grand += amt;
+		if (totals[x.category] != null) totals[x.category] += amt;
+		html += '<tr>';
+		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
+		html += `<td>${esc(catLabel(x.category))}</td>`;
+		html += `<td>${esc(x.description || '')}</td>`;
+		html += `<td class="sp-num">${fmt(amt)}</td>`;
+		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-trav-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-trav-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-trav-del-btn', `data-id="${x.id}"`)}</td>`;
+		html += '</tr>';
+	});
+
+	html += '</tbody></table></div>';
+
+	// Stat cards: the Section F total + a card per used category.
+	const used = catKeys.filter(k => totals[k] > 0);
+	if (summary) {
+		let cards = spStatCard('Total', fmt(grand), 'dollar-sign');
+		used.forEach(k => cards += spStatCard(catLabel(k), fmt(totals[k]), TRAV_ICONS[k] || 'wallet'));
+		summary.innerHTML = `<div class="sp-stat-grid">${cards}</div>`;
+	}
+
+	wrap.innerHTML = html;
+
+	$$('.sp-trav-edit-btn', wrap).forEach(b => b.addEventListener('click', () => {
+		const x = _spTrav.list.find(e => String(e.id) === String(b.dataset.id));
+		if (x) showTravForm(x);
+	}));
+	$$('.sp-trav-del-btn', wrap).forEach(b => b.addEventListener('click', async () => {
+		if (!confirm('Delete this expense?')) return;
+		const r = await spAjax('site_pulse_delete_expense', { id: b.dataset.id });
+		if (r.success) loadTravelExpenses();
+		else alert(r.data?.message || 'Error deleting.');
+	}));
+	$$('.sp-trav-receipt-btn', wrap).forEach(b => b.addEventListener('click', () => {
+		const x = _spTrav.list.find(e => String(e.id) === String(b.dataset.id));
+		if (x && x.receipt_url) spShowReceiptModal(x.receipt_url);
+	}));
+}
+
+function showTravForm(x) {
+	const wrap = $('#sp-trav-form-wrap');
+	if (!wrap) return;
+	_spTrav.editId = x ? x.id : 0;
+	wrap._receiptData = null; wrap._receiptRemove = false;	const d = new Date();
+	const today = `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`;
+
+	wrap.innerHTML = `
+		<div class="sp-card sp-vexp-form">
+			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Travel Expense</h3></div>
+			<div class="sp-card-body">
+			<div class="sp-receipt-row sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
+				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
+				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
+				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
+				<span class="sp-receipt-status sp-help-text" hidden></span>
+			</div>
+			<div class="sp-vexp-fields sp-card-item">
+				<div class="sp-vexp-form-grid">
+					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-trav-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
+					<div class="sp-form-group"><label>Category</label><select id="sp-trav-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'F', x ? x.category : (Object.keys(_spTrav.cats || {})[0] || ''))}</select></div>
+					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-trav-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
+				</div>
+				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-trav-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Delta — DFW to ATL"></div>
+			</div>
+			<div class="sp-vexp-form-actions sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-trav-save">Save</button>
+				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-trav-cancel">Cancel</button>
+			</div>
+			</div>
+		</div>`;
+	wrap.hidden = false;
+	setExpenseChrome('trav', true);
+	markUniqueSpans(wrap);
+
+	// Receipt scan → fill the fields (reusable across expense modules).
+	spWireReceiptScan(wrap, 'F', (r) => {
+		if (r.date) { const el = $('#sp-trav-date', wrap); if (el) el.value = r.date; }
+		if (r.category) { const el = $('#sp-trav-cat', wrap); if (el) el.value = 'F|' + r.category; }
+		if (r.amount > 0) { const el = $('#sp-trav-amount', wrap); if (el) el.value = (parseFloat(r.amount) || 0).toFixed(2); }
+		if (r.description) { const el = $('#sp-trav-desc', wrap); if (el) el.value = r.description; }
+	});
+
+	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);	$('#sp-trav-cancel', wrap).addEventListener('click', hideTravForm);
+	$('#sp-trav-save', wrap).addEventListener('click', saveTrav);
+	// No auto-focus on the date (see showVexpForm): it pops the iOS calendar over the photo buttons.
+}
+
+function hideTravForm() {
+	const wrap = $('#sp-trav-form-wrap');
+	if (wrap) { wrap.hidden = true; wrap.innerHTML = ''; }
+	setExpenseChrome('trav', false);
+	_spTrav.editId = 0;
+}
+
+async function saveTrav() {
+	const date = $('#sp-trav-date')?.value;
+	const dest = spExpDestParse($('#sp-trav-cat')?.value);
+	const amount = parseFloat($('#sp-trav-amount')?.value);
+	const description = $('#sp-trav-desc')?.value || '';
+	if (!date) { alert('Please choose a date.'); return; }
+	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
+	if (!spHasReceipt($('#sp-trav-form-wrap'))) { alert('A receipt photo is required for every expense. Use Take Photo or Upload to attach one.'); return; }
+	const btn = $('#sp-trav-save');
+	if (btn) btn.disabled = true;
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description };
+	if (_spTrav.editId) payload.id = _spTrav.editId;
+	Object.assign(payload, spReceiptPayload($('#sp-trav-form-wrap')));
+	try {
+		const r = await spSaveExpenseGuarded(payload);
+		if (r.success) { if (dest.section !== 'F') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideTravForm(); loadTravelExpenses(); }
 		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
 }
@@ -12985,6 +13587,7 @@ async function loadBusinessMeals() {
 		_spMeal.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderBusinessMeals();
+		spApplyExpenseLock('meal', res.data.locked);
 	} catch (e) { wrap.innerHTML = '<p>Error loading meals.</p>'; }
 }
 
@@ -13054,7 +13657,8 @@ function showMealForm(x) {
 	const wrap = $('#sp-meal-form-wrap');
 	if (!wrap) return;
 	_spMeal.editId = x ? x.id : 0;
-	wrap._receiptData = null; wrap._receiptRemove = false;
+	wrap._receiptData = null; wrap._receiptRemove = false;	wrap._mealTotal = null; wrap._mealTip = 0;   // scanned total + tip, for the Business/Personal toggle
+	const mealType = (x && x.meal_type === 'personal') ? 'personal' : 'business';
 	const d = new Date();
 	const today = `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`;
 
@@ -13076,9 +13680,16 @@ function showMealForm(x) {
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-meal-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 				</div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-meal-move" class="sp-select">${spExpDestOptions(x ? x.section : 'C', x ? x.category : 'meals')}</select></div>
-				<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
+				<div class="sp-form-group"><label>Meal Type</label>
+						<div class="sp-radio-row">
+							<label class="sp-radio-inline"><input type="radio" name="sp-meal-type" class="sp-meal-type-radio" value="business"${mealType === 'personal' ? '' : ' checked'}> Business</label>
+							<label class="sp-radio-inline"><input type="radio" name="sp-meal-type" class="sp-meal-type-radio" value="personal"${mealType === 'personal' ? ' checked' : ''}> Personal</label>
+						</div>
+						<span class="sp-help-text">Personal (family) meals: the tip is removed from the reimbursed total — tips aren&rsquo;t reimbursed.</span>
+					</div>
+					<div class="sp-form-group"><label>Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
 				<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended"></div>
-				<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-meal-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+				<div class="sp-form-group"><label>Charge To</label><select id="sp-meal-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : '99')}</select></div>
 			</div>
 			<div class="sp-vexp-form-actions sp-card-item">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-meal-save">Save</button>
@@ -13090,17 +13701,29 @@ function showMealForm(x) {
 	setExpenseChrome('meal', true);
 	markUniqueSpans(wrap);
 
-	// Receipt scan → fills Date, Amount and Place (restaurant). Purpose + attendees stay manual.
+	// Set the Amount from the scanned total, minus the tip when this is a Personal meal (tips aren't
+	// reimbursed). Only runs when a receipt was scanned this session (wrap._mealTotal set).
+	const applyMealAmount = () => {
+		if (wrap._mealTotal == null) return;
+		const personal = wrap.querySelector('.sp-meal-type-radio[value="personal"]')?.checked;
+		const amt = personal ? Math.max(0, wrap._mealTotal - (wrap._mealTip || 0)) : wrap._mealTotal;
+		const el = $('#sp-meal-amount', wrap);
+		if (el) el.value = amt.toFixed(2);
+	};
+	// Toggling Business/Personal recomputes the amount from the scanned total + tip.
+	$$('.sp-meal-type-radio', wrap).forEach(rb => rb.addEventListener('change', applyMealAmount));
+
+	// Receipt scan → fills Date, Place, and the Amount (tip stashed so Personal can drop it). Purpose
+	// + attendees stay manual.
 	spWireReceiptScan(wrap, 'C', (r) => {
 		if (r.date) { const el = $('#sp-meal-date', wrap); if (el) el.value = r.date; }
-		if (r.amount > 0) { const el = $('#sp-meal-amount', wrap); if (el) el.value = (parseFloat(r.amount) || 0).toFixed(2); }
+		if (r.amount > 0) { wrap._mealTotal = parseFloat(r.amount) || 0; wrap._mealTip = parseFloat(r.tip) || 0; applyMealAmount(); }
 		if (r.place) { const el = $('#sp-meal-place', wrap); if (el && !el.value) el.value = r.place; }
 	});
 
-	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);
-	$('#sp-meal-cancel', wrap).addEventListener('click', hideMealForm);
+	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);	$('#sp-meal-cancel', wrap).addEventListener('click', hideMealForm);
 	$('#sp-meal-save', wrap).addEventListener('click', saveMeal);
-	$('#sp-meal-date', wrap)?.focus();
+	// No auto-focus on the date (see showVexpForm): it pops the iOS calendar over the photo buttons.
 }
 
 function hideMealForm() {
@@ -13118,11 +13741,13 @@ async function saveMeal() {
 	const attendees = $('#sp-meal-attendees')?.value || '';
 	const store_number = $('#sp-meal-store')?.value || '';
 	const dest = spExpDestParse($('#sp-meal-move')?.value);
+	const meal_type = $('#sp-meal-form-wrap')?.querySelector('.sp-meal-type-radio[value="personal"]')?.checked ? 'personal' : 'business';
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
+	if (!spHasReceipt($('#sp-meal-form-wrap'))) { alert('A receipt photo is required for every expense. Use Take Photo or Upload to attach one.'); return; }
 	const btn = $('#sp-meal-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, place, business_purpose, attendees, store_number };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, place, business_purpose, attendees, store_number, meal_type };
 	if (_spMeal.editId) payload.id = _spMeal.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-meal-form-wrap')));
 	try {
@@ -13165,6 +13790,7 @@ async function loadCompetitiveShopping() {
 		_spShop.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderCompetitiveShopping();
+		spApplyExpenseLock('shop', res.data.locked);
 	} catch (e) { wrap.innerHTML = '<p>Error loading visits.</p>'; }
 }
 
@@ -13185,7 +13811,7 @@ function renderCompetitiveShopping() {
 	// total below (all of section D posts to GL 81095, R&D-Food).
 	let grand = 0;
 	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-shop-table"><thead class="sp-thead"><tr>';
-	html += '<th>Date</th><th>Place</th><th>Business Purpose</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
+	html += '<th>Date</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
 	list.forEach(x => {
@@ -13195,6 +13821,7 @@ function renderCompetitiveShopping() {
 		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
 		html += `<td>${esc(x.place || '')}</td>`;
 		html += `<td>${esc(x.business_purpose || '')}</td>`;
+		html += `<td>${esc(x.attendees || '')}</td>`;
 		html += `<td>${esc(x.store_number || '')}</td>`;
 		html += `<td class="sp-num">${fmt(amt)}</td>`;
 		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-shop-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-shop-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-shop-del-btn', `data-id="${x.id}"`)}</td>`;
@@ -13233,8 +13860,7 @@ function showShopForm(x) {
 	const wrap = $('#sp-shop-form-wrap');
 	if (!wrap) return;
 	_spShop.editId = x ? x.id : 0;
-	wrap._receiptData = null; wrap._receiptRemove = false;
-	const d = new Date();
+	wrap._receiptData = null; wrap._receiptRemove = false;	const d = new Date();
 	const today = `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`;
 
 	wrap.innerHTML = `
@@ -13256,7 +13882,8 @@ function showShopForm(x) {
 				</div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-shop-move" class="sp-select">${spExpDestOptions(x ? x.section : 'D', x ? x.category : 'shopping')}</select></div>
 				<div class="sp-form-group"><label>Business Purpose</label><input type="text" id="sp-shop-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Menu/pricing research"></div>
-				<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-shop-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+					<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-shop-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who went (optional)"></div>
+				<div class="sp-form-group"><label>Charge To</label><select id="sp-shop-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : '99')}</select></div>
 			</div>
 			<div class="sp-vexp-form-actions sp-card-item">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-shop-save">Save</button>
@@ -13275,10 +13902,9 @@ function showShopForm(x) {
 		if (r.place) { const el = $('#sp-shop-place', wrap); if (el && !el.value) el.value = r.place; }
 	});
 
-	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);
-	$('#sp-shop-cancel', wrap).addEventListener('click', hideShopForm);
+	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);	$('#sp-shop-cancel', wrap).addEventListener('click', hideShopForm);
 	$('#sp-shop-save', wrap).addEventListener('click', saveShop);
-	$('#sp-shop-date', wrap)?.focus();
+	// No auto-focus on the date (see showVexpForm): it pops the iOS calendar over the photo buttons.
 }
 
 function hideShopForm() {
@@ -13293,13 +13919,15 @@ async function saveShop() {
 	const place = $('#sp-shop-place')?.value || '';
 	const amount = parseFloat($('#sp-shop-amount')?.value);
 	const business_purpose = $('#sp-shop-purpose')?.value || '';
+	const attendees = $('#sp-shop-attendees')?.value || '';
 	const store_number = $('#sp-shop-store')?.value || '';
 	const dest = spExpDestParse($('#sp-shop-move')?.value);
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
+	if (!spHasReceipt($('#sp-shop-form-wrap'))) { alert('A receipt photo is required for every expense. Use Take Photo or Upload to attach one.'); return; }
 	const btn = $('#sp-shop-save');
 	if (btn) btn.disabled = true;
-	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, place, business_purpose, store_number };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, place, business_purpose, attendees, store_number };
 	if (_spShop.editId) payload.id = _spShop.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-shop-form-wrap')));
 	try {
@@ -13313,7 +13941,7 @@ async function saveShop() {
 /* ---- Other Expenses (Section E) ---- */
 // Catch-all section: Date | Description | Account | Store # | Amount. The GL account is entered
 // per line (free text) — section E has no fixed category list, so each row carries its own.
-let _spOexp = { list: [], editId: 0, start: '', end: '' };
+let _spOexp = { list: [], editId: 0, start: '', end: '', accounts: [], recurring: [] };
 
 async function initOtherExpenses() {
 	const addBtn = $('#sp-oexp-add-btn');
@@ -13341,9 +13969,45 @@ async function loadOtherExpenses() {
 		const res = await spAjax('site_pulse_get_expenses', { section: 'E', start: _spOexp.start, end: _spOexp.end });
 		if (!res.success) { wrap.innerHTML = '<p>Error loading expenses.</p>'; return; }
 		_spOexp.list = res.data.expenses || [];
+		_spOexp.accounts = res.data.accounts || [];
+		_spOexp.recurring = res.data.recurring || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderOtherExpenses();
+		spApplyExpenseLock('oexp', res.data.locked);
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
+}
+
+// The Recurring strip: templates the driver taps to drop a pre-filled line into this period. Shows
+// "Added" when a matching line already exists this period (by account + description). "×" stops it.
+function spOexpRecurringStrip() {
+	const tpls = _spOexp.recurring || [];
+	if (!tpls.length) return '';
+	const fmt = n => '$' + mileageNumFmt(n);
+	const norm = s => String(s || '').toLowerCase().trim();
+	const chips = tpls.map(t => {
+		const added = (_spOexp.list || []).some(e => norm(e.account_code) === norm(t.account_code) && norm(e.description) === norm(t.description));
+		const label = `${esc(t.description || t.account_code || 'Recurring')} · ${fmt(t.amount)}`;
+		const action = added
+			? '<span class="sp-recurring-chip-done">Added ✓</span>'
+			: `<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny sp-recurring-add" data-key="${esc(t.key)}">Add</button>`;
+		return `<div class="sp-recurring-chip${added ? ' sp-recurring-chip-added' : ''}">`
+			+ `<span class="sp-recurring-chip-label">${label}</span>${action}`
+			+ `<button type="button" class="unique sp-recurring-stop" data-key="${esc(t.key)}" title="Stop recurring" aria-label="Stop recurring">×</button>`
+			+ '</div>';
+	}).join('');
+	return `<div class="sp-recurring-strip"><div class="sp-recurring-strip-title">Recurring</div><div class="sp-recurring-chips">${chips}</div></div>`;
+}
+
+function spWireOexpRecurring(wrap) {
+	$$('.sp-recurring-add', wrap).forEach(b => b.addEventListener('click', () => {
+		const t = (_spOexp.recurring || []).find(r => r.key === b.dataset.key);
+		if (t) showOexpForm({ account_code: t.account_code, description: t.description, store_number: t.store_number, amount: t.amount });
+	}));
+	$$('.sp-recurring-stop', wrap).forEach(b => b.addEventListener('click', async () => {
+		if (!confirm('Stop this from recurring? Any lines already entered stay — it just won’t show here anymore.')) return;
+		const r = await spAjax('site_pulse_delete_recurring', { key: b.dataset.key });
+		if (r.success) { _spOexp.recurring = r.data.recurring || []; renderOtherExpenses(); }
+	}));
 }
 
 function renderOtherExpenses() {
@@ -13352,17 +14016,20 @@ function renderOtherExpenses() {
 	const list = _spOexp.list;
 	const fmt = n => '$' + mileageNumFmt(n);
 	const summary = $('#sp-oexp-summary');
+	const strip = spOexpRecurringStrip();
 
 	if (!list.length) {
 		if (summary) summary.innerHTML = '';
-		wrap.innerHTML = '<div class="sp-empty-state"><p>No other expenses in this period. Click “+ Add Expense” to add one, or scan a receipt.</p></div>';
+		wrap.innerHTML = strip + '<div class="sp-empty-state"><p>No other expenses in this period. Click “+ Add Expense” to add one, or tap a recurring item above.</p></div>';
+		spWireOexpRecurring(wrap);
 		return;
 	}
 
 	// One row per expense: Date | Description | Account | Store # | Amount, with a Section E total
 	// below. Each row carries its own GL account (no fixed category for section E).
 	let grand = 0;
-	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-oexp-table"><thead class="sp-thead"><tr>';
+	let html = strip;
+	html += '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-oexp-table"><thead class="sp-thead"><tr>';
 	html += '<th>Date</th><th>Description</th><th>Account</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
@@ -13390,6 +14057,7 @@ function renderOtherExpenses() {
 	}
 
 	wrap.innerHTML = html;
+	spWireOexpRecurring(wrap);
 
 	$$('.sp-oexp-edit-btn', wrap).forEach(b => b.addEventListener('click', () => {
 		const x = _spOexp.list.find(e => String(e.id) === String(b.dataset.id));
@@ -13407,17 +14075,35 @@ function renderOtherExpenses() {
 	}));
 }
 
+// Options for the Other Expenses "Account" dropdown, fed by the admin-managed chart of accounts
+// (Settings → Expense Reports). Value = the GL number; label = "91200 Office Supplies". A saved
+// account that's since left the chart (legacy row) stays selectable.
+function spOexpAccountOptions(selected) {
+	const v = selected == null ? '' : String(selected);
+	let o = `<option value=""${v === '' ? ' selected' : ''}>Choose an account…</option>`;
+	(_spOexp.accounts || []).forEach(a => {
+		const num = String(a.number || '');
+		if (!num) return;
+		const lbl = a.description ? `${num} ${a.description}` : num;
+		o += `<option value="${esc(num)}"${v === num ? ' selected' : ''}>${esc(lbl)}</option>`;
+	});
+	if (v && !(_spOexp.accounts || []).some(a => String(a.number) === v)) o += `<option value="${esc(v)}" selected>${esc(v)}</option>`;
+	return o;
+}
+
 function showOexpForm(x) {
 	const wrap = $('#sp-oexp-form-wrap');
 	if (!wrap) return;
-	_spOexp.editId = x ? x.id : 0;
-	wrap._receiptData = null; wrap._receiptRemove = false;
-	const d = new Date();
+	// x may be an existing expense (has .id → Edit) OR a recurring-template PRE-FILL (no .id → Add,
+	// fields seeded from the template). Guard on x.id, not just x, so a prefill opens as a new expense.
+	const isEdit = !!(x && x.id);
+	_spOexp.editId = isEdit ? x.id : 0;
+	wrap._receiptData = null; wrap._receiptRemove = false;	const d = new Date();
 	const today = `${d.getFullYear()}-${mPad2(d.getMonth() + 1)}-${mPad2(d.getDate())}`;
 
 	wrap.innerHTML = `
 		<div class="sp-card sp-vexp-form">
-			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Other Expense</h3></div>
+			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${isEdit ? 'Edit' : 'Add'} Other Expense</h3></div>
 			<div class="sp-card-body">
 			<div class="sp-receipt-row sp-card-item">
 				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
@@ -13428,13 +14114,16 @@ function showOexpForm(x) {
 			</div>
 			<div class="sp-vexp-fields sp-card-item">
 				<div class="sp-vexp-form-grid">
-					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-oexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
-					<div class="sp-form-group"><label>Account</label><input type="text" id="sp-oexp-account" class="sp-input" value="${esc(x ? (x.account_code || '') : '')}" placeholder="GL account #"></div>
+					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-oexp-date" class="sp-input" value="${esc(x && x.expense_date ? x.expense_date : today)}"></div>
+					<div class="sp-form-group"><label>Account</label><select id="sp-oexp-account" class="sp-select">${spOexpAccountOptions(x ? (x.account_code || '') : '')}</select></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-oexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 				</div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-oexp-move" class="sp-select">${spExpDestOptions(x ? x.section : 'E', x ? x.category : '')}</select></div>
 				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
-				<div class="sp-form-group"><label>Store # <span class="sp-help-text">(optional)</span></label><input type="text" id="sp-oexp-store" class="sp-input" value="${esc(x ? (x.store_number || '') : '')}"></div>
+				<div class="sp-form-group"><label>Charge To</label><select id="sp-oexp-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : '99')}</select></div>
+					<div class="sp-form-group sp-recurring-group">
+						<label for="sp-oexp-recurring">Recurring expense</label><input type="checkbox" id="sp-oexp-recurring" class="sp-recurring-check">
+					</div>
 			</div>
 			<div class="sp-vexp-form-actions sp-card-item">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-oexp-save">Save</button>
@@ -13453,10 +14142,9 @@ function showOexpForm(x) {
 		if (r.description) { const el = $('#sp-oexp-desc', wrap); if (el && !el.value) el.value = r.description; }
 	});
 
-	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);
-	$('#sp-oexp-cancel', wrap).addEventListener('click', hideOexpForm);
+	if (x && x.receipt_url) spShowReceiptThumb(wrap, x.receipt_url);	$('#sp-oexp-cancel', wrap).addEventListener('click', hideOexpForm);
 	$('#sp-oexp-save', wrap).addEventListener('click', saveOexp);
-	$('#sp-oexp-date', wrap)?.focus();
+	// No auto-focus on the date (see showVexpForm): it pops the iOS calendar over the photo buttons.
 }
 
 function hideOexpForm() {
@@ -13475,14 +14163,23 @@ async function saveOexp() {
 	const dest = spExpDestParse($('#sp-oexp-move')?.value);
 	if (!date) { alert('Please choose a date.'); return; }
 	if (!(amount > 0)) { alert('Please enter an amount greater than zero.'); return; }
+	if (!spHasReceipt($('#sp-oexp-form-wrap'))) { alert('A receipt photo is required for every expense. Use Take Photo or Upload to attach one.'); return; }
 	const btn = $('#sp-oexp-save');
 	if (btn) btn.disabled = true;
+	const makeRecurring = !!$('#sp-oexp-recurring')?.checked;
 	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description, account_code, store_number };
 	if (_spOexp.editId) payload.id = _spOexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-oexp-form-wrap')));
 	try {
 		const r = await spSaveExpenseGuarded(payload);
-		if (r.success) { if (dest.section !== 'E') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category)); hideOexpForm(); loadOtherExpenses(); }
+		if (r.success) {
+			// If "Make recurring" is ticked, remember this line as a template (Other Expenses only).
+			if (makeRecurring && dest.section === 'E') {
+				try { await spAjax('site_pulse_save_recurring', { account_code, description, store_number, amount }); } catch (e) {}
+			}
+			if (dest.section !== 'E') spToast('Moved to ' + spExpDestLabel(dest.section, dest.category));
+			hideOexpForm(); loadOtherExpenses();
+		}
 		else { if (!r.cancelled) alert(r.data?.message || 'Error saving.'); if (btn) btn.disabled = false; }
 	} catch (e) { alert('Error saving expense.'); if (btn) btn.disabled = false; }
 }
@@ -13500,15 +14197,15 @@ async function initExpenseReport() {
 		});
 		_spRep.start = s; _spRep.end = e;
 
-		// PDF / CSV actions on the toolbar's right edge (export the cover page's own period).
+		// PDF action + the Submit-for-Approval control on the toolbar's right edge (the submit slot is
+		// filled per period by renderExpenseReport, since its state depends on the loaded report).
 		const actions = $('#sp-rep-toolbar-actions');
 		if (actions) {
 			actions.innerHTML =
 				'<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-rep-pdf-btn">PDF</button>' +
-				'<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-rep-csv-btn">CSV</button>';
+				'<span id="sp-rep-submit-slot" class="sp-rep-submit-slot"></span>';
 			markUniqueSpans(actions);
 			$('#sp-rep-pdf-btn', actions).addEventListener('click', () => exportMileagePDF(_spRep.start, _spRep.end));
-			$('#sp-rep-csv-btn', actions).addEventListener('click', () => exportMileageCSV(_spRep.start, _spRep.end));
 		}
 	}
 	loadExpenseReport();
@@ -13523,9 +14220,61 @@ async function loadExpenseReport() {
 	renderExpenseReport(data);
 }
 
-function renderExpenseReport(data) {
-	const wrap = $('#sp-rep-content');
+// Build the Summary of Expenses in SECTION order (A, B, C, D, E, F). Each section emits one row per
+// distinct GL account its lines post to — so a section that spans two accounts (e.g. Vehicle →
+// 91300 and 91310) shows two rows, each with its account + amount. Accounts come from the chart, so
+// the labels reflect whatever the business configured. Shared by the on-screen overview AND the PDF.
+// Returns { rows: [{ desc, account, account_label, amount }], total }.
+function spBuildAccountSummary(data) {
+	const rate = parseFloat(data.rate) || 0;
+	const entries = data.entries || [];
+	const num = n => parseFloat(n) || 0;
+	const accounts = data.accounts || [];
+	const ma = Object.assign({ reimbursement: '91310', tolls: '91310', trailer: '91310' }, data.mileage_accounts || {});
+	const acctLabel = (n) => {
+		if (!n) return '';
+		const hit = accounts.find(a => String(a.number) === String(n));
+		return hit && hit.description ? `${hit.number} ${hit.description}` : String(n);
+	};
+
+	const rows = [];
+	// Emit a section's account groups (sorted by account number) as summary rows.
+	const emit = (desc, map) => {
+		Object.keys(map)
+			.filter(k => Math.abs(map[k]) > 0.0001)
+			.sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }))
+			.forEach(acct => rows.push({ desc, account: acct, account_label: acctLabel(acct), amount: map[acct] }));
+	};
+	const groupRows = (arr) => {
+		const m = {};
+		(arr || []).forEach(x => { const amt = num(x.amount); if (!amt) return; const k = String(x.account_code || ''); m[k] = (m[k] || 0) + amt; });
+		return m;
+	};
+
+	// A — Mileage: reimbursement + tolls + trailer, each to its configured account.
+	const aMap = {};
+	const addA = (acct, amt) => { if (!amt) return; const k = String(acct || ''); aMap[k] = (aMap[k] || 0) + amt; };
+	const totalMiles = entries.reduce((s, e) => s + num(e.total_miles), 0);
+	addA(ma.reimbursement, rate > 0 ? Math.round(totalMiles * rate * 100) / 100 : 0);
+	addA(ma.tolls, entries.reduce((s, e) => s + num(e.total_tolls), 0));
+	addA(ma.trailer, entries.reduce((s, e) => s + num(e.total_trailer), 0));
+	emit('A - Mileage', aMap);
+
+	emit('B - Vehicle Expenses', groupRows(data.vehicle_expenses));
+	emit('C - Business Meals', groupRows(data.business_meals));
+	emit('D - Competitive Shopping', groupRows(data.competitive_shopping));
+	emit('E - Other Expenses', groupRows(data.other_expenses));
+	emit('F - Travel Expenses', groupRows(data.travel_expenses));
+
+	return { rows, total: rows.reduce((s, r) => s + r.amount, 0) };
+}
+
+function renderExpenseReport(data, opts) {
+	opts = opts || {};
+	const readonly = !!opts.readonly;
+	const wrap = opts.target ? (typeof opts.target === 'string' ? $(opts.target) : opts.target) : $('#sp-rep-content');
 	if (!wrap) return;
+	if (!opts.target) _spRep.lastData = data; // stash for the Submit action (own Overview only)
 	const money = n => '$' + mileageNumFmt(n);
 	const sum = (arr, f) => arr.reduce((s, x) => s + (parseFloat(f(x)) || 0), 0);
 
@@ -13536,6 +14285,8 @@ function renderExpenseReport(data) {
 	const meals = data.business_meals || [];
 	const shopping = data.competitive_shopping || [];
 	const other = data.other_expenses || [];
+	const travel = data.travel_expenses || [];
+	const tcats = data.travel_categories || {};
 
 	// --- Section totals (mirrors the form's Summary of Expenses) ---
 	const totalMiles = sum(entries, e => e.total_miles);
@@ -13543,23 +14294,18 @@ function renderExpenseReport(data) {
 	const mileageTolls = sum(entries, e => e.total_tolls);
 	const mileageTrailer = sum(entries, e => e.total_trailer);
 
-	let bFWP = 0, bRepairs = 0, bTrailers = 0;
-	vehicle.forEach(x => {
-		const amt = parseFloat(x.amount) || 0;
-		if (x.category === 'repairs') bRepairs += amt;
-		else if (x.category === 'trailers') bTrailers += amt;
-		else bFWP += amt; // fuel/wash/parking (and any stray B category) → 91300
-	});
+	// Per-section totals still feed the detail-table footers below.
 	const cTotal = sum(meals, x => x.amount);
 	const dTotal = sum(shopping, x => x.amount);
 	const eTotal = sum(other, x => x.amount);
-	const fTotal = 0; // Section F (Travel) not built yet
+	const fTotal = sum(travel, x => x.amount);
 
-	// Personal Tolls/Trailers (91310) = mileage tolls + mileage trailer + B trailers.
-	const personalTolls = mileageTolls + mileageTrailer + bTrailers;
-	const totalDue = mileageReimb + bFWP + bRepairs + personalTolls + cTotal + dTotal + eTotal + fTotal;
+	// Summary of Expenses is built dynamically by GL account (mileage + every B–F line), so it
+	// reflects whatever chart of accounts / categories the business has configured.
+	const summary = spBuildAccountSummary(data);
+	const totalDue = summary.total;
 
-	const hasAny = entries.length || vehicle.length || meals.length || shopping.length || other.length;
+	const hasAny = entries.length || vehicle.length || meals.length || shopping.length || other.length || travel.length;
 
 	let html = '';
 
@@ -13581,23 +14327,13 @@ function renderExpenseReport(data) {
 		return;
 	}
 
-	// --- Summary of Expenses (totals by GL account) ---
-	const sumRows = [
-		['A - Mileage', mileageReimb, '91310'],
-		['B - Fuel/Wash/Parking', bFWP, '91300'],
-		['B - Company Driven Repairs', bRepairs, '91310'],
-		['B - Personal Tolls/Trailers', personalTolls, '91310'],
-		['C - Meals & Entertainment', cTotal, '91110'],
-		['D - R&D-Food', dTotal, '81095'],
-		['E - Other Expenses', eTotal, 'See Section E'],
-		['F - Travel Expenses', fTotal, '91110'],
-	];
+	// --- Summary of Expenses — section order A–F, one row per account each section posts to ---
 	html += '<h3 class="sp-rep-section-title">Summary of Expenses</h3>';
 	html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-summary"><thead class="sp-thead"><tr><th>Description</th><th class="sp-num">Amount</th><th>Account</th></tr></thead><tbody>';
-	sumRows.forEach(([label, amt, acct]) => {
-		html += `<tr><td>${esc(label)}</td><td class="sp-num">${money(amt)}</td><td>${esc(acct)}</td></tr>`;
+	summary.rows.forEach(r => {
+		html += `<tr><td>${esc(r.desc)}</td><td class="sp-num">${money(r.amount)}</td><td>${esc(r.account_label || r.account)}</td></tr>`;
 	});
-	html += `<tr class="sp-rep-total"><td>Total Due to Employee</td><td class="sp-num">${money(totalDue)}</td><td></td></tr>`;
+	html += `<tr class="sp-rep-total"><td>Total Due to Employee</td><td class="sp-num">${money(summary.total)}</td><td></td></tr>`;
 	html += '</tbody></table></div>';
 
 	// --- Section detail tables (only sections that have rows; mirrors the PDF body) ---
@@ -13651,12 +14387,12 @@ function renderExpenseReport(data) {
 		const catLabel = k => (vcats[k] && vcats[k].label) || k || '—';
 		let bGrand = 0;
 		html += '<h3 class="sp-rep-section-title">B — Vehicle Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
 		vehicle.forEach(x => {
 			const amt = parseFloat(x.amount) || 0; bGrand += amt;
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(catLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(amt)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(catLabel(x.category))}</td><td>${esc(x.description || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(amt)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="4" class="sp-rep-total-line">Section B Total · ${money(bGrand)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="5" class="sp-rep-total-line">Section B Total · ${money(bGrand)}</td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
@@ -13674,11 +14410,11 @@ function renderExpenseReport(data) {
 	// D — Competitive Shopping
 	if (shopping.length) {
 		html += '<h3 class="sp-rep-section-title">D — Competitive Shopping</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Place</th><th>Business Purpose</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
 		shopping.forEach(x => {
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="5" class="sp-rep-total-line">Section D Total · ${money(dTotal)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="6" class="sp-rep-total-line">Section D Total · ${money(dTotal)}</td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
@@ -13693,11 +14429,266 @@ function renderExpenseReport(data) {
 		html += '</tbody></table></div>';
 	}
 
+	// F — Travel Expenses (Date | Category | Description | Amount, like Section B; all GL 91110)
+	if (travel.length) {
+		const tcatLabel = k => (tcats[k] && tcats[k].label) || k || '—';
+		html += '<h3 class="sp-rep-section-title">F — Travel Expenses</h3>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		travel.forEach(x => {
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(tcatLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
+		});
+		html += `<tr class="sp-vexp-grand"><td colspan="4" class="sp-rep-total-line">Section F Total · ${money(fTotal)}</td></tr>`;
+		html += '</tbody></table></div>';
+	}
+
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
+	// Fill the toolbar's Submit slot (own Overview only) — button, or a status pill once submitted.
+	if (!readonly) {
+		const slot = $('#sp-rep-submit-slot');
+		if (slot) {
+			slot.innerHTML = spRepSubmitControl(data);
+			markUniqueSpans(slot);
+			const sb = slot.querySelector('#sp-rep-submit-btn');
+			if (sb) sb.addEventListener('click', submitExpenseReport);
+		}
+	}
 }
 
-async function exportMileagePDF(start, end) {
+// The submit control (toolbar, next to PDF): a Submit button, or a status pill once the period is
+// submitted. Rejection note + "waiting" hint ride the pill's tooltip to stay compact on the toolbar.
+function spRepSubmitControl(data) {
+	const rep = data.report;
+	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
+	if (rep && rep.status === 'submitted') {
+		return `<span class="sp-submit-pill sp-submit-pill-sent" title="Waiting for your supervisor's approval — this period is locked.">Submitted on ${dt(rep.submitted_at)}</span>`;
+	}
+	if (rep && rep.status === 'approved') {
+		return `<span class="sp-submit-pill sp-submit-pill-approved" title="${esc(rep.approved_by_name ? 'Approved by ' + rep.approved_by_name : 'Approved')}">Approved on ${dt(rep.approved_at)}</span>`;
+	}
+	let h = '';
+	if (rep && rep.status === 'rejected') h += `<span class="sp-submit-pill sp-submit-pill-rejected" title="${esc(rep.reject_note || 'Sent back for edits')}">Sent back</span>`;
+	if (data.can_submit_report) h += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-rep-submit-btn">Submit for Approval</button>';
+	return h;
+}
+
+// Freeze the current period to a PDF, then post it for the supervisor's approval. Locks the period.
+async function submitExpenseReport() {
+	if (!_spRep.start || !_spRep.end) { alert('Pick a pay period first.'); return; }
+	const btn = $('#sp-rep-submit-btn');
+	if (!confirm('Submit this expense report to your supervisor for approval?\n\nYou won\'t be able to edit this period afterward unless it is sent back to you.')) return;
+	if (btn) { btn.disabled = true; btn.textContent = 'Building PDF…'; }
+	let pdf = null;
+	try { pdf = await exportMileagePDF(_spRep.start, _spRep.end, { returnBase64: true }); } catch (e) { pdf = null; }
+	if (!pdf) { if (btn) { btn.disabled = false; btn.textContent = 'Submit for Approval'; } return; }
+	const data = _spRep.lastData || {};
+	const total = spBuildAccountSummary(data).total;
+	if (btn) btn.textContent = 'Submitting…';
+	const res = await spAjax('site_pulse_submit_expense_report', {
+		start: _spRep.start, end: _spRep.end, label: data.label || '', total: total, pdf_base64: pdf,
+	});
+	if (res.success) {
+		alert(res.data && res.data.auto_approved ? 'Submitted — your supervisor auto-approves your reports, so it has already been approved and sent to accounting.' : 'Submitted for approval.');
+		loadExpenseReport();
+	} else {
+		alert((res.data && res.data.message) || 'Could not submit.');
+		if (btn) { btn.disabled = false; btn.textContent = 'Submit for Approval'; }
+	}
+}
+
+/* ---- Expense report approval: supervisor queue (approve/reject/auto-approve) + approved archive ---- */
+let _spAppr = { reports: [], auto: [], canAll: false };
+let _spArch = { reports: [] };
+
+function initApproveExpense() { loadApproveExpense(); }
+
+async function loadApproveExpense() {
+	const wrap = $('#sp-approve-content'), detail = $('#sp-approve-detail');
+	if (detail) { detail.hidden = true; detail.innerHTML = ''; }
+	if (!wrap) return;
+	wrap.hidden = false;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+	const res = await spAjax('site_pulse_get_expense_approvals', {});
+	if (!res.success) { wrap.innerHTML = `<div class="sp-empty-state"><p>${esc(res.data?.message || 'Could not load the queue.')}</p></div>`; return; }
+	_spAppr.reports = res.data.reports || [];
+	_spAppr.auto = (res.data.auto_approve || []).map(n => parseInt(n, 10));
+	_spAppr.canAll = !!res.data.can_view_all;
+	renderApproveList();
+}
+
+function spApprCard(r) {
+	const money = n => '$' + mileageNumFmt(n);
+	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
+	const label = r.period_label || (dt(r.period_start) + ' – ' + dt(r.period_end));
+	let pill = '';
+	if (r.status === 'submitted') pill = '<span class="sp-submit-pill sp-submit-pill-sent">Pending</span>';
+	else if (r.status === 'approved') pill = `<span class="sp-submit-pill sp-submit-pill-approved">Approved ${dt(r.approved_at)}</span>`;
+	else if (r.status === 'rejected') pill = '<span class="sp-submit-pill sp-submit-pill-rejected">Sent back</span>';
+	return `<div class="sp-appr-card unique" data-report="${r.id}">`
+		+ `<div class="sp-appr-card-main"><div class="sp-appr-card-name">${esc(r.user_name)}</div><div class="sp-appr-card-sub">${esc(label)} · ${money(r.total_amount)}</div></div>`
+		+ `<div class="sp-appr-card-meta">${pill}<div class="sp-appr-card-date">Submitted ${dt(r.submitted_at)}</div></div></div>`;
+}
+
+function renderApproveList() {
+	const wrap = $('#sp-approve-content');
+	if (!wrap) return;
+	const reps = _spAppr.reports;
+	if (!reps.length) { wrap.innerHTML = '<div class="sp-empty-state"><p>No expense reports in your queue yet.</p></div>'; return; }
+	const pending = reps.filter(r => r.status === 'submitted');
+	const done = reps.filter(r => r.status !== 'submitted');
+	let html = `<h3 class="sp-rep-section-title">Pending approval (${pending.length})</h3>`;
+	html += '<div class="sp-appr-list">' + (pending.length ? pending.map(spApprCard).join('') : '<div class="sp-empty-state"><p>Nothing waiting.</p></div>') + '</div>';
+	if (done.length) {
+		html += '<h3 class="sp-rep-section-title">Recently actioned</h3>';
+		html += '<div class="sp-appr-list">' + done.map(spApprCard).join('') + '</div>';
+	}
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+	wrap.querySelectorAll('.sp-appr-card').forEach(c => c.addEventListener('click', () => openApproveDetail(parseInt(c.dataset.report, 10))));
+}
+
+function openApproveDetail(id) {
+	const r = _spAppr.reports.find(x => parseInt(x.id, 10) === id);
+	if (r) openReportDetail(r, 'approve', $('#sp-approve-detail'), $('#sp-approve-content'));
+}
+
+// Shared detail renderer for the queue (mode 'approve') and the archive (mode 'view').
+async function openReportDetail(r, mode, detail, listWrap) {
+	if (!detail) return;
+	if (listWrap) listWrap.hidden = true;
+	detail.hidden = false;
+	detail.innerHTML = '<div class="sp-loading"></div>';
+	const money = n => '$' + mileageNumFmt(n);
+	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
+	const label = r.period_label || (dt(r.period_start) + ' – ' + dt(r.period_end));
+
+	let bar = '<div class="sp-approve-actionbar">';
+	bar += '<button type="button" class="unique sp-btn sp-btn-ghost" data-appr-back>← Back</button>';
+	bar += `<div class="sp-approve-actionbar-title">${esc(r.user_name)} · ${esc(label)} · ${money(r.total_amount)}</div>`;
+	bar += '<div class="sp-approve-actionbar-buttons">';
+	bar += '<button type="button" class="unique sp-btn sp-btn-secondary" data-appr-pdf>Download PDF</button>';
+	if (mode === 'approve' && r.status === 'submitted') {
+		bar += '<button type="button" class="unique sp-btn sp-btn-secondary sp-appr-reject" data-appr-reject>Send back</button>';
+		bar += '<button type="button" class="unique sp-btn sp-btn-primary" data-appr-approve>Approve</button>';
+	} else if (r.status === 'approved') {
+		bar += `<span class="sp-submit-pill sp-submit-pill-approved">Approved on ${dt(r.approved_at)}${r.approved_by_name ? ' by ' + esc(r.approved_by_name) : ''}</span>`;
+	} else if (r.status === 'rejected') {
+		bar += '<span class="sp-submit-pill sp-submit-pill-rejected">Sent back</span>';
+	}
+	bar += '</div></div>';
+
+	if (mode === 'approve') {
+		const on = _spAppr.auto.indexOf(parseInt(r.user_id, 10)) !== -1;
+		bar += `<label class="sp-appr-auto"><input type="checkbox" class="sp-recurring-check" data-appr-auto ${on ? 'checked' : ''}><span class="unique">Auto-approve all reports from ${esc(r.user_name)}</span></label>`;
+	}
+	if (r.reject_note && r.status === 'rejected') bar += `<div class="sp-appr-note">Sent back: ${esc(r.reject_note)}</div>`;
+
+	detail.innerHTML = bar + '<div class="sp-approve-report" id="sp-approve-report-host"></div>';
+	markUniqueSpans(detail);
+
+	const back = () => { detail.hidden = true; detail.innerHTML = ''; if (listWrap) listWrap.hidden = false; };
+	detail.querySelector('[data-appr-back]')?.addEventListener('click', back);
+	detail.querySelector('[data-appr-pdf]')?.addEventListener('click', () => downloadReportPdf(r.id));
+	detail.querySelector('[data-appr-approve]')?.addEventListener('click', () => approveReport(r, mode));
+	detail.querySelector('[data-appr-reject]')?.addEventListener('click', () => rejectReport(r, mode));
+	detail.querySelector('[data-appr-auto]')?.addEventListener('change', (e) => toggleAutoApprove(r, e.target.checked, mode));
+
+	const data = await fetchMileageReport(r.period_start, r.period_end, r.user_id);
+	const host = detail.querySelector('#sp-approve-report-host');
+	if (!host) return;
+	if (!data) { host.innerHTML = '<div class="sp-empty-state"><p>Could not load the report.</p></div>'; return; }
+	renderExpenseReport(data, { target: host, readonly: true });
+}
+
+async function approveReport(r, mode) {
+	if (!confirm('Approve this report? It will be emailed to accounting and ' + r.user_name + ' will be notified.')) return;
+	const res = await spAjax('site_pulse_approve_expense_report', { report_id: r.id });
+	if (!res.success) { alert(res.data?.message || 'Could not approve.'); return; }
+	if (res.data && res.data.emailed === false) alert('Approved — but no accounting email is set (Settings → Expense Reports), so nothing was emailed. Set it, then re-approve if needed.');
+	refreshAfterAction(mode);
+}
+
+async function rejectReport(r, mode) {
+	const note = prompt('Send this report back to ' + r.user_name + ' for edits. Add a note (optional):', '');
+	if (note === null) return;
+	const res = await spAjax('site_pulse_reject_expense_report', { report_id: r.id, note: note });
+	if (!res.success) { alert(res.data?.message || 'Could not send it back.'); return; }
+	refreshAfterAction(mode);
+}
+
+async function toggleAutoApprove(r, on, mode) {
+	const res = await spAjax('site_pulse_set_expense_auto_approve', { user_id: r.user_id, on: on ? 1 : 0 });
+	if (!res.success) { alert(res.data?.message || 'Could not update auto-approve.'); return; }
+	_spAppr.auto = (res.data.auto_approve || []).map(n => parseInt(n, 10));
+	if (on) refreshAfterAction(mode); // approves this + any other queued reports server-side
+}
+
+function refreshAfterAction(mode) {
+	const detail = $(mode === 'view' ? '#sp-approved-detail' : '#sp-approve-detail');
+	if (detail) { detail.hidden = true; detail.innerHTML = ''; }
+	if (mode === 'view') loadApprovedExpense(); else loadApproveExpense();
+}
+
+async function downloadReportPdf(id) {
+	const res = await spAjax('site_pulse_get_expense_report_pdf', { report_id: id });
+	if (!res.success) { alert(res.data?.message || 'Could not fetch the PDF.'); return; }
+	const uri = res.data.pdf_base64 || '';
+	const b64 = uri.indexOf('base64,') !== -1 ? uri.split('base64,')[1] : uri;
+	try {
+		const bin = atob(b64);
+		const bytes = new Uint8Array(bin.length);
+		for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+		downloadBlob(res.data.filename || 'expense-report.pdf', new Blob([bytes], { type: 'application/pdf' }));
+	} catch (e) { alert('Could not decode the PDF.'); }
+}
+
+function initApprovedExpense() {
+	const panel = $('#sp-panel-approved-expense');
+	if (panel && !panel._wired) {
+		panel._wired = true;
+		$('#sp-approved-start')?.addEventListener('change', loadApprovedExpense);
+		$('#sp-approved-end')?.addEventListener('change', loadApprovedExpense);
+		$('#sp-approved-clear')?.addEventListener('click', () => { const s = $('#sp-approved-start'), e = $('#sp-approved-end'); if (s) s.value = ''; if (e) e.value = ''; loadApprovedExpense(); });
+	}
+	loadApprovedExpense();
+}
+
+async function loadApprovedExpense() {
+	const wrap = $('#sp-approved-content'), detail = $('#sp-approved-detail');
+	if (detail) { detail.hidden = true; detail.innerHTML = ''; }
+	if (!wrap) return;
+	wrap.hidden = false;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+	const res = await spAjax('site_pulse_get_approved_expense_reports', { start: $('#sp-approved-start')?.value || '', end: $('#sp-approved-end')?.value || '' });
+	if (!res.success) { wrap.innerHTML = `<div class="sp-empty-state"><p>${esc(res.data?.message || 'Could not load the archive.')}</p></div>`; return; }
+	_spArch.reports = res.data.reports || [];
+	renderApprovedList();
+}
+
+function renderApprovedList() {
+	const wrap = $('#sp-approved-content');
+	if (!wrap) return;
+	const reps = _spArch.reports;
+	if (!reps.length) { wrap.innerHTML = '<div class="sp-empty-state"><p>No approved reports found for this range.</p></div>'; return; }
+	const money = n => '$' + mileageNumFmt(n);
+	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
+	let html = '<div class="sp-card sp-table-card"><table class="sp-table"><thead class="sp-thead"><tr><th>Employee</th><th>Period</th><th class="sp-num">Total</th><th>Approved</th><th>By</th><th></th></tr></thead><tbody>';
+	reps.forEach(r => {
+		const label = r.period_label || (dt(r.period_start) + ' – ' + dt(r.period_end));
+		html += `<tr class="sp-arch-row unique" data-report="${r.id}"><td>${esc(r.user_name)}</td><td>${esc(label)}</td><td class="sp-num">${money(r.total_amount)}</td><td>${dt(r.approved_at)}</td><td>${esc(r.approved_by_name || '')}</td><td class="sp-num"><button type="button" class="unique sp-btn sp-btn-ghost sp-arch-pdf" data-report="${r.id}">PDF</button></td></tr>`;
+	});
+	html += '</tbody></table></div>';
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+	wrap.querySelectorAll('.sp-arch-pdf').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); downloadReportPdf(parseInt(b.dataset.report, 10)); }));
+	wrap.querySelectorAll('.sp-arch-row').forEach(row => row.addEventListener('click', () => {
+		const r = _spArch.reports.find(x => parseInt(x.id, 10) === parseInt(row.dataset.report, 10));
+		if (r) openReportDetail(r, 'view', $('#sp-approved-detail'), $('#sp-approved-content'));
+	}));
+}
+
+async function exportMileagePDF(start, end, opts) {
+	opts = opts || {};
 	if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
 		alert('PDF library is still loading — please try again in a moment.');
 		return;
@@ -13709,7 +14700,8 @@ async function exportMileagePDF(start, end) {
 	const meals = data.business_meals || [];
 	const shopping = data.competitive_shopping || [];
 	const other = data.other_expenses || [];
-	if (!entries.length && !vehicle.length && !meals.length && !shopping.length && !other.length) { alert('No expenses for this period.'); return; }
+	const travel = data.travel_expenses || [];
+	if (!entries.length && !vehicle.length && !meals.length && !shopping.length && !other.length && !travel.length) { if (!opts.returnBase64) alert('No expenses for this period.'); return null; }
 
 	const rate = parseFloat(data.rate) || 0;
 	const money = n => '$' + mileageNumFmt(n);
@@ -13724,19 +14716,13 @@ async function exportMileagePDF(start, end) {
 	const hasTolls = mileageTolls > 0 && rate > 0;
 	const hasTrailer = mileageTrailer > 0 && rate > 0;
 
-	let bFWP = 0, bRepairs = 0, bTrailers = 0;
-	vehicle.forEach(x => {
-		const amt = parseFloat(x.amount) || 0;
-		if (x.category === 'repairs') bRepairs += amt;
-		else if (x.category === 'trailers') bTrailers += amt;
-		else bFWP += amt;
-	});
 	const cTotal = sumOf(meals, x => x.amount);
 	const dTotal = sumOf(shopping, x => x.amount);
 	const eTotal = sumOf(other, x => x.amount);
-	const fTotal = 0; // Section F (Travel) not built yet
-	const personalTolls = mileageTolls + mileageTrailer + bTrailers;
-	const totalDue = mileageReimb + bFWP + bRepairs + personalTolls + cTotal + dTotal + eTotal + fTotal;
+	const fTotal = sumOf(travel, x => x.amount); // Section F — all categories roll up to GL 91110
+	// Summary of Expenses is grouped dynamically by GL account (shared with the on-screen report).
+	const summary = spBuildAccountSummary(data);
+	const totalDue = summary.total;
 
 	const { jsPDF } = window.jspdf;
 	const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'letter' });
@@ -13758,33 +14744,24 @@ async function exportMileagePDF(start, end) {
 	doc.setFontSize(8); doc.setTextColor(...FAINT);
 	doc.text(`Generated: ${fmtReportDate(new Date())}`, 40, y + 1);
 
-	// Summary of Expenses — totals by GL account, then Total Due to Employee (mirrors the screen).
-	const sumRows = [
-		['A - Mileage', mileageReimb, '91310'],
-		['B - Fuel/Wash/Parking', bFWP, '91300'],
-		['B - Company Driven Repairs', bRepairs, '91310'],
-		['B - Personal Tolls/Trailers', personalTolls, '91310'],
-		['C - Meals & Entertainment', cTotal, '91110'],
-		['D - R&D-Food', dTotal, '81095'],
-		['E - Other Expenses', eTotal, 'See Section E'],
-		['F - Travel Expenses', fTotal, '91110'],
-	];
+	// Summary of Expenses — one line per GL account (from the chart of accounts), then Total Due.
+	// Built from the same shared helper as the on-screen report, so the two always match.
 	doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...NAVY);
 	doc.text('Summary of Expenses', 40, y + 26);
 	doc.setFont('helvetica', 'normal');
 	doc.autoTable({
 		startY: y + 34,
 		head: [['Description', 'Amount', 'Account']],
-		body: sumRows.map(([l, amt, acct]) => [l, { content: money(amt), styles: { halign: 'right' } }, acct]),
+		body: summary.rows.map(r => [r.desc, { content: money(r.amount), styles: { halign: 'right' } }, r.account_label || r.account]),
 		foot: [['Total Due to Employee', { content: money(totalDue), styles: { halign: 'right' } }, '']],
 		headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
 		footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 10 },
 		bodyStyles: { fontSize: 9, textColor: [26, 26, 24] },
 		alternateRowStyles: { fillColor: [248, 248, 245] },
 		columnStyles: {
-			0: { cellWidth: 532 - 90 - 90 },
+			0: { cellWidth: 532 - 90 - 150 },
 			1: { cellWidth: 90, halign: 'right' },
-			2: { cellWidth: 90 },
+			2: { cellWidth: 150 },
 		},
 		margin: { left: 40, right: 40 },
 	});
@@ -13877,15 +14854,15 @@ async function exportMileagePDF(start, end) {
 		let bGrand = 0;
 		const vBody = vehicle.map(x => {
 			const amt = parseFloat(x.amount) || 0; bGrand += amt;
-			return [formatDate(x.expense_date), vcatLabel(x.category), String(x.description || ''), money(amt)];
+			return [formatDate(x.expense_date), vcatLabel(x.category), String(x.description || ''), String(x.store_number || ''), money(amt)];
 		});
 
-		const VDATE_W = 60, VCAT_W = 120, VAMT_W = 72;
+		const VDATE_W = 60, VCAT_W = 120, VSTORE_W = 56, VAMT_W = 72;
 		doc.autoTable({
 			startY: bY + 8,
-			head: [['Date', 'Category', 'Description', 'Amount']],
+			head: [['Date', 'Category', 'Description', 'Store #', 'Amount']],
 			body: vBody,
-			foot: [[{ content: `Section B Total · ${money(bGrand)}`, colSpan: 4, styles: { halign: 'right' } }]],
+			foot: [[{ content: `Section B Total · ${money(bGrand)}`, colSpan: 5, styles: { halign: 'right' } }]],
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
 			footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9 },
 			bodyStyles: { fontSize: 9, textColor: [26, 26, 24], valign: 'top' },
@@ -13893,8 +14870,9 @@ async function exportMileagePDF(start, end) {
 			columnStyles: {
 				0: { cellWidth: VDATE_W },
 				1: { cellWidth: VCAT_W },
-				2: { cellWidth: 532 - VDATE_W - VCAT_W - VAMT_W },
-				3: { cellWidth: VAMT_W, halign: 'right' },
+				2: { cellWidth: 532 - VDATE_W - VCAT_W - VSTORE_W - VAMT_W },
+				3: { cellWidth: VSTORE_W, halign: 'center' },
+				4: { cellWidth: VAMT_W, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
@@ -13941,8 +14919,8 @@ async function exportMileagePDF(start, end) {
 		});
 	}
 
-	// Section D — Competitive Shopping: Date | Place | Business Purpose | Store # | Amount,
-	// with a Section D total (all GL 81095, R&D-Food). No Attendees column.
+	// Section D — Competitive Shopping: Date | Place | Business Purpose | Attendees | Store # | Amount,
+	// with a Section D total (all GL 81095, R&D-Food).
 	if (shopping.length) {
 		let dY = doc.lastAutoTable.finalY + 28;
 		if (dY > pageH - 130) { doc.addPage(); dY = 54; }
@@ -13956,26 +14934,27 @@ async function exportMileagePDF(start, end) {
 			dGrand += amt;
 			return [
 				formatDate(x.expense_date), String(x.place || ''), String(x.business_purpose || ''),
-				String(x.store_number || ''), `$${mileageNumFmt(amt)}`,
+				String(x.attendees || ''), String(x.store_number || ''), `$${mileageNumFmt(amt)}`,
 			];
 		});
 
 		const DDATE_W = 58, DSTORE_W = 44, DAMT_W = 64, DFREE = 532 - DDATE_W - DSTORE_W - DAMT_W;
 		doc.autoTable({
 			startY: dY + 8,
-			head: [['Date', 'Place', 'Business Purpose', 'Store #', 'Amount']],
+			head: [['Date', 'Place', 'Business Purpose', 'Attendees', 'Store #', 'Amount']],
 			body: dBody,
-			foot: [[{ content: `Section D Total · ${money(dGrand)}`, colSpan: 5, styles: { halign: 'right' } }]],
+			foot: [[{ content: `Section D Total · ${money(dGrand)}`, colSpan: 6, styles: { halign: 'right' } }]],
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
 			footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9 },
 			bodyStyles: { fontSize: 8.5, textColor: [26, 26, 24], valign: 'top' },
 			alternateRowStyles: { fillColor: [248, 248, 245] },
 			columnStyles: {
 				0: { cellWidth: DDATE_W },
-				1: { cellWidth: Math.round(DFREE * 0.42) },
-				2: { cellWidth: DFREE - Math.round(DFREE * 0.42) },
-				3: { cellWidth: DSTORE_W },
-				4: { cellWidth: DAMT_W, halign: 'right' },
+				1: { cellWidth: Math.round(DFREE * 0.34) },
+				2: { cellWidth: Math.round(DFREE * 0.36) },
+				3: { cellWidth: DFREE - Math.round(DFREE * 0.34) - Math.round(DFREE * 0.36) },
+				4: { cellWidth: DSTORE_W },
+				5: { cellWidth: DAMT_W, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
@@ -14021,8 +15000,45 @@ async function exportMileagePDF(start, end) {
 		});
 	}
 
+	// Section F — Travel Expenses: Date | Category | Description | Amount (mirrors the report).
+	// Like Section B — several categories, all GL 91110, so no per-category subtotals here.
+	if (travel.length) {
+		const tcats = data.travel_categories || {};
+		const tcatLabel = k => (tcats[k] && tcats[k].label) || k || '—';
+		let fY = doc.lastAutoTable.finalY + 28;
+		if (fY > pageH - 130) { doc.addPage(); fY = 54; }
+		doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...NAVY);
+		doc.text('F — Travel Expenses', 40, fY);
+		doc.setFont('helvetica', 'normal');
+
+		let fGrand = 0;
+		const fBody = travel.map(x => {
+			const amt = parseFloat(x.amount) || 0; fGrand += amt;
+			return [formatDate(x.expense_date), tcatLabel(x.category), String(x.description || ''), money(amt)];
+		});
+
+		const FDATE_W = 60, FCAT_W = 120, FAMT_W = 72;
+		doc.autoTable({
+			startY: fY + 8,
+			head: [['Date', 'Category', 'Description', 'Amount']],
+			body: fBody,
+			foot: [[{ content: `Section F Total · ${money(fGrand)}`, colSpan: 4, styles: { halign: 'right' } }]],
+			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
+			footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9 },
+			bodyStyles: { fontSize: 9, textColor: [26, 26, 24], valign: 'top' },
+			alternateRowStyles: { fillColor: [248, 248, 245] },
+			columnStyles: {
+				0: { cellWidth: FDATE_W },
+				1: { cellWidth: FCAT_W },
+				2: { cellWidth: 532 - FDATE_W - FCAT_W - FAMT_W },
+				3: { cellWidth: FAMT_W, halign: 'right' },
+			},
+			margin: { left: 40, right: 40 },
+		});
+	}
+
 	// Receipt photos — one page each, appended after the report. Built from every section's
-	// receipt_url (vehicle/meals/shopping/other), with a caption tying it back to the line.
+	// receipt_url (vehicle/meals/shopping/other/travel), with a caption tying it back to the line.
 	const receipts = [];
 	const collect = (arr, sec) => (arr || []).forEach(x => {
 		if (!x.receipt_url) return;
@@ -14033,6 +15049,7 @@ async function exportMileagePDF(start, end) {
 	collect(meals, 'C — Business Meals');
 	collect(shopping, 'D — Competitive Shopping');
 	collect(other, 'E — Other Expenses');
+	collect(travel, 'F — Travel Expenses');
 
 	for (const rc of receipts) {
 		const img = await spLoadImage(rc.url);
@@ -14051,6 +15068,8 @@ async function exportMileagePDF(start, end) {
 	const now = new Date();
 	const genISO = `${now.getFullYear()}-${mPad2(now.getMonth() + 1)}-${mPad2(now.getDate())}`;
 	const periodSlug = (data.label || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'all';
+	// Submit flow: hand the base64 back instead of triggering a download, so it can be frozen server-side.
+	if (opts.returnBase64) return doc.output('datauristring');
 	doc.save(`${genISO}_Expense_Report_${periodSlug}.pdf`);
 }
 
@@ -14217,6 +15236,7 @@ async function loadAdminMileage() {
 		const requireApproval = res.data.require_approval !== false;
 		const periodLength = parseInt(res.data.period_length) || 0;
 		const periodAnchor = res.data.period_anchor || '';
+		const apEmail = res.data.expense_ap_email || '';
 		const pending = locs.filter(l => l.status === 'pending');
 		const approved = locs.filter(l => l.status === 'approved');
 
@@ -14396,8 +15416,32 @@ async function loadAdminMileage() {
 		secPurpose += '<div class="sp-mileage-purpose-add"><input type="text" id="sp-mileage-purpose-new" class="sp-input" placeholder="Add a purpose…"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-purpose-add-btn">Add</button></div>';
 		secPurpose += cardEnd;
 
-		// Panel order (edit this line to re-arrange the Mileage Settings sections):
-		const html = secDest + secNewDest + secPurpose + secMatrix + secReminder + secToll + secRates + secPeriods + secMarkers;
+		// Chart of Accounts editor — the GL accounts (number + description) that feed the Other
+		// Expenses account dropdown and the category account pickers below.
+		let secAccounts = card('Chart of Accounts');
+		secAccounts += '<p class="sp-text-secondary">Your GL accounts. These feed the account dropdown on <strong>Other Expenses</strong> and the account picker for each category below — shown to staff as “91200 Office Supplies”.</p>';
+		secAccounts += '<div class="sp-exp-acct-rows" id="sp-exp-acct-list"></div>';
+		secAccounts += '<div class="sp-exp-add-row"><input type="text" id="sp-exp-acct-num" class="sp-input sp-exp-acct-num-in" placeholder="Number (e.g. 91200)"><input type="text" id="sp-exp-acct-desc" class="sp-input" placeholder="Description (e.g. Office Supplies)"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-exp-acct-add-btn">Add</button></div>';
+		secAccounts += cardEnd;
+
+		// Expense Categories editor — the categories inside each section + the GL account each posts
+		// to (from the chart above), plus which accounts Mileage posts to. Other Expenses has none.
+		let secCategories = card('Expense Categories');
+		secCategories += '<p class="sp-text-secondary">The categories staff pick inside each expense section, and the GL account each posts to. Classify these however your business needs. <strong>Other Expenses</strong> has no fixed categories — staff choose an account per line.</p>';
+		secCategories += '<div id="sp-exp-cat-sections"></div>';
+		secCategories += '<div class="sp-exp-mileage-accts"><h4>Mileage posts to</h4><div class="sp-exp-mileage-accts-grid" id="sp-exp-mileage-accts"></div></div>';
+		secCategories += cardEnd;
+
+		// Approval & accounting — the email address approved expense reports are sent to.
+		let secApproval = card('Approval &amp; Accounting');
+		secApproval += '<p class="sp-text-secondary">When a supervisor approves an expense report, the frozen PDF is emailed here. Leave blank to skip the email (reports still archive under <strong>Approved Reports</strong>).</p>';
+		secApproval += '<div class="sp-admin-mileage-rate"><label for="sp-exp-ap-email">Accounting (AP) email</label>';
+		secApproval += `<input type="email" id="sp-exp-ap-email" class="sp-input" placeholder="ap@example.com" value="${esc(apEmail)}">`;
+		secApproval += '<span class="sp-help-text" id="sp-exp-ap-email-status" style="margin-left:10px;"></span></div>';
+		secApproval += cardEnd;
+
+		// Panel order (edit this line to re-arrange the Expense Reports settings sections):
+		const html = secDest + secNewDest + secApproval + secAccounts + secCategories + secPurpose + secMatrix + secReminder + secToll + secRates + secPeriods + secMarkers;
 
 		wrap.innerHTML = html;
 		markUniqueSpans(wrap);
@@ -14425,10 +15469,10 @@ async function loadAdminMileage() {
 			box.innerHTML = purposeList.map((p, i) => {
 				const nameCell = (i === editingIdx)
 					? `<input type="text" class="sp-input sp-purpose-edit-input" data-i="${i}" value="${esc(p.label)}">`
-					: `<span class="sp-purpose-text">${esc(p.label)}</span>`;
-				return `<div class="sp-purpose-row" data-i="${i}">${nameCell}`
-					+ `<label class="sp-purpose-req unique" title="Prompt the driver for an additional note whenever they pick this purpose"><input type="checkbox" class="sp-purpose-req-cb" data-i="${i}"${p.requires_note ? ' checked' : ''}> Requires note</label>`
-					+ iconBtn('edit', 'sp-purpose-edit', `data-i="${i}"`)
+					: `<div class="sp-purpose-text">${esc(p.label)}</div>`;
+				return `<div class="sp-purpose-row" data-i="${i}">`
+					+ `<label class="sp-purpose-req unique" title="Prompt the driver for an additional note whenever they pick this purpose"><input type="checkbox" class="sp-purpose-req-cb" data-i="${i}"${p.requires_note ? ' checked' : ''}></label>`
+					+ nameCell + iconBtn('edit', 'sp-purpose-edit', `data-i="${i}"`)
 					+ iconBtn('delete', 'sp-purpose-del', `data-i="${i}"`) + '</div>';
 			}).join('');
 			markUniqueSpans(box);
@@ -14483,6 +15527,115 @@ async function loadAdminMileage() {
 		};
 		$('#sp-mileage-purpose-add-btn', wrap)?.addEventListener('click', addPurpose);
 		$('#sp-mileage-purpose-new', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addPurpose(); } });
+
+		// ---- Expense config editors: Chart of Accounts, Categories, and mileage→account map ----
+		let acctList = (res.data.expense_accounts || []).map(a => ({ number: String(a.number || ''), description: String(a.description || '') }));
+		const CAT_SECTIONS = [['B', 'Vehicle Expenses'], ['C', 'Business Meals'], ['D', 'Competitive Shopping'], ['F', 'Travel Expenses']];
+		const catSrc = res.data.expense_categories || {};
+		let catArrays = {};
+		Object.keys(catSrc).forEach(sec => {
+			const cats = (catSrc[sec] && catSrc[sec].categories) || {};
+			catArrays[sec] = Object.keys(cats).map(k => ({ key: k, label: cats[k].label || k, account: String(cats[k].account || '') }));
+		});
+		CAT_SECTIONS.forEach(([sec]) => { if (!catArrays[sec]) catArrays[sec] = []; });
+		let mileageAcct = Object.assign({ reimbursement: '91310', tolls: '91310', trailer: '91310' }, res.data.expense_mileage_accounts || {});
+
+		// <option> list for an account picker; keeps a saved-but-unlisted account selectable.
+		const acctOptions = (selected) => {
+			const v = selected == null ? '' : String(selected);
+			let o = '<option value="">— account —</option>';
+			acctList.forEach(a => {
+				if (!a.number) return;
+				const lbl = a.description ? `${a.number} ${a.description}` : a.number;
+				o += `<option value="${esc(a.number)}"${v === String(a.number) ? ' selected' : ''}>${esc(lbl)}</option>`;
+			});
+			if (v && !acctList.some(a => String(a.number) === v)) o += `<option value="${esc(v)}" selected>${esc(v)}</option>`;
+			return o;
+		};
+
+		const saveAccounts = async () => {
+			const r = await spAjax('site_pulse_admin_save_expense_accounts', { accounts: JSON.stringify(acctList) });
+			if (r.success) spFlash('Accounts saved'); else alert(r.data?.message || 'Error saving accounts.');
+		};
+		const saveCategories = async () => {
+			const r = await spAjax('site_pulse_admin_save_expense_categories', { categories: JSON.stringify(catArrays) });
+			if (r.success) spFlash('Categories saved'); else alert(r.data?.message || 'Error saving categories.');
+		};
+		const saveMileageAccts = async () => {
+			const r = await spAjax('site_pulse_admin_save_mileage_accounts', { mileage_accounts: JSON.stringify(mileageAcct) });
+			if (r.success) spFlash('Saved'); else alert(r.data?.message || 'Error.');
+		};
+
+		const renderAcctRows = () => {
+			const box = $('#sp-exp-acct-list', wrap);
+			if (!box) return;
+			box.innerHTML = acctList.length ? acctList.map((a, i) =>
+				`<div class="sp-exp-acct-row" data-i="${i}">`
+				+ `<input type="text" class="sp-input sp-exp-acct-num-in sp-exp-acct-num-edit" data-i="${i}" value="${esc(a.number)}" placeholder="Number">`
+				+ `<input type="text" class="sp-input sp-exp-acct-desc-edit" data-i="${i}" value="${esc(a.description)}" placeholder="Description">`
+				+ iconBtn('delete', 'sp-exp-acct-del', `data-i="${i}"`) + '</div>').join('')
+				: '<span class="unique sp-text-secondary">No accounts yet.</span>';
+			markUniqueSpans(box);
+			$$('.sp-exp-acct-num-edit', box).forEach(inp => inp.addEventListener('change', () => { acctList[+inp.dataset.i].number = inp.value.trim(); saveAccounts(); renderCatSections(); renderMileageAccts(); }));
+			$$('.sp-exp-acct-desc-edit', box).forEach(inp => inp.addEventListener('change', () => { acctList[+inp.dataset.i].description = inp.value.trim(); saveAccounts(); renderCatSections(); renderMileageAccts(); }));
+			$$('.sp-exp-acct-del', box).forEach(b => b.addEventListener('click', () => { acctList.splice(+b.dataset.i, 1); renderAcctRows(); renderCatSections(); renderMileageAccts(); saveAccounts(); }));
+		};
+
+		const renderCatSections = () => {
+			const box = $('#sp-exp-cat-sections', wrap);
+			if (!box) return;
+			box.innerHTML = CAT_SECTIONS.map(([sec, label]) => {
+				const rows = (catArrays[sec] || []).map((c, i) =>
+					`<div class="sp-exp-cat-row" data-sec="${sec}" data-i="${i}">`
+					+ `<input type="text" class="sp-input sp-exp-cat-label" data-sec="${sec}" data-i="${i}" value="${esc(c.label)}" placeholder="Category name">`
+					+ `<select class="sp-select sp-exp-cat-acct" data-sec="${sec}" data-i="${i}">${acctOptions(c.account)}</select>`
+					+ iconBtn('delete', 'sp-exp-cat-del', `data-sec="${sec}" data-i="${i}"`) + '</div>').join('');
+				return `<div class="sp-exp-cat-group"><h4>${esc(label)}</h4><div class="sp-exp-cat-rows">${rows || '<span class="unique sp-text-secondary">No categories.</span>'}</div>`
+					+ `<div class="sp-exp-add-row"><input type="text" class="sp-input sp-exp-cat-new" data-sec="${sec}" placeholder="Add a category…"><button type="button" class="unique sp-btn sp-btn-secondary sp-exp-cat-add" data-sec="${sec}">Add</button></div></div>`;
+			}).join('') + '<div class="sp-exp-cat-group"><h4>Other Expenses</h4><p class="sp-text-secondary">No fixed categories — staff choose a GL account per line from the chart above.</p></div>';
+			markUniqueSpans(box);
+			$$('.sp-exp-cat-label', box).forEach(inp => inp.addEventListener('change', () => { catArrays[inp.dataset.sec][+inp.dataset.i].label = inp.value.trim(); saveCategories(); }));
+			$$('.sp-exp-cat-acct', box).forEach(sel => sel.addEventListener('change', () => { catArrays[sel.dataset.sec][+sel.dataset.i].account = sel.value; saveCategories(); }));
+			$$('.sp-exp-cat-del', box).forEach(b => b.addEventListener('click', () => { catArrays[b.dataset.sec].splice(+b.dataset.i, 1); renderCatSections(); saveCategories(); }));
+			$$('.sp-exp-cat-add', box).forEach(b => b.addEventListener('click', () => {
+				const inp = box.querySelector(`.sp-exp-cat-new[data-sec="${b.dataset.sec}"]`);
+				const v = (inp.value || '').trim(); if (!v) return;
+				catArrays[b.dataset.sec].push({ key: '', label: v, account: '' }); // empty key → server slugs it
+				inp.value = ''; renderCatSections(); saveCategories();
+			}));
+			$$('.sp-exp-cat-new', box).forEach(inp => inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); box.querySelector(`.sp-exp-cat-add[data-sec="${inp.dataset.sec}"]`)?.click(); } }));
+		};
+
+		const renderMileageAccts = () => {
+			const box = $('#sp-exp-mileage-accts', wrap);
+			if (!box) return;
+			const field = (k, label) => `<label class="sp-exp-mileage-acct"><span>${label}</span><select class="sp-select sp-exp-mileage-acct-sel" data-k="${k}">${acctOptions(mileageAcct[k])}</select></label>`;
+			box.innerHTML = field('reimbursement', 'Mileage reimbursement') + field('tolls', 'Tolls') + field('trailer', 'Trailer');
+			$$('.sp-exp-mileage-acct-sel', box).forEach(sel => sel.addEventListener('change', () => { mileageAcct[sel.dataset.k] = sel.value; saveMileageAccts(); }));
+		};
+
+		renderAcctRows();
+		renderCatSections();
+		renderMileageAccts();
+
+		const addAcct = () => {
+			const numI = $('#sp-exp-acct-num', wrap), descI = $('#sp-exp-acct-desc', wrap);
+			const num = (numI.value || '').trim(); if (!num) return;
+			if (acctList.some(a => a.number === num)) { numI.value = ''; descI.value = ''; return; }
+			acctList.push({ number: num, description: (descI.value || '').trim() });
+			numI.value = ''; descI.value = '';
+			renderAcctRows(); renderCatSections(); renderMileageAccts(); saveAccounts();
+		};
+		$('#sp-exp-acct-add-btn', wrap)?.addEventListener('click', addAcct);
+		$('#sp-exp-acct-desc', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addAcct(); } });
+
+		// Accounting (AP) email — save on change.
+		$('#sp-exp-ap-email', wrap)?.addEventListener('change', async (e) => {
+			const status = $('#sp-exp-ap-email-status', wrap);
+			const r = await spAjax('site_pulse_admin_save_expense_ap_email', { email: e.target.value.trim() });
+			if (r.success) { if (status) status.textContent = 'Saved.'; spFlash('Saved'); }
+			else { if (status) status.textContent = ''; alert(r.data?.message || 'Error saving.'); }
+		});
 
 		// Edit an approved location's metadata.
 		$$('.sp-mileage-edit-loc-btn', wrap).forEach(b => b.addEventListener('click', () => {

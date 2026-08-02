@@ -1,0 +1,356 @@
+/* Battle Plan Web Design — Customer Connect (public customer PWA)
+   Mobile-first, app-like. White-label: inherits the client's site fonts and
+   layers a single --cc-accent (set inline per client from the customer_connect config).
+   Uses em units throughout so it scales with the site's root size. */
+
+:root {
+	--cc-accent: #0f766e;
+	--cc-bg: #f4f6f8;
+	--cc-surface: #ffffff;
+	--cc-ink: #1f2933;
+	--cc-ink-soft: #52606d;
+	--cc-line: #e2e6ea;
+	--cc-radius: 0.9em;
+	--cc-shadow: 0 0.15em 0.5em rgba(0, 0, 0, .06);
+	--cc-tabbar-h: 4.2em;
+	--cc-accent-ink: #ffffff;
+}
+
+/* Full-screen app: strip the website chrome (header, footer, sidebar, mobile bar)
+   so Customer Connect reads as an APP, not a web page — while keeping the client's brand
+   fonts/colors. Mirrors how Site Pulse takes over the page. Scoped to both the
+   customer app and the staff dashboard body classes. */
+body.has-customer-connect { background: var(--cc-bg); }
+
+body.has-customer-connect #masthead,
+body.has-customer-connect #colophon,
+body.has-customer-connect #mobile-menu-bar,
+body.has-customer-connect #mobile-menu-bar-faux,
+body.has-customer-connect #secondary,
+body.has-customer-connect .widget-area,
+body.has-customer-connect .sidebar,
+body.has-customer-connect #wrapper-bottom,
+body.has-customer-connect .bp-chat-widget,
+body.has-customer-connect .wp-gr,
+body.has-customer-connect .wp-google-badge,
+body.has-customer-connect #include-svg {
+	display: none !important;
+}
+
+body.has-customer-connect #page,
+body.has-customer-connect .site,
+body.has-customer-connect #wrapper-content,
+body.has-customer-connect #primary,
+body.has-customer-connect .site-main-inner,
+body.has-customer-connect #main-content,
+body.has-customer-connect article[id^="post-"],
+body.has-customer-connect .entry-content {
+	max-width: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	background: var(--cc-bg);
+}
+
+body.has-customer-connect #main-content {
+	grid-column: 1 / -1;
+	display: block;
+	min-height: 100vh;
+	min-height: 100dvh;
+}
+
+#customer-connect-app {
+	font-family: var(--font-text, var(--font-primary, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif));
+	color: var(--cc-ink);
+	max-width: 34em;
+	margin: 0 auto;
+	min-height: 100vh;
+	min-height: 100dvh;
+	background: var(--cc-bg);
+	position: relative;
+}
+
+#customer-connect-app *, #customer-connect-app *::before, #customer-connect-app *::after { box-sizing: border-box; }
+
+/* ---------- screens ---------- */
+
+.cc-screen[hidden] { display: none; }
+
+.cc-boot, .cc-screen[data-screen="signin"] {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding: 1.5em;
+}
+
+.cc-boot-inner { text-align: center; }
+.cc-boot-icon { border-radius: 1em; margin-bottom: 1.2em; }
+
+.cc-check {
+	width: 3em; height: 3em; margin: 0 auto 0.6em;
+	border-radius: 50%; background: var(--cc-accent); color: #fff;
+	font-size: 1.4em; line-height: 3em; text-align: center; font-weight: 700;
+	animation: cc-pop 0.35s ease;
+}
+.cc-welcome { margin: 0; font-weight: 600; color: var(--cc-ink); }
+@keyframes cc-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.cc-spinner {
+	width: 2.2em; height: 2.2em; margin: 0 auto;
+	border: 0.22em solid var(--cc-line);
+	border-top-color: var(--cc-accent);
+	border-radius: 50%;
+	animation: cc-spin 0.8s linear infinite;
+}
+@keyframes cc-spin { to { transform: rotate(360deg); } }
+
+/* ---------- auth card ---------- */
+
+.cc-auth-card {
+	width: 100%;
+	max-width: 24em;
+	background: var(--cc-surface);
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+	padding: 2em 1.6em;
+}
+.cc-auth-header { text-align: center; margin-bottom: 1.4em; }
+.cc-auth-icon { border-radius: 0.9em; margin-bottom: 0.8em; }
+.cc-auth-title {
+	font-family: var(--font-primary, inherit);
+	font-size: 1.5em; margin: 0; color: var(--cc-ink);
+}
+.cc-auth-sub { margin: 0.2em 0 0; color: var(--cc-ink-soft); font-size: 0.95em; }
+
+/* ---------- forms ---------- */
+
+.cc-form { display: flex; flex-direction: column; gap: 0.9em; }
+.cc-form-lead { margin: 0 0 0.3em; color: var(--cc-ink-soft); font-size: 0.95em; line-height: 1.5; }
+
+.cc-field { display: flex; flex-direction: column; gap: 0.35em; }
+.cc-field > span { font-size: 0.8em; font-weight: 600; color: var(--cc-ink-soft); }
+.cc-field input {
+	font: inherit;
+	padding: 0.75em 0.85em;
+	border: 1px solid var(--cc-line);
+	border-radius: 0.6em;
+	background: #fff;
+	color: var(--cc-ink);
+	width: 100%;
+}
+.cc-field input:focus {
+	outline: none;
+	border-color: var(--cc-accent);
+	box-shadow: 0 0 0 0.15em color-mix(in srgb, var(--cc-accent) 25%, transparent);
+}
+.cc-field[data-field="email"][hidden] { display: none; }
+
+.cc-row { display: flex; gap: 0.6em; }
+.cc-row .cc-field { flex: 1; }
+
+/* ---------- buttons ---------- */
+
+.cc-btn {
+	font: inherit; font-weight: 600;
+	border: 0; border-radius: 0.6em;
+	padding: 0.8em 1em;
+	cursor: pointer;
+	background: #eef1f4; color: var(--cc-ink);
+	transition: filter 0.15s ease, background 0.15s ease;
+}
+.cc-btn:disabled { opacity: 0.6; cursor: default; }
+.cc-btn-primary { background: var(--cc-accent); color: var(--cc-accent-ink); }
+.cc-btn-primary:hover, .cc-btn-primary.active, .cc-btn-primary.tab-focus { filter: brightness(0.94); }
+.cc-link { background: none; color: var(--cc-accent); padding: 0.4em; }
+.cc-link:hover, .cc-link.active, .cc-link.tab-focus { text-decoration: underline; }
+.cc-alt-toggle { background: none; color: var(--cc-accent); align-self: flex-start; padding: 0.1em 0; font-size: 0.9em; }
+
+.cc-error { color: #b42318; font-size: 0.88em; margin: 0; }
+.cc-error[hidden], .cc-ok[hidden] { display: none; }
+.cc-ok { color: #067647; font-size: 0.88em; margin: 0; }
+
+/* ---------- app shell ---------- */
+
+.cc-app { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+
+.cc-appbar {
+	display: flex; align-items: center; justify-content: space-between;
+	padding: 0.9em 1.1em;
+	background: var(--cc-accent); color: var(--cc-accent-ink);
+	position: sticky; top: 0; z-index: 5;
+}
+.cc-appbar-title { font-family: var(--font-primary, inherit); font-weight: 700; font-size: 1.15em; }
+.cc-appbar-actions { display: flex; align-items: center; gap: 0.5em; }
+.cc-appbar-menu {
+	width: 1.9em; height: 1.9em; border: 0; border-radius: 50%;
+	background: rgba(255, 255, 255, .2); cursor: pointer; position: relative;
+}
+.cc-appbar-menu::before {
+	content: ""; position: absolute; inset: 0.5em;
+	border-radius: 50%; border: 0.14em solid #fff;
+	border-bottom: 0.55em solid #fff; box-sizing: border-box;
+}
+.cc-appbar-bell {
+	width: 1.9em; height: 1.9em; border: 0; border-radius: 50%;
+	background: rgba(255, 255, 255, .2); cursor: pointer; position: relative;
+}
+.cc-appbar-bell::before {
+	content: ""; position: absolute; left: 50%; top: 0.42em;
+	width: 0.75em; height: 0.75em; transform: translateX(-50%);
+	border: 0.14em solid #fff; border-bottom: 0; border-radius: 0.5em 0.5em 0 0;
+	box-shadow: 0 0.62em 0 -0.06em #fff; box-sizing: border-box;
+}
+.cc-badge {
+	position: absolute; top: -0.2em; right: -0.2em;
+	min-width: 1.25em; height: 1.25em; padding: 0 0.25em;
+	background: #e11d48; color: #fff; border-radius: 0.7em;
+	font-size: 0.6em; font-weight: 700; line-height: 1.25em; text-align: center;
+}
+.cc-badge[hidden] { display: none; }
+
+.cc-optin { display: flex; flex-direction: column; gap: 0.5em; align-items: flex-start; }
+.cc-optin .cc-btn { margin-top: 0.3em; }
+
+.cc-notif-list { display: flex; flex-direction: column; gap: 0.7em; }
+.cc-notif.is-unread { border-left: 0.25em solid var(--cc-accent); }
+.cc-notif-head { display: flex; justify-content: space-between; gap: 0.5em; align-items: baseline; }
+.cc-notif-title { font-weight: 700; color: var(--cc-ink); }
+.cc-notif-when { font-size: 0.78em; color: var(--cc-ink-soft); white-space: nowrap; }
+.cc-notif-body { margin: 0.4em 0 0; font-size: 0.92em; }
+.cc-notif-link { display: inline-block; margin-top: 0.5em; color: var(--cc-accent); font-weight: 600; font-size: 0.9em; }
+
+.cc-view {
+	flex: 1;
+	padding: 1.1em 1.1em calc(var(--cc-tabbar-h) + 1.1em);
+	display: flex; flex-direction: column; gap: 1em;
+}
+
+/* ---------- cards ---------- */
+
+.cc-card {
+	background: var(--cc-surface);
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+	padding: 1.2em;
+}
+.cc-card h2 { margin: 0 0 0.4em; font-family: var(--font-primary, inherit); font-size: 1.25em; }
+.cc-card p { margin: 0; color: var(--cc-ink-soft); line-height: 1.55; }
+
+.cc-hero { background: linear-gradient(135deg, var(--cc-accent), color-mix(in srgb, var(--cc-accent) 70%, #000)); color: #fff; }
+.cc-hero h2 { color: #fff; }
+.cc-hero p { color: rgba(255, 255, 255, .9); }
+
+.cc-quick { display: flex; flex-direction: column; gap: 0.8em; }
+.cc-quick-item {
+	text-align: left; border: 0; cursor: pointer; width: 100%;
+	display: flex; flex-direction: column; gap: 0.2em;
+}
+.cc-quick-item:hover, .cc-quick-item.active, .cc-quick-item.tab-focus { box-shadow: 0 0.3em 0.8em rgba(0, 0, 0, .1); }
+.cc-quick-title { font-weight: 700; color: var(--cc-ink); }
+.cc-quick-sub { font-size: 0.9em; color: var(--cc-ink-soft); }
+
+.cc-account-form { margin-top: 0.4em; }
+.cc-signout { margin-top: 1em; color: #b42318; }
+
+/* ---------- tab bar ---------- */
+
+.cc-tabbar {
+	position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
+	width: 100%; max-width: 34em;
+	height: var(--cc-tabbar-h);
+	display: flex;
+	background: var(--cc-surface);
+	border-top: 1px solid var(--cc-line);
+	padding-bottom: env(safe-area-inset-bottom, 0);
+	z-index: 6;
+}
+.cc-tab {
+	flex: 1; border: 0; background: none; cursor: pointer;
+	display: flex; align-items: center; justify-content: center;
+	color: var(--cc-ink-soft); font: inherit; font-size: 0.8em; font-weight: 600;
+}
+.cc-tab.is-active { color: var(--cc-accent); }
+.cc-tab-label { display: block; }
+
+/* ---------- equipment (My Home) ---------- */
+
+.cc-loading { display: flex; justify-content: center; padding: 1.5em; }
+.cc-empty p { text-align: center; }
+.cc-eq-intro p { font-size: 0.95em; }
+
+.cc-eq-list { display: flex; flex-direction: column; gap: 0.8em; }
+.cc-eq-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; }
+.cc-eq-title { font-weight: 700; color: var(--cc-ink); }
+.cc-eq-meta { margin: 0.5em 0 0; font-size: 0.88em; color: var(--cc-ink-soft); }
+.cc-eq-actions { display: flex; gap: 0.5em; margin-top: 0.9em; }
+
+.cc-btn-sm { padding: 0.5em 0.8em; font-size: 0.85em; background: #eef1f4; }
+
+.cc-chip {
+	font-size: 0.72em; font-weight: 700;
+	padding: 0.3em 0.6em; border-radius: 1em; white-space: nowrap;
+}
+.cc-chip-ok   { background: #e7f5ee; color: #067647; }
+.cc-chip-soon { background: #fef4e6; color: #b54708; }
+.cc-chip-due  { background: #fde8e8; color: #b42318; }
+.cc-chip-none { background: #eef1f4; color: var(--cc-ink-soft); }
+
+.cc-eq-form select {
+	font: inherit;
+	padding: 0.75em 0.85em;
+	border: 1px solid var(--cc-line);
+	border-radius: 0.6em;
+	background: #fff; color: var(--cc-ink); width: 100%;
+}
+.cc-eq-form textarea {
+	font: inherit;
+	padding: 0.75em 0.85em;
+	border: 1px solid var(--cc-line);
+	border-radius: 0.6em;
+	background: #fff; color: var(--cc-ink); width: 100%; resize: vertical;
+}
+.cc-eq-form select:focus, .cc-eq-form textarea:focus {
+	outline: none; border-color: var(--cc-accent);
+	box-shadow: 0 0 0 0.15em color-mix(in srgb, var(--cc-accent) 25%, transparent);
+}
+.cc-eq-delete { color: #b42318; }
+
+/* ---------- staff dashboard ---------- */
+/* The dashboard shell (sidebar, nav, cards, buttons, form fields) comes from the
+   SHARED design system in style-bp-admin.css (the same file Site Pulse uses), so
+   Customer Connect admin matches Site Pulse. Only the login screen + a few Customer Connect-
+   specific list widgets are styled here. */
+
+.cc-admin { font-family: var(--font-text, "Open Sans", sans-serif); }
+#customer-connect-admin *, #customer-connect-admin *::before, #customer-connect-admin *::after { box-sizing: border-box; }
+
+/* Login stays a centered card (reuses the customer-app auth-card styling). */
+.cc-admin-login { display: flex; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; padding: 1.5em; }
+
+/* Content in the shared .sp-main stacks with breathing room. */
+#customer-connect-admin [data-slot="view"] { display: flex; flex-direction: column; gap: 1.2em; max-width: 44em; }
+.cc-send-form { display: flex; flex-direction: column; gap: 0; }
+
+/* Customer picker + roster (Customer Connect-specific, on top of shared cards/inputs). */
+.cc-cust-pick[hidden] { display: none; }
+.cc-cust-results { margin-top: 0.5em; display: flex; flex-direction: column; gap: 0.3em; }
+.cc-cust-opt {
+	text-align: left; border: 1px solid var(--sp-secondary-color, #b9dbc2); background: #fff; cursor: pointer;
+	border-radius: var(--sp-radius-sm, 8px); padding: 0.6em 0.75em; display: flex; flex-direction: column; gap: 0.15em;
+}
+.cc-cust-opt:hover, .cc-cust-opt.active, .cc-cust-opt.tab-focus { border-color: var(--sp-accent-color, #ec9a3c); }
+.cc-cust-name { font-weight: 700; color: var(--sp-text, #12161c); }
+.cc-cust-meta { font-size: 0.85em; color: var(--sp-text-secondary, #173522); }
+.cc-cust-none { font-size: 0.85em; color: var(--sp-text-secondary, #173522); padding: 0.4em 0; }
+.cc-chosen { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; background: var(--sp-secondary-lightest, #dae9de); border-radius: var(--sp-radius-sm, 8px); padding: 0.6em 0.9em; }
+
+.cc-cust-list { display: flex; flex-direction: column; gap: 0.8em; }
+.cc-cust-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6em; padding: 1em 1.4em; }
+.cc-cust-row-main { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.cc-dot { display: inline-block; width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--sp-success, #2f8f57); vertical-align: middle; }
+
+@media (min-width: 35em) {
+	#customer-connect-app { box-shadow: 0 0 2em rgba(0, 0, 0, .08); }
+}

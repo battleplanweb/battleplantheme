@@ -124,6 +124,146 @@ function battleplan_displayGoogleRating($atts, $content = null) {
 	return number_format($googleInfo['google-rating']?? 0.0, 1, '.', ',');
 }
 
+
+/*--------------------------------------------------------------
+# [trust-bar] — data-driven trust signals to place above forms
+--------------------------------------------------------------*/
+// A compact row of trust signals built ENTIRELY from real data (Google rating, license, service
+// area, years in business). Nothing is fabricated: an item appears only when its data actually
+// exists, and the response-time line shows ONLY when passed explicitly (response="…") — we never
+// invent a promise about how fast a business replies.
+//
+//   [trust-bar]                                       auto — shows whatever data exists
+//   [trust-bar show="rating,license,area"]            force a subset / order
+//   [trust-bar response="We reply within 2 business hours" heading="Why homeowners choose us"]
+add_shortcode('trust-bar', 'bp_trust_bar');
+function bp_trust_bar($atts) {
+	$a = shortcode_atts([
+		'show'     => '',
+		'response' => '',
+		'heading'  => '',
+	], $atts);
+
+	$ci    = function_exists('customer_info') ? (array) customer_info() : [];
+	$gbp   = get_option('bp_gbp_update');
+	$items = [];
+
+	// Google rating — the hero cell: real proportional gold stars + the number.
+	$rating  = is_array($gbp) ? (float) ($gbp['google-rating'] ?? 0) : 0;
+	$reviews = is_array($gbp) ? (int)   ($gbp['google-reviews'] ?? 0) : 0;
+	if ($rating > 0 && $reviews > 0) {
+		$stars = '';
+		for ($i = 1; $i <= 5; $i++) {
+			$type   = $rating >= $i ? 'star' : ($rating >= $i - 0.5 ? 'star-half' : 'star-empty');
+			$stars .= do_shortcode('[get-icon type="' . $type . '"]');
+		}
+		$rlabel = rtrim(rtrim(number_format($rating, 1), '0'), '.');   // 5.0 -> "5", 4.8 -> "4.8"
+		// A small review count reads as weak trust, so hide the number until it is genuinely
+		// impressive; below the threshold just say "Google Reviews". Threshold is filterable.
+		$threshold = (int) apply_filters('bp_trust_review_threshold', 50);
+		$rev_line  = $reviews > $threshold ? ($reviews . ' Google Reviews') : 'Google Reviews';
+		$items['rating'] = [
+			'stars'   => $stars,
+			'primary' => 'Rated ' . $rlabel . ' Stars',
+			'num'     => true,
+			'caption' => $rev_line,
+		];
+	}
+
+	// License number
+	$license = trim((string) ($ci['license'] ?? ''));
+	if ($license !== '') {
+		$items['license'] = ['icon' => 'certified', 'primary' => 'Licensed', 'num' => false, 'caption' => esc_html($license)];
+	}
+
+	// Service area (city, ST)
+	$city  = trim((string) ($ci['city'] ?? ''));
+	$state = trim((string) ($ci['state-abbr'] ?? ''));
+	if ($city !== '') {
+		$items['area'] = ['icon' => 'location-pin', 'primary' => esc_html($city . ($state !== '' ? ', ' . $state : '')), 'num' => false, 'caption' => '&amp; nearby'];
+	}
+
+	// Years in business — only when it is genuinely a selling point (a brand-new business omits it)
+	$year = (int) ($ci['year'] ?? 0);
+	if ($year >= 1900) {
+		$yrs = (int) date('Y') - $year;
+		if ($yrs >= 5) $items['years'] = ['icon' => 'award', 'primary' => $yrs . '+ yrs', 'num' => true, 'caption' => 'in business'];
+	}
+
+	// Response time — shown ONLY when explicitly provided; never auto-fabricated.
+	$response = trim((string) $a['response']);
+	if ($response !== '') $items['response'] = ['icon' => 'clock', 'primary' => esc_html($response), 'num' => false, 'caption' => ''];
+
+	// Optional explicit subset / ordering
+	if (trim($a['show']) !== '') {
+		$keep = array_map('trim', explode(',', $a['show']));
+		$ordered = [];
+		foreach ($keep as $k) if (isset($items[$k])) $ordered[$k] = $items[$k];
+		$items = $ordered;
+	}
+
+	if (!$items) return '';
+
+	$tab = trim($a['heading']) !== '' ? trim($a['heading']) : 'Why choose us';
+
+	// Self-contained styles, printed once per page (no dependency on the CSS build). Colours pull
+	// from the site's brand CSS variables with safe fallbacks.
+	static $css_done = false;
+	$style = '';
+	if (!$css_done) {
+		$css_done = true;
+		$style = '<style>'
+			. '.bp-trust-bar{display:flex;align-items:stretch;background:var(--white-highest,#fff);border:1px solid rgba(18,58,99,.10);border-radius:14px;box-shadow:0 8px 22px rgba(18,58,99,.09);overflow:hidden;margin:0 0 1.4em}'
+			. '.bp-trust-tab{flex:0 0 46px;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);background:linear-gradient(135deg,var(--main-blue,#123a63),var(--navy,#0f2b4a));color:#fff;font-weight:800;letter-spacing:.14em;font-size:.72em;line-height:1;text-transform:uppercase;padding:14px 0;white-space:nowrap}'
+			. '.bp-trust-cells{display:flex;flex:1}'
+			. '.bp-trust-cell{flex:1;padding:16px 14px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}'
+			. '.bp-trust-cell + .bp-trust-cell{border-left:1px solid rgba(18,58,99,.10)}'
+			. '.bp-trust-stars{display:flex;gap:2px}'
+			. '.bp-trust-stars svg{width:19px;height:19px;fill:var(--google-star-color,#f6a821)}'
+			. '.bp-trust-stars .icon-star-empty{fill:var(--google-star-color,#f6a821);opacity:.28}'
+			. '.bp-trust-ic svg{width:26px;height:26px;fill:var(--google-star-color,#f6a821)}'
+			. '.bp-trust-primary{font-weight:800;font-size:1.3em;line-height:1.05;color:var(--main-blue,#123a63)}'
+			. '.bp-trust-primary.is-text{font-size:1em}'
+			. '.bp-trust-cap{font-size:.78em;color:#6b7885;line-height:1.25}'
+			. '@media(max-width:600px){.bp-trust-bar{flex-direction:column}.bp-trust-tab{writing-mode:horizontal-tb;transform:none;flex-basis:auto;padding:9px;letter-spacing:.1em}.bp-trust-cells{flex-direction:column}.bp-trust-cell+.bp-trust-cell{border-left:0;border-top:1px solid rgba(18,58,99,.10)}}'
+			. '</style>';
+	}
+
+	$html  = $style . '<div class="bp-trust-bar">';
+	$html .= '<div class="bp-trust-tab">' . esc_html($tab) . '</div>';
+	$html .= '<div class="bp-trust-cells">';
+	foreach ($items as $k => $it) {
+		$html .= '<div class="bp-trust-cell bp-trust-' . esc_attr($k) . '">';
+		if (!empty($it['stars']))      $html .= '<div class="bp-trust-stars">' . $it['stars'] . '</div>';
+		elseif (!empty($it['icon']))   $html .= '<div class="bp-trust-ic">' . do_shortcode('[get-icon type="' . $it['icon'] . '"]') . '</div>';
+		$html .= '<div class="bp-trust-primary' . (empty($it['num']) ? ' is-text' : '') . '">' . $it['primary'] . '</div>';
+		if (!empty($it['caption'])) $html .= '<div class="bp-trust-cap">' . $it['caption'] . '</div>';
+		$html .= '</div>';
+	}
+	$html .= '</div></div>';
+	return $html;
+}
+
+// Auto-place the trust bar above the CONTACT form on the CONTACT page only. Everywhere else the bar
+// is opt-in via [trust-bar]. Injected once, above the first id="contact" form, and only when this is
+// genuinely the contact page (slug-based default, filterable for odd slugs). An optional honest
+// response-time line can be set per site via the bp_contact_trust_response filter.
+add_filter('bp_form_html', 'bp_auto_trust_bar_on_contact', 10, 2);
+function bp_auto_trust_bar_on_contact($html, $form_id) {
+	static $done = false;
+	if ($done || $form_id !== 'contact') return $html;
+
+	$is_contact_page = apply_filters('bp_is_contact_page', is_page(['contact-us', 'contact']));
+	if (!$is_contact_page) return $html;
+
+	$response = (string) apply_filters('bp_contact_trust_response', '');
+	$bar = do_shortcode('[trust-bar' . ($response !== '' ? ' response="' . esc_attr($response) . '"' : '') . ']');
+	if ($bar === '') return $html;   // no data to show → inject nothing
+
+	$done = true;
+	return $bar . $html;
+}
+
 // Returns current year
 add_shortcode( 'get-year', 'battleplan_getYear' );
 function battleplan_getYear() { return date("Y"); }
@@ -1323,6 +1463,7 @@ add_shortcode( 'get-post-slider', 'battleplan_getPostSlider' );
 function battleplan_getPostSlider($atts, $content = null ) {
 	bp_enqueue_script( 'battleplan-carousel', 'script-carousel', ['battleplan-script-pages'] );
 	bp_inline_minified_css( get_template_directory() . '/style-carousel.css' );
+	bp_inline_minified_css( get_template_directory() . '/style-indicators.css' );
 
 	$a = shortcode_atts( array( 'type'=>'testimonials', 'auto'=>'yes', 'interval'=>'6000', 'loop'=>'true', 'num'=>'4', 'offset'=>'0', 'pics'=>'yes', 'caption'=>'no', 'controls'=>'yes', 'controls_pos'=>'below', 'indicators'=>'no', 'justify'=>'center', 'pause'=>'true', 'speed'=>'fast', 'orderby'=>'rand', 'order'=>'asc', 'post_btn'=>'', 'show_thumb'=>'true', 'all_btn'=>'View All', 'show_date'=>'false', 'show_author'=>'false', 'show_excerpt'=>'true', 'show_content'=>'false', 'title_pos'=>'', 'link'=>'', 'pic_size'=>'1/3', 'text_size'=>'', 'slide_type'=>'box', 'slide_effect'=>'fade', 'tax'=>'', 'terms'=>'', 'tag'=>'', 'start'=>'', 'end'=>'', 'exclude'=>'', 'x_current'=>'true', 'size'=>'thumbnail', 'id'=>'', 'mult'=>'1', 'class'=>'', 'truncate'=>'true', 'lazy'=>'true', 'blur'=>'false', 'mask'=>'false', 'rand_start'=>'', 'content_type'=>'image' ), $atts );
 	$num = esc_attr($a['num']);
@@ -2074,7 +2215,20 @@ function battleplan_SideBySideImg( $atts, $content = null ) {
 	$align = "align".esc_attr($a['align']);
 	$images = explode(',', esc_attr($a['img']));
 
-	$buildFlex = '<ul class="side-by-side '.$class.$align.$break.'"'.$gap.'>';
+	// Mobile swipe carousel — below 860px the strip becomes a scroll-snap carousel so the
+	// photos stay full size instead of shrinking to thumbnails (style-scroller.css +
+	// script-scroller.js, shared with [layout scroll=""]). On by default; skipped when
+	// full= is set (that layout is deliberately stacked), when break= asks for an explicit
+	// stack, or with one image.
+	$swipe = '';
+	if ( esc_attr($a['full']) === '' && esc_attr($a['break']) === 'none' && count($images) > 1 ) :
+		$swipe = ' swipe';
+		bp_enqueue_script( 'battleplan-script-scroller', 'script-scroller', ['battleplan-script-pages'] );
+		bp_inline_minified_css( get_template_directory() . '/style-scroller.css' );
+		bp_inline_minified_css( get_template_directory() . '/style-indicators.css' );
+	endif;
+
+	$buildFlex = '<ul class="side-by-side '.$class.$align.$break.$swipe.'"'.$gap.'>';
 	for ($i = 0; $i < count($images); $i++) :
 		$imgID = trim($images[$i]);
 		$img = wp_get_attachment_image_src( $imgID, $size );

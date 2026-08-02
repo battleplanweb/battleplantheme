@@ -115,6 +115,7 @@ if ($forceB || $autoTriggerB) {
     delete_option('bp_force_chron_b');
     update_option('bp_chron_b_time', time());
     update_option('bp_chron_b_next', bp_next_nightly_window());
+    bp_run_one_off_tasks();   // dated run-once jobs — see the bottom of this file
     require_once get_template_directory() . '/functions-chron-housekeeping.php';
     bp_run_chron_housekeeping($forceB);
 }
@@ -186,6 +187,57 @@ if ($forceD || $autoTriggerD) {
 # live bot page view — which meant it 502'd the visitor. Cron was a workaround for the timeout,
 # not a reason for the audit to be automatic, so both are gone.
 --------------------------------------------------------------*/
+
+
+/*--------------------------------------------------------------
+# One-Off Tasks
+#
+# Dated, run-once jobs that ride Chron B's nightly slot, so they land on a bot
+# hit inside the 10pm-5am window rather than on a real visitor's page view.
+# Each job carries its own option gate, so it fires exactly once per install and
+# is a no-op forever after — safe to leave in place, safe to delete once the
+# whole fleet has caught up.
+--------------------------------------------------------------*/
+
+function bp_run_one_off_tasks(): void {
+
+    // 2026-07-27 — refresh the American Standard catalogue on every dealer that carries the brand,
+    // plus the Samsung ductless line those same dealers sell (no site lists Samsung in site-brand,
+    // so it rides the American Standard gate rather than getting one of its own).
+    if (get_option('bp_product_upload_2026-07-27') != 'completed' && bp_site_sells_brand('american standard')) {
+        require_once get_template_directory() . '/includes/include-hvac-products/includes-american-standard-products.php';
+        require_once get_template_directory() . '/includes/include-hvac-products/includes-samsung-products.php';
+
+        // Both importers run on wp_loaded, so flag the job complete just after them
+        // (priority 20 vs their 10). If an import times out mid-way the option is never
+        // written and the job simply retries on the next nightly run.
+        add_action('wp_loaded', function () {
+            updateOption('bp_product_upload_2026-07-27', 'completed', false);
+        }, 20);
+    }
+}
+
+
+/**
+ * Does this install sell the given brand?
+ *
+ * customer_info['site-brand'] is a bare string on some sites and an array on others,
+ * the brand may sit anywhere in that array, and casing/spacing drift across the fleet
+ * ('American Standard', 'american standard', 'american-standard'), so normalise both sides.
+ */
+function bp_site_sells_brand(string $brand): bool {
+    $siteBrands = customer_info()['site-brand'] ?? '';
+    if (empty($siteBrands)) return false;
+
+    $normalise = fn($value) => trim(preg_replace('/[^a-z0-9]+/', ' ', strtolower((string) $value)));
+    $needle    = $normalise($brand);
+
+    foreach ((array) $siteBrands as $siteBrand) {
+        if ($normalise($siteBrand) === $needle) return true;
+    }
+
+    return false;
+}
 
 
 /*--------------------------------------------------------------

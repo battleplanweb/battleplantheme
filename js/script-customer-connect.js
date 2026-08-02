@@ -1,16 +1,16 @@
-/* Battle Plan Web Design — Home Base app controller (public customer PWA)
-   Client-side SPA over the home-base/v1 REST API. Auth = a device-stored bearer
-   token (localStorage 'hb_token'); OTP is once per device, then silent renewal.
+/* Battle Plan Web Design — Customer Connect app controller (public customer PWA)
+   Client-side SPA over the customer-connect/v1 REST API. Auth = a device-stored bearer
+   token (localStorage 'cc_token'); OTP is once per device, then silent renewal.
    Vanilla JS, no dependencies. Later phases fill the equipment/schedule/help
    views + push subscription; phase (a) ships boot, sign-in/OTP, and Home. */
 (function () {
 	'use strict';
 
-	var D = window.homeBaseData || {};
-	var root = document.getElementById('home-base-app');
+	var D = window.customerConnectData || {};
+	var root = document.getElementById('customer-connect-app');
 	if (!root || !D.restBase) return;
 
-	var TOKEN_KEY = 'hb_token';
+	var TOKEN_KEY = 'cc_token';
 	var state = { token: getToken(), customer: null, view: 'home' };
 
 	/* ---------- token + fetch helpers ---------- */
@@ -39,7 +39,7 @@
 	function api(path, opts) {
 		opts = opts || {};
 		var headers = { 'Content-Type': 'application/json' };
-		if (state.token) headers['X-HB-Token'] = state.token;
+		if (state.token) headers['X-CC-Token'] = state.token;
 		return fetch(D.restBase + path, {
 			method: opts.method || 'GET',
 			headers: headers,
@@ -57,13 +57,13 @@
 	/* ---------- screen switching ---------- */
 
 	function show(screen) {
-		root.querySelectorAll('.hb-screen').forEach(function (el) {
+		root.querySelectorAll('.cc-screen').forEach(function (el) {
 			el.hidden = el.getAttribute('data-screen') !== screen;
 		});
 	}
 	function q(sel, ctx) { return (ctx || root).querySelector(sel); }
 	function setErr(form, msg) {
-		var el = q('.hb-error', form);
+		var el = q('.cc-error', form);
 		if (!el) return;
 		el.textContent = msg || '';
 		el.hidden = !msg;
@@ -94,10 +94,10 @@
 	var pendingIdentifier = '';
 
 	// Toggle email field.
-	var altToggle = q('.hb-alt-toggle', formId);
+	var altToggle = q('.cc-alt-toggle', formId);
 	if (altToggle) altToggle.addEventListener('click', function () {
 		var emailField = q('[data-field="email"]', formId);
-		var phoneField = q('input[name="phone"]', formId).closest('.hb-field');
+		var phoneField = q('input[name="phone"]', formId).closest('.cc-field');
 		var showingEmail = !emailField.hidden;
 		emailField.hidden = showingEmail;
 		phoneField.hidden = !showingEmail;
@@ -191,8 +191,8 @@
 	function showWelcome() {
 		var boot = q('[data-screen="boot"]');
 		if (!boot) return;
-		var inner = q('.hb-boot-inner', boot);
-		if (inner) inner.innerHTML = '<div class="hb-check">✓</div><p class="hb-welcome">You\'re all set!</p>';
+		var inner = q('.cc-boot-inner', boot);
+		if (inner) inner.innerHTML = '<div class="cc-check">✓</div><p class="cc-welcome">You\'re all set!</p>';
 		show('boot');
 	}
 
@@ -253,7 +253,7 @@
 	}
 
 	function wireTabs() {
-		root.querySelectorAll('.hb-tab').forEach(function (tab) {
+		root.querySelectorAll('.cc-tab').forEach(function (tab) {
 			if (tab._wired) return; tab._wired = true;
 			tab.addEventListener('click', function () { navigate(tab.getAttribute('data-view')); });
 		});
@@ -270,7 +270,7 @@
 	}
 
 	function syncTab(view) {
-		root.querySelectorAll('.hb-tab').forEach(function (t) {
+		root.querySelectorAll('.cc-tab').forEach(function (t) {
 			t.classList.toggle('is-active', t.getAttribute('data-view') === view);
 		});
 	}
@@ -302,26 +302,26 @@
 		if (view === 'home') {
 			var optin = '';
 			if (pushSupported() && Notification.permission !== 'granted') {
-				optin = '<section class="hb-card hb-optin">' +
-					'<span class="hb-quick-title">Turn on reminders</span>' +
-					'<span class="hb-quick-sub">Get filter &amp; maintenance reminders and service updates from ' + esc(D.company) + '.</span>' +
-					'<button type="button" class="hb-btn hb-btn-primary hb-enable-push">Enable notifications</button>' +
+				optin = '<section class="cc-card cc-optin">' +
+					'<span class="cc-quick-title">Turn on reminders</span>' +
+					'<span class="cc-quick-sub">Get filter &amp; maintenance reminders and service updates from ' + esc(D.company) + '.</span>' +
+					'<button type="button" class="cc-btn cc-btn-primary cc-enable-push">Enable notifications</button>' +
 					'</section>';
 			}
 			return '' +
-				'<section class="hb-card hb-hero">' +
+				'<section class="cc-card cc-hero">' +
 				'<h2>' + greeting() + name + '</h2>' +
 				'<p>Welcome to ' + esc(D.appName) + ', your direct line to ' + esc(D.company) + '.</p>' +
 				'</section>' +
 				optin +
-				'<div class="hb-quick">' +
+				'<div class="cc-quick">' +
 				quick('schedule', 'Request service', 'Book a visit or priority scheduling.') +
 				quick('help', 'AC troubleshooting', 'Not cooling? Get quick help.') +
 				quick('equipment', 'My equipment', 'Track your system &amp; filter reminders.') +
 				'</div>';
 		}
-		if (view === 'notifications') return '<div data-slot="notifications"><div class="hb-card hb-loading"><div class="hb-spinner"></div></div></div>';
-		if (view === 'equipment') return '<div data-slot="equipment"><div class="hb-card hb-loading"><div class="hb-spinner"></div></div></div>';
+		if (view === 'notifications') return '<div data-slot="notifications"><div class="cc-card cc-loading"><div class="cc-spinner"></div></div></div>';
+		if (view === 'equipment') return '<div data-slot="equipment"><div class="cc-card cc-loading"><div class="cc-spinner"></div></div></div>';
 		if (view === 'schedule') return placeholder('Schedule service', 'Request an appointment or priority scheduling. Coming in the next update.');
 		if (view === 'help') return placeholder('AC troubleshooting', 'Describe what your system is doing and get guided help. Coming in the next update.');
 		if (view === 'account') return accountHtml();
@@ -329,54 +329,54 @@
 	}
 
 	function quick(view, title, sub) {
-		return '<button type="button" class="hb-card hb-quick-item" data-goto="' + view + '">' +
-			'<span class="hb-quick-title">' + title + '</span>' +
-			'<span class="hb-quick-sub">' + sub + '</span></button>';
+		return '<button type="button" class="cc-card cc-quick-item" data-goto="' + view + '">' +
+			'<span class="cc-quick-title">' + title + '</span>' +
+			'<span class="cc-quick-sub">' + sub + '</span></button>';
 	}
 
 	function placeholder(title, body) {
-		return '<section class="hb-card"><h2>' + esc(title) + '</h2><p>' + body + '</p></section>';
+		return '<section class="cc-card"><h2>' + esc(title) + '</h2><p>' + body + '</p></section>';
 	}
 
 	function accountHtml() {
 		var c = state.customer || {};
 		return '' +
-			'<section class="hb-card">' +
+			'<section class="cc-card">' +
 			'<h2>Your details</h2>' +
-			'<form class="hb-form hb-account-form">' +
+			'<form class="cc-form cc-account-form">' +
 			field('first_name', 'First name', c.first_name) +
 			field('last_name', 'Last name', c.last_name) +
 			field('email', 'Email', c.email, 'email') +
 			field('address', 'Address', c.address) +
-			'<div class="hb-row">' + field('city', 'City', c.city) + field('state', 'State', c.state) + field('zip', 'ZIP', c.zip) + '</div>' +
-			'<button type="submit" class="hb-btn hb-btn-primary">Save</button>' +
-			'<p class="hb-error" role="alert" hidden></p>' +
-			'<p class="hb-ok" role="status" hidden>Saved.</p>' +
+			'<div class="cc-row">' + field('city', 'City', c.city) + field('state', 'State', c.state) + field('zip', 'ZIP', c.zip) + '</div>' +
+			'<button type="submit" class="cc-btn cc-btn-primary">Save</button>' +
+			'<p class="cc-error" role="alert" hidden></p>' +
+			'<p class="cc-ok" role="status" hidden>Saved.</p>' +
 			'</form>' +
-			'<button type="button" class="hb-btn hb-link hb-signout">Sign out</button>' +
+			'<button type="button" class="cc-btn cc-link cc-signout">Sign out</button>' +
 			'</section>';
 	}
 
 	function field(name, label, val, type) {
-		return '<label class="hb-field"><span>' + esc(label) + '</span>' +
+		return '<label class="cc-field"><span>' + esc(label) + '</span>' +
 			'<input type="' + (type || 'text') + '" name="' + name + '" value="' + esc(val) + '"></label>';
 	}
 
 	function wireAccount(host) {
-		var form = q('.hb-account-form', host);
+		var form = q('.cc-account-form', host);
 		form.addEventListener('submit', function (e) {
 			e.preventDefault();
-			setErr(form, ''); q('.hb-ok', form).hidden = true;
+			setErr(form, ''); q('.cc-ok', form).hidden = true;
 			var body = {};
 			form.querySelectorAll('input').forEach(function (i) { body[i.name] = i.value.trim(); });
 			var btn = q('button[type="submit"]', form);
 			btn.disabled = true; btn.textContent = 'Saving…';
 			api('/profile', { method: 'POST', body: body })
-				.then(function (res) { state.customer = res.customer; q('.hb-ok', form).hidden = false; })
+				.then(function (res) { state.customer = res.customer; q('.cc-ok', form).hidden = false; })
 				.catch(function (err) { setErr(form, err.message || 'Could not save.'); })
 				.finally(function () { btn.disabled = false; btn.textContent = 'Save'; });
 		});
-		q('.hb-signout', host).addEventListener('click', function () {
+		q('.cc-signout', host).addEventListener('click', function () {
 			setToken(''); state.customer = null; state.view = 'home'; appActive = false;
 			syncTab('home');
 			formCode.hidden = true; formId.hidden = false; setErr(formId, '');
@@ -385,7 +385,7 @@
 	}
 
 	function wireHome(host) {
-		var btn = q('.hb-enable-push', host);
+		var btn = q('.cc-enable-push', host);
 		if (btn) btn.addEventListener('click', function () { enablePush(btn); });
 	}
 
@@ -398,18 +398,18 @@
 			if (res.unread) api('/notifications/read', { method: 'POST' }).then(refreshUnread).catch(function () {});
 			else refreshUnread();
 		}).catch(function (err) {
-			slot.innerHTML = '<section class="hb-card"><p class="hb-error">' + esc(err.message || 'Could not load notifications.') + '</p></section>';
+			slot.innerHTML = '<section class="cc-card"><p class="cc-error">' + esc(err.message || 'Could not load notifications.') + '</p></section>';
 		});
 	}
 
 	function renderNotifications(slot, items) {
-		if (!items.length) { slot.innerHTML = '<div class="hb-card hb-empty"><p>No notifications yet.</p></div>'; return; }
-		slot.innerHTML = '<div class="hb-notif-list">' + items.map(function (n) {
+		if (!items.length) { slot.innerHTML = '<div class="cc-card cc-empty"><p>No notifications yet.</p></div>'; return; }
+		slot.innerHTML = '<div class="cc-notif-list">' + items.map(function (n) {
 			var when = n.created_at ? esc(String(n.created_at).slice(0, 10)) : '';
-			return '<article class="hb-card hb-notif' + (n.read_at ? '' : ' is-unread') + '">' +
-				'<div class="hb-notif-head"><span class="hb-notif-title">' + esc(n.title) + '</span><span class="hb-notif-when">' + when + '</span></div>' +
-				(n.body ? '<p class="hb-notif-body">' + esc(n.body) + '</p>' : '') +
-				(n.url ? '<a class="hb-notif-link" href="' + esc(n.url) + '">Open</a>' : '') +
+			return '<article class="cc-card cc-notif' + (n.read_at ? '' : ' is-unread') + '">' +
+				'<div class="cc-notif-head"><span class="cc-notif-title">' + esc(n.title) + '</span><span class="cc-notif-when">' + when + '</span></div>' +
+				(n.body ? '<p class="cc-notif-body">' + esc(n.body) + '</p>' : '') +
+				(n.url ? '<a class="cc-notif-link" href="' + esc(n.url) + '">Open</a>' : '') +
 				'</article>';
 		}).join('') + '</div>';
 	}
@@ -425,28 +425,28 @@
 			equipmentCache = res.items || [];
 			renderEquipment(slot);
 		}).catch(function (err) {
-			slot.innerHTML = '<section class="hb-card"><p class="hb-error">' + esc(err.message || 'Could not load your equipment.') + '</p></section>';
+			slot.innerHTML = '<section class="cc-card"><p class="cc-error">' + esc(err.message || 'Could not load your equipment.') + '</p></section>';
 		});
 	}
 
 	function renderEquipment(slot) {
 		var items = equipmentCache || [];
-		var html = '<section class="hb-card hb-eq-intro"><h2>My Home</h2>' +
+		var html = '<section class="cc-card cc-eq-intro"><h2>My Home</h2>' +
 			'<p>Track your heating &amp; cooling systems so we can remind you about filters and seasonal maintenance.</p></section>';
 		html += items.length
-			? '<div class="hb-eq-list">' + items.map(eqCard).join('') + '</div>'
-			: '<div class="hb-card hb-empty"><p>No equipment added yet. Add your first system below.</p></div>';
-		html += '<button type="button" class="hb-btn hb-btn-primary hb-eq-add">+ Add equipment</button>';
+			? '<div class="cc-eq-list">' + items.map(eqCard).join('') + '</div>'
+			: '<div class="cc-card cc-empty"><p>No equipment added yet. Add your first system below.</p></div>';
+		html += '<button type="button" class="cc-btn cc-btn-primary cc-eq-add">+ Add equipment</button>';
 		slot.innerHTML = html;
 		wireEquipmentList(slot);
 	}
 
 	function filterChip(f) {
 		f = f || {};
-		if (f.status === 'due')  return '<span class="hb-chip hb-chip-due">Filter overdue</span>';
-		if (f.status === 'soon') return '<span class="hb-chip hb-chip-soon">Filter due in ' + f.days_left + 'd</span>';
-		if (f.status === 'ok')   return '<span class="hb-chip hb-chip-ok">Filter OK · ' + f.days_left + 'd left</span>';
-		return '<span class="hb-chip hb-chip-none">Add filter date</span>';
+		if (f.status === 'due')  return '<span class="cc-chip cc-chip-due">Filter overdue</span>';
+		if (f.status === 'soon') return '<span class="cc-chip cc-chip-soon">Filter due in ' + f.days_left + 'd</span>';
+		if (f.status === 'ok')   return '<span class="cc-chip cc-chip-ok">Filter OK · ' + f.days_left + 'd left</span>';
+		return '<span class="cc-chip cc-chip-none">Add filter date</span>';
 	}
 
 	function eqCard(it) {
@@ -455,24 +455,24 @@
 		if (it.install_year) meta.push('Installed ' + it.install_year + (it.age_years != null ? ' (' + it.age_years + ' yr)' : ''));
 		if (it.filter_size) meta.push('Filter ' + esc(it.filter_size));
 		if (it.location_label) meta.push(esc(it.location_label));
-		return '<article class="hb-card hb-eq" data-id="' + it.id + '">' +
-			'<div class="hb-eq-head"><span class="hb-eq-title">' + title + '</span>' + filterChip(it.filter) + '</div>' +
-			(meta.length ? '<p class="hb-eq-meta">' + meta.join(' · ') + '</p>' : '') +
-			'<div class="hb-eq-actions">' +
-			'<button type="button" class="hb-btn hb-btn-sm hb-eq-log" data-id="' + it.id + '">Log filter change</button>' +
-			'<button type="button" class="hb-btn hb-btn-sm hb-eq-edit" data-id="' + it.id + '">Edit</button>' +
+		return '<article class="cc-card cc-eq" data-id="' + it.id + '">' +
+			'<div class="cc-eq-head"><span class="cc-eq-title">' + title + '</span>' + filterChip(it.filter) + '</div>' +
+			(meta.length ? '<p class="cc-eq-meta">' + meta.join(' · ') + '</p>' : '') +
+			'<div class="cc-eq-actions">' +
+			'<button type="button" class="cc-btn cc-btn-sm cc-eq-log" data-id="' + it.id + '">Log filter change</button>' +
+			'<button type="button" class="cc-btn cc-btn-sm cc-eq-edit" data-id="' + it.id + '">Edit</button>' +
 			'</div></article>';
 	}
 
 	function wireEquipmentList(slot) {
-		q('.hb-eq-add', slot).addEventListener('click', function () { openEquipmentForm(slot, null); });
-		slot.querySelectorAll('.hb-eq-edit').forEach(function (b) {
+		q('.cc-eq-add', slot).addEventListener('click', function () { openEquipmentForm(slot, null); });
+		slot.querySelectorAll('.cc-eq-edit').forEach(function (b) {
 			b.addEventListener('click', function () {
 				var it = (equipmentCache || []).filter(function (x) { return x.id === +b.getAttribute('data-id'); })[0];
 				openEquipmentForm(slot, it || null);
 			});
 		});
-		slot.querySelectorAll('.hb-eq-log').forEach(function (b) {
+		slot.querySelectorAll('.cc-eq-log').forEach(function (b) {
 			b.addEventListener('click', function () {
 				b.disabled = true; b.textContent = 'Saving…';
 				var today = new Date().toISOString().slice(0, 10);
@@ -496,26 +496,26 @@
 			return '<option value="' + p[0] + '"' + sel + '>' + p[1] + '</option>';
 		}).join('');
 
-		slot.innerHTML = '<section class="hb-card"><h2>' + (it.id ? 'Edit equipment' : 'Add equipment') + '</h2>' +
-			'<form class="hb-form hb-eq-form">' +
-			'<label class="hb-field"><span>Type</span><select name="type">' + typeOpts + '</select></label>' +
+		slot.innerHTML = '<section class="cc-card"><h2>' + (it.id ? 'Edit equipment' : 'Add equipment') + '</h2>' +
+			'<form class="cc-form cc-eq-form">' +
+			'<label class="cc-field"><span>Type</span><select name="type">' + typeOpts + '</select></label>' +
 			field('brand', 'Brand', it.brand) +
 			field('model', 'Model #', it.model) +
-			'<div class="hb-row">' + field('install_year', 'Install year', it.install_year, 'number') + field('filter_size', 'Filter size', it.filter_size) + '</div>' +
+			'<div class="cc-row">' + field('install_year', 'Install year', it.install_year, 'number') + field('filter_size', 'Filter size', it.filter_size) + '</div>' +
 			field('filter_changed_at', 'Filter last changed', it.filter_changed_at, 'date') +
-			'<label class="hb-field"><span>Change filter</span><select name="filter_interval_days">' + intervalOpts + '</select></label>' +
+			'<label class="cc-field"><span>Change filter</span><select name="filter_interval_days">' + intervalOpts + '</select></label>' +
 			field('location_label', 'Location (e.g. Upstairs)', it.location_label) +
-			'<label class="hb-field"><span>Notes</span><textarea name="notes" rows="2">' + esc(it.notes) + '</textarea></label>' +
-			'<button type="submit" class="hb-btn hb-btn-primary">' + (it.id ? 'Save changes' : 'Add equipment') + '</button>' +
-			(it.id ? '<button type="button" class="hb-btn hb-link hb-eq-delete">Delete this equipment</button>' : '') +
-			'<button type="button" class="hb-btn hb-link hb-eq-cancel">Cancel</button>' +
-			'<p class="hb-error" role="alert" hidden></p>' +
+			'<label class="cc-field"><span>Notes</span><textarea name="notes" rows="2">' + esc(it.notes) + '</textarea></label>' +
+			'<button type="submit" class="cc-btn cc-btn-primary">' + (it.id ? 'Save changes' : 'Add equipment') + '</button>' +
+			(it.id ? '<button type="button" class="cc-btn cc-link cc-eq-delete">Delete this equipment</button>' : '') +
+			'<button type="button" class="cc-btn cc-link cc-eq-cancel">Cancel</button>' +
+			'<p class="cc-error" role="alert" hidden></p>' +
 			'</form></section>';
 
-		var form = q('.hb-eq-form', slot);
-		q('.hb-eq-cancel', form).addEventListener('click', function () { renderEquipment(slot); });
+		var form = q('.cc-eq-form', slot);
+		q('.cc-eq-cancel', form).addEventListener('click', function () { renderEquipment(slot); });
 
-		var del = q('.hb-eq-delete', form);
+		var del = q('.cc-eq-delete', form);
 		if (del) del.addEventListener('click', function () {
 			if (!window.confirm('Remove this equipment?')) return;
 			api('/equipment/' + it.id, { method: 'DELETE' })

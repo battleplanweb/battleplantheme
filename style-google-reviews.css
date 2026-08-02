@@ -111,6 +111,7 @@
 .google-review-box .icon.star-empty {
 	font-size:                                                 20px;
 	margin-right:                                              3px;
+	color:                                                     var(--google-star-color);
 }
 
 .google-review-box .google-rating-stars .icon-svg.icon-star .stroke,

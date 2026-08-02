@@ -38,7 +38,7 @@ if ( $is_god && ! $impersonating ) {
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_expense_overview' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports' ];
 	$role_label = 'Administrator';
 } else {
 	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
@@ -115,6 +115,7 @@ $icons = [
 	'chat'      => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
 	'tasks'     => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
 	'palette'   => '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.564C22 6.012 17.5 2 12 2z"/>',
+	'home'      => '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
 ];
 
 // Build nav structure with sub-items
@@ -171,8 +172,11 @@ $cap_x_vehicle  = in_array( 'view_vehicle_expenses', $caps, true ) || $cap_milea
 $cap_x_meals    = in_array( 'view_business_meals', $caps, true ) || $cap_mileage_manage;
 $cap_x_shop     = in_array( 'view_competitive_shopping', $caps, true ) || $cap_mileage_manage;
 $cap_x_other    = in_array( 'view_other_expenses', $caps, true ) || $cap_mileage_manage;
+$cap_x_travel   = in_array( 'view_travel_expenses', $caps, true ) || $cap_mileage_manage;
 $cap_x_overview = in_array( 'view_expense_overview', $caps, true ) || $cap_mileage_manage;
-$cap_expense_any = $cap_x_mileage || $cap_x_tolls || $cap_x_vehicle || $cap_x_meals || $cap_x_shop || $cap_x_other || $cap_x_overview;
+$cap_x_approve  = in_array( 'approve_expense_reports', $caps, true ) || $cap_mileage_manage;
+$cap_x_archive  = in_array( 'view_approved_expense_reports', $caps, true ) || $cap_mileage_manage;
+$cap_expense_any = $cap_x_mileage || $cap_x_tolls || $cap_x_vehicle || $cap_x_meals || $cap_x_shop || $cap_x_other || $cap_x_travel || $cap_x_overview || $cap_x_approve || $cap_x_archive;
 $nav[] = [
 	'slug'  => 'mileage',
 	'label' => 'Expense Report',
@@ -185,7 +189,10 @@ $nav[] = [
 		[ 'slug' => 'business-meals',    'label' => 'Business Meals',   'show' => $cap_x_meals ],
 		[ 'slug' => 'competitive-shopping', 'label' => 'Competitive Shopping', 'show' => $cap_x_shop ],
 		[ 'slug' => 'other-expenses',    'label' => 'Other Expenses',   'show' => $cap_x_other ],
+		[ 'slug' => 'travel-expenses',   'label' => 'Travel Expenses',  'show' => $cap_x_travel ],
 		[ 'slug' => 'expense-report',    'label' => 'Overview',         'show' => $cap_x_overview ],
+		[ 'slug' => 'approve-expense',   'label' => 'Approve Reports',  'show' => $cap_x_approve ],
+		[ 'slug' => 'approved-expense',  'label' => 'Accounting',       'show' => $cap_x_archive ],
 	],
 ];
 
@@ -224,6 +231,24 @@ $nav[] = [
 $cap_directory        = in_array( 'view_directory', $caps, true ) || in_array( 'manage_directory', $caps, true );
 $cap_directory_manage = in_array( 'manage_directory', $caps, true );
 $nav[] = [ 'slug' => 'directory', 'label' => 'Directory', 'icon' => 'users', 'show' => $cap_directory ];
+
+// Home Base — the customer-app module's staff side: the customer roster, the push composer, and
+// the scheduling-request inbox. Gated by the Home Base module caps (god always sees). The customer
+// PWA itself lives outside Site Pulse; this is only the company-facing surface.
+$cap_cc_customers = in_array( 'view_customers', $caps, true ) || in_array( 'manage_customers', $caps, true );
+$cap_cc_send      = in_array( 'send_customer_push', $caps, true );
+$cap_cc_schedule  = in_array( 'view_schedule_requests', $caps, true ) || in_array( 'manage_schedule_requests', $caps, true );
+$nav[] = [
+	'slug'  => 'customer-connect',
+	'label' => 'Customer Connect',
+	'icon'  => 'home',
+	'show'  => $cap_cc_customers || $cap_cc_send || $cap_cc_schedule,
+	'children' => [
+		[ 'slug' => 'customer-connect-customers', 'label' => 'Customers',  'show' => $cap_cc_customers ],
+		[ 'slug' => 'customer-connect-send',      'label' => 'Send',       'show' => $cap_cc_send ],
+		[ 'slug' => 'customer-connect-schedule',  'label' => 'Scheduling', 'show' => $cap_cc_schedule ],
+	],
+];
 
 // Forms is gated on the 'view_forms' capability — and ALWAYS visible in Odin (god) mode,
 // independent of the module toggle / capability catalog, so god never loses it. 'upload_forms'
@@ -279,11 +304,12 @@ $nav[] = [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
-		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
+		[ 'slug' => 'admin-templates', 'label' => 'Store Reports',  'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
 		[ 'slug' => 'review-settings', 'label' => 'Reviews',        'icon' => 'star',    'show' => in_array( 'manage_reviews', $caps ) && ! $is_review_hub ],
 		[ 'slug' => 'admin-ai-prompts','label' => 'AI Prompts',     'icon' => 'chat',    'show' => in_array( 'manage_settings', $caps ) ],
-		[ 'slug' => 'admin-mileage',   'label' => 'Mileage',        'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
+		[ 'slug' => 'admin-mileage',   'label' => 'Expense Reports', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
 		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ) ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_notifications', $caps ) ],
 		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_api_keys', $caps ) ],
@@ -887,7 +913,6 @@ if ( $cap_x_mileage ) {
 	$printPage .=     '</div>';
 	$printPage .=     '<div class="sp-mileage-actions sp-toolbar-actions">';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-pdf-btn">' . $svg( $icons['file'] ) . 'PDF</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-csv-btn">' . $svg( $icons['grid'] ) . 'CSV</button>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-map-btn">' . $svg( $icons['mappin'] ) . 'Map</button>';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-btn">+ Add a Day</button>';
 	$printPage .=     '</div>';
@@ -903,11 +928,11 @@ if ( $cap_x_mileage ) {
 if ( $cap_x_tolls ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-tolls">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Tolls' ) . '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-toll-intro">Upload the CSV export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-toll-intro">Upload the CSV or Excel (.xlsx) export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-toll-toolbar">';
 	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="file" id="sp-toll-file" accept=".csv,text/csv" class="sp-toll-file">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-toll-upload-btn" disabled>Upload CSV</button>';
+	$printPage .=       '<input type="file" id="sp-toll-file" class="sp-toll-file">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-toll-upload-btn" disabled>Upload</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-toll-status" id="sp-toll-status" hidden></div>';
@@ -987,6 +1012,48 @@ if ( $cap_x_other ) {
 	$printPage .=   '<div class="sp-meta-bar"><div class="sp-oexp-intro">Anything that doesn\'t fit the other sections — food R&amp;D, home office, postage and the like. Enter the GL account for each line. These feed Section E of your expense report.</div></div>';
 	$printPage .=   '<div class="sp-oexp-form-wrap" id="sp-oexp-form-wrap" hidden></div>';
 	$printPage .=   '<div class="sp-oexp-content" id="sp-oexp-content"></div>';
+	$printPage .= '</section>';
+}
+
+// Travel Expenses Panel (Section F of the expense report). Data loads lazily on activation.
+if ( $cap_x_travel ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-travel-expenses">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
+	$printPage .=     $sp_crumb( 'Expense Report','Travel Expenses' );
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-trav-add-btn">+ Add Expense</button>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-trav-summary" id="sp-trav-summary"></div>';
+	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-trav-toolbar-wrap"></div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-trav-intro">Airfare, hotels, rental cars and taxis, and meals while traveling. These feed Section F of your expense report.</div></div>';
+	$printPage .=   '<div class="sp-trav-form-wrap" id="sp-trav-form-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-trav-content" id="sp-trav-content"></div>';
+	$printPage .= '</section>';
+}
+
+// Approve Reports queue (supervisors) — submitted expense reports routed to this approver. Data lazy-loads.
+if ( $cap_x_approve ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-approve-expense">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Approve Reports' ) . '</div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-rep-intro">Expense reports your team has submitted. Open one to review it, then Approve (emails it to accounting) or send it back.</div></div>';
+	$printPage .=   '<div class="sp-approve-content" id="sp-approve-content"></div>';
+	$printPage .=   '<div class="sp-approve-detail" id="sp-approve-detail" hidden></div>';
+	$printPage .= '</section>';
+}
+
+// Approved Reports archive — every approved expense report (special view capability). Data lazy-loads.
+if ( $cap_x_archive ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-approved-expense">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Accounting' ) . '</div>';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-rep-intro">The archive of approved expense reports. Filter by date, then open the frozen PDF that was sent to accounting.</div></div>';
+	$printPage .=   '<div class="sp-toolbar sp-period-toolbar" id="sp-approved-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="date" id="sp-approved-start" class="sp-input" placeholder="From">';
+	$printPage .=       '<input type="date" id="sp-approved-end" class="sp-input" placeholder="To">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-approved-clear">Clear</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-approved-content" id="sp-approved-content"></div>';
+	$printPage .=   '<div class="sp-approve-detail" id="sp-approved-detail" hidden></div>';
 	$printPage .= '</section>';
 }
 
@@ -1141,6 +1208,11 @@ if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) 
 	$printPage .=         '<option value="365">Last 12 months</option>';
 	$printPage .=         '<option value="ytd">Year to date</option>';
 	$printPage .=       '</select>';
+	$printPage .=       '<select id="sp-survey-filter-source" class="sp-select">';
+	$printPage .=         '<option value="">All sources</option>';
+	$printPage .=         '<option value="web">Web</option>';
+	$printPage .=         '<option value="imported">Imported</option>';
+	$printPage .=       '</select>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-survey-list" id="sp-survey-list"><div class="sp-loading"></div></div>';
@@ -1214,6 +1286,48 @@ if ( $cap_directory ) {
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-dir-count" id="sp-dir-count"></div>';
 	$printPage .=   '<div class="sp-directory-grid" id="sp-directory-grid"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
+/*--------------------------------------------------------------
+# Home Base panels — customer roster, push composer, scheduling inbox
+# Each gated by its own module cap; content is filled by JS (spAjax).
+--------------------------------------------------------------*/
+if ( $cap_cc_customers ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-customer-connect-customers">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Customers</h2></div>';
+	$printPage .=   '<div class="sp-dir-searchrow">';
+	$printPage .=     '<input type="search" id="sp-cc-cust-search" class="sp-input sp-dir-search" placeholder="Search name, phone, or email…">';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-cc-cust-clear">Clear</button>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-dir-count" id="sp-cc-cust-count"></div>';
+	$printPage .=   '<div id="sp-cc-customers-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+if ( $cap_cc_send ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-customer-connect-send">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Send Notification</h2></div>';
+	$printPage .=   '<div id="sp-cc-send-notice"></div>';
+	$printPage .=   '<div class="sp-card sp-cc-send-card"><div class="sp-card-body">';
+	$printPage .=     '<div class="sp-form-group"><label for="sp-cc-audience">Send to</label>';
+	$printPage .=       '<select id="sp-cc-audience" class="sp-select"><option value="">Loading…</option></select></div>';
+	$printPage .=     '<div class="sp-form-group"><label for="sp-cc-title">Title</label>';
+	$printPage .=       '<input type="text" id="sp-cc-title" class="sp-input" maxlength="80" placeholder="e.g. Time to change your filter"></div>';
+	$printPage .=     '<div class="sp-form-group"><label for="sp-cc-body">Message</label>';
+	$printPage .=       '<textarea id="sp-cc-body" class="sp-textarea" rows="3" maxlength="200" placeholder="Optional details…"></textarea></div>';
+	$printPage .=     '<div class="sp-form-group"><label for="sp-cc-url">Link (optional)</label>';
+	$printPage .=       '<input type="url" id="sp-cc-url" class="sp-input" placeholder="https://…"></div>';
+	$printPage .=     '<div class="sp-cc-send-actions">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-cc-send-btn">Send Notification</button>';
+	$printPage .=       '<span class="sp-cc-send-result" id="sp-cc-send-result"></span>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div></div>';
+	$printPage .= '</section>';
+}
+if ( $cap_cc_schedule ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-customer-connect-schedule">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Scheduling Requests</h2></div>';
+	$printPage .=   '<div id="sp-cc-schedule-list"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 
@@ -1373,7 +1487,7 @@ if ( in_array( 'manage_locations', $caps ) ) {
 }
 if ( in_array( 'manage_templates', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-templates">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Reports' ) . '</div>';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Store Reports' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-templates-content"></div>';
 	$printPage .= '</section>';
 }
@@ -1381,6 +1495,12 @@ if ( in_array( 'manage_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-settings">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Site Defaults' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-settings-content"></div>';
+	$printPage .= '</section>';
+}
+if ( in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-customer-connect">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Customer Connect' ) . '</div>';
+	$printPage .=   '<div class="sp-admin-content" id="sp-admin-customer-connect-content"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 if ( in_array( 'manage_settings', $caps ) ) {
@@ -1411,7 +1531,7 @@ if ( $is_superadmin ) {
 }
 if ( in_array( 'manage_mileage', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-mileage">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Mileage' ) . '</div>';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Expense Reports' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-mileage-content"></div>';
 	$printPage .= '</section>';
 }

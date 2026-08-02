@@ -184,6 +184,8 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 // Automatically add parallax to any div noted as a scroll element
 	getObjects('[data-parallax="scroll"]').forEach(section => {
 		let imgSrc = section.getAttribute('data-image-src');
+		if (!imgSrc) return;   // guard: skip elements tagged data-parallax without a source (e.g. the
+		                       // new <img class="hero-bg"> hero, which uses its own drift, not this loop)
 		imgSrc = imgSrc.replace('/wp-content/uploads/', '');
 		const imgW = parseInt(section.getAttribute('data-img-width'), 10);
 		const imgH = parseInt(section.getAttribute('data-img-height'), 10);

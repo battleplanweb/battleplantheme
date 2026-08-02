@@ -53,7 +53,7 @@ function site_pulse_modules(): array {
 		'mileage' => [
 			'label'   => 'Expense Report',
 			'desc'    => 'Mileage logging, reimbursement reports, and NTTA toll reconciliation.',
-			'caps'    => [ 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_expense_overview', 'manage_mileage' ],
+			'caps'    => [ 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports', 'manage_mileage' ],
 			'default' => true,
 		],
 		'forms' => [
@@ -85,6 +85,12 @@ function site_pulse_modules(): array {
 			'desc'    => 'Flagged customer-service emails (complaints, compliments, comments) forwarded in from the public sites\' contact forms. Shown as a tab under Customer Feedback.',
 			'caps'    => [ 'view_emails', 'manage_emails' ],
 			'default' => true,
+		],
+		'customer_connect' => [
+			'label'   => 'Customer Connect',
+			'desc'    => 'The client\'s customers install a branded companion app (PWA) to get notifications, request scheduling, troubleshoot, and track their equipment. This panel is the staff side — the customer roster, push composer, and scheduling requests.',
+			'caps'    => [ 'view_customers', 'send_customer_push', 'view_schedule_requests', 'manage_customers', 'manage_schedule_requests' ],
+			'default' => false,
 		],
 	];
 }

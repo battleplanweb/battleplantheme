@@ -225,9 +225,15 @@ Delete the option to disable it. Default base template has these commented out.
     - `grid="1fr 1fr"` → two fluid equal columns
     - Use this when columns aren't simple equal/ratio shares — e.g. decorative side images flanking a fluid content column (the image cols are fixed-width, the text col takes `1fr`). For plain ratio splits, stick with dash/equal notation.
   - **Never use more than 6 columns** in dash/equal notation. Don't write `grid="1-1-1-1-1"` — use `grid="5e"`. Don't write `grid="7e"` or `grid="8e"`. (Custom track notation is exempt — it's for fixed-rail layouts, not wide column counts.)
-- `valign` → vertical alignment — values: `left`, `center`, `right` (never `middle`)
+- `valign` → **vertical** alignment (maps to `align-self` on the cols) — values: `start`, `center`, `end`, `stretch`. Default is `start`. Use **`valign="stretch"`** to make every column equal height (cards in a row line up their tops *and* bottoms — the usual choice for a row of teaser/service cards). `left`/`right` are **not** valign values (those are `align`), and `middle` isn't one either — use `center`.
 - `gap` → **do not set this attribute.** Glendon adjusts column spacing via CSS in the rare cases it's needed. Same applies to `[col]`.
-- `break` → **do not set this attribute.** Glendon adds responsive breakpoints manually if/when needed. Same applies to `[col]`.
+- `break` → **do not set this attribute.** Glendon adds responsive breakpoints manually if/when needed. Same applies to `[col]`. (The one exception is `scroll` below, which needs a `break` to know where to kick in.)
+- `scroll` → **swipe scroller instead of stacking.** `[layout grid="4e" break="3" scroll="true"]` — at the break point the row stops stacking into one column and becomes a horizontal scroll-snap carousel: the columns keep a usable width and the visitor swipes left/right, with dots underneath. Unset or `scroll="false"` = the usual stacking.
+  - Break points are the ones `break-*` already stacks at: `break="4"` → 1280px, `break="3"` → 1024px, `break="2"` → 860px, `break="1"` → 576px. **`scroll` does nothing without `break="1-4"`.**
+  - Slide width defaults to 80% of the row (so the next card peeks in). Override with a length instead of `true`: `scroll="65%"`, `scroll="18em"`, `scroll="260px"`.
+  - **The row bleeds to the screen edges.** A half-visible slide runs off the physical edge instead of stopping at the content inset (which reads as a mistake); the first and last slides keep the inset so the row still starts and ends on the content line. The script measures it per row — nothing to set.
+  - **Every direct `[col]` becomes a slide** — including a `[col class="span-all"]` heading. Put the section heading in its own `[layout]` above the scrolling one.
+  - Dots are `.carousel-indicators` (same as `[get-post-slider]`), so styling them once makes both match. Files: [style-scroller.css](style-scroller.css) + [style-indicators.css](style-indicators.css) + [js/script-scroller.js](js/script-scroller.js), all loaded on demand.
 
 **Critical rule — never nest `[layout]` inside `[layout]` (or inside a `[col]`).** It breaks the grid. `[layout]` emits a bare `<div class="flex grid-X">` whose grid CSS only works as the **direct child of a `[section]`** — drop a second `[layout]` inside a `[col]` and the inner grid renders wrong. Two correct options instead:
 1. **Flatten the grid (preferred).** Rethink the columns as a single layout. A `grid="1-2"` whose right col holds an inner `grid="1-1"` is really just three columns — write `grid="1-1-1"`. Most "I need a grid inside a grid" cases collapse this way, often with `h-span`/`v-span` to handle the odd spanning cell.
@@ -246,7 +252,8 @@ Delete the option to disable it. Default base template has these commented out.
 - `h-span="N"` → the col spans **N columns** of the grid (`.col.h-span-N` → `grid-column: span N`). `v-span="N"` → spans **N rows** (`grid-row: span N`). The grid (`.flex.grid-*`) is a real CSS grid, so a single col can span multiple cells in either direction — e.g. in a `grid="1-1"`, give the heading col `h-span="2"` to make it span both columns while the rest of the cells flow normally.
 - `class="span-all"` → shorthand for "span the entire row" (`grid-column: 1 / -1`). Prefer this over `h-span="5"`/`h-span="6"` for a full-width header inside a multi-col grid — it's count-agnostic, so it keeps spanning the whole row no matter how many columns the layout has.
 - `order` → CSS order override
-- `align` / `valign` → values: `left`, `center`, `right` (never `middle`)
+- `align` → **horizontal** alignment (justify-self) — values: `left`, `center`, `right`.
+- `valign` → **vertical** alignment (align-self) — values: `start`, `center`, `end`, `stretch` (not `left`/`right`, and not `middle` — use `center`).
 - `gap` → **do not set.** Glendon tweaks via CSS only when needed.
 
 **Critical rule — wrap multi-child content in `[txt]`:**
@@ -318,6 +325,26 @@ NOT:
 **When you flatten a wrapper `<div>`, move its CSS hook with it — don't let it vanish.** If the `<div>` you're removing carried styling (a `class` with a background, a `position:relative` context, a `::before`/`::after` connector or accent, a grid/flex declaration), that class and its CSS have to land on the element that replaces it — usually the `[col]` (via `class=""`) or the `[layout]` (yes, `[layout class="x"]` works → `<div class="flex grid-… x">`). Two traps specifically:
 - **Selector drift.** A rule written as `.journey .journey-step` (descendant of the old wrapper) stops matching once the wrapper is gone. Rewrite it against the new DOM — `#section-name .journey-step`, or whatever the surviving ancestor is.
 - **Positioned pseudo-elements lose their anchor.** An absolutely-positioned `::before`/`::after` (e.g. a connector line behind a row of icons) needs a `position:relative` ancestor. If that `position:relative` lived on the deleted wrapper, re-add it to the element now carrying the class (commonly the `[layout]`). And if the pseudo-element is positioned from the top of its host, keep section headings in a *separate* `[layout]` so the decorated grid's top still aligns with its own content row, not the heading.
+
+**Linked cards — compose from framework blocks, not one big `<a>` + CSS background.** A clickable teaser/service card is a stack of framework block shortcodes inside the `[col]` — a real linked image, the label, and a real button — each a block, so no outer `[txt]` around the whole col (only the loose inline label needs its own `[txt]`):
+
+```
+[layout grid="6e" valign="stretch"]
+ [col class="span-all section-head"][txt]<h2>We're Here For All Your HVAC Needs</h2>[/txt][/col]
+
+ [col class="service-card"]
+  [img link="/air-conditioning/" ada-hidden="true"]<img src="/wp-content/uploads/service-ac.webp" alt="" width="300" height="300" style="aspect-ratio:300/300" />[/img]
+  [txt]<span class="service-icon">[get-icon type="snowflake"]</span><span class="service-label">Air Conditioning</span>[/txt]
+  [btn link="/air-conditioning/" ada="about our air conditioning service"]Learn More[/btn]
+ [/col]
+ …more service-card cols…
+[/layout]
+```
+
+Why this shape, not a single `<a class="service-link" style="background-image:url(…)">…</a>`:
+- **Real `<img>` via `[img]`, never a CSS `background-image`.** Only real `<img>` tags get alt text, width/height, lazy-loading, and — critically — the framework's media-replace / alt-sync / dimension-fix systems (all DB-walkers that look for `<img class="wp-image-…">`, not inline background URLs). A background-image is invisible to all of that.
+- **`[img link="/path/"]`** makes the image itself a link (the whole image block, no hand-written `<a>`), and **`ada-hidden="true"` + `alt=""`** hides the decorative image from screen readers since the button already provides the accessible link — otherwise AT users hit the same destination twice.
+- **`[btn link="/path/" ada="…"]` carries the real link.** When a row has many identical button labels ("Learn More"), give each a unique **`ada="…"`** (screen-reader-only text) so AT users can tell them apart — five links all reading "Learn More" is an accessibility failure. Pair with **`valign="stretch"`** on the layout so the cards are equal height regardless of label length.
 
 ### [img] — Image block wrapper
 ```
@@ -398,6 +425,12 @@ Spring/fall fall back to summer/winter if not set.
 - `size` → image size slug
 - `full` → attachment ID that gets `full-{pos}` class
 - Uses aspect ratio math so all images share equal height
+
+**Mobile: the strip becomes a swipe carousel (default, ≤860px).** A four-photo strip squeezed onto a phone screen is four thumbnails, so below 860px the shortcode adds `.swipe` and the row turns into a native scroll-snap carousel — photos keep a real size (equal height, natural width) and the visitor swipes left/right. Same engine as `[layout scroll=""]`: [style-scroller.css](style-scroller.css) + [style-indicators.css](style-indicators.css) + [js/script-scroller.js](js/script-scroller.js), loaded on demand. Dots are `.carousel-indicators`, shared with `[get-post-slider]`, and only appear once the strip really overflows.
+
+Swipe is skipped — the strip squeezes/breaks the old way — when **`full` is set** (that layout is deliberately stacked; `full="true"` is the way to opt a strip out without designating a full-width image), when **`break`** is anything but the default `none` (an explicit stack request), or with a single image.
+
+Slide height is `--sbs-slide-height` on `ul.side-by-side.swipe` (default `clamp(13em, 58vw, 25em)`) — override per site in `style-site.css`.
 
 ### [get-before-after] — Before/After comparison with overlay
 ```
@@ -861,9 +894,53 @@ Use this exact pattern whenever a form opens with Name/Email/Phone — don't rea
 
 ### Building a custom form
 
-Two patterns, in order from simplest to most powerful:
+Four patterns, in order from simplest to most powerful:
 
-**Pattern 1: Add fields to a standard form** — `bp_form_extra_fields` filter
+**Pattern 1: Drop a field into a named slot** — `bp_form_slot` (preferred)
+
+Both standard bodies carry a `[bp-slot]` marker after every field, so you can place a field **anywhere** in the shared framework form from `functions-site.php` — no `str_replace`, no redefining the body. The precise filter is `bp_form_slot_{form-id}_{slot}`, which needs no `if` and no extra arg count:
+
+```php
+add_filter('bp_form_slot_quote_after-phone', function($fields) {
+    return '[seek label="Service Needed" id="user-service" req="true"]
+        [bp-select name="user-service" first="— select —" options="AC Repair|Heating Repair|Maintenance" required="true"]
+    [/seek]';
+});
+```
+
+Or the general form, when one callback covers several slots/forms:
+
+```php
+add_filter('bp_form_slot', function($fields, $slot, $form_id) {
+    if ($form_id === 'quote' && $slot === 'before-message') {
+        $fields .= '[seek label="Preferred Date" id="user-date"][bp-date name="user-date"][/seek]';
+    }
+    return $fields;
+}, 10, 3);
+```
+
+**Slots, in render order** (both standard forms, so the same slot name works on either):
+
+| Slot | Position |
+|---|---|
+| `top` | very top of the form |
+| `after-name` | after Name |
+| `after-city` | after City (**quote form only** — the contact form has no City) |
+| `after-email` | after Email |
+| `after-phone` | after Phone |
+| `before-message` | between the contact-info row and the Message row |
+| `after-message` | after Message |
+| `before-button` | immediately before the submit button |
+| `bottom` | below the submit button (where `bp_form_extra_fields` lands) |
+
+Notes:
+- **Return bare field markup** (`[seek]…[/seek]`). The slot wraps it in the `[col]` — or `[layout][col]` for the row-level slots — that its surrounding grid needs. Return your own `[col]` / `[layout]` / `[nested]` to take over the wrapping instead.
+- **Slot-added fields are first-class.** They resolve during the `[bp-form]` body pass, so `required="true"` registers into the signed `bp_required` payload and `[bp-file]` accept/size declarations register too — server-side enforcement comes along for free.
+- **Multiple filters stack** on one slot (append with `.=` in the general form), and the precise `bp_form_slot_{form-id}_{slot}` filter runs after the general one, so it can see and override it.
+- **Grid reflow on the contact form.** Its top row is `grid="3-3-2"` (3 columns), so a field added at `after-name` takes Email's cell and pushes Phone onto a second line. That's correct positioning, just a reflowed row — if you want the new field on its own full-width line, use `before-message`, or return `[col class="span-all"]…[/col]`. The quote form's fields are a single-column stack (`grid-1`), so every slot there is exactly positional.
+- **`[bp-slot]` works in custom bodies too** — drop `[bp-slot name="whatever"]` in your own `[bp-form]` and that form becomes extensible the same way.
+
+**Pattern 2: Append below the button** — `bp_form_extra_fields` filter
 
 ```php
 add_filter('bp_form_extra_fields', function($fields, $form_id) {
@@ -876,9 +953,9 @@ add_filter('bp_form_extra_fields', function($fields, $form_id) {
 }, 10, 2);
 ```
 
-The added fields are appended after the standard form body, before the submit button. Use this when the standard form is mostly right and you just need an extra question or two.
+The oldest hook, kept for the sites already using it. It appends after the **entire** body — and since the standard bodies include their own `[bp-submit]`, the added fields render **below the submit button**. Identical to the `bottom` slot. For anything that should sit above the button, use Pattern 1.
 
-**Pattern 2: Replace an entire form body** — register a new shortcode
+**Pattern 3: Replace an entire form body** — register a new shortcode
 
 ```php
 add_shortcode('site-application-form', function() {
@@ -902,6 +979,17 @@ add_shortcode('site-application-form', function() {
 ```
 
 Then on the page that needs it: `[site-application-form]`. The form `id="application"` is what shows up in `bp_form_extra_fields($fields, $form_id)` filters and as the form_id in `bp_form_before_send` / `bp_form_after_send` hooks.
+
+**Pattern 4: Rewrite a standard form's body wholesale** — `bp_form_body` filter
+
+```php
+add_filter('bp_form_body', function($body, $form_id, $type) {
+    if ($type !== 'quote') return $body;
+    return '…entirely different shortcode body…';
+}, 10, 3);
+```
+
+`$type` is `'contact'` or `'quote'` (which default body was requested); `$form_id` is the `id` attr, so a `[bp-quote-form id="service-call"]` is distinguishable. Use this only to **remove or reorder** built-in fields — for *adding* fields, Pattern 1 does the job without you owning a copy of the framework body that then goes stale when the framework's changes.
 
 ### Email rendering — automatic, no template
 
@@ -1569,6 +1657,10 @@ update_option('jobsite_geo', array(
     'fsm_brand'       => '',         // 'Housecall Pro' to enable HCP webhook
 ));
 ```
+
+> ⚠️ **`default_service` is required, not optional.** It is the safety-net fallback in `bp_geo_run_ai_rewrite()`: the service-type tag **and** the `/service/` landing page are only created when the resolved service category is non-empty. If the AI returns no `service_category` **and** `default_service` is blank, the post is orphaned with only its deterministic service-area tag — no service-type, no page, no archive intro. Set it to the client's primary service (e.g. `'Gutter Installation'`) on every new site. Also confirm `BP_ANTHROPIC_API_KEY` is defined in that site's `wp-config.php` — without it the whole AI classification step short-circuits and you get the same orphaned result.
+
+> ✅ **New-site smoke test (do this once per install):** submit one test job **with a photo**, then confirm the full chain end-to-end: (1) a service-type term + `/service/{service--city-st}/` page were created, (2) the archive intro rendered, (3) the photo **shows on the front end** (not just under "Attachments"), (4) the photo got AI alt text. This single test exercises every silent failure mode (`default_service`, intro trigger, photo→ACF bridge, alt cron). A standing **"Jobsite GEO health"** admin notice (on the jobsite list + dashboard) also flags these three drifts automatically — but run the smoke test on setup so a new site is right from day one.
 
 ### Custom Post Type: `jobsite_geo`
 - Public archive at `/jobsites/`

@@ -110,7 +110,7 @@ function battleplan_buildNested( $atts, $content = null ) {
 // Layout
 add_shortcode( 'layout', 'battleplan_buildLayout' );
 function battleplan_buildLayout( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'gap'=>'', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'gap'=>'', 'break'=>'', 'scroll'=>'', 'valign'=>'', 'align'=>'', 'class'=>'', 'track'=>'' ), $atts );
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name ? ' id="'.$name.'"' : '';
 	$grid = esc_attr($a['grid']);
@@ -123,12 +123,30 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	$gap = !empty($a['gap']) ? 'gap:' . esc_attr($a['gap']) . '; ' : '';
 	$break = !empty($a['break']) ? ' break-' . esc_attr($a['break']) : '';
 	$valign = !empty($a['valign']) ? ' valign-' . esc_attr($a['valign']) : '';
+	$align = !empty($a['align']) ? ' align-' . esc_attr($a['align']) : '';
 	$class = !empty($a['class']) ? ' ' . esc_attr($a['class']) : '';
 	$data = !empty($a['data']) ? ' data-' . esc_attr($a['data']) : '';
 	$tracking = !empty($a['track']) ? ' data-track="' . esc_attr($a['track']) . '"'	: '';
 	if ( $tracking !== '' ) $class .= " tracking";
 
-	$style = $gap !== '' || $custom_grid !== '' ? ' style="'.$gap.' '.$custom_grid.'"' : '';
+	// Swipe scroller — at its break point the row scrolls sideways instead of stacking, so a
+	// row of cards stays card-sized on a phone (style-scroller.css + script-scroller.js).
+	// scroll="true" uses the default slide width; scroll="65%" / scroll="18em" sets your own.
+	// Needs break="1-4" — that class is what tells the CSS which break point to scroll at.
+	$scroll = strtolower(trim(esc_attr($a['scroll'])));
+	$swipe = '';
+	$slide = '';
+	if ( !in_array($scroll, ['', 'false', 'no'], true) && in_array(esc_attr($a['break']), ['1','2','3','4'], true) ) {
+		$swipe = ' swipe';
+		if ( !in_array($scroll, ['true', 'yes', '1'], true) && preg_match('/^[0-9.]+(px|em|rem|%|vw)$/', $scroll) ) {
+			$slide = '--bp-slide-width:'.$scroll.'; ';
+		}
+		bp_enqueue_script( 'battleplan-script-scroller', 'script-scroller', ['battleplan-script-pages'] );
+		bp_inline_minified_css( get_template_directory() . '/style-scroller.css' );
+		bp_inline_minified_css( get_template_directory() . '/style-indicators.css' );
+	}
+
+	$style = $gap !== '' || $custom_grid !== '' || $slide !== '' ? ' style="'.$gap.' '.$custom_grid.' '.$slide.'"' : '';
 
 	$data_attrs = '';
 	foreach ( $atts as $k => $v ) {
@@ -138,7 +156,7 @@ function battleplan_buildLayout( $atts, $content = null ) {
 		}
 	}
 
-	return '<div'.$name.' '.$data_attrs.' class="flex grid-'.$grid.$valign.$break.$class.'"'.$style.$tracking.'>'.do_shortcode($content).'</div>';
+	return '<div'.$name.' '.$data_attrs.' class="flex grid-'.$grid.$valign.$align.$break.$swipe.$class.'"'.$style.$tracking.'>'.do_shortcode($content).'</div>';
 }
 
 // Column
@@ -639,28 +657,36 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 	} else {
 		if ( $hasImage ) {
-			// Record the FIRST hero image as the page's LCP image for the cache-safe head preload.
-			bp_register_hero_preload( $image );
+// Responsive <img> hero backdrop: the browser picks the file via srcset/sizes (native, width +
+			// DPR aware); the parallax drift is a compositor transform on that same <img> (.hero-bg in
+			// style-grid.css). Replaces the old CSS-background + .load-bg-img JS sizer (which double-loaded:
+			// preload the original, then JS-fetch a responsive size).
+			$srcset  = $attachment_id ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_id, 'full' ) ) : '';
 
-			$desktopSrc = explode('.', $image);
-			$desktopExt = array_pop($desktopSrc);
-			$desktopBase = preg_replace('/-\d+x\d+$/', '', implode('.', $desktopSrc));
+			// Preload the SAME candidate set the <img> resolves so the LCP image is fetched high-priority
+			// and correctly sized - one download, no downgrade.
+			bp_register_hero_preload( $image, $srcset, '100vw' );
 
-			$dataAttrs     = ' data-parallax="scroll" data-img-width="' . $imgW . '" data-img-height="' . $imgH . '" data-holder-height="'.$height.'" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '" data-fixed="' . $fixed . '" data-image-src="' . $image . '" data-img-base="' . $desktopBase . '" data-img-ext="' . $desktopExt . '"';
+			$heroImg = '<img class="hero-bg" src="' . esc_url( $image ) . '"'
+				. ( $srcset ? ' srcset="' . esc_attr( $srcset ) . '" sizes="100vw"' : '' )
+				. ' width="' . esc_attr( $imgW ) . '" height="' . esc_attr( $imgH ) . '"'
+				. ' style="object-position:' . esc_attr( $posX ) . ' center;"'
+				. ' alt="' . esc_attr( $alt_text ) . '" fetchpriority="high" decoding="async">';
+
+			// No data-parallax="scroll": that triggers the old parallaxBG auto-loop in script-desktop.js
+			// (which reads data-image-src etc.). The <img class="hero-bg"> hero uses the CSS view() drift
+			// / .hero-bg JS fallback instead. top-y/bottom-y kept as future drift hooks.
+			$dataAttrs     = ' data-img-height="' . $imgH . '" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '"';
 			$parallaxClass = ' ' . $type . '-parallax';
-
-				// Server-render the hero background inline (the ORIGINAL image, which is exactly what
-				// the preload targets) so the LCP image paints on first byte — instead of waiting for the
-				// load-bg-img JS to apply it after DOMContentLoaded. The parallax scroll effect still runs
-				// on top and only nudges background-position on scroll; it no longer gates first paint.
-				$bgStyle       = ' background-image:url(' . $image . '); background-size:cover; background-position:'.$posX.' center;';
 		} else {
+			$heroImg       = '';
 			$dataAttrs     = '';
 			$parallaxClass = '';
-				$bgStyle       = '';
 		}
 
-		return do_shortcode( '<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . ( $hasImage ? ' load-bg-img' : '' ) . $class . '"' . $tracking . ' style="height:' . $height . ';' . $bgStyle . '"' . $dataAttrs . '>' . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
+		// min-height (not height) so a hero with tall content grows instead of clipping under
+		// overflow:hidden; the absolutely-positioned .hero-bg still fills whatever height results.
+		return do_shortcode( '<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . $class . '"' . $tracking . ' style="min-height:' . $height . ';"' . $dataAttrs . '>' . $heroImg . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
 
 	}
 }
@@ -675,23 +701,78 @@ function battleplan_buildParallax( $atts, $content = null ) {
 // throttled mobile connection it becomes the slow LCP. Fix: the first hero records its URL here, and
 // the framework's existing whole-page `final_output` filter (functions.php) injects a high-priority
 // <link rel=preload> right after <head> — so it lands in the cached HTML, discovered before anything.
-function bp_register_hero_preload( $url ) {
+function bp_register_hero_preload( $url, $srcset = '', $sizes = '' ) {
 	if ( empty($GLOBALS['bp_hero_preload']) && ! empty($url) ) {
-		$GLOBALS['bp_hero_preload'] = $url;
+		$GLOBALS['bp_hero_preload'] = array( 'url' => $url, 'srcset' => $srcset, 'sizes' => $sizes );
 	}
 }
 
 add_filter('final_output', 'bp_inject_hero_preload', 5);
 function bp_inject_hero_preload( $html ) {
 	if ( empty($GLOBALS['bp_hero_preload']) || ! is_string($html) || stripos($html, '</head>') === false ) return $html;
-	$link = '<link rel="preload" as="image" href="' . esc_url($GLOBALS['bp_hero_preload']) . '" fetchpriority="high">' . "\n";
-	// Inject at the END of <head>, AFTER the self-hosted font preloads — not before them. The preload
-	// scanner still issues it during head parse (position doesn't gate discovery), but keeping it after
-	// the fonts lets Blu/Open Sans keep their priority on the throttled pipe. A hero preload placed
-	// ahead of the fonts delays the heading font past first paint, and the late font swap reflows the
-	// (vertically-centered) hero copy — a CLS source. Fonts first, hero right after.
+
+	$hero   = $GLOBALS['bp_hero_preload'];
+	$url    = is_array($hero) ? ( $hero['url']    ?? '' ) : $hero;   // mobile passes a plain URL string
+	$srcset = is_array($hero) ? ( $hero['srcset'] ?? '' ) : '';
+	$sizes  = is_array($hero) ? ( $hero['sizes']  ?? '' ) : '';
+	if ( ! $url ) return $html;
+
+	// Responsive preload when a srcset exists (desktop hero) so the preloader fetches the SAME
+	// candidate the <img srcset> resolves; href stays as fallback for browsers ignoring imagesrcset.
+	$attr = $srcset
+		? 'imagesrcset="' . esc_attr($srcset) . '"' . ( $sizes ? ' imagesizes="' . esc_attr($sizes) . '"' : '' ) . ' href="' . esc_url($url) . '"'
+		: 'href="' . esc_url($url) . '"';
+
+	$link = '<link rel="preload" as="image" ' . $attr . ' fetchpriority="high">' . "
+";
+
+	// Inject at the END of <head>, after the self-hosted font preloads, so fonts keep priority on the
+	// throttled pipe; the hero preload is still discovered during head parse regardless of position.
 	return str_ireplace('</head>', $link . '</head>', $html);
 }
+
+
+/*--------------------------------------------------------------
+# Header/footer chrome: logo priority + logo alt-text fallback
+--------------------------------------------------------------*/
+// Two fixes that both key off "are we rendering the site chrome (masthead or footer), where the LOGO
+// is the only attachment image":
+//
+//   1. fetchpriority — WordPress core (6.3+) auto-stamps fetchpriority="high" on the first sizeable
+//      <img> it renders, guessing it's the LCP. On our sites that's the header LOGO, but the real LCP
+//      is the server-rendered hero background, which we already preload high ourselves
+//      (bp_inject_hero_preload above). Core's guess hands the single high-priority slot to the logo,
+//      so we strip it back while the chrome renders — the hero preload wins.
+//
+//   2. alt text — the logo is frequently uploaded with a blank alt, so it (and the home link that
+//      wraps it) reads as silence to screen readers and gives Google no context. When a chrome image
+//      has an empty alt, fall it back to the business name.
+//
+// Scoped to the masthead + colophon only. Body content images — hero/grid images set their priority
+// as raw HTML (not through this filter), and real content images carry their own alt — are untouched,
+// so a deliberately decorative alt="" in the page body still stays empty.
+add_action( 'bp_before_masthead', function () { $GLOBALS['bp_in_chrome'] = true; },  PHP_INT_MIN );
+add_action( 'bp_after_masthead',  function () { $GLOBALS['bp_in_chrome'] = false; }, PHP_INT_MAX );
+add_action( 'bp_before_colophon', function () { $GLOBALS['bp_in_chrome'] = true; },  PHP_INT_MIN );
+add_action( 'bp_after_colophon',  function () { $GLOBALS['bp_in_chrome'] = false; }, PHP_INT_MAX );
+add_filter( 'wp_get_attachment_image_attributes', function ( $attr ) {
+	if ( empty( $GLOBALS['bp_in_chrome'] ) ) return $attr;
+
+	// (1) Don't let the logo hold the LCP's high-priority slot.
+	if ( isset( $attr['fetchpriority'] ) && 'high' === $attr['fetchpriority'] ) {
+		unset( $attr['fetchpriority'] );
+	}
+
+	// (2) Give a blank-alt logo the business name so it isn't silent.
+	if ( '' === trim( (string) ( $attr['alt'] ?? '' ) ) ) {
+		$ci   = function_exists( 'customer_info' ) ? customer_info() : [];
+		$name = is_array( $ci ) ? trim( (string) ( $ci['name'] ?? '' ) ) : '';
+		if ( '' === $name ) $name = get_bloginfo( 'name' );
+		if ( '' !== $name ) $attr['alt'] = $name;
+	}
+
+	return $attr;
+}, 99 );
 
 // Locked Section
 add_shortcode( 'lock', 'battleplan_buildLockedSection' );

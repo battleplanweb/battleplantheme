@@ -1,0 +1,182 @@
+/*--------------------------------------------------------------
+# Swipe scrollers — [layout scroll=""] + [side-by-side]
+#
+# Instead of stacking a row at its break point (or squeezing a photo strip onto
+# a phone screen), the row turns into a horizontal scroll-snap carousel: the
+# items keep a usable size and the visitor swipes left/right through them.
+#
+#   [layout grid="4e" break="3" scroll="true"]  → 4 cols, scrolls below 1024px
+#   [side-by-side img="12,13,14"]               → photos scroll below 860px
+#
+# Break points match the ones those classes stack at in style-grid.css:
+#   break-4 = 1280px · break-3 = 1024px · break-2 = 860px · break-1 = 576px
+#
+# Only display / flex-flow / overflow have to be gated per break point. Every
+# other rule below is inert until the row is actually a flex scroller (grid
+# items ignore flex-basis, scroll-snap needs a scroll container), so it can be
+# declared once.
+#
+# Dots are built by script-scroller.js and wear the carousel's
+# .carousel-indicators classes (style-indicators.css) so both match on a page.
+#
+# Inlined on demand by the shortcodes (bp_inline_minified_css), not part of core.
+--------------------------------------------------------------*/
+
+/* ---------------------------------------------------------------
+   Turn the row into a scroller at its break point
+   (justify-content is reset because a centred row overflows both ways — the
+   items before the centre become unreachable in a scroll container.)
+--------------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+	div.flex.break-4.swipe {
+		display:                                                  flex;
+		flex-flow:                                                row nowrap;
+		justify-content:                                          flex-start;
+		overflow-x:                                               auto;
+	}
+}
+
+@media (max-width: 1024px) {
+	div.flex.break-3.swipe {
+		display:                                                  flex;
+		flex-flow:                                                row nowrap;
+		justify-content:                                          flex-start;
+		overflow-x:                                               auto;
+	}
+}
+
+@media (max-width: 860px) {
+	div.flex.break-2.swipe,
+	ul.side-by-side.swipe {
+		display:                                                  flex;
+		flex-flow:                                                row nowrap;
+		justify-content:                                          flex-start;
+		overflow-x:                                               auto;
+	}
+}
+
+@media (max-width: 576px) {
+	div.flex.break-1.swipe {
+		display:                                                  flex;
+		flex-flow:                                                row nowrap;
+		justify-content:                                          flex-start;
+		overflow-x:                                               auto;
+	}
+}
+
+
+/* ---------------------------------------------------------------
+   Shared scroller behavior (inert until the row scrolls)
+--------------------------------------------------------------- */
+
+.swipe {
+	/* The row is almost always a grid item itself (a .flex inside a section, a
+	   .side-by-side inside a .flex.grid-*), and grid/flex items default to
+	   min-width:auto — without this the row just grows past its track and spills
+	   off the screen instead of scrolling, and nothing is swipable. */
+	min-width:                                                 0;
+	/* Both are load-bearing: min-width:0 lets the row shrink to its track, and
+	   max-width caps the min-content size it hands back up the grid — without it
+	   the row's content blows the track out and it spills instead of scrolling. */
+	max-width:                                                 100%;
+	overscroll-behavior-x:                                     contain;
+	scroll-snap-type:                                          x mandatory;
+	scrollbar-width:                                           none;
+	-webkit-overflow-scrolling:                                touch;
+}
+
+.swipe::-webkit-scrollbar {
+	display:                                                   none;
+}
+
+/* Full bleed — a slide that hangs off the side has to run all the way to the
+   screen edge, or the leftover strip of background reads as a mistake. The row
+   is pulled out to the edges by its own side inset, and that inset is handed to
+   the first and last slides instead, so the row still starts and ends on the
+   content line. script-scroller.js measures --bp-bleed-* and keeps them current
+   on resize; they are 0 until it does, so the row never jumps. */
+.swipe.is-swipable {
+	/* The max-width above still applies — widen it by exactly the bleed, or it
+	   clamps the row straight back to its track and nothing moves. */
+	max-width:                                                 calc(100% + var(--bp-bleed-left, 0px) + var(--bp-bleed-right, 0px));
+	/* !important because [side-by-side] can carry an inline margin of its own —
+	   an inline style would otherwise win and leave that side short of the edge. */
+	margin-left:                                               calc(-1 * var(--bp-bleed-left, 0px)) !important;
+	margin-right:                                              calc(-1 * var(--bp-bleed-right, 0px)) !important;
+}
+
+.swipe.is-swipable > :first-child {
+	margin-left:                                               var(--bp-bleed-left, 0px) !important;
+}
+
+.swipe.is-swipable > :last-child {
+	margin-right:                                              var(--bp-bleed-right, 0px) !important;
+}
+
+.swipe:focus-visible {
+	outline:                                                   2px solid var(--button-background, currentColor);
+	outline-offset:                                            4px;
+}
+
+
+/* ---------------------------------------------------------------
+   [layout] columns as slides
+--------------------------------------------------------------- */
+
+div.flex.swipe > .col {
+	flex:                                                      0 0 var(--bp-slide-width, 80%);
+	scroll-snap-align:                                         center;
+}
+
+/* The break-* rules narrow .col-inner (85% / 75% / 50%) to centre a stacked
+   column — a slide should fill its own width instead. */
+div.flex.swipe > .col > .col-inner {
+	max-width:                                                 100%;
+}
+
+
+/* ---------------------------------------------------------------
+   [side-by-side] photos as slides
+   Equal height, natural width — the same height-matched look the strip has on
+   desktop, just wider than the screen so it scrolls.
+--------------------------------------------------------------- */
+
+ul.side-by-side.swipe {
+	--sbs-slide-height:                                        clamp(13em, 58vw, 25em);
+}
+
+@media (max-width: 860px) {
+
+	ul.side-by-side.swipe > li {
+		flex:                                                     0 0 auto !important;
+		height:                                                   var(--sbs-slide-height);
+		scroll-snap-align:                                        center;
+	}
+
+	ul.side-by-side.swipe > li img {
+		width:                                                    auto;
+		height:                                                   100%;
+		max-width:                                                none;
+		object-fit:                                               cover;
+	}
+}
+
+
+/* ---------------------------------------------------------------
+   Dots — .carousel-indicators styling comes from style-indicators.css.
+   Only shown once the row really does overflow (the script adds .is-swipable).
+--------------------------------------------------------------- */
+
+ol.carousel-indicators.swipe-dots {
+	display:                                                   none;
+}
+
+.swipe.is-swipable + ol.carousel-indicators.swipe-dots {
+	display:                                                   flex;
+	justify-content:                                           center;
+	/* Ignored in a flex/block parent — keeps the dots on their own full row when
+	   the row sits directly in a grid. script-scroller.js overrides this with the
+	   row's own grid-column when it has a named one (a .flex in a section). */
+	grid-column:                                               1 / -1;
+}

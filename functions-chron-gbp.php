@@ -16,14 +16,29 @@ function bp_run_chron_gbp(bool $force = false): void {
 		$today      = strtotime(date("F j, Y"));
 		$daysSince  = ($today - (int)($google_info['date'] ?? 0)) / 86400;
 		$reviewCount = (int)($google_info['google-reviews'] ?? 0);
-		$thresholds  = [1000 => 1, 500 => 2, 250 => 3, 125 => 4, 75 => 5, 50 => 6];
-		$days        = 7;
+
+		// Sync cadence in days, by review count — highest matching threshold wins.
+		// The loop used to fall through every row without breaking, so the SMALLEST
+		// matching threshold always won and every site with 50+ reviews synced on the
+		// same 6-day cadence no matter its size. Values are floored at 6 days on
+		// purpose: each Place ID fetched is one Place Details *Enterprise* call
+		// ($20/1,000 — the rating/userRatingCount/phone fields force that tier), so
+		// cadence is the only real cost lever in this function. Do not lower these
+		// without checking the Places API spend first.
+		$thresholds = [1000 => 6, 500 => 6, 250 => 7, 125 => 7, 75 => 7, 50 => 7];
+		$days       = 7;
 
 		foreach ($thresholds as $limit => $val) {
-			$days = ($reviewCount >= $limit) ? $val : $days;
+			if ($reviewCount >= $limit) { $days = $val; break; }
 		}
 
-		if ($force === true || $daysSince > $days) {
+		// Back-off after a fully-failed run. Because a failed run deliberately no longer
+		// stamps $google_info['date'], $daysSince stays huge forever once a site breaks —
+		// which would re-hit (and re-bill) the API every single night. This gate keeps a
+		// broken site on the same cadence a healthy one gets. Cleared on the first success.
+		$retryAfter = (int) get_option('bp_chron_a_retry_after', 0);
+
+		if ($force === true || ($daysSince > $days && time() >= $retryAfter)) {
 			
 			update_option('bp_chron_a_api_time', time()); // timestamp of actual API hit
 
@@ -219,6 +234,9 @@ function bp_run_chron_gbp(bool $force = false): void {
 
 			} else {
 				// Every Place ID failed — leave the last-known-good data untouched and alert (deduped).
+				// Hold off the next attempt for a full cadence so a permanently-broken Place ID (or a
+				// dead key) can't hammer the billable API nightly. Cleared by the first clean run.
+				update_option('bp_chron_a_retry_after', time() + ($days * DAY_IN_SECONDS), false);
 				bp_chron_a_notify_failure($customer_info, $fetch_errors, true);
 			}
 		}
@@ -306,4 +324,5 @@ function bp_chron_a_notify_drop(array $customer_info, int $oldTotal, int $newTot
 function bp_chron_a_clear_failure_state(): void {
 	delete_option('bp_chron_a_fail_since');
 	delete_option('bp_chron_a_last_alert');
+	delete_option('bp_chron_a_retry_after');
 }

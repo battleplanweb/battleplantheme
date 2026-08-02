@@ -230,12 +230,96 @@ get_header(); ?>
 
 		$GLOBALS['mapPins'] = json_encode($lat_lng);
 
-		// Set up javascript to build map
-		add_action('wp_footer', 'battleplan_googleMapsAPI');
-		function battleplan_googleMapsAPI() { ?>
+		// The archive map is decorative — pins on a basemap, no directions, no panning.
+		// A Static Maps <img> bills at $2/1,000 against $7/1,000 for a Dynamic (JS) map,
+		// ships no JavaScript at all, and renders above the fold as a plain image. Set
+		// this filter to false on a site that genuinely needs the interactive map back.
+		$useStaticMap = (bool) apply_filters('bp_jobsite_static_map', true);
+
+		// Set up javascript to build map (interactive fallback only)
+		if ( ! $useStaticMap ) add_action('wp_footer', 'battleplan_googleMapsAPI');
+
+		if ( ! function_exists('bp_jobsite_static_map_url') ) :
+		/**
+		 * Google Static Maps URL for the jobsite pin map.
+		 *
+		 * Omitting center/zoom lets Static Maps auto-fit the marker bounds — the same job
+		 * fitBounds() did on the JS map. Two cases can't auto-fit: no pins (nothing to fit,
+		 * so centre on the business) and one pin (auto-fit zooms to maximum, so pin the
+		 * zoom at 14, matching the old maxZoom cap).
+		 *
+		 * The marker icon MUST be PNG/JPEG/GIF — Static Maps rejects WebP — and is drawn at
+		 * its natural pixel size regardless of scale=2, so export the PNG at the size it
+		 * should appear on a retina render.
+		 *
+		 * Returns '' with no key, so the caller can skip the <img> rather than emit a broken one.
+		 */
+		function bp_jobsite_static_map_url( array $lat_lng, int $size = 550 ): string {
+			if ( ! defined('_JOBSITE_API') || ! _JOBSITE_API ) return '';
+
+			$opt  = get_option('jobsite_geo') ?: [];
+			$pinX = isset($opt['pin_anchor_x']) ? (int) $opt['pin_anchor_x'] : 0;
+			$pinY = isset($opt['pin_anchor_y']) ? (int) $opt['pin_anchor_y'] : 0;
+
+			// Google caps the whole URL at 16,384 chars (~18 per pin). Cap well short of it —
+			// an over-length URL returns an error image, not a partial map.
+			$pins = array_slice($lat_lng, 0, (int) apply_filters('bp_jobsite_static_map_max_pins', 600));
+			$pins = array_map(fn($p) => str_replace(' ', '', (string) $p), $pins);
+			$pins = array_values(array_filter($pins));
+
+			$args = [
+				'size'    => $size . 'x' . $size,
+				'scale'   => 2,
+				'format'  => 'png',
+				'maptype' => 'roadmap',
+				// Hide POI labels, matching the styles[] block the JS map used.
+				'style'   => 'feature:poi|element:labels|visibility:off',
+			];
+
+			if ( $pins ) {
+				// Custom icon only when the PNG actually exists. Static Maps returns an ERROR
+				// image (not a map) for an unreachable icon URL, so a site that hasn't had the
+				// PNG uploaded yet must fall back to Google's default markers rather than
+				// render a broken map. Checked on disk, not over HTTP — no request per view.
+				$up   = wp_upload_dir();
+				$icon = '';
+				if ( empty($up['error']) && file_exists( trailingslashit($up['basedir']) . 'jobsite_geo-pin.png' ) ) {
+					$icon = 'anchor:' . $pinX . ',' . $pinY
+					      . '|icon:' . trailingslashit($up['baseurl']) . 'jobsite_geo-pin.png|';
+				}
+
+				$args['markers'] = $icon . implode('|', $pins);
+				if ( count($pins) === 1 ) $args['zoom'] = 14;
+			} else {
+				$ci = customer_info();
+				$args['center'] = ( isset($ci['lat']) && is_numeric($ci['lat']) ? (float) $ci['lat'] : 32.7767 )
+				                . ',' . ( isset($ci['long']) && is_numeric($ci['long']) ? (float) $ci['long'] : -96.7970 );
+				$args['zoom']   = 10;
+			}
+
+			$args['key'] = _JOBSITE_API;
+
+			$query = [];
+			foreach ( $args as $k => $v ) $query[] = $k . '=' . rawurlencode((string) $v);
+
+			return 'https://maps.googleapis.com/maps/api/staticmap?' . implode('&', $query);
+		}
+		endif;
+		function battleplan_googleMapsAPI() {
+			// Fallback centre for when no jobsite geocoded — without it the map
+			// falls back to {0,0} (Null Island, off West Africa) instead of the
+			// business. Defaults to Dallas if the business has no coords set.
+			$ci = customer_info();
+			$homeLat = ( isset($ci['lat'])  && is_numeric($ci['lat']) )  ? (float) $ci['lat']  : 32.7767;
+			$homeLng = ( isset($ci['long']) && is_numeric($ci['long']) ) ? (float) $ci['long'] : -96.7970;
+			?>
 			<script defer nonce="<?php echo _BP_NONCE; ?>">
 				var addresses = <?php echo $GLOBALS['mapPins']; ?>;
-				var geocoder, map, totalDis = 0, midLat = 0, midLng = 0, maxLat = 0, minLat = 0, maxLng = 0, minLng = 0, totalPins = addresses.length;
+				var mapHome = { lat: <?php echo $homeLat; ?>, lng: <?php echo $homeLng; ?> };
+				// No Geocoder here on purpose: addresses are geocoded server-side on save
+				// (includes-jobsite-geo.php) and cached to the `geocode` post meta, so the
+				// browser only ever plots pre-computed lat/lng. This key needs Maps JS only.
+				var map, totalDis = 0, midLat = 0, midLng = 0, maxLat = 0, minLat = 0, maxLng = 0, minLng = 0, totalPins = addresses.length;
 				var pinX = <?php echo get_option('jobsite_geo')['pin_anchor_x']; ?>;
 				var pinY = <?php echo get_option('jobsite_geo')['pin_anchor_y']; ?>;
 				var pinSize = 60;
@@ -253,10 +337,9 @@ get_header(); ?>
 
 				function initMap() {
 					const bounds = new google.maps.LatLngBounds();
-					geocoder = new google.maps.Geocoder();
 
 					map = new google.maps.Map(document.getElementById('map'), {
-						center: { lat: 0, lng: 0 },
+						center: mapHome,
 						zoom: 8,
 						styles: [
 						  {
@@ -291,12 +374,16 @@ get_header(); ?>
 							}
 						}
 					}
-					map.fitBounds(bounds);
+					// fitBounds() on an empty LatLngBounds is a no-op, which would leave
+					// the map wherever it initialised. Only fit when we actually have pins.
+					if ( !bounds.isEmpty() ) {
+						map.fitBounds(bounds);
 
 						const listener = google.maps.event.addListenerOnce(map, 'bounds_changed', function () {
 							const maxZoom = 14;
 							if (map.getZoom() > maxZoom) map.setZoom(maxZoom);
 						});
+					}
 				}
 			</script>
 
@@ -312,7 +399,16 @@ get_header(); ?>
 
 			$buildIntro = '[col class="jobsite_geo_content"][txt]'.bp_wpautop($GLOBALS['jobsite_geo-content']).'[/txt][/col]';
 
-			$buildIntro .= '[col class="jobsite_geo_map_holder"][txt class="jobsite_geo_map"]<div id="map" class="map-'.get_post_type().'"></div><div class="map-jobsite_geo-caption">'.$GLOBALS['jobsite_geo-map-caption'].'</div>[/txt][/col]';
+			$mapInner = '';
+			if ( $useStaticMap ) {
+				$staticSrc = bp_jobsite_static_map_url($lat_lng);
+				if ( $staticSrc ) {
+					$mapInner = '<img src="'.esc_url($staticSrc).'" width="550" height="550" alt="'
+					          . esc_attr(sprintf(__('Map of recent %s job locations', 'battleplan'), get_bloginfo('name')))
+					          . '" loading="eager" decoding="async">';
+				}
+			}
+			$buildIntro .= '[col class="jobsite_geo_map_holder"][txt class="jobsite_geo_map"]<div id="map" class="map-'.get_post_type().'">'.$mapInner.'</div><div class="map-jobsite_geo-caption">'.$GLOBALS['jobsite_geo-map-caption'].'</div>[/txt][/col]';
 
 			$displayHeader .= do_shortcode('[section width="inline" class="'.get_post_type().'-content '.get_post_type().'-intro"][layout grid="'.$GLOBALS['mapGrid'].'"]'.$buildIntro.'[/layout][/section]');
 

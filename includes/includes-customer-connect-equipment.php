@@ -1,20 +1,20 @@
 <?php
 /**
- * Home Base — Equipment profiles (customer's heating & cooling systems)
+ * Customer Connect — Equipment profiles (customer's heating & cooling systems)
  * ---------------------------------------------------------------------------
  * A lightweight per-customer inventory of HVAC equipment (type, brand, install
  * year, filter size + change tracking). Powers filter-change reminders and gives
  * the AI troubleshooter real context. Self-entered now; a CRM connector can
- * auto-fill later. REST under home-base/v1/equipment, token-authed per customer.
+ * auto-fill later. REST under customer-connect/v1/equipment, token-authed per customer.
  *
- * The equipment TABLE is created in includes-home-base.php (hb_install_db); this
+ * The equipment TABLE is created in includes-customer-connect.php (cc_install_db); this
  * file adds the API + derived filter status. @package battleplan
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /** Allowed equipment types (the app's picker). 'Other' catches the rest. */
-function hb_equipment_types(): array {
+function cc_equipment_types(): array {
 	return [ 'Central AC', 'Heat Pump', 'Furnace', 'Air Handler', 'Mini-Split', 'Boiler', 'Water Heater', 'Thermostat', 'Other' ];
 }
 
@@ -22,7 +22,7 @@ function hb_equipment_types(): array {
  * Shape an equipment row for the app, with derived filter + age info so the UI
  * and (phase c) reminders share one source of truth.
  */
-function hb_equipment_public( array $r ): array {
+function cc_equipment_public( array $r ): array {
 	$interval = (int) ( $r['filter_interval_days'] ?: 90 );
 	$filter   = [ 'status' => 'none', 'days_left' => null, 'next_due' => null ];
 
@@ -58,7 +58,7 @@ function hb_equipment_public( array $r ): array {
 }
 
 /** Pull the writable fields from a request body, sanitized. */
-function hb_equipment_input( array $body ): array {
+function cc_equipment_input( array $body ): array {
 	$out = [];
 	if ( isset( $body['type'] ) )           $out['type']           = sanitize_text_field( (string) $body['type'] );
 	if ( isset( $body['brand'] ) )          $out['brand']          = sanitize_text_field( (string) $body['brand'] );
@@ -84,91 +84,91 @@ function hb_equipment_input( array $body ): array {
 }
 
 /** Load one equipment row IF it belongs to the customer, else null. */
-function hb_equipment_owned( int $id, int $customer_id ) {
+function cc_equipment_owned( int $id, int $customer_id ) {
 	global $wpdb;
-	$t = hb_table( 'equipment' );
+	$t = cc_table( 'equipment' );
 	$r = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $t WHERE id = %d AND customer_id = %d", $id, $customer_id ), ARRAY_A );
 	return $r ?: null;
 }
 
 add_action( 'rest_api_init', function () {
-	$ns = 'home-base/v1';
+	$ns = 'customer-connect/v1';
 
 	register_rest_route( $ns, '/equipment', [
-		[ 'methods' => 'GET',  'callback' => 'hb_rest_equipment_list',   'permission_callback' => '__return_true' ],
-		[ 'methods' => 'POST', 'callback' => 'hb_rest_equipment_create', 'permission_callback' => '__return_true' ],
+		[ 'methods' => 'GET',  'callback' => 'cc_rest_equipment_list',   'permission_callback' => '__return_true' ],
+		[ 'methods' => 'POST', 'callback' => 'cc_rest_equipment_create', 'permission_callback' => '__return_true' ],
 	] );
 	register_rest_route( $ns, '/equipment/(?P<id>\d+)', [
-		[ 'methods' => 'POST',   'callback' => 'hb_rest_equipment_update', 'permission_callback' => '__return_true' ],
-		[ 'methods' => 'DELETE', 'callback' => 'hb_rest_equipment_delete', 'permission_callback' => '__return_true' ],
+		[ 'methods' => 'POST',   'callback' => 'cc_rest_equipment_update', 'permission_callback' => '__return_true' ],
+		[ 'methods' => 'DELETE', 'callback' => 'cc_rest_equipment_delete', 'permission_callback' => '__return_true' ],
 	] );
 } );
 
 /** GET /equipment — the signed-in customer's units, filter-due first. */
-function hb_rest_equipment_list( WP_REST_Request $request ) {
-	$customer = hb_current_customer( $request );
-	if ( ! $customer ) return new WP_Error( 'hb_auth', 'Not signed in.', [ 'status' => 401 ] );
+function cc_rest_equipment_list( WP_REST_Request $request ) {
+	$customer = cc_current_customer( $request );
+	if ( ! $customer ) return new WP_Error( 'cc_auth', 'Not signed in.', [ 'status' => 401 ] );
 
 	global $wpdb;
-	$t    = hb_table( 'equipment' );
+	$t    = cc_table( 'equipment' );
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT * FROM $t WHERE customer_id = %d ORDER BY id ASC", (int) $customer['id']
 	), ARRAY_A ) ?: [];
 
-	$items = array_map( 'hb_equipment_public', $rows );
-	return rest_ensure_response( [ 'ok' => true, 'items' => $items, 'types' => hb_equipment_types() ] );
+	$items = array_map( 'cc_equipment_public', $rows );
+	return rest_ensure_response( [ 'ok' => true, 'items' => $items, 'types' => cc_equipment_types() ] );
 }
 
 /** POST /equipment — add a unit. Requires at least a type. */
-function hb_rest_equipment_create( WP_REST_Request $request ) {
-	$customer = hb_current_customer( $request );
-	if ( ! $customer ) return new WP_Error( 'hb_auth', 'Not signed in.', [ 'status' => 401 ] );
+function cc_rest_equipment_create( WP_REST_Request $request ) {
+	$customer = cc_current_customer( $request );
+	if ( ! $customer ) return new WP_Error( 'cc_auth', 'Not signed in.', [ 'status' => 401 ] );
 
 	$body = json_decode( $request->get_body(), true ) ?: [];
-	$data = hb_equipment_input( $body );
-	if ( empty( $data['type'] ) ) return new WP_Error( 'hb_bad', 'Pick an equipment type.', [ 'status' => 400 ] );
+	$data = cc_equipment_input( $body );
+	if ( empty( $data['type'] ) ) return new WP_Error( 'cc_bad', 'Pick an equipment type.', [ 'status' => 400 ] );
 
 	global $wpdb;
 	$now = current_time( 'mysql' );
 	$data['customer_id'] = (int) $customer['id'];
 	$data['created_at']  = $now;
 	$data['updated_at']  = $now;
-	$wpdb->insert( hb_table( 'equipment' ), $data );
+	$wpdb->insert( cc_table( 'equipment' ), $data );
 
-	$row = hb_equipment_owned( (int) $wpdb->insert_id, (int) $customer['id'] );
-	return rest_ensure_response( [ 'ok' => true, 'item' => hb_equipment_public( $row ) ] );
+	$row = cc_equipment_owned( (int) $wpdb->insert_id, (int) $customer['id'] );
+	return rest_ensure_response( [ 'ok' => true, 'item' => cc_equipment_public( $row ) ] );
 }
 
 /** POST /equipment/{id} — update a unit the customer owns. */
-function hb_rest_equipment_update( WP_REST_Request $request ) {
-	$customer = hb_current_customer( $request );
-	if ( ! $customer ) return new WP_Error( 'hb_auth', 'Not signed in.', [ 'status' => 401 ] );
+function cc_rest_equipment_update( WP_REST_Request $request ) {
+	$customer = cc_current_customer( $request );
+	if ( ! $customer ) return new WP_Error( 'cc_auth', 'Not signed in.', [ 'status' => 401 ] );
 
 	$id  = (int) $request['id'];
-	$own = hb_equipment_owned( $id, (int) $customer['id'] );
-	if ( ! $own ) return new WP_Error( 'hb_404', 'Not found.', [ 'status' => 404 ] );
+	$own = cc_equipment_owned( $id, (int) $customer['id'] );
+	if ( ! $own ) return new WP_Error( 'cc_404', 'Not found.', [ 'status' => 404 ] );
 
 	$body = json_decode( $request->get_body(), true ) ?: [];
-	$data = hb_equipment_input( $body );
+	$data = cc_equipment_input( $body );
 	if ( $data ) {
 		$data['updated_at'] = current_time( 'mysql' );
 		global $wpdb;
-		$wpdb->update( hb_table( 'equipment' ), $data, [ 'id' => $id ] );
+		$wpdb->update( cc_table( 'equipment' ), $data, [ 'id' => $id ] );
 	}
-	$row = hb_equipment_owned( $id, (int) $customer['id'] );
-	return rest_ensure_response( [ 'ok' => true, 'item' => hb_equipment_public( $row ) ] );
+	$row = cc_equipment_owned( $id, (int) $customer['id'] );
+	return rest_ensure_response( [ 'ok' => true, 'item' => cc_equipment_public( $row ) ] );
 }
 
 /** DELETE /equipment/{id} — remove a unit the customer owns. */
-function hb_rest_equipment_delete( WP_REST_Request $request ) {
-	$customer = hb_current_customer( $request );
-	if ( ! $customer ) return new WP_Error( 'hb_auth', 'Not signed in.', [ 'status' => 401 ] );
+function cc_rest_equipment_delete( WP_REST_Request $request ) {
+	$customer = cc_current_customer( $request );
+	if ( ! $customer ) return new WP_Error( 'cc_auth', 'Not signed in.', [ 'status' => 401 ] );
 
 	$id  = (int) $request['id'];
-	$own = hb_equipment_owned( $id, (int) $customer['id'] );
-	if ( ! $own ) return new WP_Error( 'hb_404', 'Not found.', [ 'status' => 404 ] );
+	$own = cc_equipment_owned( $id, (int) $customer['id'] );
+	if ( ! $own ) return new WP_Error( 'cc_404', 'Not found.', [ 'status' => 404 ] );
 
 	global $wpdb;
-	$wpdb->delete( hb_table( 'equipment' ), [ 'id' => $id ] );
+	$wpdb->delete( cc_table( 'equipment' ), [ 'id' => $id ] );
 	return rest_ensure_response( [ 'ok' => true ] );
 }

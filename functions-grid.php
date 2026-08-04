@@ -88,7 +88,21 @@ function battleplan_buildSection( $atts, $content = null ) {
 	return $buildSection;
 }
 
-// Layout (Nested)
+/* Layout (Nested) — @deprecated 2026-08-02. DO NOT USE ON NEW BUILDS.
+   Kept registered ONLY for back-compat with existing page content on
+   Bubba's Cooks Country (#section-menu, #section-choose-location),
+   Goot Bros Music and GuttenBoy, whose sections wrap [layout]s in a
+   [nested]. Delete this whole block once those three are re-authored.
+
+   Why it is deprecated: it was documented as "a sub-grid inside a [col]",
+   which WordPress CANNOT parse — a shortcode may not be nested inside
+   another shortcode of the SAME name, so get_shortcode_regex() closes the
+   outer [col] on the first inner [/col]. The later cols escape as loose
+   markup and a literal "[/nested] [/col]" prints on the page. It only ever
+   worked as a direct child of [layout] (a grid ROW, not a sub-grid).
+
+   Instead: flatten. One [layout] of [col]s, using h-span / v-span and the
+   custom track notation (grid="1fr 1fr 1fr 3fr") for uneven shares. */
 add_shortcode( 'nested', 'battleplan_buildNested' );
 function battleplan_buildNested( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ), $atts );

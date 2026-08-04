@@ -3134,6 +3134,65 @@ function returnNavMenu() {
 	return buildNavMenu( 'manual' );
 }
 
+// Footer Menu — a lean <ul> of the primary menu, for footer "Quick Links" columns.
+// No walker, no container: just <ul class="footer-menu"><li><a>. Keeps a footer
+// column in sync with Appearance → Menus instead of hand-listing the pages.
+//   [footer-menu]                        top-level items of the primary menu
+//   [footer-menu location="footer-menu"] pull from a specific registered location
+//   [footer-menu depth="2"]              include sub-items (default 1)
+//   [footer-menu class="two-col"]        extra class(es) on the <ul>
+add_shortcode( 'footer-menu', 'battleplan_footerMenu' );
+function battleplan_footerMenu( $atts ) {
+	$a = shortcode_atts( array( 'location'=>'', 'depth'=>'1', 'class'=>'' ), $atts );
+
+	$args = array(
+		'echo'        => false,
+		'container'   => false,
+		'menu_class'  => trim( 'footer-menu '.esc_attr($a['class']) ),
+		'depth'       => max( 1, (int) $a['depth'] ),
+		'fallback_cb' => false,
+	);
+
+	// A named location is a preference, not a hard requirement — if nothing is
+	// assigned there, auto-detect rather than silently rendering nothing.
+	$location = esc_attr($a['location']);
+	if ( $location !== '' && !has_nav_menu( $location ) ) $location = '';
+
+	if ( $location === '' ) {
+		// 1. The primary menu, resolved exactly the way header.php does (last assigned wins).
+		foreach ( array( 'header-menu', 'top-menu', 'widget-menu' ) as $loc ) {
+			if ( has_nav_menu( $loc ) ) $location = $loc;
+		}
+		// 2. Sites that place their nav with [get-menu] only assign Manual Menu.
+		if ( $location === '' && has_nav_menu( 'manual-menu' ) ) $location = 'manual-menu';
+		// 3. Any other assigned location. footer-menu goes last: the documented default
+		//    is the MAIN menu, and location="footer-menu" is the explicit opt-in.
+		if ( $location === '' ) {
+			$assigned = array_filter( (array) get_nav_menu_locations() );
+			unset( $assigned['footer-menu'] );
+			if ( $assigned )                        $location = key( $assigned );
+			elseif ( has_nav_menu( 'footer-menu' ) ) $location = 'footer-menu';
+		}
+	}
+
+	if ( $location !== '' ) {
+		$args['theme_location'] = $location;
+	} else {
+		// 4. No location assigned anywhere — use the first menu that actually has items,
+		//    so a site whose menu was built but never assigned still fills the column.
+		$menu = null;
+		foreach ( (array) wp_get_nav_menus() as $m ) {
+			if ( !empty($m->count) ) { $menu = $m; break; }
+		}
+		if ( !$menu ) return '';
+		$args['menu'] = $menu->term_id;
+	}
+
+	$out = wp_nav_menu( $args );
+
+	return is_string($out) ? $out : '';
+}
+
 // Display Mobile Menu Bar Item - Scroll
 add_action('bp_mobile_menu_bar_scroll', 'battleplan_mobile_menu_bar_scroll', 20);
 function battleplan_mobile_menu_bar_scroll() {

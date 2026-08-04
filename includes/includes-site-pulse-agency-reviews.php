@@ -88,6 +88,104 @@ function sp_agency_client_fetched_at( array $cfg, array $cache ): int {
 }
 
 
+/**
+ * Build ONE client's review entry (Google + Facebook). With $do_live it re-polls the upstreams and
+ * updates $cache in place; otherwise it serves whatever's cached. Dismissed reviews are filtered out.
+ * Shared by the bulk list endpoint AND the per-client stepped Refresh, so both stay in lockstep.
+ */
+function sp_agency_fetch_client_entry( string $site_key, array $cfg, bool $do_live, array &$cache, array $dismissed, int $now ): array {
+	$location = (string) ( $cfg['location'] ?? '' );
+	$entry    = [
+		'site_key'         => $site_key,
+		'label'            => (string) ( $cfg['label'] ?? $site_key ),
+		'site_url'         => ! empty( $cfg['site_url'] ) ? (string) $cfg['site_url'] : '',
+		'averageRating'    => null,
+		'totalReviewCount' => null,
+		'reviews'          => [],
+		'error'            => null,
+	];
+
+	$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
+	if ( '' === $location && '' === $fbid ) {
+		$entry['error'] = 'No Google location or Facebook Page set — add one in Tools → Client Reviews.';
+		return $entry;
+	}
+
+	$reviews = [];
+
+	// ── Google reviews ──
+	if ( '' !== $location ) {
+		if ( $do_live ) {
+			try {
+				// One page (50) is plenty — the agency view only shows reviews since the cutoff.
+				$data               = BPGBP_Hub::fetch_reviews_for_location( $location, '', 50, sp_agency_reviews_since() );
+				$cache[ $location ] = [
+					'fetched_at'       => $now,
+					'averageRating'    => $data['averageRating'],
+					'totalReviewCount' => $data['totalReviewCount'],
+					'reviews'          => array_values( $data['reviews'] ),
+				];
+			} catch ( Exception $e ) {
+				if ( ! isset( $cache[ $location ] ) || ! is_array( $cache[ $location ] ) ) $cache[ $location ] = [ 'reviews' => [] ];
+				$cache[ $location ]['fetched_at'] = $now;
+				$entry['error'] = empty( $cache[ $location ]['reviews'] ) ? $e->getMessage() : ( 'Showing saved reviews — ' . $e->getMessage() );
+			}
+		}
+		$cached = $cache[ $location ] ?? null;
+		$entry['averageRating']    = $cached['averageRating']    ?? null;
+		$entry['totalReviewCount'] = $cached['totalReviewCount'] ?? null;
+		$greviews = $cached['reviews'] ?? [];
+		foreach ( $greviews as &$gr ) { if ( empty( $gr['source'] ) ) $gr['source'] = 'google'; }
+		unset( $gr );
+		$dis = $dismissed[ $location ] ?? [];
+		if ( $dis && $greviews ) {
+			$greviews = array_values( array_filter( $greviews, function ( $r ) use ( $dis ) {
+				return empty( $dis[ (string) ( $r['reviewId'] ?? '' ) ] );
+			} ) );
+		}
+		$reviews = array_merge( $reviews, $greviews );
+	}
+
+	// ── Facebook recommendations (own cache bucket 'fb:<pageId>'; positive=5★, negative=1★) ──
+	if ( '' !== $fbid && class_exists( 'BPFB_Hub' ) ) {
+		$fbkey = 'fb:' . $fbid;
+		if ( $do_live ) {
+			try {
+				$fbrev = [];
+				foreach ( BPFB_Hub::fetch_reviews( $fbid, 100 ) as $r ) {
+					$fbrev[] = [
+						'reviewId'   => 'fb_' . sha1( $fbid . '|' . $r['createTime'] . '|' . $r['comment'] ),
+						'reviewer'   => $r['author'],   // anonymous "Facebook user"; named at post time
+						'comment'    => $r['comment'],
+						'starRating' => (int) $r['rating'],
+						'createTime' => $r['createTime'],
+						'photo'      => '',
+						'reply'      => '',
+						'source'     => 'facebook',
+					];
+				}
+				$cache[ $fbkey ] = [ 'fetched_at' => $now, 'reviews' => $fbrev ];
+			} catch ( Exception $e ) {
+				if ( ! isset( $cache[ $fbkey ] ) || ! is_array( $cache[ $fbkey ] ) ) $cache[ $fbkey ] = [ 'reviews' => [] ];
+				$cache[ $fbkey ]['fetched_at'] = $now;
+				$entry['fb_error'] = $e->getMessage();
+			}
+		}
+		$fbreviews = $cache[ $fbkey ]['reviews'] ?? [];
+		$fdis = $dismissed[ $fbkey ] ?? [];
+		if ( $fdis && $fbreviews ) {
+			$fbreviews = array_values( array_filter( $fbreviews, function ( $r ) use ( $fdis ) {
+				return empty( $fdis[ (string) ( $r['reviewId'] ?? '' ) ] );
+			} ) );
+		}
+		$reviews = array_merge( $reviews, $fbreviews );
+	}
+
+	$entry['reviews'] = $reviews;
+	return $entry;
+}
+
+
 /*--------------------------------------------------------------
 # AJAX — all clients' reviews, grouped by client
 --------------------------------------------------------------*/
@@ -132,114 +230,18 @@ function site_pulse_ajax_get_agency_reviews(): void {
 
 	$out = [];
 	foreach ( $agency as $item ) {
-		$site_key = $item['key'];
-		$cfg      = $item['cfg'];
-		$location = (string) ( $cfg['location'] ?? '' );
-		$entry    = [
-			'site_key'         => $site_key,
-			'label'            => (string) ( $cfg['label'] ?? $site_key ),
-			'site_url'         => ! empty( $cfg['site_url'] ) ? (string) $cfg['site_url'] : '',
-			'averageRating'    => null,
-			'totalReviewCount' => null,
-			'reviews'          => [],
-			'error'            => null,
-			'_order'           => $item['order'],
-		];
+		// Live-pull only while the budget lasts; otherwise serve cache. (The stepped per-client Refresh
+		// below is the primary path now — it has no budget — but the bulk endpoint keeps this guard so a
+		// legacy refresh:1 call still can't 502.)
+		$do_live = $force && microtime( true ) < $deadline;
+		if ( $force && ! $do_live ) $partial = true;
 
-		$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
-		if ( '' === $location && '' === $fbid ) { $entry['error'] = 'No Google location or Facebook Page set — add one in Tools → Client Reviews.'; $out[] = $entry; continue; }
+		$entry           = sp_agency_fetch_client_entry( $item['key'], $item['cfg'], $do_live, $cache, $dismissed, $now );
+		$entry['_order'] = $item['order'];
+		$out[]           = $entry;
 
-		$reviews  = [];
-		$did_live = false;
-
-		// ── Google reviews ──
-		if ( '' !== $location ) {
-			// Only the Refresh button re-polls, and only while the budget lasts; otherwise serve cache.
-			$do_google = $force && microtime( true ) < $deadline;
-			if ( $force && ! $do_google ) $partial = true;
-			if ( $do_google ) {
-				$did_live = true;
-				try {
-					// One page (50) is plenty — the agency view only shows reviews since the cutoff — and it
-					// caps each Google fetch at a single HTTP call, so a slow location can't multi-page past
-					// the budget.
-					$data               = BPGBP_Hub::fetch_reviews_for_location( $location, '', 50, sp_agency_reviews_since() );
-					$cache[ $location ] = [
-						'fetched_at'       => $now,
-						'averageRating'    => $data['averageRating'],
-						'totalReviewCount' => $data['totalReviewCount'],
-						'reviews'          => array_values( $data['reviews'] ),
-					];
-				} catch ( Exception $e ) {
-					// Advance the timestamp even on failure so a broken location rotates to the back of the
-					// stalest-first queue instead of eating the budget on every Refresh.
-					if ( ! isset( $cache[ $location ] ) || ! is_array( $cache[ $location ] ) ) $cache[ $location ] = [ 'reviews' => [] ];
-					$cache[ $location ]['fetched_at'] = $now;
-					if ( empty( $cache[ $location ]['reviews'] ) ) { $entry['error'] = $e->getMessage(); }
-					else { $entry['error'] = 'Showing saved reviews — ' . $e->getMessage(); }
-				}
-			}
-			$cached = $cache[ $location ] ?? null;
-			$entry['averageRating']    = $cached['averageRating']    ?? null;
-			$entry['totalReviewCount'] = $cached['totalReviewCount'] ?? null;
-			$greviews = $cached['reviews'] ?? [];
-			foreach ( $greviews as &$gr ) { if ( empty( $gr['source'] ) ) $gr['source'] = 'google'; }
-			unset( $gr );
-			$dis = $dismissed[ $location ] ?? [];
-			if ( $dis && $greviews ) {
-				$greviews = array_values( array_filter( $greviews, function ( $r ) use ( $dis ) {
-					return empty( $dis[ (string) ( $r['reviewId'] ?? '' ) ] );
-				} ) );
-			}
-			$reviews = array_merge( $reviews, $greviews );
-		}
-
-		// ── Facebook recommendations (own cache bucket 'fb:<pageId>'; positive=5★, negative=1★) ──
-		if ( '' !== $fbid && class_exists( 'BPFB_Hub' ) ) {
-			$fbkey  = 'fb:' . $fbid;
-			$do_fb  = $force && microtime( true ) < $deadline;
-			if ( $force && ! $do_fb ) $partial = true;
-			if ( $do_fb ) {
-				$did_live = true;
-				try {
-					$fbrev = [];
-					foreach ( BPFB_Hub::fetch_reviews( $fbid, 100 ) as $r ) {
-						$fbrev[] = [
-							'reviewId'   => 'fb_' . sha1( $fbid . '|' . $r['createTime'] . '|' . $r['comment'] ),
-							'reviewer'   => $r['author'],   // anonymous "Facebook user"; named at post time
-							'comment'    => $r['comment'],
-							'starRating' => (int) $r['rating'],
-							'createTime' => $r['createTime'],
-							'photo'      => '',
-							'reply'      => '',
-							'source'     => 'facebook',
-						];
-					}
-					$cache[ $fbkey ] = [ 'fetched_at' => $now, 'reviews' => $fbrev ];
-				} catch ( Exception $e ) {
-					// Advance the timestamp even on failure (same rotation logic as Google above) and
-					// surface the FB problem (token/mapping/deprecation) so it isn't an invisible blank.
-					if ( ! isset( $cache[ $fbkey ] ) || ! is_array( $cache[ $fbkey ] ) ) $cache[ $fbkey ] = [ 'reviews' => [] ];
-					$cache[ $fbkey ]['fetched_at'] = $now;
-					$entry['fb_error'] = $e->getMessage();
-				}
-			}
-			$fbreviews = $cache[ $fbkey ]['reviews'] ?? [];
-			$fdis = $dismissed[ $fbkey ] ?? [];
-			if ( $fdis && $fbreviews ) {
-				$fbreviews = array_values( array_filter( $fbreviews, function ( $r ) use ( $fdis ) {
-					return empty( $fdis[ (string) ( $r['reviewId'] ?? '' ) ] );
-				} ) );
-			}
-			$reviews = array_merge( $reviews, $fbreviews );
-		}
-
-		$entry['reviews'] = $reviews;
-		$out[] = $entry;
-
-		// Persist after every client that hit the network, so a later timeout never throws away the
-		// clients already refreshed this request (the request self-heals across successive Refreshes).
-		if ( $did_live ) sp_agency_cache_save( $cache );
+		// Persist after every client that hit the network, so a later timeout never throws away progress.
+		if ( $do_live ) sp_agency_cache_save( $cache );
 	}
 
 	sp_agency_cache_save( $cache );
@@ -250,6 +252,39 @@ function site_pulse_ajax_get_agency_reviews(): void {
 	unset( $e );
 
 	wp_send_json_success( [ 'clients' => $out, 'partial' => $partial ] );
+}
+
+
+/*--------------------------------------------------------------
+# AJAX — live-refresh ONE client (the stepped Refresh)
+#
+# The bulk endpoint above can only live-pull a few clients before WPE's request cap, so a single
+# Refresh never covered everyone. Instead the browser loops over the client list and calls THIS once
+# per client — each request is a single company's fetch, comfortably under the timeout, so one Refresh
+# reliably re-pulls every client. Returns that one client's freshly-built entry.
+--------------------------------------------------------------*/
+
+add_action( 'wp_ajax_site_pulse_refresh_agency_client', 'site_pulse_ajax_refresh_agency_client' );
+function site_pulse_ajax_refresh_agency_client(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! sp_agency_can_manage() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! sp_agency_is_hub() )     wp_send_json_error( [ 'message' => 'This site is not the review hub.' ] );
+
+	$site_key = sanitize_text_field( wp_unslash( $_POST['site_key'] ?? '' ) );
+	if ( '' === $site_key ) wp_send_json_error( [ 'message' => 'Missing client.' ] );
+
+	$sites = BPGBP_Hub::get_site_map();
+	$cfg   = $sites[ $site_key ] ?? null;
+	if ( ! $cfg || empty( $cfg['agency'] ) ) wp_send_json_error( [ 'message' => 'Not an agency-managed client.' ] );
+
+	if ( function_exists( 'set_time_limit' ) ) @set_time_limit( 45 );
+
+	$cache     = sp_agency_cache();
+	$dismissed = sp_agency_dismissed();
+	$entry     = sp_agency_fetch_client_entry( $site_key, $cfg, true, $cache, $dismissed, time() );
+	sp_agency_cache_save( $cache );
+
+	wp_send_json_success( [ 'client' => $entry ] );
 }
 
 

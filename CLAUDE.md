@@ -25,7 +25,7 @@ battleplantheme/
 ├── functions.php                  # Entry point → loads functions-global.php
 ├── functions-global.php           # Constants, customer_info, bot detection, rand seed
 ├── functions-shortcodes.php       # All content shortcodes
-├── functions-grid.php             # Layout shortcodes: section, layout, col, nested, group, img, vid
+├── functions-grid.php             # Layout shortcodes: section, layout, col, group, img, vid (+ deprecated nested)
 ├── functions-public.php           # Front-end hooks and output
 ├── functions-admin.php            # Admin customizations
 ├── functions-admin-columns.php    # Custom admin list columns
@@ -236,14 +236,42 @@ Delete the option to disable it. Default base template has these commented out.
   - Dots are `.carousel-indicators` (same as `[get-post-slider]`), so styling them once makes both match. Files: [style-scroller.css](style-scroller.css) + [style-indicators.css](style-indicators.css) + [js/script-scroller.js](js/script-scroller.js), all loaded on demand.
 
 **Critical rule — never nest `[layout]` inside `[layout]` (or inside a `[col]`).** It breaks the grid. `[layout]` emits a bare `<div class="flex grid-X">` whose grid CSS only works as the **direct child of a `[section]`** — drop a second `[layout]` inside a `[col]` and the inner grid renders wrong. Two correct options instead:
-1. **Flatten the grid (preferred).** Rethink the columns as a single layout. A `grid="1-2"` whose right col holds an inner `grid="1-1"` is really just three columns — write `grid="1-1-1"`. Most "I need a grid inside a grid" cases collapse this way, often with `h-span`/`v-span` to handle the odd spanning cell.
-2. **Use `[nested]` for a genuine sub-grid.** When a col truly must contain its own multi-column grid, that is the *only* supported nesting — see below. Glendon reaches for it rarely; try to flatten first.
+**Flatten the grid — this is the only option.** Rethink the columns as a single layout. A `grid="1-2"` whose right col holds an inner `grid="1-1"` is really just three columns — write `grid="1-1-1"`. Every "I need a grid inside a grid" case collapses this way, using `h-span`/`v-span` for the spanning cells and the custom track notation when the shares aren't uniform.
 
-### [nested] — Sub-grid inside a `[col]` (the only supported nesting)
+Worked example — a hero whose left side is a headline block *above* a 3-across feature strip, with a full-height photo on the right. That reads like "a sub-grid inside the copy column", but it is one flat 4-track grid:
+
 ```
-[nested name="" grid="1" break="" valign="" class=""]
+[section name="home-hero" width="edge"]
+ [layout grid="1fr 1fr 1fr 3fr"]
+  [col class="hero-copy" h-span="3"][txt] …headline, lead, buttons… [/txt][/col]
+  [col class="hero-img" v-span="2"]<img …>[/col]
+  [col class="hero-feature"][get-icon type="a" grid="1-3"]…[/get-icon][/col]
+  [col class="hero-feature"][get-icon type="b" grid="1-3"]…[/get-icon][/col]
+  [col class="hero-feature"][get-icon type="c" grid="1-3"]…[/get-icon][/col]
+ [/layout]
+[/section]
 ```
-`[nested]` is the **only** way to put a grid inside a `[col]`. It emits `<div class="flex nested grid-X">` — the `nested` class is what makes the grid CSS behave one level down; a plain `[layout]` in that spot lacks it and breaks (see the `[layout]` rule above). Same `grid` notation as `[layout]` (dash for 1–4, `Ne` for 5–6). Use it only when a sub-grid genuinely can't be flattened into the parent layout — most layouts should be a single `[layout]` of `[col]`s.
+Auto-placement does the rest: the copy takes row 1 / cols 1–3, the photo takes col 4 and spans both rows, and the three features fill row 1–3 of row 2. Release the spans in the mobile query (`#home-hero .col { grid-column:auto !important; grid-row:auto !important }`) when the row collapses to one column.
+
+### ⚠️ [nested] — DEPRECATED (2026-08-02). Never use it on a new build.
+
+`[nested]` is still registered, but **only as back-compat for legacy page content on three sites** — Bubba's Cooks Country (`#section-menu`, `#section-choose-location`), Goot Bros Music and GuttenBoy — whose sections wrap `[layout]`s inside a `[nested]`. It is deleted from the framework the moment those three are re-authored. **Do not write new `[nested]` markup, and rewrite it whenever you touch a page that has it.**
+
+It was documented as "a sub-grid inside a `[col]`", which **WordPress cannot parse: a shortcode may not be nested inside another shortcode of the same name.** `get_shortcode_regex()` matches the *first* `[/col]` as the outer col's closing tag — its content group is `[^\[]*+(?:\[(?!\/\2\])[^\[]*+)*+`, which stops dead there and (being possessive) cannot backtrack to a later one. So `[col]` → `[nested]` → `[col]` always broke the same way: the outer `[col]` closed on the first inner `[/col]`, the remaining inner cols escaped as loose siblings scattered across the grid, a literal `[/nested] [/col]` printed on the page, and everything after it was pushed out of position.
+
+It *does* work as a direct child of `[layout]` (a grid **row** rather than a sub-grid) — that is the only shape that ever worked, and the only reason it is still registered. **Flatten instead** (see above); for the per-item-row case, give each item one `[col]` holding a plain `<div>` you style with `display:grid` — that is how Firehouse's vendors archive was migrated.
+
+**The same parser rule kills any same-name nesting** — never `[col]` in `[col]`, `[txt]` in `[txt]`, `[section]` in `[section]`, `[layout]` in `[layout]`.
+
+Quick audit for any page's markup — every container tag must have max depth 1:
+```python
+import re
+for tag in ['section','layout','col','txt','img','btn','group']:
+    d = mx = 0
+    for m in re.finditer(r'\[(/?)' + tag + r'(?=[\s\]])', markup):
+        d += -1 if m.group(1) else 1; mx = max(mx, d)
+    assert d == 0 and mx <= 1, f'{tag}: depth {mx}, ends {d}'
+```
 
 ### [col] — Column inside a layout
 ```
@@ -267,7 +295,7 @@ When a `[col]` contains more than one child element (text + icon, headline + par
 [/col]
 ```
 
-The same rule applies to `[nested]` when it wraps multiple inline children. (`[group]` is practically deprecated — see below.)
+(`[group]` is practically deprecated — see below. `[nested]` is deprecated too — see its section above.)
 
 ### [group] / [txt] — Block wrapper (div.block.block-group/text)
 ```
@@ -489,7 +517,17 @@ Do **not** hand-build the row as `<div class="features"><div class="feature">[ge
 [footer-menu depth="2"]                → include sub-items (default 1 = top-level only)
 [footer-menu class="two-col"]          → extra class(es) on the <ul>
 ```
-Emits a lean `<ul class="footer-menu">` (no walker/container), so a footer column stays in sync with **Appearance → Menus** automatically. Auto-detects the primary menu the same way the header does: `widget-menu` > `top-menu` > `header-menu` (last assigned wins). Use `[get-menu]` for the full styled nav; use this for footer/quick-links lists.
+Emits a lean `<ul class="footer-menu">` (no walker/container), so a footer column stays in sync with **Appearance → Menus** automatically. Use `[get-menu]` for the full styled nav; use this for footer/quick-links lists.
+
+**It always renders something if the site has a menu at all.** Resolution order (`battleplan_footerMenu()` in [functions.php](functions.php)):
+
+1. The `location` attribute, *if* a menu is assigned there. A named-but-unassigned location is treated as a preference, not a hard requirement — it falls through rather than rendering nothing.
+2. The primary menu, resolved exactly the way `header.php` does: `widget-menu` > `top-menu` > `header-menu` (last assigned wins).
+3. `manual-menu` — the location `[get-menu]` renders. Sites that place their nav with `[get-menu]` assign *only* this one, so without this step the shortcode returns empty on exactly those builds.
+4. Any other assigned location, `footer-menu` considered last (the documented default is the MAIN menu; `location="footer-menu"` is the explicit opt-in).
+5. No location assigned anywhere → the first menu in **Appearance → Menus** that actually has items.
+
+Only a site with no non-empty menus at all produces no output.
 
 ### [add-search-btn] — Add search button to menu or other areas
 ```
@@ -934,7 +972,7 @@ add_filter('bp_form_slot', function($fields, $slot, $form_id) {
 | `bottom` | below the submit button (where `bp_form_extra_fields` lands) |
 
 Notes:
-- **Return bare field markup** (`[seek]…[/seek]`). The slot wraps it in the `[col]` — or `[layout][col]` for the row-level slots — that its surrounding grid needs. Return your own `[col]` / `[layout]` / `[nested]` to take over the wrapping instead.
+- **Return bare field markup** (`[seek]…[/seek]`). The slot wraps it in the `[col]` — or `[layout][col]` for the row-level slots — that its surrounding grid needs. Return your own `[col]` / `[layout]` to take over the wrapping instead.
 - **Slot-added fields are first-class.** They resolve during the `[bp-form]` body pass, so `required="true"` registers into the signed `bp_required` payload and `[bp-file]` accept/size declarations register too — server-side enforcement comes along for free.
 - **Multiple filters stack** on one slot (append with `.=` in the general form), and the precise `bp_form_slot_{form-id}_{slot}` filter runs after the general one, so it can see and override it.
 - **Grid reflow on the contact form.** Its top row is `grid="3-3-2"` (3 columns), so a field added at `after-name` takes Email's cell and pushes Phone onto a second line. That's correct positioning, just a reflowed row — if you want the new field on its own full-width line, use `before-message`, or return `[col class="span-all"]…[/col]`. The quote form's fields are a single-column stack (`grid-1`), so every slot there is exactly positional.
@@ -1530,7 +1568,7 @@ Write selectors against the HTML the shortcodes actually emit, not against the s
 | `[section name="x" style="2" width="full"]…[/section]` | `<section id="x" class="section style-2 section-full …">…</section>` — **content sits directly inside `<section>`; there is no inner wrapper.** `name` → `id` (spaces/underscores → hyphens). |
 | `[layout grid="5e"]…[/layout]` | `<div class="flex grid-5e …">…</div>` — column widths come from the framework's `.grid-*` rules. |
 | `[col class="c"]…[/col]` | `<div class="col c …"><div class="col-inner">…</div></div>` — **everything you put in a `[col]` lands inside `.col-inner`.** |
-| `[nested grid="g"]` | `<div class="flex nested grid-g …">` |
+| `[nested grid="g"]` | `<div class="flex nested grid-g …">` — **deprecated 2026-08-02**, legacy content only; never use on a new build |
 | `[txt class="c"]…[/txt]` | `<div class="block block-text span-100 c">…</div>` |
 | `[group class="c"]…[/group]` | `<div class="block block-group span-100 c">…</div>` |
 | `[btn class="c"]Label[/btn]` | `<div class="block block-button span-100 c"><a class="button c">Label</a></div>` — the class lands on **both** the wrapper div and the `<a>`. |
@@ -1842,7 +1880,10 @@ update_option( 'ai_chat', array(
     'model'          => 'opus',        // 'opus' (best, recommended for live leads) or 'haiku'
     'greeting'       => '{greeting}. Thanks for stopping by …',  // OPENING BUBBLE. {greeting} → time-of-day salutation (client-side)
     'launcher'       => 'Chat with us',
-    'contractor_sms' => '+1XXXXXXXXXX', // where leads text + where the human takes over
+    'contractor_sms' => '+1XXXXXXXXXX', // legacy single number (still works as the fallback for both roles)
+    // Split routing (optional, per site): notification can be many, reply is ONE line
+    // 'contractor_sms_notification' => '+1XXXXXXXXXX, +1YYYYYYYYYY', // comma-separated; ALL get lead alerts + the one-time handoff notice
+    // 'contractor_sms_reply'        => '+1XXXXXXXXXX',               // the SINGLE line that two-way texts the customer (takeover relay); only this number's inbound texts relay
     'twilio_sid'     => 'AC…',          // Account SID — SAME across all clients under the one ISV account
     'twilio_number'  => '+1XXXXXXXXXX', // the client's own local number (differs per client)
     'privacy_url'    => '/privacy-policy/',

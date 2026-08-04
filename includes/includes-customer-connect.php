@@ -77,6 +77,86 @@ function cc_company_name(): string {
 }
 
 /**
+ * Customer Connect's two brand tones, sourced from the SITE PULSE color scheme so the customer app
+ * always matches the staff dashboard's branding — there is no separate Customer Connect palette.
+ * Brand 1 = the site's primary color (app bar / primary buttons); brand 2 = the site's accent
+ * (active tab / highlights). Returns [ b1, b1_ink, b2, b2_ink ]; elements are '' when no scheme is
+ * set, so callers fall back to the stylesheet / manifest defaults.
+ */
+function cc_brand_tones(): array {
+	$b1 = $b2 = $i1 = $i2 = '';
+	if ( function_exists( 'site_pulse_color_active_vars' ) ) {
+		$v    = site_pulse_color_active_vars();
+		$pick = static function( array $keys ) use ( $v ) {
+			foreach ( $keys as $k ) { $h = cc_hex( $v[ $k ] ?? '' ); if ( $h !== '' ) return $h; }
+			return '';
+		};
+		// Brand 1 = the site's PRIMARY BUTTON (so the app bar + primary buttons look exactly like the
+		// dashboard's main button — including any Fine-Tune override). Falls back to the primary tone
+		// for schemes saved before the element tokens existed.
+		$b1 = $pick( [ '--sp-btn-bg', '--sp-primary-color' ] );
+		$i1 = $pick( [ '--sp-btn-text', '--sp-primary-contrast' ] );
+		// Brand 2 = the accent (active tab, highlights, hero gradient partner).
+		$b2 = $pick( [ '--sp-accent-color' ] );
+		$i2 = $pick( [ '--sp-accent-contrast' ] );
+	}
+	// Fallback (no saved scheme): the raw company brand colors — main color 1 = primary, slot 3 = accent.
+	if ( $b1 === '' && function_exists( 'site_pulse_saved_brand_colors' ) ) {
+		$brand = site_pulse_saved_brand_colors();
+		$b1 = cc_hex( $brand[0] ?? '' );
+		if ( $b2 === '' ) $b2 = cc_hex( $brand[2] ?? ( $brand[1] ?? '' ) );
+	}
+	if ( $b1 !== '' && $i1 === '' ) $i1 = cc_contrast( $b1 );
+	if ( $b2 === '' && $b1 !== '' ) { $b2 = $b1; $i2 = $i1; }   // one tone only → mirror it
+	if ( $b2 !== '' && $i2 === '' ) $i2 = cc_contrast( $b2 );
+	return [ $b1, $i1, $b2, $i2 ];
+}
+
+/**
+ * The app's TWO brand tones as an inline :root override, from the site color scheme (cc_brand_tones).
+ * The rest of the app (white surfaces, greyscale text/lines) is standardized in the stylesheet and
+ * never changes. Emitting nothing leaves the stylesheet's baked-in defaults to stand.
+ */
+function cc_brand_css(): string {
+	[ $b1, $i1, $b2, $i2 ] = cc_brand_tones();
+	// Last-resort default so the primary tone is NEVER undefined — otherwise a stale service-worker
+	// copy of the stylesheet (from before the --cc-brand defaults existed) would leave --cc-accent
+	// unset and the primary button would fall back to the grey .cc-btn base.
+	if ( $b1 === '' ) { $b1 = '#0f766e'; $i1 = '#ffffff'; }
+	if ( $b2 === '' ) { $b2 = $b1; $i2 = $i1; }
+	$out  = '--cc-brand:' . $b1 . ';--cc-brand-ink:' . $i1 . ';';
+	$out .= '--cc-brand-2:' . $b2 . ';--cc-brand-2-ink:' . $i2 . ';';
+	// Emit the --cc-accent aliases too (= primary tone). These are what the primary button/links
+	// actually read; setting them inline makes the button correct even against an older cached CSS.
+	$out .= '--cc-accent:' . $b1 . ';--cc-accent-ink:' . $i1 . ';';
+	return ':root{' . $out . '}';
+}
+
+/** The app-bar / PWA-manifest theme color (brand 1 from the site scheme), with a safe default. */
+function cc_theme_color(): string {
+	$b1 = cc_brand_tones()[0];
+	return $b1 !== '' ? $b1 : '#0f766e';
+}
+
+/** Normalize a value to #rrggbb, or '' if it's not a plain hex (rejects var() refs, color names, blank). */
+function cc_hex( $v ): string {
+	$v = trim( (string) $v );
+	if ( ! preg_match( '/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i', $v, $m ) ) return '';
+	$h = strtolower( $m[1] );
+	if ( strlen( $h ) === 3 ) $h = $h[0] . $h[0] . $h[1] . $h[1] . $h[2] . $h[2];
+	return '#' . $h;
+}
+
+/** Legible text color (#fff or near-black) for a given hex background, by relative luminance. */
+function cc_contrast( string $hex ): string {
+	$hex = cc_hex( $hex );
+	if ( $hex === '' ) return '#ffffff';
+	$r = hexdec( substr( $hex, 1, 2 ) ); $g = hexdec( substr( $hex, 3, 2 ) ); $b = hexdec( substr( $hex, 5, 2 ) );
+	$lum = ( 0.2126 * $r + 0.7152 * $g + 0.0722 * $b ) / 255;
+	return $lum > 0.6 ? '#1f2933' : '#ffffff';
+}
+
+/**
  * Anthropic key — reuse the framework helper if present, else the constants.
  * (Used by the AI troubleshooter phase; defined here so all phases share it.)
  */
@@ -655,24 +735,35 @@ add_action( 'template_redirect', function () {
 	if ( ! headers_sent() ) header( 'Cache-Control: private, no-store, no-cache, must-revalidate, max-age=0' );
 	add_filter( 'show_admin_bar', '__return_false' );
 	add_filter( 'body_class', function ( $c ) { $c[] = 'has-customer-connect'; return $c; } );
+	// A real app must NOT look like the website — suppress the site's inline critical CSS.
+	add_filter( 'bp_inline_site_css', '__return_false' );
 } );
 
-// This IS a customer-facing app, so — unlike Site Pulse — it KEEPS the client's
-// brand styling. We only enqueue the app's own CSS/JS on top.
+// This is a real app, so — like the Site Pulse dashboard — it does NOT inherit the website.
+// Dequeue the site's own CSS/JS so nothing (chrome, fonts, colors) bleeds in; the app ships its
+// own standardized design system, themed only by the two brand colors (cc_brand_css()).
 add_action( 'wp_enqueue_scripts', function () {
 	if ( ! cc_is_app_page() ) return;
+
+	wp_dequeue_style(  'battleplan-site' );
+	wp_dequeue_script( 'battleplan-script-site' );
 
 	$css = file_exists( get_template_directory() . '/style-customer-connect.css' )
 		? '/style-customer-connect.css' : '';
 	if ( $css ) {
-		wp_enqueue_style( 'customer-connect', get_template_directory_uri() . $css, [], _BP_VERSION );
+		// Version by file mtime so any CSS edit busts the browser + service-worker cache on the next
+		// deploy — no more stale styles / "reinstall to see changes" during iteration.
+		$css_ver = _BP_VERSION . '.' . (int) filemtime( get_template_directory() . $css );
+		wp_enqueue_style( 'customer-connect', get_template_directory_uri() . $css, [], $css_ver );
+		wp_add_inline_style( 'customer-connect', cc_brand_css() );
 	}
 
 	$js = file_exists( get_template_directory() . '/js/script-customer-connect.min.js' )
 		? '/js/script-customer-connect.min.js'
 		: ( file_exists( get_template_directory() . '/js/script-customer-connect.js' ) ? '/js/script-customer-connect.js' : '' );
 	if ( $js ) {
-		wp_enqueue_script( 'customer-connect', get_template_directory_uri() . $js, [], _BP_VERSION, true );
+		$js_ver = _BP_VERSION . '.' . (int) filemtime( get_template_directory() . $js );
+		wp_enqueue_script( 'customer-connect', get_template_directory_uri() . $js, [], $js_ver, true );
 		wp_localize_script( 'customer-connect', 'customerConnectData', [
 			'restBase'    => esc_url_raw( rest_url( 'customer-connect/v1' ) ),
 			'appName'     => cc_app_name(),

@@ -1002,7 +1002,9 @@
 
      .follow_us_on_fb {
           margin:                                           20px auto;
-          width:                                            235px;
+          width:                                            min(100%, 350px);
+          display:                                          grid;
+          grid-template-columns:                            auto 1fr;
      }
 
      .follow_us_on_fb .iframe {
@@ -1016,8 +1018,7 @@
 
      .follow_us_on_fb .text {
           display:                                          inline-block;
-          width:                                            150px;
-          transform:                                        translate(5px, -10px);
+          width:                                            100%;
           font-family:                                      Arial !important;
           font-size:                                        15px !important;
           font-weight:                                      bold !important;

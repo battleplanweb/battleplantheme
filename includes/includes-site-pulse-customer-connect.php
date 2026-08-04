@@ -280,7 +280,9 @@ function sp_cc_ajax_schedule_update(): void {
 
 /** Staff-editable Customer Connect settings; stored as site_pulse settings under 'cc_'-prefixed keys. */
 function sp_cc_settings_keys(): array {
-	return [ 'app_name', 'company_name', 'pwa_short_name', 'theme_color', 'pwa_background_color', 'pwa_icon_url', 'push_contact' ];
+	// Brand colors are intentionally NOT here — Customer Connect draws its palette from the Site Pulse
+	// color scheme (see cc_brand_tones()), so there's no separate customer-app color to save.
+	return [ 'app_name', 'company_name', 'pwa_short_name', 'pwa_background_color', 'pwa_icon_url', 'push_contact' ];
 }
 
 add_action( 'wp_ajax_site_pulse_cc_get_settings', 'sp_cc_ajax_get_settings' );

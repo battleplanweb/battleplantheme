@@ -25,7 +25,7 @@ battleplantheme/
 ├── functions.php                  # Entry point → loads functions-global.php
 ├── functions-global.php           # Constants, customer_info, bot detection, rand seed
 ├── functions-shortcodes.php       # All content shortcodes
-├── functions-grid.php             # Layout shortcodes: section, layout, col, nested, group, img, vid
+├── functions-grid.php             # Layout shortcodes: section, layout, col, group, img, vid (+ deprecated nested)
 ├── functions-public.php           # Front-end hooks and output
 ├── functions-admin.php            # Admin customizations
 ├── functions-admin-columns.php    # Custom admin list columns
@@ -231,13 +231,13 @@ Delete the option to disable it. Default base template has these commented out.
 
 **Critical rule — never nest `[layout]` inside `[layout]` (or inside a `[col]`).** It breaks the grid. `[layout]` emits a bare `<div class="flex grid-X">` whose grid CSS only works as the **direct child of a `[section]`** — drop a second `[layout]` inside a `[col]` and the inner grid renders wrong. Two correct options instead:
 1. **Flatten the grid (preferred).** Rethink the columns as a single layout. A `grid="1-2"` whose right col holds an inner `grid="1-1"` is really just three columns — write `grid="1-1-1"`. Most "I need a grid inside a grid" cases collapse this way, often with `h-span`/`v-span` to handle the odd spanning cell.
-2. **Use `[nested]` for a genuine sub-grid.** When a col truly must contain its own multi-column grid, that is the *only* supported nesting — see below. Glendon reaches for it rarely; try to flatten first.
+**Flatten the grid — this is the only option.** Rethink the columns as a single layout, using `h-span`/`v-span` for spanning cells and the custom track notation (`grid="1fr 1fr 1fr 3fr"`) when the shares aren't uniform.
 
-### [nested] — Sub-grid inside a `[col]` (the only supported nesting)
-```
-[nested name="" grid="1" break="" valign="" class=""]
-```
-`[nested]` is the **only** way to put a grid inside a `[col]`. It emits `<div class="flex nested grid-X">` — the `nested` class is what makes the grid CSS behave one level down; a plain `[layout]` in that spot lacks it and breaks (see the `[layout]` rule above). Same `grid` notation as `[layout]` (dash for 1–4, `Ne` for 5–6). Use it only when a sub-grid genuinely can't be flattened into the parent layout — most layouts should be a single `[layout]` of `[col]`s.
+### ⚠️ [nested] — DEPRECATED (2026-08-02). Never use it on a new build.
+
+`[nested]` is still registered, but only as back-compat for legacy page content on Bubba's Cooks Country, Goot Bros Music and GuttenBoy. It is deleted once those are re-authored. It was documented as "a sub-grid inside a `[col]`", which **WordPress cannot parse: a shortcode may not be nested inside another shortcode of the same name.** `get_shortcode_regex()` closes the outer `[col]` on the first inner `[/col]`, so the later cols escape as loose markup and a literal `[/nested] [/col]` prints on the page. Flatten instead; for a per-item row, give each item one `[col]` holding a plain `<div>` styled with `display:grid`.
+
+**The same rule kills any same-name nesting** — never `[col]` in `[col]`, `[txt]` in `[txt]`, `[section]` in `[section]`, `[layout]` in `[layout]`.
 
 ### [col] — Column inside a layout
 ```
@@ -261,7 +261,7 @@ When a `[col]` contains more than one child element (text + icon, headline + par
 [/col]
 ```
 
-The same rule applies to `[nested]` when it wraps multiple inline children. (`[group]` is practically deprecated — see below.)
+(`[group]` is practically deprecated — see below. `[nested]` is deprecated too.)
 
 ### [group] / [txt] — Block wrapper (div.block.block-group/text)
 ```
@@ -1290,7 +1290,7 @@ Write selectors against the HTML the shortcodes actually emit, not against the s
 | `[section name="x" style="2" width="full"]…[/section]` | `<section id="x" class="section style-2 section-full …">…</section>` — **content sits directly inside `<section>`; there is no inner wrapper.** `name` → `id` (spaces/underscores → hyphens). |
 | `[layout grid="5e"]…[/layout]` | `<div class="flex grid-5e …">…</div>` — column widths come from the framework's `.grid-*` rules. |
 | `[col class="c"]…[/col]` | `<div class="col c …"><div class="col-inner">…</div></div>` — **everything you put in a `[col]` lands inside `.col-inner`.** |
-| `[nested grid="g"]` | `<div class="flex nested grid-g …">` |
+| `[nested grid="g"]` | `<div class="flex nested grid-g …">` — **deprecated**, legacy content only |
 | `[txt class="c"]…[/txt]` | `<div class="block block-text span-100 c">…</div>` |
 | `[group class="c"]…[/group]` | `<div class="block block-group span-100 c">…</div>` |
 | `[btn class="c"]Label[/btn]` | `<div class="block block-button span-100 c"><a class="button c">Label</a></div>` — the class lands on **both** the wrapper div and the `<a>`. |

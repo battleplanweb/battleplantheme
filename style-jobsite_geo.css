@@ -12,8 +12,8 @@
 --------------------------------------------- */
 
 #map.map-jobsite_geo {
-	width:                                                     100%;
-	max-width:                                                 550px;
+	width:                                                     min(100%, 550px);
+	overflow:                                                  hidden;
 	height:                                                    auto;
 	margin:                                                    1.5em auto 1em;
 	aspect-ratio:                                              1/1;
@@ -46,14 +46,14 @@
 	   style-schedules.css). Using clip rather than visible keeps the horizontal
 	   overflow guard — clip does not create a scroll container, so sticky survives. */
 	body.jobsite_geo #page {
-		overflow-x:                                        clip;
-		overflow-y:                                        visible;
+		overflow-x:                                               clip;
+		overflow-y:                                               visible;
 	}
 
 	.jobsite_geo_map_holder {
-		position:                                          sticky;
-		top:                                               var(--jobsite-map-sticky-top, 120px);
-		align-self:                                        start;
+		position:                                                 sticky;
+		top:                                                      var(--jobsite-map-sticky-top, 120px);
+		align-self:                                               start;
 	}
 }
 
@@ -129,7 +129,6 @@
 	display:                                                   block;
 	position:                                                  relative;
 	overflow:                                                  hidden;
-	border-radius:                                             8px;
 	aspect-ratio:                                              1 / 1;
 	background:                                                rgba(0, 0, 0, 0.06);
 	cursor:                                                    zoom-in;
@@ -141,6 +140,11 @@
 	object-fit:                                                cover;
 	display:                                                   block;
 	transition:                                                transform 0.35s ease;
+	border:                                                    none !important;
+	background:                                                none !important;
+	box-shadow:                                                none !important;
+	outline:                                                   none !important;
+	filter:                                                    none !important;
 }
 
 .archive-jobsite_geo .jobsite-photo-link:hover img {

@@ -571,15 +571,52 @@ function bp_seo_head_hardening() {
 	});
 
 	// remove_emoji_scripts (+ their DNS-prefetch and TinyMCE plugin)
+	// NEVER filter 'emoji_svg_url' to false. If anything still prints the detection
+	// script (block editor, a plugin, a core hook we didn't catch), the JS builds
+	// src = svgUrl + codepoint + '.svg' → "false2b50.svg", which 404s — so every
+	// emoji renders as a BROKEN IMAGE followed by its alt text (the original glyph).
+	// That was showing up as broken images in front of the ⭐ rating column and the
+	// ✨ AI-alt button. Filtering it also broke battleplan_disable_emojis_remove_dns_prefetch(),
+	// which resolves the same filter to find the URL it's supposed to strip.
+	// Remove the hooks instead of poisoning the URL.
 	remove_action('wp_head', 'print_emoji_detection_script', 7);
 	remove_action('admin_print_scripts', 'print_emoji_detection_script');
+	remove_action('embed_head', 'print_emoji_detection_script');
 	remove_action('wp_print_styles', 'print_emoji_styles');
 	remove_action('admin_print_styles', 'print_emoji_styles');
+	remove_action('wp_enqueue_scripts', 'wp_enqueue_emoji_styles');
+	remove_action('admin_print_styles', 'wp_enqueue_emoji_styles');
 	remove_filter('the_content_feed', 'wp_staticize_emoji');
 	remove_filter('comment_text_rss', 'wp_staticize_emoji');
 	remove_filter('wp_mail', 'wp_staticize_emoji_for_email');
-	add_filter('emoji_svg_url', '__return_false');
+	add_filter('wp_resource_hints', 'bp_seo_drop_emoji_prefetch', 10, 2);
 }
+
+/**
+ * Drop the s.w.org DNS-prefetch hint left behind once the emoji script is gone.
+ * Resolves the URL through the same filter core does, so it keeps matching if core
+ * bumps the emoji version — which is exactly why 'emoji_svg_url' must stay truthy.
+ */
+function bp_seo_drop_emoji_prefetch( $urls, $relation_type ) {
+	if ( 'dns-prefetch' === $relation_type ) {
+		/** This filter is documented in wp-includes/formatting.php */
+		$svg = apply_filters('emoji_svg_url', 'https://s.w.org/images/core/emoji/2/svg/');
+		$urls = array_diff( $urls, array( $svg, 'https://s.w.org' ) );
+	}
+	return $urls;
+}
+
+/**
+ * Belt-and-braces: re-run the admin removal late, after every plugin has had its
+ * chance to (re-)register on 'init'. 'admin_print_scripts' fires well after this,
+ * so anything that re-added the detection script still gets stripped.
+ */
+add_action('admin_init', function() {
+	if ( bp_seo_defer() ) return;
+	remove_action('admin_print_scripts', 'print_emoji_detection_script');
+	remove_action('admin_print_styles', 'print_emoji_styles');
+	remove_action('admin_print_styles', 'wp_enqueue_emoji_styles');
+}, 999);
 
 /*--------------------------------------------------------------
 # §7. Crawl optimization  (old cron: deny_*_crawling, search_cleanup, redirect_search_pretty_urls)

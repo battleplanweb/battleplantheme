@@ -20,7 +20,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Bump on any SW change to force every installed client to fetch a fresh worker.
-if ( ! defined( 'CUSTOMER_CONNECT_PWA_VERSION' ) ) define( 'CUSTOMER_CONNECT_PWA_VERSION', '1.0.0' );
+if ( ! defined( 'CUSTOMER_CONNECT_PWA_VERSION' ) ) define( 'CUSTOMER_CONNECT_PWA_VERSION', '1.0.2' );
 
 if ( ! defined( 'CUSTOMER_CONNECT_PWA_MANIFEST_FILE' ) ) define( 'CUSTOMER_CONNECT_PWA_MANIFEST_FILE', 'customer-connect-app.webmanifest' );
 if ( ! defined( 'CUSTOMER_CONNECT_PWA_SW_FILE' ) )       define( 'CUSTOMER_CONNECT_PWA_SW_FILE', 'customer-connect-sw' );
@@ -42,13 +42,16 @@ function cc_pwa_config(): array {
 	$short = mb_substr( $short, 0, 12 );
 
 	$start = home_url( '/' . ( defined( 'CUSTOMER_CONNECT_SLUG' ) ? CUSTOMER_CONNECT_SLUG : 'customer-connect' ) . '/' );
-	$home_path = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
-	$scope     = $home_path !== '' ? trailingslashit( $home_path ) : '/';
+	// Scope the PWA to its OWN app path, NOT the site root. A root scope makes the service worker
+	// control the ENTIRE site and intercept every request (it was breaking the Site Pulse login and
+	// dashboard). Scoped here, the worker only ever governs /customer-connect/.
+	$app_path  = (string) wp_parse_url( $start, PHP_URL_PATH );
+	$scope     = $app_path !== '' ? trailingslashit( $app_path ) : '/';
 
 	$cfg = [
 		'name'        => $app_name,
 		'short_name'  => $short,
-		'theme_color' => (string) ( function_exists( 'cc_get' ) ? cc_get( 'theme_color', '#0f766e' ) : '#0f766e' ),
+		'theme_color' => (string) ( function_exists( 'cc_theme_color' ) ? cc_theme_color() : '#0f766e' ),
 		'bg_color'    => (string) ( function_exists( 'cc_get' ) ? cc_get( 'pwa_background_color', '#ffffff' ) : '#ffffff' ),
 		'start_url'   => $start,
 		'scope_path'  => $scope,

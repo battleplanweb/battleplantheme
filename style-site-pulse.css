@@ -484,7 +484,7 @@ input[type="radio"] {
 	   menu scrolls internally via overflow-y when it outgrows the screen. Do NOT add
 	   min-height:100vh — it lets the fixed box grow past the viewport, which pushes the
 	   bottom nav items off-screen where they can't be reached. */
-	background:                                                var(--sp-primary-color);
+	background:                                                var(--sp-sidebar-bg, var(--sp-primary-color));
 	display:                                                   grid;
 	grid-template-rows:                                        auto auto 1fr;
 	position:                                                  fixed;
@@ -584,7 +584,7 @@ input[type="radio"] {
 	padding:                                                   4px 6px;
 	border:                                                    none;
 	background:                                                none;
-	color:                                                     var(--sp-primary-contrast);
+	color:                                                     var(--sp-sidebar-text, var(--sp-primary-contrast));
 	font-size:                                                 var(--font-size-text);
 	font-weight:                                               500;
 	font-family:                                               var(--font-text);
@@ -596,14 +596,14 @@ input[type="radio"] {
 }
 
 .sp-nav-item:hover {
-	background:                                                var(--sp-primary-dark);
-	color:                                                     var(--sp-primary-contrast);
+	background:                                                var(--sp-nav-hover-bg, var(--sp-primary-dark));
+	color:                                                     var(--sp-nav-hover-text, var(--sp-primary-contrast));
 	font-weight:                                               800;
 }
 
 .sp-nav-item.active {
-	background:                                                var(--sp-accent-color);
-	color:                                                     var(--sp-accent-contrast);
+	background:                                                var(--sp-sidebar-active-bg, var(--sp-accent-color));
+	color:                                                     var(--sp-sidebar-active-text, var(--sp-accent-contrast));
 	font-weight:                                               800;
 }
 
@@ -984,33 +984,33 @@ input[type="radio"] {
 }
 
 .sp-btn-primary {
-	--button-color:                                            var(--white);
-	--button-background:                                       var(--sp-primary-color);
-	--button-border:                                           1px solid var(--sp-primary-color);
+	--button-color:                                            var(--sp-btn-text, var(--white));
+	--button-background:                                       var(--sp-btn-bg, var(--sp-primary-color));
+	--button-border:                                           1px solid var(--sp-btn-border, var(--sp-primary-color));
 
-	--button-color-hover:                                      var(--white);
-	--button-background-hover:                                 var(--sp-primary-light);
-	--button-border-hover:                                     1px solid var(--sp-primary-darkest);
+	--button-color-hover:                                      var(--sp-btn-text-hover, var(--white));
+	--button-background-hover:                                 var(--sp-btn-bg-hover, var(--sp-primary-light));
+	--button-border-hover:                                     1px solid var(--sp-btn-border-hover, var(--sp-primary-darkest));
 }
 
 .sp-btn-secondary {
-	--button-color:                                            var(--sp-accent-color);
-	--button-background:                                       var(--sp-accent-lightest);
-	--button-border:                                           1px solid var(--sp-accent-light);
+	--button-color:                                            var(--sp-btn2-text, var(--sp-accent-color));
+	--button-background:                                       var(--sp-btn2-bg, var(--sp-accent-lightest));
+	--button-border:                                           1px solid var(--sp-btn2-border, var(--sp-accent-light));
 
-	--button-color-hover:                                      var(--sp-accent-darkest);
-	--button-background-hover:                                 var(--sp-accent-lightest);
-	--button-border-hover:                                     1px solid var(--sp-accent-light);
+	--button-color-hover:                                      var(--sp-btn2-text-hover, var(--sp-accent-darkest));
+	--button-background-hover:                                 var(--sp-btn2-bg-hover, var(--sp-accent-lightest));
+	--button-border-hover:                                     1px solid var(--sp-btn2-border-hover, var(--sp-accent-light));
 }
 
 .sp-btn-ghost {
-	--button-color:                                            var(--sp-accent-color);
+	--button-color:                                            var(--sp-btn-ghost-text, var(--sp-accent-color));
 	--button-background:                                       var(--white);
-	--button-border:                                           1px solid var(--sp-accent-color);
+	--button-border:                                           1px solid var(--sp-btn-ghost-text, var(--sp-accent-color));
 
-	--button-color-hover:                                      var(--sp-accent-dark);
-	--button-background-hover:                                 var(--sp-accent-lightest);
-	--button-border-hover:                                     1px solid var(--sp-accent-dark);
+	--button-color-hover:                                      var(--sp-btn-ghost-text-hover, var(--sp-accent-dark));
+	--button-background-hover:                                 var(--sp-btn-ghost-bg-hover, var(--sp-accent-lightest));
+	--button-border-hover:                                     1px solid var(--sp-btn-ghost-text-hover, var(--sp-accent-dark));
 }
 
 .sp-icon-edit {
@@ -1173,7 +1173,8 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	border-radius:                                             var(--card-border-radius);
 	padding:                                                   var(--card-padding);
 	box-shadow:                                                1px 1px 3px var(--sp-button-shadow);
-	border:                                                    1px solid var(--sp-secondary-color);
+	border:                                                    1px solid var(--sp-card-border, var(--sp-secondary-color));
+	color:                                                     var(--sp-card-text, var(--sp-text));
 	overflow:                                                  hidden;
 }
 
@@ -1189,10 +1190,10 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-card.sp-table-card thead,
 .sp-card-footer,
 .sp-review-reply {
-	background:                                                var(--sp-secondary-lightest);
+	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
 	gap:                                                       calc(var(--card-padding) * 0.5);
 	padding:                                                   calc(var(--card-padding) * 0.5) var(--card-padding);
-	border-bottom:                                             1px solid var(--sp-secondary-color);
+	border-bottom:                                             1px solid var(--sp-card-border, var(--sp-secondary-color));
 	width:                                                     calc(100% + (var(--card-padding) * 2));
 	margin:                                                    calc(-1 * var(--card-padding)) 0 var(--card-padding) calc(-1 * var(--card-padding));
 }
@@ -1207,7 +1208,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-card.sp-table-card thead {
 	font-size:                                                 22px;
 	font-weight:                                               bold;
-	color:                                                     var(--sp-secondary-darkest);
+	color:                                                     var(--sp-card-band-text, var(--sp-secondary-darkest));
 	letter-spacing:                                            1px;
 	text-transform:                                            uppercase;
 	margin:                                                    2px 0 0 10px;
@@ -1290,12 +1291,12 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 }
 
 .sp-tile {
-	background:                                                var(--sp-secondary-lightest);
+	background:                                                var(--sp-tile-bg, var(--sp-secondary-lightest));
 	border-radius:                                             var(--sp-radius-sm);
 	padding:                                                   calc(var(--card-padding) * 0.5);
 	margin:                                                    var(--card-padding) 0;
 	box-shadow:                                                var(--sp-shadow-sm);
-	border:                                                    1px solid var(--sp-secondary-dark);
+	border:                                                    1px solid var(--sp-tile-border, var(--sp-secondary-dark));
 	text-align:                                                left;
 }
 
@@ -1309,7 +1310,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-tile-value {
 	font-size:                                                 22px;
 	font-weight:                                               bold;
-	color:                                                     var(--sp-secondary-darkest);
+	color:                                                     var(--sp-tile-value, var(--sp-secondary-darkest));
 	line-height:                                               1.1;
 }
 
@@ -1318,7 +1319,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	font-weight:                                               bold;
 	text-transform:                                            capitalize;
 	letter-spacing:                                            0;
-	color:                                                     var(--sp-secondary-darkest);
+	color:                                                     var(--sp-tile-label, var(--sp-secondary-darkest));
 }
 
 .sp-tile-icon {
@@ -2018,6 +2019,218 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 /*==============================================================================
   Mileage
 ==============================================================================*/
+
+/* --- Duplicate destinations ------------------------------------------------
+   One card per candidate set; the radio picks the record that survives the merge. */
+.sp-dupe-results {
+	margin-top:                                                16px;
+}
+
+.sp-dupe-group {
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   12px 14px;
+	margin-bottom:                                             12px;
+	background:                                                var(--sp-bg-white);
+}
+
+/* Grid, not flex: the radio is a fixed rail and the three text lines stack in one column
+   beside it, which is two dimensions — exactly what grid is for. */
+.sp-dupe-option {
+	display:                                                   grid;
+	grid-template-columns:                                     auto 1fr;
+	column-gap:                                                10px;
+	align-items:                                               baseline;
+	padding:                                                   8px 10px;
+	border-radius:                                             var(--sp-radius-xs);
+	cursor:                                                    pointer;
+}
+
+.sp-dupe-option:hover,
+.sp-dupe-option.active,
+.sp-dupe-option.tab-focus {
+	background:                                                var(--sp-primary-lightest);
+}
+
+.sp-dupe-option:has(input:checked) {
+	background:                                                var(--sp-secondary-lightest);
+}
+
+.sp-dupe-name,
+.sp-dupe-addr,
+.sp-dupe-tags {
+	grid-column:                                               2;
+	display:                                                   block;
+}
+
+.sp-dupe-name {
+	color:                                                     var(--sp-text);
+}
+
+.sp-dupe-addr {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 var(--font-size-sm);
+}
+
+.sp-dupe-tags {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 var(--font-size-xs);
+	font-style:                                                italic;
+	margin-top:                                                2px;
+}
+
+.sp-dupe-merge {
+	margin-top:                                                8px;
+}
+
+/* --- Distance matrix -------------------------------------------------------
+   The grid is one row and one column per approved destination, so it is always
+   wider than its card. Its own scroll context is what makes it usable: the card
+   it sits in is a .sp-card (overflow:hidden), which clipped the overflowing
+   columns dead — the grid ran off the right edge with no way to reach it. */
+.sp-mileage-matrix-wrap {
+	overflow:                                                  auto;
+	max-height:                                                70vh;
+	overscroll-behavior:                                       contain;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg-white);
+}
+
+/* separate/0 rather than collapse: collapsed borders detach from sticky cells and
+   scroll away from them, leaving the pinned header and first column unlined. */
+.sp-matrix-table {
+	border-collapse:                                           separate;
+	border-spacing:                                            0;
+	margin:                                                    0;
+	font-size:                                                 var(--font-size-sm);
+}
+
+.sp-matrix-table th,
+.sp-matrix-table td {
+	padding:                                                   6px 10px;
+	border-right:                                              1px solid var(--sp-border);
+	border-bottom:                                             1px solid var(--sp-border);
+	white-space:                                               nowrap;
+}
+
+/* Column headers WRAP rather than ellipsize. A fleet's stops share a long prefix ("Babe's
+   Chicken Arlington", "Babe's Chicken Burleson"…), so truncating leaves every column labelled
+   the same thing — the part that identifies the stop is the part that gets cut. Wrapping keeps
+   the width capped and the tail visible; only the row headers, which have room, ellipsize. */
+.sp-matrix-table thead th {
+	position:                                                  sticky;
+	top:                                                       0;
+	z-index:                                                   2;
+	max-width:                                                 8em;
+	white-space:                                               normal;
+	overflow-wrap:                                             break-word;
+	vertical-align:                                            bottom;
+	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
+	color:                                                     var(--sp-card-band-text, var(--sp-secondary-darkest));
+	text-align:                                                left;
+	font-size:                                                 var(--font-size-xs);
+	line-height:                                               1.25;
+	text-transform:                                            none;
+	letter-spacing:                                            0;
+}
+
+.sp-matrix-rowhead {
+	position:                                                  sticky;
+	left:                                                      0;
+	z-index:                                                   1;
+	max-width:                                                 14em;
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
+	color:                                                     var(--sp-card-band-text, var(--sp-secondary-darkest));
+	text-align:                                                left;
+	font-weight:                                               600;
+}
+
+/* Pinned in both directions, so it has to outrank both. Selector carries the table class
+   only to beat the `thead th` rule above on specificity — otherwise its z-index loses. */
+.sp-matrix-table .sp-matrix-corner {
+	left:                                                      0;
+	z-index:                                                   3;
+	min-width:                                                 14em;
+	max-width:                                                 14em;
+}
+
+.sp-matrix-table td {
+	min-width:                                                 4em;
+	text-align:                                                center;
+	font-variant-numeric:                                      tabular-nums;
+}
+
+.sp-matrix-cell {
+	cursor:                                                    pointer;
+	transition:                                                background var(--sp-transition);
+}
+
+.sp-matrix-api {
+	background:                                                var(--sp-primary-lightest);
+	color:                                                     var(--sp-text);
+}
+
+.sp-matrix-manual {
+	background:                                                var(--sp-secondary-lightest);
+	color:                                                     var(--sp-secondary-darkest);
+	font-weight:                                               700;
+}
+
+/* The "+" is the only cell that is an invitation rather than a value, so it reads as
+   an affordance instead of a number that failed to load. */
+.sp-matrix-missing {
+	background:                                                var(--sp-bg-white);
+	color:                                                     var(--sp-accent-dark);
+	font-weight:                                               700;
+}
+
+.sp-matrix-self {
+	background:                                                var(--sp-primary-light);
+	color:                                                     var(--sp-text-secondary);
+	text-align:                                                center;
+}
+
+.sp-matrix-cell:hover,
+.sp-matrix-cell.active,
+.sp-matrix-cell.tab-focus {
+	background:                                                var(--sp-accent-light);
+	color:                                                     var(--sp-accent-contrast);
+}
+
+/* Inline flow, not flex: swatch and label must stay glued as a pair and wrap together —
+   flex would space every item evenly and break the pairing. */
+.sp-matrix-legend {
+	margin:                                                    0 0 12px;
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-matrix-key {
+	display:                                                   inline-block;
+	width:                                                     14px;
+	height:                                                    14px;
+	vertical-align:                                            -2px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-xs);
+	margin:                                                    0 5px 0 16px;
+}
+
+/* An uncomputed cell is white with an orange "+", so an empty white swatch would read as
+   nothing at all. Show the glyph itself — the key then matches what's in the grid. */
+.sp-matrix-key.sp-matrix-missing::before {
+	content:                                                   "+";
+	display:                                                   block;
+	line-height:                                               12px;
+	text-align:                                                center;
+	font-size:                                                 13px;
+}
+
+.sp-matrix-key:first-child {
+	margin-left:                                               0;
+}
 
 /* Section B category subtotals */
 .sp-mileage-path-loading {
@@ -5373,7 +5586,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	width:                                                     48px;
 	height:                                                    48px;
 	border-radius:                                             var(--sp-radius-sm);
-	border:                                                    1px solid rgba(0,0,0,0.15);
+	border:                                                    none !important;
 	box-shadow:                                                inset 0 0 0 2px var(--sp-bg-white);
 	cursor:                                                    pointer;
 	padding:                                                   0;
@@ -6744,8 +6957,13 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	margin:                                                    0;
 }
 
+/* flex, not grid: a row of buttons of differing widths that should size to their labels */
 .sp-settings-card-actions,
-.sp-mileage-actions
+.sp-mileage-actions {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+}
 
 .sp-settings-card-body {
 	border-top:                                                1px solid var(--sp-border);
@@ -7517,6 +7735,21 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 		white-space:                                              nowrap;
 		padding-left:                                             10px;
 		padding-right:                                            10px;
+	}
+
+	/* Pinned name columns have to give up width on a phone or there's nothing left to scroll into. */
+	.sp-mileage-matrix-wrap {
+		max-height:                                               60vh;
+	}
+
+	.sp-matrix-table thead th {
+		max-width:                                                6em;
+	}
+
+	.sp-matrix-rowhead,
+	.sp-matrix-table .sp-matrix-corner {
+		max-width:                                                9em;
+		min-width:                                                9em;
 	}
 
 	.sp-mileage-stop {

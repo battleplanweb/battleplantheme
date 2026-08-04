@@ -95,6 +95,40 @@ function bp_chat_twilio( string $key ): string {
 }
 
 /**
+ * Numbers that receive lead alerts + handoff notices (informational broadcast).
+ * `contractor_sms_notification` may be a comma-separated list of numbers. Falls
+ * back to the legacy single `contractor_sms`, then to the reply number.
+ */
+function bp_chat_notify_numbers( array $o = [] ): array {
+	if ( ! $o ) $o = bp_chat_config();
+	$raw = trim( (string) ( $o['contractor_sms_notification'] ?? '' ) );
+	if ( $raw === '' ) $raw = trim( (string) ( $o['contractor_sms'] ?? '' ) );
+	if ( $raw === '' ) $raw = trim( (string) ( $o['contractor_sms_reply'] ?? '' ) );
+
+	$out = [];
+	foreach ( explode( ',', $raw ) as $n ) {
+		$p = bp_chat_normalize_phone( trim( $n ) );
+		if ( $p !== '' && ! in_array( $p, $out, true ) ) $out[] = $p;
+	}
+	return $out;
+}
+
+/**
+ * The single number that two-way texts the customer (takeover relay). Only this
+ * line can reply into a customer conversation. Falls back to the legacy
+ * `contractor_sms`, then to the first notification number.
+ */
+function bp_chat_reply_number( array $o = [] ): string {
+	if ( ! $o ) $o = bp_chat_config();
+	$n = bp_chat_normalize_phone( trim( (string) ( $o['contractor_sms_reply'] ?? '' ) ) );
+	if ( $n !== '' ) return $n;
+	$n = bp_chat_normalize_phone( trim( (string) ( $o['contractor_sms'] ?? '' ) ) );
+	if ( $n !== '' ) return $n;
+	$notify = bp_chat_notify_numbers( $o );
+	return $notify[0] ?? '';
+}
+
+/**
  * The widget can run only when both an Anthropic key and a Twilio
  * destination + credentials are configured.
  */
@@ -102,7 +136,7 @@ function bp_chat_ready(): bool {
 	return bp_chat_api_key() !== ''
 		&& bp_chat_twilio( 'sid' ) !== '' && bp_chat_twilio( 'token' ) !== ''
 		&& bp_chat_twilio( 'number' ) !== ''
-		&& ! empty( bp_chat_config()['contractor_sms'] );
+		&& bp_chat_reply_number() !== '';
 }
 
 
@@ -521,7 +555,7 @@ function bp_chat_begin_text_thread( array &$conv, array $customer, string $raw_p
 	$note       = "New text lead: {$label} ({$phone}).";
 	if ( $transcript !== '' ) $note .= "\n\nChat so far:\n{$transcript}";
 	$note .= "\n\nThey'll text you here. Reply to take over and I'll keep helping until you do.";
-	bp_chat_forward_to_contractor( $note, bp_chat_config() );
+	bp_chat_broadcast_to_contractors( $note, bp_chat_config() );
 
 	return $ok;
 }
@@ -603,7 +637,7 @@ function bp_chat_deliver_lead( array $lead, string $cid, array $customer, array 
 	$lines[] = 'Call them back.';
 	$message = implode( "\n", $lines );
 
-	$ok = bp_chat_send_sms( (string) ( $o['contractor_sms'] ?? '' ), $message );
+	$ok = bp_chat_broadcast_to_contractors( $message, $o );
 
 	if ( $ok && $sent_key ) set_transient( $sent_key, 1, 6 * HOUR_IN_SECONDS );
 	return $ok;

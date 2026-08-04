@@ -76,7 +76,12 @@ get_header(); ?>
 				$buildUpdate .= '<div class="jobsite-entry count-'.$imgNum.'">';
 				$buildUpdate .= '<div class="jobsite-description'.( $imgNum >= 3 ? ' span-all' : '' ).'">';
 				$buildUpdate .= '<div class="jobsite_geo-job_meta"><p>'.$location.'</p></div>';
-				$buildUpdate .= '<p>'.$jobDesc.'</p></div>';
+				// bp_wpautop, not a hand-wrapped <p>: the framework removes wpautop from
+				// the_content globally (functions.php), so a multi-paragraph description
+				// arrives as one blob of newlines and collapsed into a single paragraph.
+				// Same pattern as the intro content below — built here, do_shortcode'd
+				// once more when the whole $buildUpdate renders at the bottom of the file.
+				$buildUpdate .= bp_wpautop( $jobDesc ).'</div>';
 				$cleanedJobDesc = trim( wp_strip_all_tags( $jobDesc ) );
 				$customer_info = customer_info();
 				$img = $imgs ? wp_get_attachment_image_src( reset($imgs), 'full' ) : array('');

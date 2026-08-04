@@ -4,16 +4,37 @@
    Uses em units throughout so it scales with the site's root size. */
 
 :root {
-	--cc-accent: #0f766e;
-	--cc-bg: #f4f6f8;
-	--cc-surface: #ffffff;
-	--cc-ink: #1f2933;
-	--cc-ink-soft: #52606d;
-	--cc-line: #e2e6ea;
-	--cc-radius: 0.9em;
-	--cc-shadow: 0 0.15em 0.5em rgba(0, 0, 0, .06);
-	--cc-tabbar-h: 4.2em;
-	--cc-accent-ink: #ffffff;
+	/* Native-OS font stack — makes the PWA feel like a real app and never varies by client/site. */
+	--cc-font:                                                 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+	/* Brand — the ONLY per-client colors: two tones, set in Settings → Customer Connect and injected
+	   as an inline :root override (cc_brand_css). Defaults here so the app is never unstyled. */
+	--cc-brand: #0f766e;        /* primary — app bar, primary buttons, active accents */
+	--cc-brand-ink: #ffffff;    /* legible text on --cc-brand */
+	--cc-brand-2: #f59e0b;      /* secondary — active tab, highlights, hero partner */
+	--cc-brand-2-ink:                                          #ffffff;
+
+	/* Standardized canvas — white + a fixed greyscale ramp. Never changes per client. */
+	--cc-white:                                                #ffffff;
+	--cc-bg: #f4f6f8;           /* app background */
+	--cc-surface: #ffffff;      /* cards */
+	--cc-ink: #1f2933;          /* primary text */
+	--cc-ink-soft: #52606d;     /* secondary text */
+	--cc-ink-faint: #9aa5b1;    /* tertiary / placeholders */
+	--cc-line: #e2e6ea;         /* borders / dividers */
+
+	--cc-radius:                                               0.9em;
+	--cc-shadow:                                               0 0.15em 0.5em rgba(0, 0, 0, .06);
+	--cc-tabbar-h:                                             4.2em;
+
+	/* Back-compat aliases so existing --cc-accent usages map to the primary brand tone. */
+	--cc-accent:                                               var(--cc-brand);
+	--cc-accent-ink:                                           var(--cc-brand-ink);
+}
+
+html {
+	--wp-admin--admin-bar--height:                             0 !important;
+	margin-top:                                                0 !important;
 }
 
 /* Full-screen app: strip the website chrome (header, footer, sidebar, mobile bar)
@@ -34,7 +55,7 @@ body.has-customer-connect .bp-chat-widget,
 body.has-customer-connect .wp-gr,
 body.has-customer-connect .wp-google-badge,
 body.has-customer-connect #include-svg {
-	display: none !important;
+	display:                                                   none !important;
 }
 
 body.has-customer-connect #page,
@@ -45,29 +66,29 @@ body.has-customer-connect .site-main-inner,
 body.has-customer-connect #main-content,
 body.has-customer-connect article[id^="post-"],
 body.has-customer-connect .entry-content {
-	max-width: 100%;
-	width: 100%;
-	margin: 0;
-	padding: 0;
-	background: var(--cc-bg);
+	max-width:                                                 100%;
+	width:                                                     100%;
+	margin:                                                    0;
+	padding:                                                   0;
+	background:                                                var(--cc-bg);
 }
 
 body.has-customer-connect #main-content {
-	grid-column: 1 / -1;
-	display: block;
-	min-height: 100vh;
-	min-height: 100dvh;
+	grid-column:                                               1 / -1;
+	display:                                                   block;
+	min-height:                                                100vh;
+	min-height:                                                100dvh;
 }
 
 #customer-connect-app {
-	font-family: var(--font-text, var(--font-primary, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif));
-	color: var(--cc-ink);
-	max-width: 34em;
-	margin: 0 auto;
-	min-height: 100vh;
-	min-height: 100dvh;
-	background: var(--cc-bg);
-	position: relative;
+	font-family:                                               var(--cc-font);
+	color:                                                     var(--cc-ink);
+	max-width:                                                 34em;
+	margin:                                                    0 auto;
+	min-height:                                                100vh;
+	min-height:                                                100dvh;
+	background:                                                var(--cc-bg);
+	position:                                                  relative;
 }
 
 #customer-connect-app *, #customer-connect-app *::before, #customer-connect-app *::after { box-sizing: border-box; }
@@ -76,51 +97,55 @@ body.has-customer-connect #main-content {
 
 .cc-screen[hidden] { display: none; }
 
+/* Enforce the hidden attribute app-wide. The app dequeues the site CSS that used to do this,
+   so display:flex components (like .cc-form) must not override [hidden] and show two forms at once. */
+[hidden] { display: none !important; }
+
 .cc-boot, .cc-screen[data-screen="signin"] {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 100vh;
-	min-height: 100dvh;
-	padding: 1.5em;
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	min-height:                                                100vh;
+	min-height:                                                100dvh;
+	padding:                                                   1.5em;
 }
 
 .cc-boot-inner { text-align: center; }
 .cc-boot-icon { border-radius: 1em; margin-bottom: 1.2em; }
 
 .cc-check {
-	width: 3em; height: 3em; margin: 0 auto 0.6em;
-	border-radius: 50%; background: var(--cc-accent); color: #fff;
-	font-size: 1.4em; line-height: 3em; text-align: center; font-weight: 700;
-	animation: cc-pop 0.35s ease;
+	width:                                                     3em; height: 3em; margin: 0 auto 0.6em;
+	border-radius:                                             50%; background: var(--cc-accent); color: #fff;
+	font-size:                                                 1.4em; line-height: 3em; text-align: center; font-weight: 700;
+	animation:                                                 cc-pop 0.35s ease;
 }
 .cc-welcome { margin: 0; font-weight: 600; color: var(--cc-ink); }
 @keyframes cc-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .cc-spinner {
-	width: 2.2em; height: 2.2em; margin: 0 auto;
-	border: 0.22em solid var(--cc-line);
-	border-top-color: var(--cc-accent);
-	border-radius: 50%;
-	animation: cc-spin 0.8s linear infinite;
+	width:                                                     2.2em; height: 2.2em; margin: 0 auto;
+	border:                                                    0.22em solid var(--cc-line);
+	border-top-color:                                          var(--cc-accent);
+	border-radius:                                             50%;
+	animation:                                                 cc-spin 0.8s linear infinite;
 }
 @keyframes cc-spin { to { transform: rotate(360deg); } }
 
 /* ---------- auth card ---------- */
 
 .cc-auth-card {
-	width: 100%;
-	max-width: 24em;
-	background: var(--cc-surface);
-	border-radius: var(--cc-radius);
-	box-shadow: var(--cc-shadow);
-	padding: 2em 1.6em;
+	width:                                                     100%;
+	max-width:                                                 24em;
+	background:                                                var(--cc-surface);
+	border-radius:                                             var(--cc-radius);
+	box-shadow:                                                var(--cc-shadow);
+	padding:                                                   2em 1.6em;
 }
 .cc-auth-header { text-align: center; margin-bottom: 1.4em; }
 .cc-auth-icon { border-radius: 0.9em; margin-bottom: 0.8em; }
 .cc-auth-title {
-	font-family: var(--font-primary, inherit);
-	font-size: 1.5em; margin: 0; color: var(--cc-ink);
+	font-family:                                               inherit;
+	font-size:                                                 1.5em; margin: 0; color: var(--cc-ink);
 }
 .cc-auth-sub { margin: 0.2em 0 0; color: var(--cc-ink-soft); font-size: 0.95em; }
 
@@ -129,21 +154,25 @@ body.has-customer-connect #main-content {
 .cc-form { display: flex; flex-direction: column; gap: 0.9em; }
 .cc-form-lead { margin: 0 0 0.3em; color: var(--cc-ink-soft); font-size: 0.95em; line-height: 1.5; }
 
+.cc-form label {
+	text-align:                                                left;
+}
+
 .cc-field { display: flex; flex-direction: column; gap: 0.35em; }
 .cc-field > span { font-size: 0.8em; font-weight: 600; color: var(--cc-ink-soft); }
 .cc-field input {
-	font: inherit;
-	padding: 0.75em 0.85em;
-	border: 1px solid var(--cc-line);
-	border-radius: 0.6em;
-	background: #fff;
-	color: var(--cc-ink);
-	width: 100%;
+	font:                                                      inherit;
+	padding:                                                   0.75em 0.85em;
+	border:                                                    1px solid var(--cc-line);
+	border-radius:                                             0.6em;
+	background:                                                #fff;
+	color:                                                     var(--cc-ink);
+	width:                                                     100%;
 }
 .cc-field input:focus {
-	outline: none;
-	border-color: var(--cc-accent);
-	box-shadow: 0 0 0 0.15em color-mix(in srgb, var(--cc-accent) 25%, transparent);
+	outline:                                                   none;
+	border-color:                                              var(--cc-accent);
+	box-shadow:                                                0 0 0 0.15em color-mix(in srgb, var(--cc-accent) 25%, transparent);
 }
 .cc-field[data-field="email"][hidden] { display: none; }
 
@@ -153,12 +182,12 @@ body.has-customer-connect #main-content {
 /* ---------- buttons ---------- */
 
 .cc-btn {
-	font: inherit; font-weight: 600;
-	border: 0; border-radius: 0.6em;
-	padding: 0.8em 1em;
-	cursor: pointer;
-	background: #eef1f4; color: var(--cc-ink);
-	transition: filter 0.15s ease, background 0.15s ease;
+	font:                                                      inherit; font-weight: 600;
+	border:                                                    0; border-radius: 0.6em;
+	padding:                                                   0.8em 1em;
+	cursor:                                                    pointer;
+	background:                                                #eef1f4; color: var(--cc-ink);
+	transition:                                                filter 0.15s ease, background 0.15s ease;
 }
 .cc-btn:disabled { opacity: 0.6; cursor: default; }
 .cc-btn-primary { background: var(--cc-accent); color: var(--cc-accent-ink); }
@@ -166,6 +195,30 @@ body.has-customer-connect #main-content {
 .cc-link { background: none; color: var(--cc-accent); padding: 0.4em; }
 .cc-link:hover, .cc-link.active, .cc-link.tab-focus { text-decoration: underline; }
 .cc-alt-toggle { background: none; color: var(--cc-accent); align-self: flex-start; padding: 0.1em 0; font-size: 0.9em; }
+
+/* Large, prominent primary button (sign-in / verify). Solid brand color 1. */
+.cc-btn-lg { padding: 1em 1.2em; font-size: 1.02em; }
+
+/* ---------- verification code: 6 boxes + countdown ---------- */
+.cc-code-boxes { display: flex; gap: 0.5em; justify-content: space-between; }
+#customer-connect-app .cc-code-box {
+	flex:                                                      1 1 0; min-width: 0; width: 100%;
+	aspect-ratio:                                              3 / 4;
+	font:                                                      inherit; font-size: 1.6em; font-weight: 700; text-align: center;
+	color:                                                     var(--cc-ink);
+	border:                                                    1.5px solid var(--cc-line);
+	border-radius:                                             0.55em;
+	background:                                                #fff; padding: 0;
+}
+#customer-connect-app .cc-code-box:focus {
+	outline:                                                   none; border-color: var(--cc-brand);
+	box-shadow:                                                0 0 0 0.15em color-mix(in srgb, var(--cc-brand) 25%, transparent);
+}
+.cc-code-timer {
+	margin:                                                    0; text-align: center; font-size: 0.9em; color: var(--cc-ink-soft);
+	background:                                                var(--cc-bg); border-radius: 0.6em; padding: 0.6em 0.8em;
+}
+.cc-code-timer strong { color: var(--cc-brand); font-variant-numeric: tabular-nums; }
 
 .cc-error { color: #b42318; font-size: 0.88em; margin: 0; }
 .cc-error[hidden], .cc-ok[hidden] { display: none; }
@@ -176,37 +229,26 @@ body.has-customer-connect #main-content {
 .cc-app { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
 
 .cc-appbar {
-	display: flex; align-items: center; justify-content: space-between;
-	padding: 0.9em 1.1em;
-	background: var(--cc-accent); color: var(--cc-accent-ink);
-	position: sticky; top: 0; z-index: 5;
+	display:                                                   flex; align-items: center; gap: 0.6em;
+	padding:                                                   0.9em 1.1em;
+	background:                                                var(--cc-accent); color: var(--cc-accent-ink);
+	position:                                                  sticky; top: 0; z-index: 5;
 }
-.cc-appbar-title { font-family: var(--font-primary, inherit); font-weight: 700; font-size: 1.15em; }
+.cc-appbar-title { flex: 1 1 auto; font-family: inherit; font-weight: 700; font-size: 1.15em; }
 .cc-appbar-actions { display: flex; align-items: center; gap: 0.5em; }
-.cc-appbar-menu {
-	width: 1.9em; height: 1.9em; border: 0; border-radius: 50%;
-	background: rgba(255, 255, 255, .2); cursor: pointer; position: relative;
+.cc-appbar-btn {
+	width:                                                     2.2em; height: 2.2em; flex: 0 0 auto; border: 0; border-radius: 50%;
+	background:                                                rgba(255, 255, 255, .18); color: inherit; cursor: pointer; position: relative;
+	display:                                                   flex; align-items: center; justify-content: center;
+	transition:                                                background 0.15s ease;
 }
-.cc-appbar-menu::before {
-	content: ""; position: absolute; inset: 0.5em;
-	border-radius: 50%; border: 0.14em solid #fff;
-	border-bottom: 0.55em solid #fff; box-sizing: border-box;
-}
-.cc-appbar-bell {
-	width: 1.9em; height: 1.9em; border: 0; border-radius: 50%;
-	background: rgba(255, 255, 255, .2); cursor: pointer; position: relative;
-}
-.cc-appbar-bell::before {
-	content: ""; position: absolute; left: 50%; top: 0.42em;
-	width: 0.75em; height: 0.75em; transform: translateX(-50%);
-	border: 0.14em solid #fff; border-bottom: 0; border-radius: 0.5em 0.5em 0 0;
-	box-shadow: 0 0.62em 0 -0.06em #fff; box-sizing: border-box;
-}
+.cc-appbar-btn:hover, .cc-appbar-btn.active, .cc-appbar-btn.tab-focus { background: rgba(255, 255, 255, .32); }
+.cc-appbar-btn .cc-ico { width: 1.25em; height: 1.25em; }
 .cc-badge {
-	position: absolute; top: -0.2em; right: -0.2em;
-	min-width: 1.25em; height: 1.25em; padding: 0 0.25em;
-	background: #e11d48; color: #fff; border-radius: 0.7em;
-	font-size: 0.6em; font-weight: 700; line-height: 1.25em; text-align: center;
+	position:                                                  absolute; top: -0.2em; right: -0.2em;
+	min-width:                                                 1.25em; height: 1.25em; padding: 0 0.25em;
+	background:                                                #e11d48; color: #fff; border-radius: 0.7em;
+	font-size:                                                 0.6em; font-weight: 700; line-height: 1.25em; text-align: center;
 }
 .cc-badge[hidden] { display: none; }
 
@@ -222,30 +264,30 @@ body.has-customer-connect #main-content {
 .cc-notif-link { display: inline-block; margin-top: 0.5em; color: var(--cc-accent); font-weight: 600; font-size: 0.9em; }
 
 .cc-view {
-	flex: 1;
-	padding: 1.1em 1.1em calc(var(--cc-tabbar-h) + 1.1em);
-	display: flex; flex-direction: column; gap: 1em;
+	flex:                                                      1;
+	padding:                                                   1.1em;
+	display:                                                   flex; flex-direction: column; gap: 1em;
 }
 
 /* ---------- cards ---------- */
 
 .cc-card {
-	background: var(--cc-surface);
-	border-radius: var(--cc-radius);
-	box-shadow: var(--cc-shadow);
-	padding: 1.2em;
+	background:                                                var(--cc-surface);
+	border-radius:                                             var(--cc-radius);
+	box-shadow:                                                var(--cc-shadow);
+	padding:                                                   1.2em;
 }
-.cc-card h2 { margin: 0 0 0.4em; font-family: var(--font-primary, inherit); font-size: 1.25em; }
+.cc-card h2 { margin: 0 0 0.4em; font-family: inherit; font-size: 1.25em; }
 .cc-card p { margin: 0; color: var(--cc-ink-soft); line-height: 1.55; }
 
-.cc-hero { background: linear-gradient(135deg, var(--cc-accent), color-mix(in srgb, var(--cc-accent) 70%, #000)); color: #fff; }
+.cc-hero { background: linear-gradient(135deg, var(--cc-brand), var(--cc-brand-2)); color: #fff; }
 .cc-hero h2 { color: #fff; }
 .cc-hero p { color: rgba(255, 255, 255, .9); }
 
 .cc-quick { display: flex; flex-direction: column; gap: 0.8em; }
 .cc-quick-item {
-	text-align: left; border: 0; cursor: pointer; width: 100%;
-	display: flex; flex-direction: column; gap: 0.2em;
+	text-align:                                                left; border: 0; cursor: pointer; width: 100%;
+	display:                                                   flex; flex-direction: column; gap: 0.2em;
 }
 .cc-quick-item:hover, .cc-quick-item.active, .cc-quick-item.tab-focus { box-shadow: 0 0.3em 0.8em rgba(0, 0, 0, .1); }
 .cc-quick-title { font-weight: 700; color: var(--cc-ink); }
@@ -254,25 +296,51 @@ body.has-customer-connect #main-content {
 .cc-account-form { margin-top: 0.4em; }
 .cc-signout { margin-top: 1em; color: #b42318; }
 
-/* ---------- tab bar ---------- */
+/* ---------- side drawer menu (mirrors the Site Pulse sidebar) ---------- */
 
-.cc-tabbar {
-	position: fixed; left: 50%; transform: translateX(-50%); bottom: 0;
-	width: 100%; max-width: 34em;
-	height: var(--cc-tabbar-h);
-	display: flex;
-	background: var(--cc-surface);
-	border-top: 1px solid var(--cc-line);
-	padding-bottom: env(safe-area-inset-bottom, 0);
-	z-index: 6;
+/* fixed to the viewport so it stays put while the view scrolls; on a phone / mobile-emulated
+   viewport the app frame == the viewport, so left:0 sits on the frame's edge. */
+.cc-scrim {
+	position:                                                  fixed; inset: 0;
+	background:                                                rgba(0, 0, 0, .45);
+	opacity:                                                   0; pointer-events: none; transition: opacity 0.25s ease;
+	z-index:                                                   1000;
 }
+#customer-connect-app.cc-menu-open .cc-scrim { opacity: 1; pointer-events: auto; }
+
+.cc-sidebar {
+	position:                                                  fixed; top: 0; left: 0; bottom: 0;
+	width:                                                     15em; max-width: 82vw;
+	background:                                                var(--cc-brand); color: var(--cc-brand-ink);
+	display:                                                   flex; flex-direction: column; gap: 0.15em;
+	padding:                                                   0.5em;
+	overflow-y:                                                auto;
+	transform:                                                 translateX(-100%); transition: transform 0.25s ease;
+	box-shadow:                                                0.2em 0 1.4em rgba(0, 0, 0, .28);
+	z-index:                                                   1001;
+}
+#customer-connect-app.cc-menu-open .cc-sidebar { transform: none; }
+
+.cc-sidebar-head {
+	display:                                                   flex; align-items: center; gap: 0.6em;
+	padding:                                                   0.7em 0.6em 1em;
+}
+.cc-sidebar-logo { width: 1.9em; height: 1.9em; border-radius: 0.4em; flex: 0 0 auto; }
+.cc-sidebar-app { font-weight: 700; font-size: 1.05em; }
+
 .cc-tab {
-	flex: 1; border: 0; background: none; cursor: pointer;
-	display: flex; align-items: center; justify-content: center;
-	color: var(--cc-ink-soft); font: inherit; font-size: 0.8em; font-weight: 600;
+	display:                                                   flex; align-items: center; gap: 0.8em; width: 100%;
+	border:                                                    0; background: none; cursor: pointer;
+	color:                                                     var(--cc-brand-ink); opacity: 0.82;
+	font:                                                      inherit; font-weight: 600; font-size: 0.95em; text-align: left;
+	padding:                                                   0.8em; border-radius: 0.6em;
+	transition:                                                background 0.15s ease, opacity 0.15s ease;
 }
-.cc-tab.is-active { color: var(--cc-accent); }
+.cc-tab:hover, .cc-tab.active, .cc-tab.tab-focus { background: rgba(255, 255, 255, .14); opacity: 1; }
+.cc-tab.is-active { background: var(--cc-brand-2); color: var(--cc-brand-2-ink); opacity: 1; }
+.cc-tab .cc-ico { width: 1.2em; height: 1.2em; flex: 0 0 auto; }
 .cc-tab-label { display: block; }
+.cc-tab-spacer { flex: 1 1 auto; }
 
 /* ---------- equipment (My Home) ---------- */
 
@@ -289,8 +357,8 @@ body.has-customer-connect #main-content {
 .cc-btn-sm { padding: 0.5em 0.8em; font-size: 0.85em; background: #eef1f4; }
 
 .cc-chip {
-	font-size: 0.72em; font-weight: 700;
-	padding: 0.3em 0.6em; border-radius: 1em; white-space: nowrap;
+	font-size:                                                 0.72em; font-weight: 700;
+	padding:                                                   0.3em 0.6em; border-radius: 1em; white-space: nowrap;
 }
 .cc-chip-ok   { background: #e7f5ee; color: #067647; }
 .cc-chip-soon { background: #fef4e6; color: #b54708; }
@@ -298,22 +366,22 @@ body.has-customer-connect #main-content {
 .cc-chip-none { background: #eef1f4; color: var(--cc-ink-soft); }
 
 .cc-eq-form select {
-	font: inherit;
-	padding: 0.75em 0.85em;
-	border: 1px solid var(--cc-line);
-	border-radius: 0.6em;
-	background: #fff; color: var(--cc-ink); width: 100%;
+	font:                                                      inherit;
+	padding:                                                   0.75em 0.85em;
+	border:                                                    1px solid var(--cc-line);
+	border-radius:                                             0.6em;
+	background:                                                #fff; color: var(--cc-ink); width: 100%;
 }
 .cc-eq-form textarea {
-	font: inherit;
-	padding: 0.75em 0.85em;
-	border: 1px solid var(--cc-line);
-	border-radius: 0.6em;
-	background: #fff; color: var(--cc-ink); width: 100%; resize: vertical;
+	font:                                                      inherit;
+	padding:                                                   0.75em 0.85em;
+	border:                                                    1px solid var(--cc-line);
+	border-radius:                                             0.6em;
+	background:                                                #fff; color: var(--cc-ink); width: 100%; resize: vertical;
 }
 .cc-eq-form select:focus, .cc-eq-form textarea:focus {
-	outline: none; border-color: var(--cc-accent);
-	box-shadow: 0 0 0 0.15em color-mix(in srgb, var(--cc-accent) 25%, transparent);
+	outline:                                                   none; border-color: var(--cc-accent);
+	box-shadow:                                                0 0 0 0.15em color-mix(in srgb, var(--cc-accent) 25%, transparent);
 }
 .cc-eq-delete { color: #b42318; }
 
@@ -337,8 +405,8 @@ body.has-customer-connect #main-content {
 .cc-cust-pick[hidden] { display: none; }
 .cc-cust-results { margin-top: 0.5em; display: flex; flex-direction: column; gap: 0.3em; }
 .cc-cust-opt {
-	text-align: left; border: 1px solid var(--sp-secondary-color, #b9dbc2); background: #fff; cursor: pointer;
-	border-radius: var(--sp-radius-sm, 8px); padding: 0.6em 0.75em; display: flex; flex-direction: column; gap: 0.15em;
+	text-align:                                                left; border: 1px solid var(--sp-secondary-color, #b9dbc2); background: #fff; cursor: pointer;
+	border-radius:                                             var(--sp-radius-sm, 8px); padding: 0.6em 0.75em; display: flex; flex-direction: column; gap: 0.15em;
 }
 .cc-cust-opt:hover, .cc-cust-opt.active, .cc-cust-opt.tab-focus { border-color: var(--sp-accent-color, #ec9a3c); }
 .cc-cust-name { font-weight: 700; color: var(--sp-text, #12161c); }

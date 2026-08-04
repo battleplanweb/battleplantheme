@@ -6128,7 +6128,7 @@ async function loadCcSettings() {
 	html += field('app_name', 'App name', s.app_name, 'e.g. MAK Comfort Companion');
 	html += field('company_name', 'Company name', s.company_name, 'e.g. MAK Comfort');
 	html += field('pwa_short_name', 'Home-screen label', s.pwa_short_name, 'e.g. Comfort', 'Short name shown under the installed icon (defaults to the first word of the app name).');
-	html += field('theme_color', 'Theme color', s.theme_color, '#0f766e or var(--main-red)');
+	html += '<div class="sp-form-group"><label>Brand colors</label><p class="sp-help-text" style="margin:0;">The customer app uses the site color scheme — its app bar &amp; buttons follow your <strong>primary</strong> color and highlights follow your <strong>accent</strong> color. Change them in <em>Settings → Color scheme</em>.</p></div>';
 	html += field('pwa_background_color', 'Splash background', s.pwa_background_color, '#ffffff');
 	html += field('pwa_icon_url', 'App icon URL', s.pwa_icon_url, 'https://…/app-icon.png', 'Media Library URL of a square icon. Blank = the child-theme app icon / Site Icon.');
 	html += field('push_contact', 'Push contact', s.push_contact, 'mailto:you@domain.com', 'VAPID contact address for push (defaults to the site admin email).');
@@ -6141,7 +6141,7 @@ async function loadCcSettings() {
 	$('#sp-cc-settings-save', wrap)?.addEventListener('click', async () => {
 		const btn = $('#sp-cc-settings-save', wrap);
 		const st = $('#sp-cc-settings-status', wrap);
-		const keys = ['app_name', 'company_name', 'pwa_short_name', 'theme_color', 'pwa_background_color', 'pwa_icon_url', 'push_contact'];
+		const keys = ['app_name', 'company_name', 'pwa_short_name', 'pwa_background_color', 'pwa_icon_url', 'push_contact'];
 		const data = {};
 		keys.forEach(k => { const el = $('#sp-cc-' + k, wrap); if (el) data[k] = el.value.trim(); });
 		btn.disabled = true;
@@ -6219,8 +6219,16 @@ function renderColorScheme(wrap, data) {
 	html += '</div>';
 	html += '</div>';
 
+	// Fine-tune: per-element color overrides on top of the generated scheme (wired by spWireOverrides).
+	html += '<div class="sp-card sp-settings-card"><h3 style="margin:0 0 4px;">Fine-tune elements</h3>'
+		+ '<p class="sp-help-text" style="margin:0 0 12px;">Optional. Override individual pieces of the generated scheme — each change previews instantly. Reset a row to return it to the generated color. Overrides survive re-generating the scheme.</p>'
+		+ '<div id="sp-color-overrides"></div>'
+		+ '<div style="margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-ov-save">Save overrides</button><button type="button" class="unique sp-btn sp-btn-ghost" id="sp-ov-reset-all">Reset all</button><span class="sp-help-text" id="sp-ov-status"></span></div>'
+		+ '</div>';
+
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
+	spWireOverrides(wrap, data);
 
 	// App icon — save the pasted Media URL; refresh the preview from the rebuilt icon.
 	const aiSave = $('#sp-appicon-save', wrap);
@@ -6370,6 +6378,180 @@ function renderColorScheme(wrap, data) {
 			if (res.success) { location.reload(); }
 			else { alert(res.data?.message || 'Error resetting.'); resetBtn.disabled = false; }
 		} catch (err) { alert('Error resetting.'); resetBtn.disabled = false; }
+	});
+}
+
+
+// Read a CSS custom property's computed value off :root ('' if unset).
+function spReadVar(tok) {
+	try { return getComputedStyle(document.documentElement).getPropertyValue(tok).trim(); } catch (e) { return ''; }
+}
+
+// Per-element color overrides: grouped rows (swatch + picker + reset) that layer on top of the
+// generated scheme, preview live on :root, and save to the color_overrides setting.
+function spWireOverrides(wrap, data) {
+	const host = $('#sp-color-overrides', wrap);
+	if (!host) return;
+	const root = document.documentElement;
+	const base = Object.assign({}, (data && data.override_base) || {});
+	const brand = ((data && data.brand) || []).map(spSanitizeHex).filter(Boolean);
+	let overrides = Object.assign({}, (data && data.overrides) || {});
+
+	if (!Object.keys(base).length) {
+		host.innerHTML = '<p class="sp-help-text" style="margin:0;">Generate &amp; save a color scheme above first — then you can fine-tune individual elements here.</p>';
+		return;
+	}
+
+	const GROUPS = [
+		{ col: 0, title: 'Sidebar', rows: [
+			['--sp-sidebar-bg', 'Background'], ['--sp-sidebar-text', 'Text'],
+			['--sp-nav-hover-bg', 'Item hover background'], ['--sp-nav-hover-text', 'Item hover text'],
+			['--sp-sidebar-active-bg', 'Active item background'], ['--sp-sidebar-active-text', 'Active item text'],
+		] },
+		{ col: 0, title: 'Cards', rows: [
+			['--sp-card-band', 'Header / footer background'], ['--sp-card-band-text', 'Header / footer text'],
+			['--sp-card-border', 'Border'], ['--sp-bg-white', 'Card background'], ['--sp-card-text', 'Body text'],
+		] },
+		{ col: 0, title: 'Tiles', rows: [
+			['--sp-tile-bg', 'Background'], ['--sp-tile-border', 'Border'],
+			['--sp-tile-value', 'Value text'], ['--sp-tile-label', 'Label text'],
+		] },
+		{ col: 0, title: 'Surfaces', rows: [
+			['--sp-accent-color', 'Accent (links & highlights)'], ['--sp-bg', 'Page background'],
+			['--sp-text', 'Body text'], ['--sp-border', 'Borders'],
+		] },
+		{ col: 1, title: 'Primary button', btn: 'sp-btn-primary', rows: [
+			['--sp-btn-bg', 'Background'], ['--sp-btn-border', 'Border'], ['--sp-btn-text', 'Text'],
+			['--sp-btn-bg-hover', 'Hover background'], ['--sp-btn-border-hover', 'Hover border'], ['--sp-btn-text-hover', 'Hover text'],
+		] },
+		{ col: 1, title: 'Secondary button', btn: 'sp-btn-secondary', rows: [
+			['--sp-btn2-bg', 'Background'], ['--sp-btn2-border', 'Border'], ['--sp-btn2-text', 'Text'],
+			['--sp-btn2-bg-hover', 'Hover background'], ['--sp-btn2-border-hover', 'Hover border'], ['--sp-btn2-text-hover', 'Hover text'],
+		] },
+		{ col: 1, title: 'Ghost button', btn: 'sp-btn-ghost', rows: [
+			['--sp-btn-ghost-text', 'Text & border'], ['--sp-btn-ghost-bg-hover', 'Hover background'], ['--sp-btn-ghost-text-hover', 'Hover text'],
+		] },
+	];
+
+	// token -> friendly label (first element that uses it), for naming in-use theme colors.
+	const tokLabel = {};
+	GROUPS.forEach((g) => g.rows.forEach((r) => { if (!tokLabel[r[0]]) tokLabel[r[0]] = g.title + ' · ' + r[1]; }));
+
+	// The "theme colors" swatch list, computed LIVE from current state: the company's brand colors
+	// (always, sticky) + every colour currently applied to an element. So a custom colour picked on
+	// one element is instantly reusable on another, and a colour nothing uses anymore drops off.
+	function computePalette() {
+		const out = [], seen = {};
+		const push = (hex, label) => {
+			hex = (spSanitizeHex(hex) || '').toLowerCase();
+			if (!hex || seen[hex]) return;
+			seen[hex] = true; out.push({ hex: hex, label: label });
+		};
+		const bl = ['Main color 1', 'Main color 2', 'Accent color'];
+		brand.forEach((h, i) => push(h, bl[i] || ('Company color ' + (i + 1))));
+		Object.keys(base).forEach((tok) => push(overrides[tok] || base[tok], tokLabel[tok] || 'In use'));
+		Object.keys(overrides).forEach((tok) => push(overrides[tok], tokLabel[tok] || 'Custom'));
+		return out;
+	}
+
+	const eff = (tok) => spSanitizeHex(overrides[tok] || base[tok] || spReadVar(tok)) || '#888888';
+
+	// Number key: each theme color gets a 1-based number (palette order); every element row shows the
+	// number of the colour it currently uses, so shared colours are obvious at a glance.
+	function paletteIndex() { const m = {}; computePalette().forEach((p, i) => { m[p.hex] = i + 1; }); return m; }
+	function palNum(hex) { return paletteIndex()[(spSanitizeHex(hex) || '').toLowerCase()] || ''; }
+	function repaintNumbers() {
+		const idx = paletteIndex();
+		$$('.sp-ov-item', host).forEach((it) => {
+			const n = $('.sp-ov-num', it);
+			if (n) n.textContent = idx[(spSanitizeHex(eff(it.getAttribute('data-token'))) || '').toLowerCase()] || '';
+		});
+	}
+
+	function rowHtml(tok, label) {
+		const val = eff(tok), isOv = !!overrides[tok];
+		return '<div class="sp-ov-item" data-token="' + tok + '" style="position:relative;">'
+			+ '<div class="sp-ov-row" style="display:flex;align-items:center;gap:9px;padding:5px 0;">'
+			+ '<button type="button" class="sp-ov-swatch" title="Change color" style="width:28px;height:24px;padding:0;border:1px solid var(--sp-border);border-radius:6px;cursor:pointer;flex:0 0 auto;background:' + val + ';"></button>'
+			+ '<span class="sp-ov-num" title="Theme color number" style="flex:0 0 auto;min-width:1.2em;text-align:center;font-size:0.74em;font-weight:700;color:var(--sp-text-light);">' + palNum(val) + '</span>'
+			+ '<span style="flex:1 1 auto;">' + esc(label) + '</span>'
+			+ '<code class="sp-ov-hex" style="font-size:0.76em;color:var(--sp-text-light);">' + val + '</code>'
+			+ '<button type="button" class="sp-ov-reset unique sp-btn sp-btn-ghost" style="padding:2px 7px;font-size:0.72em;' + (isOv ? '' : 'visibility:hidden;') + '">Reset</button>'
+			+ '</div>'
+			+ '<div class="sp-ov-pop" hidden style="position:absolute;z-index:20;left:0;top:100%;min-width:230px;padding:8px;border:1px solid var(--sp-border);border-radius:8px;background:var(--sp-bg-white);box-shadow:0 8px 24px rgba(0,0,0,0.14);"></div>'
+			+ '</div>';
+	}
+	function colHtml(colIdx) {
+		let h = '';
+		GROUPS.filter((g) => g.col === colIdx).forEach((g) => {
+			h += '<h4 style="margin:16px 0 6px;font-size:0.95em;font-weight:700;color:var(--sp-text);text-align:left;">' + esc(g.title) + '</h4>';
+			if (g.btn) h += '<div style="margin:0 0 8px;"><button type="button" class="unique sp-btn ' + g.btn + '">Test Me</button></div>';
+			g.rows.forEach((r) => { h += rowHtml(r[0], r[1]); });
+		});
+		return h;
+	}
+	host.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 40px;align-items:start;">'
+		+ '<div>' + colHtml(0) + '</div><div>' + colHtml(1) + '</div></div>';
+	markUniqueSpans(host);
+	repaintNumbers();
+
+	const preview = (tok, hex) => root.style.setProperty(tok, hex);
+	const unpreview = (tok) => { if (base[tok]) root.style.setProperty(tok, base[tok]); else root.style.removeProperty(tok); };
+
+	function applyColor(item, tok, hex) {
+		hex = spSanitizeHex(hex) || hex;
+		overrides[tok] = hex;
+		$('.sp-ov-swatch', item).style.background = hex;
+		$('.sp-ov-hex', item).textContent = hex;
+		$('.sp-ov-reset', item).style.visibility = 'visible';
+		preview(tok, hex);
+		repaintNumbers();
+	}
+	function closePops() { $$('.sp-ov-pop', host).forEach((p) => { p.hidden = true; }); }
+	function buildPop(item, tok) {
+		const pop = $('.sp-ov-pop', item);
+		let ph = '<div style="font-size:0.72em;font-weight:700;color:var(--sp-text-secondary);margin-bottom:5px;">THEME COLORS</div><div style="display:flex;flex-wrap:wrap;gap:5px;">';
+		computePalette().forEach((p, i) => { ph += '<span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px;"><button type="button" class="sp-ov-pal" data-hex="' + p.hex + '" title="' + esc(p.label) + ' (' + p.hex + ')" style="width:24px;height:24px;border:1px solid var(--sp-border);border-radius:5px;cursor:pointer;background:' + p.hex + ';"></button><span style="font-size:0.66em;font-weight:700;color:var(--sp-text-light);line-height:1;">' + (i + 1) + '</span></span>'; });
+		ph += '</div><label style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:0.8em;color:var(--sp-text-secondary);cursor:pointer;">Custom color <input type="color" class="sp-ov-custom" value="' + (spSanitizeHex(eff(tok)) || '#888888') + '" style="width:34px;height:24px;padding:0;border:1px solid var(--sp-border);border-radius:5px;background:none;cursor:pointer;"></label>';
+		pop.innerHTML = ph;
+		$$('.sp-ov-pal', pop).forEach((sw) => sw.addEventListener('click', () => { applyColor(item, tok, sw.getAttribute('data-hex')); closePops(); }));
+		$('.sp-ov-custom', pop).addEventListener('input', (e) => applyColor(item, tok, e.target.value));
+	}
+
+	$$('.sp-ov-item', host).forEach((item) => {
+		const tok = item.getAttribute('data-token');
+		$('.sp-ov-swatch', item).addEventListener('click', (e) => {
+			e.stopPropagation();
+			const pop = $('.sp-ov-pop', item), wasOpen = !pop.hidden;
+			closePops();
+			if (!wasOpen) { buildPop(item, tok); pop.hidden = false; }
+		});
+		$('.sp-ov-reset', item).addEventListener('click', () => {
+			delete overrides[tok]; unpreview(tok);
+			const b = spSanitizeHex(base[tok]) || '#888888';
+			$('.sp-ov-swatch', item).style.background = b;
+			$('.sp-ov-hex', item).textContent = b;
+			$('.sp-ov-reset', item).style.visibility = 'hidden';
+			repaintNumbers();
+			closePops();
+		});
+	});
+	host.addEventListener('click', (e) => { if (!e.target.closest('.sp-ov-item')) closePops(); });
+
+	const saveBtn = $('#sp-ov-save', wrap), st = $('#sp-ov-status', wrap);
+	saveBtn && saveBtn.addEventListener('click', async () => {
+		saveBtn.disabled = true; if (st) st.textContent = 'Saving…';
+		try {
+			const res = await spAjax('site_pulse_admin_save_color_overrides', { overrides: JSON.stringify(overrides) });
+			if (st) st.textContent = res.success ? '✓ Saved' : (res.data && res.data.message || 'Error.');
+		} catch (e) { if (st) st.textContent = 'Error saving.'; }
+		saveBtn.disabled = false;
+	});
+	const resetAll = $('#sp-ov-reset-all', wrap);
+	resetAll && resetAll.addEventListener('click', () => {
+		Object.keys(overrides).forEach((tok) => unpreview(tok));
+		spWireOverrides(wrap, { override_base: base, overrides: {}, brand: brand });
+		if (st) st.textContent = 'Reset — click Save overrides to keep it.';
 	});
 }
 
@@ -9081,25 +9263,71 @@ function initAgencyReviews() {
 	});
 }
 
+let _spAgencyRefreshing = false;
+
 async function loadAgencyReviews(force = false) {
 	const list = $('#sp-agency-reviews-list');
 	if (!list) return;
-	if (spAgencyLoaded && !force) { renderAgencyReviews(); return; }
 
-	list.innerHTML = '<div class="sp-loading"></div>';
-	try {
-		const res = await spAjax('site_pulse_get_agency_reviews', force ? { refresh: 1 } : {});
-		if (!res.success) {
-			list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load client reviews.')}</div>`;
+	// First open loads the client list from CACHE — one cheap call, no live upstream pulls — so the
+	// panel paints instantly. (Returning to an already-loaded panel just re-renders.)
+	if (!spAgencyLoaded) {
+		list.innerHTML = '<div class="sp-loading"></div>';
+		try {
+			const res = await spAjax('site_pulse_get_agency_reviews', {});
+			if (!res.success) {
+				list.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load client reviews.')}</div>`;
+				return;
+			}
+			spAgencyClients = res.data.clients || [];
+			spAgencyLoaded = true;
+			populateAgencyClientFilter();
+			renderAgencyReviews();
+		} catch (e) {
+			list.innerHTML = '<div class="sp-empty">Error loading client reviews.</div>';
 			return;
 		}
-		spAgencyClients = res.data.clients || [];
-		spAgencyLoaded = true;
-		populateAgencyClientFilter();
+	} else if (!force) {
 		renderAgencyReviews();
-	} catch (e) {
-		list.innerHTML = '<div class="sp-empty">Error loading client reviews.</div>';
 	}
+
+	// Refresh re-pulls every client LIVE, one request each, so a single click covers everyone. (The old
+	// all-at-once refresh could only reach a handful of companies before the server request timed out —
+	// which is why so many showed blank.)
+	if (force) await refreshAgencyClientsStepped();
+}
+
+// Walk every client, live-refreshing ONE per request. Each card updates the moment its fetch returns,
+// with a running "Refreshing X/Y" on the button. A slow or broken client (e.g. a dead Facebook token)
+// only slows itself — it can't starve the rest, which was the whole problem with the budgeted bulk pull.
+async function refreshAgencyClientsStepped() {
+	if (_spAgencyRefreshing) return;
+	_spAgencyRefreshing = true;
+	const btn   = $('#sp-agency-reviews-refresh-btn');
+	const label = btn ? btn.textContent : '';
+	if (btn) btn.disabled = true;
+
+	const keys = spAgencyClients.map(c => c.site_key);
+	let done = 0;
+	const tick = () => { if (btn) btn.textContent = `Refreshing ${done}/${keys.length}…`; };
+	tick();
+
+	for (const key of keys) {
+		try {
+			const res = await spAjax('site_pulse_refresh_agency_client', { site_key: key });
+			if (res.success && res.data.client) {
+				const i = spAgencyClients.findIndex(c => c.site_key === key);
+				if (i >= 0) spAgencyClients[i] = res.data.client; else spAgencyClients.push(res.data.client);
+				renderAgencyReviews(false); // repaint with the newly-arrived reviews, keeping scroll position
+			}
+		} catch (e) { /* one client's failure can't stall the sweep */ }
+		done++;
+		tick();
+	}
+
+	if (btn) { btn.disabled = false; btn.textContent = label || 'Refresh'; }
+	_spAgencyRefreshing = false;
+	spFlash('Reviews refreshed');
 }
 
 // Type-to-search the client list: matches the typed company name (exact, or a unique partial) to a
@@ -15252,15 +15480,7 @@ async function loadAdminMileage() {
 		secRates += `<input type="number" step="0.01" min="0" max="5" id="sp-mileage-rate-input" class="sp-input" value="${rate.toFixed(2)}">`;
 		secRates += '<label title="Extra $/mile paid on legs where a trailer is pulled. Set 0 to disable.">Trailer rate (+$/mile)</label>';
 		secRates += `<input type="number" step="0.01" min="0" max="5" id="sp-mileage-trailer-rate-input" class="sp-input" value="${trailerRate.toFixed(2)}">`;
-		secRates += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-recompute">Recompute All Distances</button>';
-		secRates += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-import-btn">Import Destinations</button>';
-		if (D.isGod) {
-			secRates += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-test-api">Test Google API</button>';
-		}
 		secRates += '</div>';
-		if (D.isGod) {
-			secRates += '<div id="sp-mileage-api-test-result" class="sp-mileage-api-test" hidden></div>';
-		}
 		secRates += cardEnd;
 
 		// Pay periods — drives the report's "Jump to period" menu. Length 0 = calendar months.
@@ -15302,7 +15522,9 @@ async function loadAdminMileage() {
 		secNewDest += '</div>';
 		secNewDest += cardEnd;
 
-		const destActions = '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-geocode-missing" title="Add map coordinates to any destinations that are missing them (e.g. the seeded restaurants)">Geocode Missing</button>'
+		// Import sits with the destination list it adds to, next to the other list-level actions.
+		const destActions = '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-import-btn">Import Destinations</button>'
+			+ '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-geocode-missing" title="Add map coordinates to any destinations that are missing them (e.g. the seeded restaurants)">Geocode Missing</button>'
 			+ '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-dest">+ Add Destination</button>';
 		let secDest = card('Destinations', destActions);
 
@@ -15402,11 +15624,22 @@ async function loadAdminMileage() {
 		secToll += '</div>';
 		secToll += cardEnd;
 
-		// Distance matrix (lazy-rendered on demand — can be a large grid).
-		let secMatrix = card('Distance Matrix');
-		secMatrix += '<p class="sp-text-secondary">Cached miles between approved locations. Click a cell to set a manual value; blue = from Google, green = manual, grey = not computed yet.</p>';
+		// Distance matrix (lazy-rendered on demand — can be a large grid). Everything that fills or
+		// diagnoses the grid lives on this card's header, beside the grid it acts on.
+		let matrixActions = '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-recompute" title="Ask Google for every missing pair, and geocode any destination without map coordinates">Recompute All Distances</button>'
+			+ '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-find-dupes" title="Find destinations that are really the same place, and merge them">Find Duplicates</button>';
+		if (D.isGod) {
+			matrixActions += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-test-api">Test Google API</button>';
+		}
+		let secMatrix = card('Distance Matrix', matrixActions);
+		secMatrix += '<p class="sp-text-secondary">Cached miles between approved locations. Click any cell to set a manual value. Row and column headers stay pinned as you scroll — hover a truncated name to see it in full.</p>';
+		secMatrix += '<p class="sp-matrix-legend"><b class="sp-matrix-key sp-matrix-api"></b> calculated by Google <b class="sp-matrix-key sp-matrix-manual"></b> manual override <b class="sp-matrix-key sp-matrix-missing"></b> not computed yet</p>';
 		secMatrix += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-matrix-toggle">Show matrix</button>';
 		secMatrix += '<div class="sp-mileage-matrix-wrap" id="sp-mileage-matrix" hidden></div>';
+		if (D.isGod) {
+			secMatrix += '<div id="sp-mileage-api-test-result" class="sp-mileage-api-test" hidden></div>';
+		}
+		secMatrix += '<div id="sp-mileage-dupes" class="sp-dupe-results" hidden></div>';
 		secMatrix += cardEnd;
 
 		// Purpose library editor
@@ -15837,13 +16070,54 @@ async function loadAdminMileage() {
 		});
 
 		$('#sp-mileage-recompute', wrap)?.addEventListener('click', async (e) => {
+			// The server handles a few locations per request (two Google round trips each), so walk the
+			// batches here rather than asking it to do the whole list in one shot and time out mid-run.
+			const btn = e.target;
+			btn.disabled = true;
+			btn.textContent = 'Computing…';
+
+			let offset = 0, added = 0, geocoded = 0, failed = 0, apiError = '', error = '', guard = 0;
+			for (;;) {
+				const r = await spAjax('site_pulse_admin_recompute_mileage_distances', { offset });
+				if (!r.success) { error = r.data?.message || 'Error.'; break; }
+				added += r.data.distances_added;
+				geocoded += r.data.geocoded;
+				failed += r.data.failed || 0;
+				if (r.data.error) apiError = r.data.error;
+				offset = r.data.next_offset;
+				btn.textContent = `Computing… ${offset}/${r.data.total}`;
+				if (r.data.done || ++guard > 500) break;
+			}
+
+			btn.disabled = false;
+			btn.textContent = 'Recompute All Distances';
+			if (error) { alert(error); return; }
+
+			// A run that stores nothing used to look like "everything was already up to date". Say so
+			// when Google actually rejected the calls, and quote its reason.
+			let msg = `${added} distance${added === 1 ? '' : 's'} stored across ${offset} location${offset === 1 ? '' : 's'}.`;
+			if (geocoded) msg += `\n${geocoded} location${geocoded === 1 ? '' : 's'} geocoded.`;
+			if (failed) {
+				msg += `\n\n⚠ Google returned no distances for ${failed} location${failed === 1 ? '' : 's'}.`;
+				if (apiError) msg += `\nGoogle said: ${apiError}`;
+				msg += '\n\nUse "Test Google API" on this card to check the key and that the Routes API is enabled.';
+			}
+			alert(msg);
+
+			const box = $('#sp-mileage-matrix', wrap);
+			if (box && !box.hidden) renderMileageMatrix(box);
+		});
+
+		$('#sp-mileage-find-dupes', wrap)?.addEventListener('click', async (e) => {
+			const box = $('#sp-mileage-dupes', wrap);
+			if (!box) return;
 			e.target.disabled = true;
-			e.target.textContent = 'Computing…';
-			const r = await spAjax('site_pulse_admin_recompute_mileage_distances', {});
+			box.hidden = false;
+			box.innerHTML = '<div class="sp-loading"></div>';
+			const r = await spAjax('site_pulse_admin_find_mileage_duplicates', {});
 			e.target.disabled = false;
-			e.target.textContent = 'Recompute All Distances';
-			if (r.success) alert(`${r.data.distances_added} distances stored across ${r.data.locations_processed} locations.`);
-			else alert(r.data?.message || 'Error.');
+			if (!r.success) { box.innerHTML = '<p class="sp-text-warning">Could not check for duplicates.</p>'; return; }
+			renderMileageDuplicates(box, r.data.groups || []);
 		});
 
 		$('#sp-mileage-test-api', wrap)?.addEventListener('click', async (e) => {
@@ -16032,6 +16306,92 @@ function showImportDestinationsModal(existingLocs, onSaved) {
 	});
 }
 
+// Duplicate destinations, grouped, with the survivor chosen per group. Merging rewrites trip
+// history onto the kept record, so the choice is always explicit — never a bulk "merge all".
+function renderMileageDuplicates(box, groups) {
+	if (!groups.length) {
+		box.innerHTML = '<p class="sp-text-secondary">No duplicate destinations found.</p>';
+		return;
+	}
+
+	// Default to the record most expensive to lose: the one carrying the store link (home-base
+	// resolution runs through it), then the one with the most trip history, then the original.
+	const bestOf = (rows) => rows.slice().sort((a, b) =>
+		(b.store_linked - a.store_linked) || (b.legs - a.legs) || (a.id - b.id))[0];
+
+	let html = `<p class="sp-text-secondary">${groups.length} possible duplicate set${groups.length === 1 ? '' : 's'} found. Pick the record to <strong>keep</strong> in each set — the others are folded into it, carrying their trips, cached miles and home-base assignments with them.</p>`;
+
+	groups.forEach((rows, gi) => {
+		const keep = bestOf(rows);
+		html += `<div class="sp-dupe-group" data-group="${gi}">`;
+		rows.forEach(r => {
+			const tags = [];
+			if (r.store_linked) tags.push('linked to a store');
+			if (r.is_private) tags.push('private home');
+			if (r.status !== 'approved') tags.push(esc(r.status));
+			if (!r.geocoded) tags.push('not geocoded');
+			if (r.legs) tags.push(`${r.legs} trip leg${r.legs === 1 ? '' : 's'}`);
+			if (r.home_for) tags.push(`home base for ${r.home_for}`);
+			html += `<label class="sp-dupe-option">
+				<input type="radio" name="sp-dupe-keep-${gi}" value="${r.id}"${r.id === keep.id ? ' checked' : ''}>
+				<b class="sp-dupe-name">${esc(r.name)}</b>
+				<small class="sp-dupe-addr">${esc(r.address || 'No address')}</small>
+				${tags.length ? `<small class="sp-dupe-tags">${tags.join(' · ')}</small>` : ''}
+			</label>`;
+		});
+		html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-dupe-merge" data-group="${gi}">Merge this set</button>`;
+		html += '</div>';
+	});
+
+	box.innerHTML = html;
+	markUniqueSpans(box);
+
+	$$('.sp-dupe-merge', box).forEach(btn => btn.addEventListener('click', async () => {
+		const gi = btn.dataset.group;
+		const rows = groups[gi];
+		const picked = box.querySelector(`input[name="sp-dupe-keep-${gi}"]:checked`);
+		if (!picked) { alert('Pick which record to keep.'); return; }
+
+		const survivorId = parseInt(picked.value, 10);
+		const survivor = rows.find(r => r.id === survivorId);
+		const losers = rows.filter(r => r.id !== survivorId);
+		const legs = losers.reduce((n, r) => n + r.legs, 0);
+
+		const ok = confirm(
+			`Keep "${survivor.name}" and merge ${losers.length} other record${losers.length === 1 ? '' : 's'} into it:\n\n` +
+			losers.map(r => `  • ${r.name}`).join('\n') +
+			`\n\n${legs} trip leg${legs === 1 ? '' : 's'} will be repointed to "${survivor.name}". This cannot be undone.`
+		);
+		if (!ok) return;
+
+		btn.disabled = true;
+		btn.textContent = 'Merging…';
+		const r = await spAjax('site_pulse_admin_merge_mileage_locations', {
+			survivor_id: survivorId,
+			loser_ids: losers.map(l => l.id),
+		});
+		if (!r.success) {
+			alert(r.data?.message || 'Error.');
+			btn.disabled = false;
+			btn.textContent = 'Merge this set';
+			return;
+		}
+
+		const d = r.data;
+		alert(`Merged ${d.merged} record${d.merged === 1 ? '' : 's'} into "${d.survivor}".\n` +
+			`${d.legs_repointed} trip leg${d.legs_repointed === 1 ? '' : 's'} repointed, ` +
+			`${d.entries_recalced} day${d.entries_recalced === 1 ? '' : 's'} recalculated.`);
+
+		// Re-detect rather than patching the DOM — the merge may have collapsed other sets too.
+		box.innerHTML = '<div class="sp-loading"></div>';
+		const again = await spAjax('site_pulse_admin_find_mileage_duplicates', {});
+		renderMileageDuplicates(box, again.success ? (again.data.groups || []) : []);
+
+		const matrix = $('#sp-mileage-matrix');
+		if (matrix && !matrix.hidden) renderMileageMatrix(matrix);
+	}));
+}
+
 // Renders the editable distance-matrix grid into `box`.
 async function renderMileageMatrix(box) {
 	box.innerHTML = '<div class="sp-loading"></div>';
@@ -16044,17 +16404,20 @@ async function renderMileageMatrix(box) {
 
 	const key = (a, b) => (a <= b ? `${a}-${b}` : `${b}-${a}`);
 
-	let html = '<table class="sp-table sp-matrix-table"><thead class="sp-thead"><tr><th></th>';
-	locs.forEach(c => { html += `<th title="${esc(c.name)}">${esc(c.name)}</th>`; });
+	let html = '<table class="sp-table sp-matrix-table"><thead class="sp-thead"><tr><th class="sp-matrix-corner"></th>';
+	locs.forEach(c => { html += `<th scope="col" title="${esc(c.name)}">${esc(c.name)}</th>`; });
 	html += '</tr></thead><tbody>';
 	locs.forEach(rLoc => {
-		html += `<tr><th title="${esc(rLoc.name)}">${esc(rLoc.name)}</th>`;
+		html += `<tr><th scope="row" class="sp-matrix-rowhead" title="${esc(rLoc.name)}">${esc(rLoc.name)}</th>`;
 		locs.forEach(cLoc => {
 			if (rLoc.id === cLoc.id) { html += '<td class="sp-matrix-self">—</td>'; return; }
 			const d = dist[key(parseInt(rLoc.id), parseInt(cLoc.id))];
 			const cls = !d ? 'sp-matrix-missing' : (d.source === 'manual' ? 'sp-matrix-manual' : 'sp-matrix-api');
 			const val = d ? d.miles.toFixed(1) : '+';
-			html += `<td class="sp-matrix-cell ${cls}" data-from="${rLoc.id}" data-to="${cLoc.id}" data-from-name="${esc(rLoc.name)}" data-to-name="${esc(cLoc.name)}" data-miles="${d ? d.miles : ''}">${val}</td>`;
+			const tip = d
+				? `${rLoc.name} ↔ ${cLoc.name}: ${d.miles.toFixed(1)} mi (${d.source === 'manual' ? 'manual' : 'Google'})`
+				: `${rLoc.name} ↔ ${cLoc.name}: not computed yet — click to enter manually`;
+			html += `<td class="sp-matrix-cell ${cls}" title="${esc(tip)}" data-from="${rLoc.id}" data-to="${cLoc.id}" data-from-name="${esc(rLoc.name)}" data-to-name="${esc(cLoc.name)}" data-miles="${d ? d.miles : ''}">${val}</td>`;
 		});
 		html += '</tr>';
 	});

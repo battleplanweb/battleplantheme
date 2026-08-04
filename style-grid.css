@@ -398,6 +398,9 @@ section.section-parallax-disabled section.section-default .flex {
 	grid-column:                                               default-start / default-end;
 }
 
+/* .flex.nested is @deprecated with the [nested] shortcode (2026-08-02) — kept
+   only for Bubba's / Goot Bros / GuttenBoy legacy content. Drop this selector
+   when those three are re-authored and the shortcode is deleted. */
 section.section .flex.nested .flex,
 .flex .col,
 .span-1 {

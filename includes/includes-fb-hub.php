@@ -101,11 +101,11 @@ class BPFB_Hub {
 	 * GET a Graph API path. Throws on any Graph error with a "(code) message" string — so callers can
 	 * surface the EXACT Meta response (e.g. "(12) ... has been deprecated").
 	 */
-	private static function graph_get( $path, $params, $token ) {
+	private static function graph_get( $path, $params, $token, $timeout = 20 ) {
 		$params['access_token'] = $token;
 		$url = 'https://graph.facebook.com/' . self::graph_version() . '/' . ltrim( $path, '/' )
 			. '?' . http_build_query( $params );
-		$res = wp_remote_get( $url, array( 'timeout' => 20 ) );
+		$res = wp_remote_get( $url, array( 'timeout' => (int) $timeout ) );
 		if ( is_wp_error( $res ) ) throw new Exception( $res->get_error_message() );
 		$code = (int) wp_remote_retrieve_response_code( $res );
 		$body = json_decode( wp_remote_retrieve_body( $res ), true );
@@ -505,10 +505,12 @@ class BPFB_Hub {
 	public static function fetch_reviews( $page_id, $limit = 50 ) {
 		$token = self::page_token( $page_id );
 		if ( ! $token ) throw new Exception( 'No access token stored for that Page — reconnect.' );
+		// 8s, not the default 20: the agency Refresh pulls this per client, and a dead/slow Page token
+		// should fail fast so it only briefly slows its own client instead of dragging the sweep.
 		$resp = self::graph_get( (string) $page_id . '/ratings', array(
 			'fields' => 'created_time,recommendation_type,review_text,reviewer{name,id}',
 			'limit'  => max( 1, (int) $limit ),
-		), $token );
+		), $token, 8 );
 		$out = array();
 		foreach ( ( $resp['data'] ?? array() ) as $r ) $out[] = self::normalize_rating( $r );
 		return $out;

@@ -39,7 +39,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-customer-
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.59' );
+define( 'SITE_PULSE_DB_VERSION', '1.60' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -308,7 +308,7 @@ function site_pulse_install_db(): void {
 	$sql .= "CREATE TABLE " . site_pulse_table('config') . " (
 		id int(11) NOT NULL AUTO_INCREMENT,
 		config_key varchar(100) NOT NULL,
-		config_value text DEFAULT NULL,
+		config_value longtext DEFAULT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY config_key (config_key)
 	) $charset;";
@@ -756,6 +756,22 @@ add_action( 'init', function() {
 		update_option( 'site_pulse_mileage_seeded', '1' );
 	}
 
+	// One-time: widen config_value TEXT → LONGTEXT. dbDelta doesn't reliably issue MODIFY for a
+	// TEXT→LONGTEXT change, and this is the fix for large JSON values (agency review cache + the
+	// "dismissed reviews" list) truncating at TEXT's 64KB cap and corrupting. Guarded + type-checked.
+	if ( ! get_option( 'site_pulse_config_longtext' ) ) {
+		global $wpdb;
+		$tbl  = site_pulse_table( 'config' );
+		$type = $wpdb->get_var( $wpdb->prepare(
+			"SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'config_value'",
+			$tbl
+		) );
+		if ( $type && strtolower( (string) $type ) !== 'longtext' ) {
+			$wpdb->query( "ALTER TABLE $tbl MODIFY config_value LONGTEXT DEFAULT NULL" );
+		}
+		update_option( 'site_pulse_config_longtext', '1' );
+	}
+
 	// One-time: drop the retired alcohol-detection column. The feature (scanner flagging + badges)
 	// was removed for too many false positives; dbDelta never drops columns, so retire it explicitly.
 	// Self-guards on its own flag and checks the column exists first.
@@ -903,9 +919,18 @@ function site_pulse_seed_mileage_locations(): void {
 	$now = current_time( 'mysql' );
 	foreach ( $restaurants as $r ) {
 		$address_parts = array_filter( [ $r['address'], $r['city'], $r['state'] ] );
+		$address       = implode( ', ', $address_parts );
+		// Geocode as we seed. These rows are born 'approved', so they never pass through
+		// site_pulse_mileage_approve_location() — without this they sit with NULL coordinates and
+		// stay off the route map. Distances are NOT computed here (that's two Routes calls per stop,
+		// far too slow for an install hook); the batched Recompute All Distances fills them, and the
+		// JIT path covers any stop a driver reaches first.
+		$geo = site_pulse_mileage_geocode( $address );
 		$wpdb->insert( site_pulse_table('mileage_locations'), [
 			'name'                   => $r['name'],
-			'address'                => implode( ', ', $address_parts ),
+			'address'                => $address,
+			'lat'                    => $geo['lat'] ?? null,
+			'lng'                    => $geo['lng'] ?? null,
 			'location_type'          => 'restaurant',
 			'site_pulse_location_id' => (int) $r['id'],
 			'status'                 => 'approved',
@@ -946,12 +971,31 @@ function site_pulse_sync_mileage_location_for_store( int $store_id ): void {
 	if ( $existing ) {
 		// Keep the linked stop in step with the store, and make sure it's approved so home-base
 		// resolution (which filters on status='approved') actually finds it.
+		$prev = $wpdb->get_row( $wpdb->prepare(
+			"SELECT address, lat, lng FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d",
+			$existing
+		), ARRAY_A );
+		$moved = ! $prev || (string) $prev['address'] !== $address;
+
 		$wpdb->update( site_pulse_table('mileage_locations'), [
 			'name'       => $loc['name'],
 			'address'    => $address,
 			'status'     => 'approved',
 			'updated_at' => $now,
 		], [ 'id' => $existing ] );
+
+		// A store that moved keeps its old coordinates and its old cached mileage until something
+		// clears them, so re-ask Google rather than reimbursing against the previous address.
+		if ( $moved ) {
+			$wpdb->update( site_pulse_table('mileage_locations'),
+				[ 'lat' => null, 'lng' => null ],
+				[ 'id' => $existing ]
+			);
+			site_pulse_mileage_clear_api_distances( $existing );
+		}
+		if ( $moved || $prev['lat'] === null || $prev['lng'] === null ) {
+			site_pulse_mileage_prepare_location( $existing );
+		}
 		return;
 	}
 
@@ -966,6 +1010,10 @@ function site_pulse_sync_mileage_location_for_store( int $store_id ): void {
 		'created_at'             => $now,
 		'updated_at'             => $now,
 	] );
+
+	// Born 'approved', so the admin approve flow never runs for it — geocode and price it here or the
+	// stop lands with no coordinates and an empty row in the distance matrix.
+	site_pulse_mileage_prepare_location( (int) $wpdb->insert_id );
 }
 
 /**
@@ -6246,7 +6294,16 @@ function site_pulse_oklch_secondary_ramp( string $srcHex ): array {
  */
 function site_pulse_oklch_accent_ramp( string $srcHex ): array {
 	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	$C0 = min( max( $C0, 0.10 ), 0.45 );
+	// A near-achromatic input (silver/grey/black/white) has no real hue — atan2() on the sRGB→OKLab
+	// matrix's floating-point residue invents one (pure grey lands near hue 90° = GOLD). So only floor
+	// chroma up to "vivid" for colors that genuinely have some; a neutral accent stays neutral (silver
+	// stays a silver pop, not gold). Threshold 0.02 in OKLCH chroma ≈ visually colorless.
+	if ( $C0 < 0.02 ) {
+		$H  = 0.0;                       // hue is meaningless at ~0 chroma; pin it so it isn't noise
+		$C0 = min( $C0, 0.02 );          // keep it a true neutral
+	} else {
+		$C0 = min( max( $C0, 0.10 ), 0.45 );
+	}
 	$Lc = max( 0.50, min( 0.76, $L0 ) );
 	return [
 		'lightest' => site_pulse_oklch_to_hex( 0.95, $C0 * 0.35, $H ),
@@ -6305,6 +6362,44 @@ function site_pulse_build_color_scheme( array $colors ): array {
 	$vars['--sp-warning-light'] = site_pulse_color_mix_white( '#c77d18', 0.90 );
 	$vars['--sp-danger']        = '#d0432f';
 	$vars['--sp-danger-light']  = site_pulse_color_mix_white( '#d0432f', 0.90 );
+
+	// Element-level tokens — each defaults to a generated family value, but is individually
+	// overridable in Settings → Site Defaults (the override rows). The CSS reads them as
+	// var(--sp-btn-bg, <family value>), so an override changes ONLY that element, no override
+	// looks identical to today, and pre-override saved schemes still resolve via the fallback.
+	$vars['--sp-btn-bg']              = $vars['--sp-primary-color'];
+	$vars['--sp-btn-border']          = $vars['--sp-primary-color'];
+	$vars['--sp-btn-text']            = $vars['--sp-primary-contrast'];
+	$vars['--sp-btn-bg-hover']        = $vars['--sp-primary-light'];
+	$vars['--sp-btn-border-hover']    = $vars['--sp-primary-darkest'];
+	$vars['--sp-btn-text-hover']      = $vars['--sp-primary-contrast'];
+	$vars['--sp-sidebar-bg']          = $vars['--sp-primary-color'];
+	$vars['--sp-sidebar-text']        = $vars['--sp-primary-contrast'];
+	$vars['--sp-sidebar-active-bg']   = $vars['--sp-accent-color'];
+	$vars['--sp-sidebar-active-text'] = $vars['--sp-accent-contrast'];
+	$vars['--sp-nav-hover-bg']        = $vars['--sp-primary-dark'];
+	$vars['--sp-nav-hover-text']      = $vars['--sp-primary-contrast'];
+	// Secondary + ghost buttons (default from the accent family, matching the current stylesheet).
+	$vars['--sp-btn2-bg']             = $vars['--sp-accent-lightest'];
+	$vars['--sp-btn2-border']         = $vars['--sp-accent-light'];
+	$vars['--sp-btn2-text']           = $vars['--sp-accent-color'];
+	$vars['--sp-btn2-bg-hover']       = $vars['--sp-accent-lightest'];
+	$vars['--sp-btn2-border-hover']   = $vars['--sp-accent-light'];
+	$vars['--sp-btn2-text-hover']     = $vars['--sp-accent-darkest'];
+	$vars['--sp-btn-ghost-text']      = $vars['--sp-accent-color'];
+	$vars['--sp-btn-ghost-bg-hover']  = $vars['--sp-accent-lightest'];
+	$vars['--sp-btn-ghost-text-hover'] = $vars['--sp-accent-dark'];
+	// Cards — separate controls for the header/footer/thead band background (card tops & bottoms,
+	// table headers, the review "Owner reply" strip) and the card outline.
+	$vars['--sp-card-band']           = $vars['--sp-secondary-lightest'];
+	$vars['--sp-card-border']         = $vars['--sp-secondary-color'];
+	$vars['--sp-card-text']           = $vars['--sp-text'];
+	$vars['--sp-card-band-text']      = $vars['--sp-secondary-darkest'];
+	// Stat tiles.
+	$vars['--sp-tile-bg']             = $vars['--sp-secondary-lightest'];
+	$vars['--sp-tile-border']         = $vars['--sp-secondary-dark'];
+	$vars['--sp-tile-value']          = $vars['--sp-secondary-darkest'];
+	$vars['--sp-tile-label']          = $vars['--sp-secondary-darkest'];
 
 	return site_pulse_enforce_contrast( $vars );
 }
@@ -6614,18 +6709,161 @@ function site_pulse_saved_brand_colors(): array {
 	return array_slice( $out, 0, 3 );
 }
 
-/** The active CSS-variable map: the saved AI scheme, else a legacy per-role scheme, else none. */
-function site_pulse_color_active_vars(): array {
-	// The saved scheme (the AI-tuned map) is the source of truth — AI can't run on every page load,
-	// so the chosen scheme is stored at Save time. If none is stored but company colors are, fall
-	// back to the deterministic build; with neither, the stylesheet :root defaults stand.
+/**
+ * The scheme map BEFORE per-element overrides: the saved scheme (AI-tuned map, stored at Save time
+ * because AI can't run on every load), else the deterministic build from the company colors, else
+ * none (stylesheet :root defaults stand). This is the "generated" baseline the override rows reset to.
+ */
+function site_pulse_color_base_vars(): array {
 	$raw = (string) site_pulse_get_setting( 'color_vars', '' );
+	$vars = [];
 	if ( $raw !== '' ) {
 		$decoded = json_decode( $raw, true );
-		if ( is_array( $decoded ) && $decoded ) return site_pulse_enforce_contrast( $decoded );
+		if ( is_array( $decoded ) && $decoded ) $vars = $decoded;
 	}
-	$brand = site_pulse_saved_brand_colors();
-	return $brand ? site_pulse_build_color_scheme( $brand ) : [];
+	if ( ! $vars ) {
+		$brand = site_pulse_saved_brand_colors();
+		$vars  = $brand ? site_pulse_build_color_scheme( $brand ) : [];
+	}
+	return $vars ? site_pulse_enforce_contrast( $vars ) : [];
+}
+
+/** The tokens the per-element override UI is allowed to set (element tokens + a few surfaces). */
+function site_pulse_color_override_tokens(): array {
+	return [
+		'--sp-sidebar-bg', '--sp-sidebar-text', '--sp-sidebar-active-bg', '--sp-sidebar-active-text', '--sp-nav-hover-bg', '--sp-nav-hover-text',
+		'--sp-btn-bg', '--sp-btn-border', '--sp-btn-text', '--sp-btn-bg-hover', '--sp-btn-border-hover', '--sp-btn-text-hover',
+		'--sp-btn2-bg', '--sp-btn2-border', '--sp-btn2-text', '--sp-btn2-bg-hover', '--sp-btn2-border-hover', '--sp-btn2-text-hover',
+		'--sp-btn-ghost-text', '--sp-btn-ghost-bg-hover', '--sp-btn-ghost-text-hover',
+		'--sp-accent-color', '--sp-bg', '--sp-bg-white', '--sp-text', '--sp-border', '--sp-card-band', '--sp-card-border',
+		'--sp-card-text', '--sp-card-band-text',
+		'--sp-tile-bg', '--sp-tile-border', '--sp-tile-value', '--sp-tile-label',
+	];
+}
+
+/** The saved per-element overrides (token => hex), validated against the allow-list. */
+function site_pulse_color_overrides(): array {
+	$raw = (string) site_pulse_get_setting( 'color_overrides', '' );
+	$map = $raw !== '' ? json_decode( $raw, true ) : [];
+	if ( ! is_array( $map ) ) return [];
+	$allowed = site_pulse_color_override_tokens();
+	$out = [];
+	foreach ( $map as $k => $v ) {
+		if ( ! in_array( (string) $k, $allowed, true ) ) continue;
+		$hex = site_pulse_sanitize_hex( (string) $v );
+		if ( $hex !== '' ) $out[ (string) $k ] = $hex;
+	}
+	return $out;
+}
+
+/** The active CSS-variable map = the generated base with the per-element overrides layered LAST. */
+function site_pulse_color_active_vars(): array {
+	$vars = site_pulse_color_base_vars();
+	if ( ! $vars ) return [];
+	// Overrides win over the generated scheme AND the auto-contrast guard — a manual pick is final.
+	foreach ( site_pulse_color_overrides() as $k => $v ) {
+		$vars[ $k ] = $v;
+	}
+	return $vars;
+}
+
+/** Each override token's GENERATED value (for the swatch + reset), using family fallbacks for the
+ *  element tokens so it works even on schemes saved before those tokens existed. */
+function site_pulse_color_override_base(): array {
+	$base = site_pulse_color_base_vars();
+	if ( ! $base ) return [];
+	$fallback = [
+		'--sp-btn-bg' => '--sp-primary-color', '--sp-btn-border' => '--sp-primary-color', '--sp-btn-text' => '--sp-primary-contrast',
+		'--sp-btn-bg-hover' => '--sp-primary-light', '--sp-btn-border-hover' => '--sp-primary-darkest', '--sp-btn-text-hover' => '--sp-primary-contrast',
+		'--sp-sidebar-bg' => '--sp-primary-color', '--sp-sidebar-text' => '--sp-primary-contrast',
+		'--sp-sidebar-active-bg' => '--sp-accent-color', '--sp-sidebar-active-text' => '--sp-accent-contrast',
+		'--sp-nav-hover-bg' => '--sp-primary-dark', '--sp-nav-hover-text' => '--sp-primary-contrast',
+		'--sp-btn2-bg' => '--sp-accent-lightest', '--sp-btn2-border' => '--sp-accent-light', '--sp-btn2-text' => '--sp-accent-color',
+		'--sp-btn2-bg-hover' => '--sp-accent-lightest', '--sp-btn2-border-hover' => '--sp-accent-light', '--sp-btn2-text-hover' => '--sp-accent-darkest',
+		'--sp-btn-ghost-text' => '--sp-accent-color', '--sp-btn-ghost-bg-hover' => '--sp-accent-lightest', '--sp-btn-ghost-text-hover' => '--sp-accent-dark',
+		'--sp-card-band' => '--sp-secondary-lightest', '--sp-card-border' => '--sp-secondary-color',
+		'--sp-card-text' => '--sp-text', '--sp-card-band-text' => '--sp-secondary-darkest',
+		'--sp-tile-bg' => '--sp-secondary-lightest', '--sp-tile-border' => '--sp-secondary-dark',
+		'--sp-tile-value' => '--sp-secondary-darkest', '--sp-tile-label' => '--sp-secondary-darkest',
+	];
+	$out = [];
+	foreach ( site_pulse_color_override_tokens() as $tok ) {
+		if ( isset( $base[ $tok ] ) )                                          $out[ $tok ] = $base[ $tok ];
+		elseif ( isset( $fallback[ $tok ], $base[ $fallback[ $tok ] ] ) )      $out[ $tok ] = $base[ $fallback[ $tok ] ];
+	}
+	return $out;
+}
+
+/**
+ * The "theme colors" swatch list for the override picker = the company's chosen colors (always,
+ * first) PLUS every colour CURRENTLY IN USE on a fine-tunable element. "In use" = the effective
+ * value (generated, or the admin's override) of each override-eligible token — so a custom colour
+ * appears here for reuse the moment it's assigned to any element, and drops off once nothing uses
+ * it. The JS mirrors this live in the browser; this is the persisted/initial-load source of truth.
+ *
+ * NOTE: the fixed status colors (--sp-success/-warning/-danger) are deliberately excluded — they're
+ * semantic, not brand, so they're never offered as "theme colors" to pick from.
+ */
+function site_pulse_color_palette(): array {
+	$out  = [];
+	$seen = [];
+	$push = static function( $hex, $label ) use ( &$out, &$seen ) {
+		$hex = strtolower( site_pulse_sanitize_hex( (string) $hex ) );
+		if ( $hex === '' || isset( $seen[ $hex ] ) ) return;
+		$seen[ $hex ] = true;
+		$out[] = [ 'label' => $label, 'hex' => $hex ];
+	};
+
+	// 1) The company's chosen colors — always present, first, even if no element currently uses them.
+	$brandLabels = [ 'Main color 1', 'Main color 2', 'Accent color' ];
+	foreach ( site_pulse_saved_brand_colors() as $bi => $bhex ) {
+		$push( $bhex, $brandLabels[ $bi ] ?? 'Company color ' . ( $bi + 1 ) );
+	}
+
+	// 2) Every colour currently applied to an element = the effective value of each override token.
+	$active = site_pulse_color_active_vars();
+	$base   = site_pulse_color_override_base();
+	if ( $active || $base ) {
+		// Friendly names for colours that match a generated family shade (so an in-use colour reads
+		// "Primary dark" instead of a bare hex); anything else is a bespoke pick → "Custom".
+		$b     = site_pulse_color_base_vars();
+		$named = [];
+		foreach ( [
+			'--sp-primary-color' => 'Primary', '--sp-primary-light' => 'Primary light', '--sp-primary-lightest' => 'Primary lightest', '--sp-primary-dark' => 'Primary dark', '--sp-primary-darkest' => 'Primary darkest',
+			'--sp-secondary-color' => 'Secondary', '--sp-secondary-light' => 'Secondary light', '--sp-secondary-lightest' => 'Secondary lightest', '--sp-secondary-dark' => 'Secondary dark', '--sp-secondary-darkest' => 'Secondary darkest',
+			'--sp-accent-color' => 'Accent', '--sp-accent-light' => 'Accent light', '--sp-accent-lightest' => 'Accent lightest', '--sp-accent-dark' => 'Accent dark', '--sp-accent-darkest' => 'Accent darkest',
+			'--sp-text' => 'Body text', '--sp-bg' => 'Page background', '--sp-bg-white' => 'White', '--sp-border' => 'Border',
+		] as $tok => $lab ) {
+			$hx = strtolower( site_pulse_sanitize_hex( (string) ( $b[ $tok ] ?? '' ) ) );
+			if ( $hx !== '' && ! isset( $named[ $hx ] ) ) $named[ $hx ] = $lab;
+		}
+		foreach ( site_pulse_color_override_tokens() as $tok ) {
+			$hex = strtolower( site_pulse_sanitize_hex( (string) ( $active[ $tok ] ?? $base[ $tok ] ?? '' ) ) );
+			if ( $hex === '' ) continue;
+			$push( $hex, $named[ $hex ] ?? 'Custom' );
+		}
+	}
+	return $out;
+}
+
+add_action( 'wp_ajax_site_pulse_admin_save_color_overrides', 'site_pulse_ajax_admin_save_color_overrides' );
+function site_pulse_ajax_admin_save_color_overrides(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	$raw = $_POST['overrides'] ?? '';
+	$map = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
+	if ( ! is_array( $map ) ) $map = [];
+	$allowed = site_pulse_color_override_tokens();
+	$clean = [];
+	foreach ( $map as $k => $v ) {
+		if ( ! in_array( (string) $k, $allowed, true ) ) continue;
+		$hex = site_pulse_sanitize_hex( (string) $v );
+		if ( $hex !== '' ) $clean[ (string) $k ] = $hex;
+	}
+	site_pulse_set_setting( 'color_overrides', wp_json_encode( $clean ) );
+	site_pulse_log( 'color_overrides_saved', 'Updated per-element color overrides (' . count( $clean ) . ').' );
+	wp_send_json_success( [ 'message' => 'Saved.', 'overrides' => $clean ] );
 }
 
 /**
@@ -6665,6 +6903,9 @@ function site_pulse_ajax_admin_get_color_scheme(): void {
 		'news_enabled'   => (string) site_pulse_get_setting( 'dashboard_news_enabled', '1' ),
 		'app_icon'       => site_pulse_pwa_icon_setting_url(),
 		'app_icon_built' => function_exists( 'site_pulse_pwa_preview_url' ) ? site_pulse_pwa_preview_url() : '',
+		'overrides'      => (object) site_pulse_color_overrides(),
+		'override_base'  => (object) site_pulse_color_override_base(),
+		'palette'        => site_pulse_color_palette(),
 	] );
 }
 
@@ -7397,10 +7638,16 @@ function site_pulse_mileage_set_private_home( int $user_id, string $address ): i
 			"SELECT is_private FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d", $current
 		) );
 		if ( $is_priv ) {
+			$moved = (string) $wpdb->get_var( $wpdb->prepare(
+				"SELECT address FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d", $current
+			) ) !== $address;
 			$wpdb->update( site_pulse_table('mileage_locations'),
 				[ 'name' => $name, 'address' => $address, 'lat' => $lat, 'lng' => $lng, 'updated_at' => $now ],
 				[ 'id' => $current ]
 			);
+			// A driver who moved house keeps every cached mile from the old address until these go.
+			if ( $moved ) site_pulse_mileage_clear_api_distances( $current );
+			site_pulse_mileage_prepare_location( $current );
 			return $current;
 		}
 	}
@@ -7421,7 +7668,12 @@ function site_pulse_mileage_set_private_home( int $user_id, string $address ): i
 		'created_at'    => $now,
 		'updated_at'    => $now,
 	] );
-	return (int) $wpdb->insert_id;
+	$id = (int) $wpdb->insert_id;
+
+	// Inserted 'approved', so the admin approve flow never runs for it — price it here or the driver's
+	// own home base is a blank row in the distance matrix and every leg from it stays pending.
+	site_pulse_mileage_prepare_location( $id );
+	return $id;
 }
 
 /**
@@ -7643,6 +7895,7 @@ function site_pulse_mileage_geocode( string $address ): ?array {
 function site_pulse_mileage_compute_distances_for( int $location_id ): array {
 	$key = site_pulse_mileage_google_key();
 	if ( ! $key ) {
+		site_pulse_mileage_api_error( 'No Google API key is set (Settings → API Keys).' );
 		site_pulse_log( 'mileage_error', 'Distance Matrix skipped — no Google API key', [ 'location_id' => $location_id ] );
 		return [];
 	}
@@ -7699,6 +7952,18 @@ function site_pulse_mileage_routes_waypoint( string $point ): array {
 	return [ 'waypoint' => [ 'address' => $point ] ];
 }
 
+/**
+ * Last Google failure seen during this request, so a caller can TELL THE ADMIN why nothing computed.
+ * Without it a failing recompute reports "0 distances stored across 36 locations" and looks like a
+ * no-op instead of 72 rejected API calls — the reason was only ever visible in the activity log.
+ * Pass a string to record, '' to reset, null to read.
+ */
+function site_pulse_mileage_api_error( ?string $set = null ): string {
+	static $last = '';
+	if ( $set !== null ) $last = $set;
+	return $last;
+}
+
 function site_pulse_mileage_distance_matrix_call( array $origins, array $destinations, string $key ): ?array {
 	$body = [
 		'origins'           => array_map( 'site_pulse_mileage_routes_waypoint', $origins ),
@@ -7718,6 +7983,7 @@ function site_pulse_mileage_distance_matrix_call( array $origins, array $destina
 	] );
 
 	if ( is_wp_error( $response ) ) {
+		site_pulse_mileage_api_error( 'Could not reach Google: ' . $response->get_error_message() );
 		site_pulse_log( 'mileage_error', 'Routes API failed: ' . $response->get_error_message() );
 		return null;
 	}
@@ -7725,6 +7991,7 @@ function site_pulse_mileage_distance_matrix_call( array $origins, array $destina
 	$raw  = wp_remote_retrieve_body( $response );
 	$data = json_decode( $raw, true );
 	if ( ! is_array( $data ) ) {
+		site_pulse_mileage_api_error( 'Google returned an unreadable response (HTTP ' . wp_remote_retrieve_response_code( $response ) . ').' );
 		site_pulse_log( 'mileage_error', 'Routes API: invalid response', [ 'body' => substr( $raw, 0, 500 ) ] );
 		return null;
 	}
@@ -7732,7 +7999,9 @@ function site_pulse_mileage_distance_matrix_call( array $origins, array $destina
 	// Routes API can wrap an error either at the top level or in the first array element
 	$err_obj = $data['error'] ?? ( isset( $data[0]['error'] ) ? $data[0]['error'] : null );
 	if ( $err_obj ) {
-		site_pulse_log( 'mileage_error', 'Routes API error: ' . ( $err_obj['message'] ?? 'unknown' ), [ 'status' => $err_obj['status'] ?? '' ] );
+		$msg = (string) ( $err_obj['message'] ?? 'unknown error' );
+		site_pulse_mileage_api_error( trim( ( $err_obj['status'] ?? '' ) . ' — ' . $msg, ' —' ) );
+		site_pulse_log( 'mileage_error', 'Routes API error: ' . $msg, [ 'status' => $err_obj['status'] ?? '' ] );
 		return null;
 	}
 
@@ -7826,6 +8095,361 @@ function site_pulse_mileage_finalize_legs_for_location( int $location_id ): arra
 		site_pulse_mileage_recalc_entry( $eid );
 	}
 	return array_keys( $entries_touched );
+}
+
+/**
+ * Bring a location fully online: geocode it if it has no coordinates, compute its distance to every
+ * other approved location, and finalize any legs that were waiting on those distances.
+ *
+ * EVERY path that creates an already-'approved' location must call this. site_pulse_mileage_approve_location()
+ * does the same work, but only the admin approve flow goes through it — the store sync and the private
+ * home-base helper insert status='approved' directly. Without this they land with no coordinates and no
+ * distances, which is exactly what leaves a permanent "+" (manual entry only) in the admin distance
+ * matrix: Google isn't failing on those stops, it was simply never asked. The gap then only closes if a
+ * driver happens to log a leg there and the JIT path (site_pulse_mileage_ensure_distance) fires.
+ *
+ * Safe to re-run: geocoding is skipped when coordinates already exist, and site_pulse_mileage_save_distance()
+ * keeps the larger of the cached/new value, so re-running never loses an existing pair.
+ */
+function site_pulse_mileage_prepare_location( int $id ): array {
+	$empty = [ 'geocoded' => false, 'distances' => 0, 'entries' => 0, 'error' => '' ];
+	if ( ! $id ) return $empty;
+
+	global $wpdb;
+	$loc = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, address, lat, lng FROM " . site_pulse_table('mileage_locations') . " WHERE id = %d",
+		$id
+	), ARRAY_A );
+	if ( ! $loc ) return $empty;
+
+	$geocoded = false;
+	if ( $loc['lat'] === null || $loc['lng'] === null ) {
+		$geo = site_pulse_mileage_geocode( (string) $loc['address'] );
+		if ( $geo ) {
+			$wpdb->update( site_pulse_table('mileage_locations'),
+				[ 'lat' => $geo['lat'], 'lng' => $geo['lng'] ],
+				[ 'id' => $id ]
+			);
+			$geocoded = true;
+		}
+	}
+
+	// Clear first, so what we read back belongs to THIS location's calls and not an earlier one's.
+	site_pulse_mileage_api_error( '' );
+	$distances = count( site_pulse_mileage_compute_distances_for( $id ) );
+
+	return [
+		'geocoded'  => $geocoded,
+		'distances' => $distances,
+		'entries'   => count( site_pulse_mileage_finalize_legs_for_location( $id ) ),
+		'error'     => $distances ? '' : site_pulse_mileage_api_error(),
+	];
+}
+
+/**
+ * Drop the API-computed distances for a location whose address moved, so the next prepare() re-asks
+ * Google instead of keeping the old address's mileage. Manual overrides survive — an admin typed those
+ * on purpose, and save_distance()'s keep-the-larger rule would otherwise pin the stale value forever.
+ */
+function site_pulse_mileage_clear_api_distances( int $id ): void {
+	if ( ! $id ) return;
+	global $wpdb;
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM " . site_pulse_table('mileage_distances') . "
+		 WHERE ( from_id = %d OR to_id = %d ) AND source = 'api'",
+		$id, $id
+	) );
+}
+
+
+/*--------------------------------------------------------------
+# Mileage — Duplicate destinations
+--------------------------------------------------------------*/
+
+/**
+ * Normalize an address for comparison: lowercase, curly apostrophes flattened, punctuation dropped,
+ * whitespace collapsed, and the noise that differs between two records of the SAME place removed —
+ * a trailing "USA" that only Places-autocompleted addresses carry, and a ZIP one record has and the
+ * other doesn't.
+ */
+function site_pulse_mileage_address_key( string $address ): string {
+	$a = strtolower( trim( $address ) );
+	$a = str_replace( [ "\xE2\x80\x99", "\xE2\x80\x98", '`' ], "'", $a );
+	$a = preg_replace( '/[.,#]/', ' ', $a );
+	$a = preg_replace( '/\b\d{5}(-\d{4})?\b/', ' ', $a );
+	$a = preg_replace( '/\s+/', ' ', trim( (string) $a ) );
+	$a = preg_replace( '/\s*\b(usa|u s a|united states)$/', '', (string) $a );
+	return trim( preg_replace( '/\s+/', ' ', (string) $a ) );
+}
+
+/**
+ * The part of an address that identifies the building: house number + the next two words
+ * ("6720 ne loop", "124 rose lane"). Two records of one place agree here even when one spells the
+ * city out and the other abbreviates it ("NRH" vs "North Richland Hills"), or one carries the state
+ * and the other doesn't — which is exactly how the store sync's rows differ from hand-typed ones.
+ * Returns '' when the address doesn't start with a number; those fall back to the full key.
+ */
+function site_pulse_mileage_street_key( string $address ): string {
+	$key = site_pulse_mileage_address_key( $address );
+	if ( ! preg_match( '/^(\d+[a-z]?)\s+(.+)$/', $key, $m ) ) return '';
+	$words = preg_split( '/\s+/', $m[2] );
+	return $m[1] . ' ' . implode( ' ', array_slice( $words, 0, 2 ) );
+}
+
+function site_pulse_mileage_meters_between( float $lat1, float $lng1, float $lat2, float $lng2 ): float {
+	$d_lat = deg2rad( $lat2 - $lat1 );
+	$d_lng = deg2rad( $lng2 - $lng1 );
+	$a     = sin( $d_lat / 2 ) ** 2
+	       + cos( deg2rad( $lat1 ) ) * cos( deg2rad( $lat2 ) ) * sin( $d_lng / 2 ) ** 2;
+	return 6371000.0 * 2 * atan2( sqrt( $a ), sqrt( 1 - $a ) );
+}
+
+/**
+ * Split a same-street bucket into clusters that are actually the same building. "100 Main St" exists
+ * in every town, so anything more than $limit_m from a cluster's first row starts its own cluster.
+ * A row with no coordinates can't be ruled out, so it stays in the cluster for the admin to judge.
+ */
+function site_pulse_mileage_cluster_by_distance( array $rows, float $limit_m = 200.0 ): array {
+	$clusters = [];
+	foreach ( $rows as $row ) {
+		$placed = false;
+		foreach ( $clusters as $i => $cluster ) {
+			$seed = $cluster[0];
+			$near = true;
+			if ( $row['lat'] !== null && $row['lng'] !== null && $seed['lat'] !== null && $seed['lng'] !== null ) {
+				$near = site_pulse_mileage_meters_between(
+					(float) $seed['lat'], (float) $seed['lng'], (float) $row['lat'], (float) $row['lng']
+				) <= $limit_m;
+			}
+			if ( $near ) { $clusters[ $i ][] = $row; $placed = true; break; }
+		}
+		if ( ! $placed ) $clusters[] = [ $row ];
+	}
+	return $clusters;
+}
+
+/**
+ * Decorate a candidate row with how much history hangs off it, so whoever picks the survivor is
+ * choosing with the consequences visible rather than by name alone.
+ */
+function site_pulse_mileage_duplicate_row( array $l ): array {
+	global $wpdb;
+	$id = (int) $l['id'];
+	return [
+		'id'           => $id,
+		'name'         => (string) $l['name'],
+		'address'      => (string) $l['address'],
+		'status'       => (string) $l['status'],
+		'is_private'   => (int) $l['is_private'],
+		'store_linked' => ( (int) $l['site_pulse_location_id'] ) > 0,
+		'geocoded'     => ( $l['lat'] !== null && $l['lng'] !== null ),
+		'created_at'   => (string) $l['created_at'],
+		'legs'         => (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM " . site_pulse_table('mileage_legs') . "
+			 WHERE from_location_id = %d OR to_location_id = %d", $id, $id
+		) ),
+		'home_for'     => (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM " . site_pulse_table('user_profiles') . "
+			 WHERE mileage_home_location_id = %d", $id
+		) ),
+	];
+}
+
+/**
+ * Candidate duplicate destinations, grouped. This proposes, it does NOT merge — an admin reviews each
+ * group and picks the survivor — so it deliberately errs toward offering a group over staying quiet.
+ *
+ * One hard rule that is NOT left to review: a home base only ever groups with a home of the same
+ * NAME. Two employees living at one address is ordinary (Rovin has exactly that), and merging them
+ * would silently rebase one person's home onto the other's — easy to approve, hard to ever notice.
+ */
+function site_pulse_mileage_duplicate_groups(): array {
+	global $wpdb;
+	$locs = $wpdb->get_results(
+		"SELECT id, name, address, lat, lng, status, is_private, location_type, site_pulse_location_id, created_at
+		 FROM " . site_pulse_table('mileage_locations') . " ORDER BY id",
+		ARRAY_A
+	) ?: [];
+	if ( count( $locs ) < 2 ) return [];
+
+	$buckets = [];
+	foreach ( $locs as $l ) {
+		$street = site_pulse_mileage_street_key( (string) $l['address'] );
+		$key    = $street !== '' ? $street : site_pulse_mileage_address_key( (string) $l['address'] );
+		if ( $key === '' ) continue;
+		// Keyed on location_type, NOT is_private: private only means "hidden from other drivers'
+		// pickers" and is set on ordinary business stops too. Home rows are always type 'home'.
+		if ( $l['location_type'] === 'home' ) {
+			$key = 'home|' . strtolower( trim( (string) $l['name'] ) ) . '|' . $key;
+		}
+		$buckets[ $key ][] = $l;
+	}
+
+	$groups = [];
+	foreach ( $buckets as $rows ) {
+		if ( count( $rows ) < 2 ) continue;
+		foreach ( site_pulse_mileage_cluster_by_distance( $rows ) as $cluster ) {
+			if ( count( $cluster ) < 2 ) continue;
+			$groups[] = array_map( 'site_pulse_mileage_duplicate_row', $cluster );
+		}
+	}
+	return $groups;
+}
+
+/**
+ * Fold $loser_ids into $survivor_id and delete them. Every surface that can point at a location has
+ * to be repointed first or the merge quietly destroys history:
+ *   legs (trip history) · distances (the cached matrix) · toll routes (directional cache) ·
+ *   user_profiles.mileage_home_location_id (a driver's home base) · the store link.
+ *
+ * The survivor's own name/address/coordinates always win — merging is not an edit. Only fields the
+ * survivor left BLANK are inherited, so nothing an admin typed on the survivor is overwritten.
+ */
+function site_pulse_mileage_merge_locations( int $survivor_id, array $loser_ids ): ?array {
+	global $wpdb;
+
+	$survivor_id = (int) $survivor_id;
+	$loser_ids   = array_values( array_unique( array_filter( array_map( 'intval', $loser_ids ) ) ) );
+	$loser_ids   = array_values( array_diff( $loser_ids, [ $survivor_id ] ) );
+	if ( ! $survivor_id || ! $loser_ids ) return null;
+
+	$locations = site_pulse_table('mileage_locations');
+	$survivor  = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $locations WHERE id = %d", $survivor_id ), ARRAY_A );
+	if ( ! $survivor ) return null;
+
+	$ph     = implode( ',', array_fill( 0, count( $loser_ids ), '%d' ) );
+	$losers = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM $locations WHERE id IN ($ph)", ...$loser_ids ), ARRAY_A ) ?: [];
+	if ( ! $losers ) return null;
+	$loser_ids = array_map( fn( $l ) => (int) $l['id'], $losers );
+	$ph        = implode( ',', array_fill( 0, count( $loser_ids ), '%d' ) );
+
+	$legs_t = site_pulse_table('mileage_legs');
+	$dist_t = site_pulse_table('mileage_distances');
+
+	// Entries whose totals will change once their legs point somewhere else.
+	$affected_entries = $wpdb->get_col( $wpdb->prepare(
+		"SELECT DISTINCT entry_id FROM $legs_t WHERE from_location_id IN ($ph) OR to_location_id IN ($ph)",
+		...array_merge( $loser_ids, $loser_ids )
+	) ) ?: [];
+
+	$legs_moved  = (int) $wpdb->query( $wpdb->prepare(
+		"UPDATE $legs_t SET from_location_id = %d WHERE from_location_id IN ($ph)", $survivor_id, ...$loser_ids
+	) );
+	$legs_moved += (int) $wpdb->query( $wpdb->prepare(
+		"UPDATE $legs_t SET to_location_id = %d WHERE to_location_id IN ($ph)", $survivor_id, ...$loser_ids
+	) );
+
+	// A leg that ran between two rows for the same place really is a zero-mile leg.
+	$wpdb->query( $wpdb->prepare(
+		"UPDATE $legs_t SET miles = 0 WHERE from_location_id = %d AND to_location_id = %d",
+		$survivor_id, $survivor_id
+	) );
+
+	// Distances: fold each loser's pairs onto the survivor BEFORE deleting them, so a pair the
+	// survivor never had is inherited instead of lost. The table has a UNIQUE key on (from_id,to_id),
+	// so this is read-then-write per pair rather than one blanket UPDATE.
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM $dist_t WHERE from_id IN ($ph) OR to_id IN ($ph)",
+		...array_merge( $loser_ids, $loser_ids )
+	), ARRAY_A ) ?: [];
+
+	foreach ( $rows as $r ) {
+		$a = in_array( (int) $r['from_id'], $loser_ids, true ) ? $survivor_id : (int) $r['from_id'];
+		$b = in_array( (int) $r['to_id'],   $loser_ids, true ) ? $survivor_id : (int) $r['to_id'];
+		if ( $a === $b ) continue;   // was a pair between two rows of the same place
+
+		[ $lo, $hi ] = site_pulse_mileage_normalize_pair( $a, $b );
+		$existing = $wpdb->get_row( $wpdb->prepare(
+			"SELECT miles, source FROM $dist_t WHERE from_id = %d AND to_id = %d", $lo, $hi
+		), ARRAY_A );
+
+		if ( ! $existing ) {
+			$wpdb->insert( $dist_t, [
+				'from_id'    => $lo,
+				'to_id'      => $hi,
+				'miles'      => (float) $r['miles'],
+				'source'     => $r['source'],
+				'created_at' => current_time( 'mysql' ),
+			] );
+			continue;
+		}
+		// A manual value is somebody's decision — it outranks anything computed. Between two of the
+		// same kind, keep the larger, matching site_pulse_mileage_save_distance()'s agreement.
+		$take = $r['source'] === 'manual' && $existing['source'] !== 'manual'
+			|| ( $r['source'] === $existing['source'] && (float) $r['miles'] > (float) $existing['miles'] );
+		if ( $take ) {
+			$wpdb->update( $dist_t,
+				[ 'miles' => (float) $r['miles'], 'source' => $r['source'] ],
+				[ 'from_id' => $lo, 'to_id' => $hi ]
+			);
+		}
+	}
+
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM $dist_t WHERE from_id IN ($ph) OR to_id IN ($ph)",
+		...array_merge( $loser_ids, $loser_ids )
+	) );
+
+	// Directional toll/polyline cache — no value worth folding, and it re-fetches on demand.
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM " . site_pulse_table('mileage_toll_routes') . "
+		 WHERE from_location_id IN ($ph) OR to_location_id IN ($ph)",
+		...array_merge( $loser_ids, $loser_ids )
+	) );
+
+	// Drivers based at a merged row keep their home base — it just points at the survivor now.
+	$homes_moved = (int) $wpdb->query( $wpdb->prepare(
+		"UPDATE " . site_pulse_table('user_profiles') . "
+		 SET mileage_home_location_id = %d WHERE mileage_home_location_id IN ($ph)",
+		$survivor_id, ...$loser_ids
+	) );
+
+	// Inherit only what the survivor is missing. The store link matters most: home-base resolution
+	// finds a driver's store through it, so losing it would break their Home bookend.
+	$fill = [];
+	foreach ( [ 'site_pulse_location_id', 'marker_icon', 'code', 'category', 'notes' ] as $field ) {
+		if ( ! empty( $survivor[ $field ] ) ) continue;
+		foreach ( $losers as $l ) {
+			if ( ! empty( $l[ $field ] ) ) { $fill[ $field ] = $l[ $field ]; break; }
+		}
+	}
+	if ( $fill ) {
+		$fill['updated_at'] = current_time( 'mysql' );
+		$wpdb->update( $locations, $fill, [ 'id' => $survivor_id ] );
+	}
+
+	$wpdb->query( $wpdb->prepare( "DELETE FROM $locations WHERE id IN ($ph)", ...$loser_ids ) );
+
+	foreach ( $affected_entries as $eid ) {
+		site_pulse_mileage_recalc_entry( (int) $eid );
+	}
+	// Fill any pair the survivor is now missing (and geocode it if the merge left it without coords).
+	$prepared = site_pulse_mileage_prepare_location( $survivor_id );
+
+	$merged_names = implode( ', ', array_map( fn( $l ) => $l['name'], $losers ) );
+	site_pulse_log( 'mileage_locations_merged',
+		sprintf( 'Merged %d duplicate destination(s) into %s', count( $losers ), $survivor['name'] ),
+		[
+			'survivor_id'      => $survivor_id,
+			'survivor'         => $survivor['name'],
+			'merged'           => $merged_names,
+			'merged_ids'       => $loser_ids,
+			'legs_repointed'   => $legs_moved,
+			'homes_repointed'  => $homes_moved,
+			'entries_recalced' => count( $affected_entries ),
+			'inherited'        => array_keys( $fill ),
+		]
+	);
+
+	return [
+		'survivor'         => $survivor['name'],
+		'merged'           => count( $losers ),
+		'merged_names'     => $merged_names,
+		'legs_repointed'   => $legs_moved,
+		'homes_repointed'  => $homes_moved,
+		'entries_recalced' => count( $affected_entries ),
+		'distances_added'  => $prepared['distances'],
+	];
 }
 
 
@@ -11374,6 +11998,16 @@ function site_pulse_ajax_admin_delete_mileage_location(): void {
 	$wpdb->query( $wpdb->prepare(
 		"DELETE FROM " . site_pulse_table('mileage_distances') . " WHERE from_id = %d OR to_id = %d", $id, $id
 	) );
+	// The directional toll cache and any driver based here point at this id too — left behind, the
+	// home-base pointer dangles and that driver silently loses their Home bookend.
+	$wpdb->query( $wpdb->prepare(
+		"DELETE FROM " . site_pulse_table('mileage_toll_routes') . "
+		 WHERE from_location_id = %d OR to_location_id = %d", $id, $id
+	) );
+	$wpdb->update( site_pulse_table('user_profiles'),
+		[ 'mileage_home_location_id' => 0 ],
+		[ 'mileage_home_location_id' => $id ]
+	);
 	$wpdb->delete( site_pulse_table('mileage_locations'), [ 'id' => $id ] );
 
 	foreach ( $affected_entries as $eid ) {
@@ -11706,6 +12340,36 @@ function site_pulse_ajax_admin_get_mileage_matrix(): void {
 	}
 
 	wp_send_json_success( [ 'locations' => $locs, 'distances' => $dist ] );
+}
+
+// Candidate duplicate destinations for review. Read-only — nothing merges until the admin says so.
+add_action( 'wp_ajax_site_pulse_admin_find_mileage_duplicates', 'site_pulse_ajax_admin_find_mileage_duplicates' );
+function site_pulse_ajax_admin_find_mileage_duplicates(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$groups = site_pulse_mileage_duplicate_groups();
+	wp_send_json_success( [
+		'groups' => $groups,
+		'count'  => count( $groups ),
+	] );
+}
+
+// Fold the picked duplicates into the survivor. Destructive, so the survivor is always chosen
+// explicitly by the admin — there is deliberately no "merge everything automatically" path.
+add_action( 'wp_ajax_site_pulse_admin_merge_mileage_locations', 'site_pulse_ajax_admin_merge_mileage_locations' );
+function site_pulse_ajax_admin_merge_mileage_locations(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_mileage_admin_check() ) return;
+
+	$survivor = (int) ( $_POST['survivor_id'] ?? 0 );
+	$losers   = array_map( 'intval', (array) ( $_POST['loser_ids'] ?? [] ) );
+	if ( ! $survivor || ! $losers ) wp_send_json_error( [ 'message' => 'Pick which destination to keep and at least one to merge into it.' ] );
+
+	$res = site_pulse_mileage_merge_locations( $survivor, $losers );
+	if ( ! $res ) wp_send_json_error( [ 'message' => 'Those destinations no longer exist — refresh and try again.' ] );
+
+	wp_send_json_success( $res );
 }
 
 // Manual override of a single pair (forces the value, bypassing the keep-larger rule).
@@ -12121,19 +12785,42 @@ function site_pulse_ajax_admin_recompute_mileage_distances(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_mileage_admin_check() ) return;
 
-	global $wpdb;
-	$ids = $wpdb->get_col(
-		"SELECT id FROM " . site_pulse_table('mileage_locations') . " WHERE status = 'approved' ORDER BY id"
-	) ?: [];
+	// Batched on purpose. Each location costs two Routes API round trips (plus a geocode when it has no
+	// coordinates), so a full destination list ran ~70 sequential HTTPS calls inside ONE admin-ajax
+	// request and hit the PHP time limit part-way through — silently, leaving a half-filled matrix and
+	// no error to explain it. The browser now walks the list a few stops at a time and shows progress.
+	$offset = max( 0, (int) ( $_POST['offset'] ?? 0 ) );
+	$batch  = 4;
 
-	$added = 0;
+	global $wpdb;
+	$total = (int) $wpdb->get_var(
+		"SELECT COUNT(*) FROM " . site_pulse_table('mileage_locations') . " WHERE status = 'approved'"
+	);
+	$ids = $wpdb->get_col( $wpdb->prepare(
+		"SELECT id FROM " . site_pulse_table('mileage_locations') . "
+		 WHERE status = 'approved' ORDER BY id LIMIT %d OFFSET %d",
+		$batch, $offset
+	) ) ?: [];
+
+	$added = 0; $geocoded = 0; $failed = 0; $error = '';
 	foreach ( $ids as $id ) {
-		$result = site_pulse_mileage_compute_distances_for( (int) $id );
-		$added += count( $result );
-		site_pulse_mileage_finalize_legs_for_location( (int) $id );
+		$res    = site_pulse_mileage_prepare_location( (int) $id );
+		$added += $res['distances'];
+		if ( $res['geocoded'] ) $geocoded++;
+		if ( $res['error'] !== '' ) { $failed++; $error = $res['error']; }
 	}
 
-	wp_send_json_success( [ 'distances_added' => $added, 'locations_processed' => count( $ids ) ] );
+	$processed = $offset + count( $ids );
+	wp_send_json_success( [
+		'distances_added'     => $added,
+		'geocoded'            => $geocoded,
+		'locations_processed' => count( $ids ),
+		'failed'              => $failed,
+		'error'               => $error,
+		'next_offset'         => $processed,
+		'total'               => $total,
+		'done'                => ( ! $ids || $processed >= $total ),
+	] );
 }
 
 

@@ -245,8 +245,13 @@ function bp_chat_handle_inbound_sms( WP_REST_Request $req ) {
 	// A text FROM the contractor's own phone is a reply to the customer they're
 	// currently handling — relay it. Handled BEFORE keyword parsing so the
 	// contractor's words are never swallowed as STOP/HELP.
-	if ( $from === bp_chat_normalize_phone( (string) ( $o['contractor_sms'] ?? '' ) ) ) {
+	if ( $from === bp_chat_reply_number( $o ) ) {
 		return bp_chat_handle_contractor_reply( $body, $customer, $o );
+	}
+	// A notification-only staff number texting in is not a customer lead — ignore
+	// it (only the reply line drives the two-way relay).
+	if ( in_array( $from, bp_chat_notify_numbers( $o ), true ) ) {
+		return bp_chat_twiml_response();
 	}
 
 	// Compliance keywords (Twilio also enforces STOP at the carrier level; we
@@ -327,11 +332,20 @@ function bp_chat_conv_label( array $conv ): string {
 	return $phone !== '' ? 'Customer ' . substr( $phone, -4 ) : 'Customer';
 }
 
-/** Text the contractor (fire-and-forget). */
+/** Text the single reply/takeover line (ongoing relay + replies to the contractor). */
 function bp_chat_forward_to_contractor( string $message, array $o ): bool {
-	$to = bp_chat_normalize_phone( (string) ( $o['contractor_sms'] ?? '' ) );
+	$to = bp_chat_reply_number( $o );
 	if ( $to === '' ) return false;
 	return bp_chat_send_sms( $to, $message );
+}
+
+/** Broadcast to every notification number (lead alerts + one-time handoff notices). */
+function bp_chat_broadcast_to_contractors( string $message, array $o ): bool {
+	$ok = false;
+	foreach ( bp_chat_notify_numbers( $o ) as $num ) {
+		if ( bp_chat_send_sms( $num, $message ) ) $ok = true;
+	}
+	return $ok;
 }
 
 /**

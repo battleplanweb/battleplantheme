@@ -78,11 +78,12 @@
 			if (res.token) setToken(res.token); // silent renewal
 			enterApp();
 		}).catch(function (err) {
-			// Only a genuinely invalid/expired token (401) logs the customer out.
-			// A transient network/server error must NOT wipe a good token, or they'd
-			// be forced to re-verify on every flaky connection.
-			if (err && err.status === 401) setToken('');
-			show('signin');
+			// The verify screen must ONLY appear when there's no valid session. A confirmed 401
+			// (bad/expired token) logs them out to verify; ANY other error (flaky network, a brief
+			// server blip) keeps the saved token and drops them straight into the app — a verified
+			// customer is never re-prompted to verify on a hiccup.
+			if (err && err.status === 401) { setToken(''); show('signin'); }
+			else enterApp();
 		});
 	}
 
@@ -93,35 +94,64 @@
 	var formCode = q('[data-step="code"]', signin);
 	var pendingIdentifier = '';
 
-	// Toggle email field.
-	var altToggle = q('.cc-alt-toggle', formId);
-	if (altToggle) altToggle.addEventListener('click', function () {
-		var emailField = q('[data-field="email"]', formId);
-		var phoneField = q('input[name="phone"]', formId).closest('.cc-field');
-		var showingEmail = !emailField.hidden;
-		emailField.hidden = showingEmail;
-		phoneField.hidden = !showingEmail;
-		altToggle.textContent = showingEmail ? 'Use email instead' : 'Use mobile number instead';
+	/* ---------- OTP expiry countdown (10 min — matches the server TTL) ---------- */
+	var codeTimer = null;
+	function stopCountdown() { if (codeTimer) { clearInterval(codeTimer); codeTimer = null; } }
+	function startCountdown() {
+		stopCountdown();
+		var wrap = q('[data-slot="timer"]', formCode);
+		var out = q('[data-slot="countdown"]', formCode);
+		if (!wrap || !out) return;
+		wrap.hidden = false;
+		var ends = Date.now() + 10 * 60 * 1000;
+		function tick() {
+			var left = Math.max(0, Math.round((ends - Date.now()) / 1000));
+			var m = Math.floor(left / 60), s = left % 60;
+			out.textContent = m + ':' + (s < 10 ? '0' + s : s);
+			if (left <= 0) { stopCountdown(); wrap.innerHTML = 'Code expired — tap <strong>Resend code</strong>.'; }
+		}
+		tick();
+		codeTimer = setInterval(tick, 1000);
+	}
+
+	/* ---------- 6-box code input (auto-advance, backspace, paste) ---------- */
+	var codeBoxes = Array.prototype.slice.call(formCode.querySelectorAll('.cc-code-box'));
+	function codeValue() { return codeBoxes.map(function (b) { return b.value.replace(/\D/g, ''); }).join(''); }
+	function clearCode() { codeBoxes.forEach(function (b) { b.value = ''; }); if (codeBoxes[0]) codeBoxes[0].focus(); }
+	function maybeAutoSubmit() { if (codeValue().length === 6) { if (formCode.requestSubmit) formCode.requestSubmit(); else q('button[type="submit"]', formCode).click(); } }
+	codeBoxes.forEach(function (box, i) {
+		box.addEventListener('input', function () {
+			box.value = box.value.replace(/\D/g, '').slice(0, 1);
+			if (box.value && i < codeBoxes.length - 1) codeBoxes[i + 1].focus();
+			maybeAutoSubmit();
+		});
+		box.addEventListener('keydown', function (e) {
+			if (e.key === 'Backspace' && !box.value && i > 0) { e.preventDefault(); codeBoxes[i - 1].value = ''; codeBoxes[i - 1].focus(); }
+		});
+		box.addEventListener('paste', function (e) {
+			e.preventDefault();
+			var digits = ((e.clipboardData || window.clipboardData).getData('text') || '').replace(/\D/g, '').slice(0, codeBoxes.length - i);
+			for (var j = 0; j < digits.length; j++) codeBoxes[i + j].value = digits[j];
+			codeBoxes[Math.min(i + digits.length, codeBoxes.length - 1)].focus();
+			maybeAutoSubmit();
+		});
 	});
 
 	formId.addEventListener('submit', function (e) {
 		e.preventDefault();
 		setErr(formId, '');
-		var emailField = q('[data-field="email"]', formId);
-		var usingEmail = !emailField.hidden;
-		var phone = q('input[name="phone"]', formId).value.trim();
 		var email = q('input[name="email"]', formId).value.trim();
-		if (usingEmail ? !email : !phone) { setErr(formId, usingEmail ? 'Enter your email.' : 'Enter your mobile number.'); return; }
+		if (!email) { setErr(formId, 'Enter your email.'); return; }
 
 		var btn = q('button[type="submit"]', formId);
 		btn.disabled = true; btn.textContent = 'Sending…';
-		api('/request-otp', { method: 'POST', body: usingEmail ? { email: email } : { phone: phone } })
+		api('/request-otp', { method: 'POST', body: { email: email } })
 			.then(function (res) {
-				pendingIdentifier = res.identifier || (usingEmail ? email : phone);
+				pendingIdentifier = res.identifier || email;
 				q('[data-slot="sent-to"]', formCode).textContent = pendingIdentifier;
 				formId.hidden = true; formCode.hidden = false;
-				var codeInput = q('input[name="code"]', formCode);
-				codeInput.value = ''; codeInput.focus();
+				clearCode();
+				startCountdown();
 			})
 			.catch(function (err) { setErr(formId, err.message || 'Could not send a code.'); })
 			.finally(function () { btn.disabled = false; btn.textContent = 'Send code'; });
@@ -130,13 +160,14 @@
 	formCode.addEventListener('submit', function (e) {
 		e.preventDefault();
 		setErr(formCode, '');
-		var code = q('input[name="code"]', formCode).value.replace(/\D+/g, '');
+		var code = codeValue();
 		if (code.length !== 6) { setErr(formCode, 'Enter the 6-digit code.'); return; }
 
 		var btn = q('button[type="submit"]', formCode);
 		btn.disabled = true; btn.textContent = 'Verifying…';
 		api('/verify-otp', { method: 'POST', body: { identifier: pendingIdentifier, code: code } })
 			.then(function (res) {
+				stopCountdown();
 				setToken(res.token);
 				state.customer = res.customer;
 				btn.textContent = 'Verified ✓';
@@ -145,17 +176,18 @@
 			})
 			.catch(function (err) {
 				setErr(formCode, err.message || 'Verification failed.');
-				btn.disabled = false; btn.textContent = 'Verify & continue';
+				btn.disabled = false; btn.textContent = 'Verify code';
+				clearCode();
 			});
 	});
 
 	formCode.addEventListener('click', function (e) {
 		var action = e.target.getAttribute('data-action');
-		if (action === 'back') { formCode.hidden = true; formId.hidden = false; setErr(formCode, ''); }
+		if (action === 'back') { stopCountdown(); formCode.hidden = true; formId.hidden = false; setErr(formCode, ''); }
 		if (action === 'resend') {
 			setErr(formCode, '');
-			api('/request-otp', { method: 'POST', body: /@/.test(pendingIdentifier) ? { email: pendingIdentifier } : { phone: pendingIdentifier } })
-				.then(function () { setErr(formCode, ''); })
+			api('/request-otp', { method: 'POST', body: { email: pendingIdentifier } })
+				.then(function () { clearCode(); startCountdown(); })
 				.catch(function (err) { setErr(formCode, err.message || 'Could not resend.'); });
 		}
 	});
@@ -252,20 +284,27 @@
 		}).catch(function () {});
 	}
 
+	function closeMenu() { root.classList.remove('cc-menu-open'); }
+
 	function wireTabs() {
 		root.querySelectorAll('.cc-tab').forEach(function (tab) {
 			if (tab._wired) return; tab._wired = true;
-			tab.addEventListener('click', function () { navigate(tab.getAttribute('data-view')); });
+			tab.addEventListener('click', function () { navigate(tab.getAttribute('data-view')); closeMenu(); });
 		});
-		var account = q('[data-action="account"]', root);
-		if (account && !account._wired) {
-			account._wired = true;
-			account.addEventListener('click', function () { navigate('account'); });
-		}
 		var bell = q('[data-action="notifications"]', root);
 		if (bell && !bell._wired) {
 			bell._wired = true;
 			bell.addEventListener('click', function () { navigate('notifications'); });
+		}
+		var menu = q('[data-action="menu"]', root);
+		if (menu && !menu._wired) {
+			menu._wired = true;
+			menu.addEventListener('click', function () { root.classList.toggle('cc-menu-open'); });
+		}
+		var scrim = q('[data-action="close-menu"]', root);
+		if (scrim && !scrim._wired) {
+			scrim._wired = true;
+			scrim.addEventListener('click', closeMenu);
 		}
 	}
 

@@ -37,8 +37,20 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	bp_check_for_post_updates();
 
 	$customer_info = customer_info();
-	$site          = str_replace('https://', '', get_bloginfo('url'));
-	$rovin         = in_array($site, ["babeschicken.com","babescatering.com","babeschicken.tv","sweetiepiesribeyes.com","bubbascookscountry.com","rovindirectory.com","rovininc.com"], true);
+
+	// Bare host only — no scheme, no www., lowercased. Everything below is built from
+	// this: the from_email, the Brevo sending domain, and both site-list comparisons.
+	// (It used to be a plain str_replace of 'https://', so a site whose WP Address
+	// carried a www. never matched its own list entry AND got a from_email of
+	// email@admin.www.example.com.)
+	$site          = strtolower( (string) ( wp_parse_url( get_bloginfo('url'), PHP_URL_HOST ) ?: '' ) );
+	$site          = preg_replace('#^www\.#', '', $site);
+
+	// Rovin sends on their OWN Brevo account, not ours. A site counts as Rovin if it is
+	// on the domain list or if it simply defines BP_BREVO_ROVIN_KEY — the constant is the
+	// authoritative signal, so a Rovin install we forget to list (or that moves domain)
+	// still routes correctly the moment its wp-config.php has the key.
+	$rovin         = defined('BP_BREVO_ROVIN_KEY') || in_array($site, ["babeschicken.com","babescatering.com","babeschicken.tv","sweetiepiesribeyes.com","bubbascookscountry.com","rovindirectory.com","rovininc.com","rovin.work"], true);
 	$bp_handles_mail = ($site !== "asairconditioning.com");
 
 /*--------------------------------------------------------------
@@ -59,8 +71,26 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 			$wpMailSettings['mail']['mailer']            = 'sendinblue';
 			$wpMailSettings['mail']['from_email_force']  = '1';
 			$wpMailSettings['mail']['from_name_force']   = '1';
-			$wpMailSettings['sendinblue']['api_key']     = 'x' . ( $rovin && defined('BP_BREVO_ROVIN_KEY') ? BP_BREVO_ROVIN_KEY : _BREVO_API );
+
+			// This write is unconditional every night, so it overwrites anything set by hand
+			// in the WP Mail SMTP UI. A Rovin site with no BP_BREVO_ROVIN_KEY therefore falls
+			// back to OUR key — we keep the fallback (their mail must never fail) but alert,
+			// because otherwise the fallback is completely silent: their transactional mail
+			// bills to and sends from our Brevo account with nothing to indicate it.
+			$bp_brevo_fallback = false;
+			$bp_brevo_key      = _BREVO_API;
+			if ($rovin === true) {
+				if (defined('BP_BREVO_ROVIN_KEY') && BP_BREVO_ROVIN_KEY !== '') {
+					$bp_brevo_key = BP_BREVO_ROVIN_KEY;
+				} else {
+					$bp_brevo_fallback = true;
+				}
+			}
+			$wpMailSettings['sendinblue']['api_key']     = 'x' . $bp_brevo_key;
 			update_option('wp_mail_smtp', $wpMailSettings);
+
+			// Alert AFTER the write, so the warning itself goes out on a known-good transport.
+			if ($bp_brevo_fallback) bp_brevo_key_alert($site, $wpMailSettings, $customer_info);
 		}
 	}
 
@@ -386,4 +416,70 @@ function bp_check_for_post_updates(): void {
 	if ($other) $body .= '<h3>Updated by Other Users</h3><ul>' . $other . '</ul>';
 	if ($mine)  $body .= '<h3>Updated by battleplanweb</h3><ul>' . $mine . '</ul>';
 	if ($body)  emailMe('Content Updates Detected · ' . get_bloginfo('name'), $body);
+}
+
+
+/*--------------------------------------------------------------
+# Brevo key fallback alert
+#
+# Fires when a site is identified as belonging to a client with its own Brevo
+# account (currently Rovin) but that account's key is missing from wp-config.php.
+# The nightly cron has just written OUR key into WP Mail SMTP so their mail keeps
+# flowing — this says so, loudly, with everything needed to fix it.
+#
+# Throttled to one email per site per week (transients are per-install), so a site
+# that stays unfixed nags weekly instead of nightly.
+--------------------------------------------------------------*/
+
+function bp_brevo_key_alert(string $site, array $wpMailSettings, array $customer_info): void {
+
+	if (get_transient('bp_brevo_key_alert')) return;
+	set_transient('bp_brevo_key_alert', 1, WEEK_IN_SECONDS);
+
+	$biz        = $customer_info['name'] ?? get_bloginfo('name');
+	$from       = $wpMailSettings['mail']['from_email'] ?? '(unset)';
+	$from_name  = $wpMailSettings['mail']['from_name'] ?? '(unset)';
+	$brevo_dom  = $wpMailSettings['sendinblue']['domain'] ?? '(unset)';
+	$listed     = in_array($site, ["babeschicken.com","babescatering.com","babeschicken.tv","sweetiepiesribeyes.com","bubbascookscountry.com","rovindirectory.com","rovininc.com","rovin.work"], true);
+	$key_tail   = _BREVO_API !== '' ? '…' . substr(_BREVO_API, -6) : '(BP_BREVO_KEY is not defined either!)';
+
+	// WP Engine install name — the folder to SSH/SFTP into to edit wp-config.php.
+	$install    = defined('PWP_NAME') ? PWP_NAME : '(unknown — not a WP Engine install?)';
+
+	$body  = '<p><strong>' . esc_html($biz) . '</strong> is flagged as a client with its own Brevo account, '
+	       . 'but <code>BP_BREVO_ROVIN_KEY</code> is not defined in its <code>wp-config.php</code>.</p>'
+	       . '<p>Tonight\'s housekeeping cron wrote <strong>YOUR</strong> Brevo key into WP Mail SMTP so their email keeps '
+	       . 'sending — but every message from this site is going out on your Brevo account: your sending quota, your '
+	       . 'reputation, your bill, and their stats missing from their own dashboard.</p>'
+	       . '<h3>Site</h3><ul>'
+	       . '<li><strong>URL:</strong> ' . esc_html(home_url()) . '</li>'
+	       . '<li><strong>Host matched as:</strong> ' . esc_html($site) . '</li>'
+	       . '<li><strong>WP Engine install:</strong> ' . esc_html($install) . '</li>'
+	       . '<li><strong>Matched by:</strong> ' . ($listed ? 'the domain list in functions-chron-housekeeping.php' : 'nothing — see the warning below') . '</li>'
+	       . '</ul>'
+	       . '<h3>What it is sending as right now</h3><ul>'
+	       . '<li><strong>From:</strong> ' . esc_html($from_name) . ' &lt;' . esc_html($from) . '&gt;</li>'
+	       . '<li><strong>Brevo sending domain:</strong> ' . esc_html($brevo_dom) . '</li>'
+	       . '<li><strong>Brevo key in use:</strong> yours, ' . esc_html($key_tail) . '</li>'
+	       . '</ul>'
+	       . '<h3>Fix</h3>'
+	       . '<p>Add this to <code>wp-config.php</code> on this install (above the "stop editing" line):</p>'
+	       . '<pre>define( \'BP_BREVO_ROVIN_KEY\', \'keysib-xxxxxxxx…\' );</pre>'
+	       . '<p><strong>Store it WITHOUT the leading <code>x</code>.</strong> The cron prefixes <code>x</code> itself '
+	       . '(<code>\'x\' . BP_BREVO_ROVIN_KEY</code>), so paste the Brevo key as <code>keysib-…</code>, not '
+	       . '<code>xkeysib-…</code> — a doubled <code>x</code> authenticates as nothing and their mail stops dead.</p>'
+	       . '<p>The next nightly Chron B run picks it up and rewrites WP Mail SMTP. To apply it immediately: '
+	       . '<code>wp option update bp_force_chron_b 1</code>, then load a page as <code>battleplanweb</code>. '
+	       . 'Confirm under Settings &rarr; WP Mail SMTP that the API key changed.</p>';
+
+	if (!$listed) {
+		$body .= '<h3>Also worth fixing</h3>'
+		       . '<p>This site was identified only because <code>BP_BREVO_ROVIN_KEY</code> was expected here — its host '
+		       . '(<code>' . esc_html($site) . '</code>) is <strong>not</strong> in the domain list in '
+		       . '<code>functions-chron-housekeeping.php</code>. Add it there too so the routing does not depend on '
+		       . 'the constant alone.</p>';
+	}
+
+	emailMe('[Battle Plan] Client Brevo key missing · ' . $biz, $body);
+	error_log('bp_brevo_key_alert: BP_BREVO_ROVIN_KEY undefined on ' . $site . ' — fell back to BP_BREVO_KEY');
 }

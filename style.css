@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v44.8
+Version: v44.9
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -364,7 +364,8 @@ i:not(.fa),
 em,
 span:not(.page-numbers):not(.icon):not(.unique):not(.h1-small):not(.h2-small):not(.h3-small) {
 	font-family:                                               inherit;
-	color:                                                     inherit !important;
+	/*color:                                                     inherit !important;*/
+	color:                                                     inherit;
 	text-align:                                                inherit;
 	font-size:                                                 inherit;
 	font-weight:                                               inherit;

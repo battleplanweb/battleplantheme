@@ -161,9 +161,26 @@ function is_wplogin() {
     return ((in_array($ABSPATH_MY.'wp-login.php', get_included_files()) || in_array($ABSPATH_MY.'wp-register.php', get_included_files()) ) || (isset($GLOBALS['pagenow']) && $GLOBALS['pagenow'] === 'wp-login.php') || $_SERVER['PHP_SELF']== '/wp-login.php');
 }
 
-// Check if user is on a mobile device
+// The one mobile user-agent pattern, shared by PHP and the client-side stamp below, so the two can
+// never drift apart. Deliberately identical syntax in both languages — do not "improve" it in one place.
+function bp_mobile_ua_pattern() {
+	return '(android|avantgo|blackberry|bolt|boost|cricket|docomo|fone|hiptop|mini|mobi|palm|phone|pie|tablet|up\.browser|up\.link|webos|wos)';
+}
+
+// Check if user is on a mobile device.
+//
+// ⚠️ SERVER-SIDE ONLY — NEVER let this change the HTML. EverCache stores ONE cached page per URL
+// with no `Vary: User-Agent`, so whichever device warms the cache gets served to every other device
+// for the life of that entry. Any is_mobile() branch in output means a phone can warm the cache and
+// desktop visitors then receive the mobile page (and vice versa). That is exactly how
+// `addMenuIcon is not defined` reached desktop browsers: the desktop-only script tag was gated on
+// this, so the mobile-warmed HTML omitted it while script-site.js still called it.
+//
+// Branch on the CLIENT instead — `window.bpIsMobile` / the screen-mobile|screen-desktop body class,
+// both stamped by battleplan_stampDeviceClass() below. Safe remaining uses of this function are ones
+// that never touch markup (e.g. labelling the device in a notification email).
 function is_mobile() {
-    return preg_match("/(android|avantgo|blackberry|bolt|boost|cricket|docomo|fone|hiptop|mini|mobi|palm|phone|pie|tablet|up\.browser|up\.link|webos|wos)/i", $_SERVER["HTTP_USER_AGENT"]);
+    return preg_match( '/' . bp_mobile_ua_pattern() . '/i', $_SERVER["HTTP_USER_AGENT"] );
 }
 
 // Check if business is currently open
@@ -814,12 +831,28 @@ function battleplan_random_seed($orderby_statement) {
     return $orderby_statement;
 }
 
+// Stamp the device class on <body> from the CLIENT, so the cached HTML stays device-agnostic.
+//
+// Runs as the first thing inside <body> (wp_body_open, priority 1). It is a parser-blocking inline
+// script, so the class is on <body> before the browser paints anything — no FOUC, no CLS, no extra
+// request. It uses the SAME user-agent pattern is_mobile() uses, so the class a visitor gets is
+// identical to what the server used to emit; only the timing moved. Keeps the class on <body> (not
+// <html>) because ~100 `body.screen-*` selectors across the child themes depend on that.
+//
+// Also publishes window.bpIsMobile for the deferred scripts (script-desktop / script-magic-menu),
+// which self-gate on it instead of being conditionally enqueued.
+add_action( 'wp_body_open', 'battleplan_stampDeviceClass', 1 );
+function battleplan_stampDeviceClass() {
+	echo '<script nonce="' . esc_attr(_BP_NONCE) . '">(function(){var m=/' . bp_mobile_ua_pattern() . '/i.test(navigator.userAgent);window.bpIsMobile=m;document.body.classList.add(m?"screen-mobile":"screen-desktop");})();</script>' . "\n";
+}
+
 // Add some defining classes to body
 add_filter( 'body_class', 'battleplan_addBodyClasses', 30 );
 function battleplan_addBodyClasses( $classes ) {
 	$customer_info = customer_info();
 	$classes[] = "slug-"._PAGE_SLUG;
-	$classes[] = is_mobile() ? "screen-mobile" : "screen-desktop";
+	// screen-mobile / screen-desktop is NOT emitted here — it would bake a device into the cached
+	// HTML (see is_mobile()). battleplan_stampDeviceClass() adds it client-side, before first paint.
 
 	$siteType = $customer_info['site-type'] ?? null;
 	$bizTypeRaw = $customer_info['business-type'] ?? null;
@@ -1376,12 +1409,16 @@ function battleplan_enqueue_footer_scripts() {
 
 	bp_enqueue_script( 'battleplan-script-pages', 'script-pages' );
 
-	if ( !is_mobile() ) {
-		bp_enqueue_script( 'battleplan-script-desktop', 'script-desktop' );
+	// Enqueued for EVERY device on purpose — do not put an is_mobile() gate back here. The gate that
+	// used to live here is what let a phone-warmed cache entry ship desktop visitors a page with no
+	// script-desktop, so any child theme calling a desktop-only global (addMenuIcon, splitMenu…) threw
+	// and aborted the rest of script-site.js. Both files now self-gate on window.bpIsMobile and return
+	// immediately on mobile, so mobile behaviour is unchanged; the cost is ~3.8KB gzip of deferred,
+	// never-executed JS in exchange for cache-safe HTML.
+	bp_enqueue_script( 'battleplan-script-desktop', 'script-desktop' );
 
-		if ( isset($customer_info['scripts']) && is_array($customer_info['scripts']) && in_array('magic-menu', $customer_info['scripts']) ) {
-			bp_enqueue_script( 'battleplan-script-magic-menu', 'script-magic-menu' );
-		}
+	if ( isset($customer_info['scripts']) && is_array($customer_info['scripts']) && in_array('magic-menu', $customer_info['scripts']) ) {
+		bp_enqueue_script( 'battleplan-script-magic-menu', 'script-magic-menu' );
 	}
 
 	bp_enqueue_script( 'battleplan-script-tracking', 'script-tracking' );
@@ -2158,6 +2195,10 @@ function battleplan_current_type_nav_class($classes, $item) {
 
 	// Highlight HOME button if any of the Landing pages are viewed
 	if ( $post_type == 'landing' && preg_match ('/, [A-Z]{2}$/', get_the_title() ) === 1 && ( $item->url == get_home_url() || $item->url == get_home_url().'/' )) array_push($classes, 'current-menu-item');
+
+	// A dropdown parent that's only a placeholder custom link to "/" isn't the home page - don't let it go active there
+	if ( is_front_page() && $item->type == 'custom' && in_array( 'menu-item-has-children', $classes ) && in_array( untrailingslashit( $item->url ), array( '', untrailingslashit( get_home_url() ) ) ) )
+		$classes = array_diff( $classes, array( 'current-menu-item', 'current_page_item', 'current-menu-ancestor', 'current-menu-parent' ) );
 
 	return $classes;
 }
@@ -3267,7 +3308,11 @@ function battleplan_printHeader() {
 // Display the "we're open" banner on desktop
 add_action('bp_before_masthead', 'battleplan_printOpenBanner', 30);
 function battleplan_printOpenBanner() {
-	echo is_biz_open() && !is_mobile() ? '<div class="currently-open-banner"><p>Call Us Now...<br>We\'re Open!</p></div>' : '';
+	// No is_mobile() here — that would make the markup device-dependent (see is_mobile()). Mobile is
+	// handled twice over in CSS already: the banner sits off-screen until script-desktop adds
+	// .reveal-open (which never runs on mobile), and `.screen-mobile .currently-open-banner` is
+	// display:none in style.css.
+	echo is_biz_open() ? '<div class="currently-open-banner"><p>Call Us Now...<br>We\'re Open!</p></div>' : '';
 }
 
 // Display #wrapper-top

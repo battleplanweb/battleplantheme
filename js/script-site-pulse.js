@@ -11986,7 +11986,7 @@ function showAdminAddLocationModal(onSaved) {
 				<div class="sp-form-group"><label>Type</label><select id="sp-addloc-type" class="sp-select">${typeOptions}</select></div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-addloc-category" class="sp-select">${catOptions}</select></div>
 			</div>
-			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="sp-form-group"><label>Business or personal</label><select id="sp-addloc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div><div class="sp-form-group"><label>Store # / code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-addloc-code" class="sp-input" placeholder="e.g. 1042"></div></div>
+			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="sp-form-group"><label>Business or personal</label><select id="sp-addloc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div><div class="sp-form-group"><label>Charge To / code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-addloc-code" class="sp-input" placeholder="e.g. 1042"></div></div>
 			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-addloc-notes" class="sp-textarea" rows="2"></textarea></div>
 			<div class="sp-modal-actions">
 				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-addloc-submit">Add Destination</button>
@@ -12043,7 +12043,7 @@ function showEditLocationModal(loc, onSaved) {
 				<div class="sp-form-group"><label>Category</label><select id="sp-editloc-category" class="sp-select">${catOptions}</select></div>
 				<div class="sp-form-group"><label>Business or personal</label><select id="sp-editloc-business" class="sp-select"><option value="1"${parseInt(loc.is_business) ? ' selected' : ''}>Business</option><option value="0"${!parseInt(loc.is_business) ? ' selected' : ''}>Personal</option></select></div>
 			</div>
-			<div class="sp-form-group"><label>Store # / accounting code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-editloc-code" class="sp-input" value="${esc(loc.code || '')}" placeholder="e.g. 1042"></div>
+			<div class="sp-form-group"><label>Charge To / accounting code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-editloc-code" class="sp-input" value="${esc(loc.code || '')}" placeholder="e.g. 1042"></div>
 				<div class="sp-form-group"><label>Notes</label><textarea id="sp-editloc-notes" class="sp-textarea" rows="2">${esc(loc.notes || '')}</textarea></div>
 			<div class="sp-form-group"><label>Pinned purposes <span class="unique sp-text-secondary" style="font-weight:400;">(one per line — first one pre-fills the purpose when this place is chosen)</span></label><textarea id="sp-editloc-pinned" class="sp-textarea" rows="3" placeholder="Store visit&#10;Manager meeting">${esc(pinned)}</textarea></div>
 			<div class="sp-form-group"><label>Marker image URL <span class="unique sp-text-secondary" style="font-weight:400;">(optional — overrides this location type's default marker on the map; blank = use the default)</span></label><input type="text" id="sp-editloc-marker" class="sp-input" value="${esc(loc.marker_icon || '')}" placeholder="https://rovin.work/wp-content/uploads/brand-logo.png"></div>
@@ -12705,9 +12705,10 @@ function spShowReceiptThumb(wrap, src) {
 		const row = $('.sp-receipt-row', wrap);
 		if (row) row.insertAdjacentElement('afterend', prev); else wrap.appendChild(prev);
 	}
-	prev.innerHTML = `<img class="sp-receipt-thumb" src="${src}" alt="Receipt"><button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-receipt-remove">Remove</button>`;
+	prev.innerHTML = `<img class="sp-receipt-thumb" alt="Receipt"><button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-receipt-remove">Remove</button>`;
 	prev.hidden = false;
 	markUniqueSpans(prev);
+	spImgWithRetry($('.sp-receipt-thumb', prev), src);
 	$('.sp-receipt-thumb', prev)?.addEventListener('click', () => spShowReceiptModal(src));
 	$('.sp-receipt-remove', prev)?.addEventListener('click', () => {
 		wrap._receiptData = null;
@@ -12736,17 +12737,63 @@ function spHasReceipt(wrap) {
 }
 
 // Full-size receipt popup (clicked from a form thumb or a list row's receipt icon).
+// Load an image, auto-retrying a couple times before it gives up. Receipt fetches occasionally miss on a
+// cold CDN edge / slow origin and show a permanent broken icon that a simple reload would have fixed;
+// each retry cache-busts so it forces a fresh fetch rather than re-reading a bad/empty cached response.
+function spImgWithRetry(img, src, tries = 3) {
+	if (!img) return;
+	// Data URLs (a freshly-scanned receipt still in memory) can't miss a cache and can't take a query
+	// param — load them straight, no retry.
+	if (/^data:/i.test(src)) { img.src = src; return; }
+	let n = 0;
+	img.onerror = () => {
+		if (++n >= tries) return;
+		setTimeout(() => { img.src = src + (src.indexOf('?') < 0 ? '?' : '&') + '_r=' + n; }, 500 * n);
+	};
+	img.src = src;
+}
+
 function spShowReceiptModal(src) {
 	if (!src) return;
 	const back = document.createElement('div');
 	back.className = 'sp-modal-backdrop sp-receipt-modal';
-	back.innerHTML = `<div class="sp-receipt-modal-box"><button type="button" class="unique sp-receipt-modal-close" aria-label="Close">×</button><img src="${esc(src)}" alt="Receipt"></div>`;
+	back.innerHTML = `<div class="sp-receipt-modal-box"><button type="button" class="unique sp-receipt-modal-close" aria-label="Close">×</button><img alt="Receipt"></div>`;
 	document.body.appendChild(back);
 	markUniqueSpans(back);
+	spImgWithRetry(back.querySelector('img'), src);
 	const close = () => back.remove();
 	back.addEventListener('click', (e) => { if (e.target === back) close(); });
 	$('.sp-receipt-modal-close', back)?.addEventListener('click', close);
 	document.addEventListener('keydown', function esc2(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc2); } });
+}
+
+// Full-screen view of the uploaded toll statement (the "toll CSV"), rendered as a table — the data
+// parallel to spShowReceiptModal's image. Reads the same toll_transactions the report PDF appends.
+function spShowTollModal(txns) {
+	txns = Array.isArray(txns) ? txns : [];
+	const money = n => '$' + mileageNumFmt(n);
+	let total = 0;
+	const rows = txns.map(x => {
+		const amt = parseFloat(x.amount) || 0; total += amt;
+		const dt = x.txn_datetime ? String(x.txn_datetime).replace('T', ' ') : '';
+		const reimb = x.allocation_status === 'matched' ? 'Yes' : '';
+		return `<tr><td>${esc(dt)}</td><td>${esc(x.road || '')}</td><td>${esc(x.gantry || '')}</td><td style="text-align:center">${reimb}</td><td class="sp-num">${money(amt)}</td></tr>`;
+	}).join('');
+	const back = document.createElement('div');
+	back.className = 'sp-modal-backdrop sp-toll-modal';
+	back.innerHTML = `<div class="sp-toll-modal-box">
+		<button type="button" class="unique sp-toll-modal-close" aria-label="Close">×</button>
+		<h3 class="sp-toll-modal-title">Toll Statement</h3>
+		<div class="sp-toll-modal-scroll"><table class="sp-table"><thead class="sp-thead"><tr><th>Date / Time</th><th>Road</th><th>Location</th><th>Reimbursed</th><th class="sp-num">Amount</th></tr></thead>
+		<tbody>${rows || '<tr><td colspan="5">No toll transactions for this period.</td></tr>'}</tbody>
+		<tfoot><tr class="sp-vexp-grand"><td colspan="4" class="sp-rep-total-line">Toll Statement Total</td><td class="sp-num">${money(total)}</td></tr></tfoot>
+		</table></div></div>`;
+	document.body.appendChild(back);
+	markUniqueSpans(back);
+	const close = () => back.remove();
+	back.addEventListener('click', (e) => { if (e.target === back) close(); });
+	$('.sp-toll-modal-close', back)?.addEventListener('click', close);
+	document.addEventListener('keydown', function escT(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escT); } });
 }
 
 /* ===========================================================================
@@ -13450,7 +13497,7 @@ function renderVehicleExpenses() {
 	let grand = 0;
 
 	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-vexp-table"><thead class="sp-thead"><tr>';
-	html += '<th>Date</th><th>Category</th><th>Description</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
+	html += '<th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
 	list.forEach(x => {
@@ -13459,9 +13506,9 @@ function renderVehicleExpenses() {
 		if (totals[x.category] != null) totals[x.category] += amt;
 		html += '<tr>';
 		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
+		html += `<td class="sp-charge-col">${esc(x.store_number || '')}</td>`;
 		html += `<td>${esc(catLabel(x.category))}</td>`;
 		html += `<td>${esc(x.description || '')}</td>`;
-		html += `<td>${esc(x.store_number || '')}</td>`;
 		html += `<td class="sp-num">${fmt(amt)}</td>`;
 		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-vexp-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-vexp-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-vexp-del-btn', `data-id="${x.id}"`)}</td>`;
 		html += '</tr>';
@@ -13832,11 +13879,11 @@ function renderBusinessMeals() {
 		return;
 	}
 
-	// One row per meal: Date | Place | Business Purpose | Attendees | Store # | Amount, with a
+	// One row per meal: Date | Place | Business Purpose | Attendees | Charge To | Amount, with a
 	// Section C total below (all of section C posts to GL 91110).
 	let grand = 0;
 	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-meal-table"><thead class="sp-thead"><tr>';
-	html += '<th>Date</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
+	html += '<th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
 	list.forEach(x => {
@@ -13844,10 +13891,10 @@ function renderBusinessMeals() {
 		grand += amt;
 		html += '<tr>';
 		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
+		html += `<td class="sp-charge-col">${esc(x.store_number || '')}</td>`;
 		html += `<td>${esc(x.place || '')}</td>`;
 		html += `<td>${esc(x.business_purpose || '')}</td>`;
 		html += `<td>${esc(x.attendees || '')}</td>`;
-		html += `<td>${esc(x.store_number || '')}</td>`;
 		html += `<td class="sp-num">${fmt(amt)}</td>`;
 		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-meal-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-meal-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-meal-del-btn', `data-id="${x.id}"`)}</td>`;
 		html += '</tr>';
@@ -14035,11 +14082,11 @@ function renderCompetitiveShopping() {
 		return;
 	}
 
-	// One row per visit: Date | Place | Business Purpose | Store # | Amount, with a Section D
+	// One row per visit: Date | Place | Business Purpose | Charge To | Amount, with a Section D
 	// total below (all of section D posts to GL 81095, R&D-Food).
 	let grand = 0;
 	let html = '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-shop-table"><thead class="sp-thead"><tr>';
-	html += '<th>Date</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
+	html += '<th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
 	list.forEach(x => {
@@ -14047,10 +14094,10 @@ function renderCompetitiveShopping() {
 		grand += amt;
 		html += '<tr>';
 		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
+		html += `<td class="sp-charge-col">${esc(x.store_number || '')}</td>`;
 		html += `<td>${esc(x.place || '')}</td>`;
 		html += `<td>${esc(x.business_purpose || '')}</td>`;
 		html += `<td>${esc(x.attendees || '')}</td>`;
-		html += `<td>${esc(x.store_number || '')}</td>`;
 		html += `<td class="sp-num">${fmt(amt)}</td>`;
 		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-shop-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-shop-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-shop-del-btn', `data-id="${x.id}"`)}</td>`;
 		html += '</tr>';
@@ -14167,7 +14214,7 @@ async function saveShop() {
 
 
 /* ---- Other Expenses (Section E) ---- */
-// Catch-all section: Date | Description | Account | Store # | Amount. The GL account is entered
+// Catch-all section: Date | Description | Account | Charge To | Amount. The GL account is entered
 // per line (free text) — section E has no fixed category list, so each row carries its own.
 let _spOexp = { list: [], editId: 0, start: '', end: '', accounts: [], recurring: [] };
 
@@ -14253,12 +14300,12 @@ function renderOtherExpenses() {
 		return;
 	}
 
-	// One row per expense: Date | Description | Account | Store # | Amount, with a Section E total
+	// One row per expense: Date | Description | Account | Charge To | Amount, with a Section E total
 	// below. Each row carries its own GL account (no fixed category for section E).
 	let grand = 0;
 	let html = strip;
 	html += '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table sp-oexp-table"><thead class="sp-thead"><tr>';
-	html += '<th>Date</th><th>Description</th><th>Account</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th><th></th>';
+	html += '<th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Vendor</th><th>Description</th><th>Account</th><th class="sp-num">Amount</th><th></th>';
 	html += '</tr></thead><tbody>';
 
 	list.forEach(x => {
@@ -14266,9 +14313,10 @@ function renderOtherExpenses() {
 		grand += amt;
 		html += '<tr>';
 		html += `<td>${esc(formatDate(x.expense_date))}</td>`;
+		html += `<td class="sp-charge-col">${esc(x.store_number || '')}</td>`;
+		html += `<td>${esc(x.place || '')}</td>`;
 		html += `<td>${esc(x.description || '')}</td>`;
 		html += `<td>${esc(x.account_code || '')}</td>`;
-		html += `<td>${esc(x.store_number || '')}</td>`;
 		html += `<td class="sp-num">${fmt(amt)}</td>`;
 		html += `<td class="sp-mileage-row-actions">${x.receipt_url ? receiptIconBtn('sp-oexp-receipt-btn', x.id) : ''}${iconBtn('edit', 'sp-oexp-edit-btn', `data-id="${x.id}"`)}${iconBtn('delete', 'sp-oexp-del-btn', `data-id="${x.id}"`)}</td>`;
 		html += '</tr>';
@@ -14312,7 +14360,8 @@ function spOexpAccountOptions(selected) {
 	(_spOexp.accounts || []).forEach(a => {
 		const num = String(a.number || '');
 		if (!num) return;
-		const lbl = a.description ? `${num} ${a.description}` : num;
+		// Staff picking an account get the full context: code + short category + the long description.
+		const lbl = [num, a.category, a.description].filter(Boolean).join(' — ');
 		o += `<option value="${esc(num)}"${v === num ? ' selected' : ''}>${esc(lbl)}</option>`;
 	});
 	if (v && !(_spOexp.accounts || []).some(a => String(a.number) === v)) o += `<option value="${esc(v)}" selected>${esc(v)}</option>`;
@@ -14347,7 +14396,8 @@ function showOexpForm(x) {
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-oexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 				</div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-oexp-move" class="sp-select">${spExpDestOptions(x ? x.section : 'E', x ? x.category : '')}</select></div>
-				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
+				<div class="sp-form-group"><label>Vendor</label><input type="text" id="sp-oexp-vendor" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="e.g. Michael's"></div>
+					<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
 				<div class="sp-form-group"><label>Charge To</label><select id="sp-oexp-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : '99')}</select></div>
 					<div class="sp-form-group sp-recurring-group">
 						<label for="sp-oexp-recurring">Recurring expense</label><input type="checkbox" id="sp-oexp-recurring" class="sp-recurring-check">
@@ -14363,9 +14413,10 @@ function showOexpForm(x) {
 	setExpenseChrome('oexp', true);
 	markUniqueSpans(wrap);
 
-	// Receipt scan → fills Date, Amount and Description. The GL account stays manual.
+	// Receipt scan → fills Date, Vendor, Amount and Description. The GL account stays manual.
 	spWireReceiptScan(wrap, 'E', (r) => {
 		if (r.date) { const el = $('#sp-oexp-date', wrap); if (el) el.value = r.date; }
+		if (r.place) { const el = $('#sp-oexp-vendor', wrap); if (el && !el.value) el.value = r.place; }
 		if (r.amount > 0) { const el = $('#sp-oexp-amount', wrap); if (el) el.value = (parseFloat(r.amount) || 0).toFixed(2); }
 		if (r.description) { const el = $('#sp-oexp-desc', wrap); if (el && !el.value) el.value = r.description; }
 	});
@@ -14387,6 +14438,7 @@ async function saveOexp() {
 	const account_code = $('#sp-oexp-account')?.value || '';
 	const amount = parseFloat($('#sp-oexp-amount')?.value);
 	const description = $('#sp-oexp-desc')?.value || '';
+	const place = $('#sp-oexp-vendor')?.value || '';
 	const store_number = $('#sp-oexp-store')?.value || '';
 	const dest = spExpDestParse($('#sp-oexp-move')?.value);
 	if (!date) { alert('Please choose a date.'); return; }
@@ -14395,7 +14447,7 @@ async function saveOexp() {
 	const btn = $('#sp-oexp-save');
 	if (btn) btn.disabled = true;
 	const makeRecurring = !!$('#sp-oexp-recurring')?.checked;
-	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description, account_code, store_number };
+	const payload = { section: dest.section, category: dest.category, expense_date: date, amount, description, place, account_code, store_number };
 	if (_spOexp.editId) payload.id = _spOexp.editId;
 	Object.assign(payload, spReceiptPayload($('#sp-oexp-form-wrap')));
 	try {
@@ -14459,10 +14511,13 @@ function spBuildAccountSummary(data) {
 	const num = n => parseFloat(n) || 0;
 	const accounts = data.accounts || [];
 	const ma = Object.assign({ reimbursement: '91310', tolls: '91310', trailer: '91310' }, data.mileage_accounts || {});
+	// Summary of Expenses shows just GL code + short Category (not the long description) to keep the
+	// report clean — e.g. "91310 - Vehicle Maintenance". Falls back to the bare code if no category yet.
 	const acctLabel = (n) => {
 		if (!n) return '';
 		const hit = accounts.find(a => String(a.number) === String(n));
-		return hit && hit.description ? `${hit.number} ${hit.description}` : String(n);
+		if (!hit) return String(n);
+		return hit.category ? `${hit.number} - ${hit.category}` : String(hit.number);
 	};
 
 	const rows = [];
@@ -14479,14 +14534,18 @@ function spBuildAccountSummary(data) {
 		return m;
 	};
 
-	// A — Mileage: reimbursement + tolls + trailer, each to its configured account.
-	const aMap = {};
-	const addA = (acct, amt) => { if (!amt) return; const k = String(acct || ''); aMap[k] = (aMap[k] || 0) + amt; };
+	// A — Mileage: reimbursement, tolls and trailer each get their OWN summary line (rather than
+	// collapsing into a single account row) so the Summary reconciles line-for-line with the itemized
+	// Section A totals. Tolls/trailer only appear when there's an amount to show — like E's per-account
+	// lines. All three still post to their configured account.
 	const totalMiles = entries.reduce((s, e) => s + num(e.total_miles), 0);
-	addA(ma.reimbursement, rate > 0 ? Math.round(totalMiles * rate * 100) / 100 : 0);
-	addA(ma.tolls, entries.reduce((s, e) => s + num(e.total_tolls), 0));
-	addA(ma.trailer, entries.reduce((s, e) => s + num(e.total_trailer), 0));
-	emit('A - Mileage', aMap);
+	const aReimb = rate > 0 ? Math.round(totalMiles * rate * 100) / 100 : 0;
+	const aTolls = entries.reduce((s, e) => s + num(e.total_tolls), 0);
+	const aTrailer = entries.reduce((s, e) => s + num(e.total_trailer), 0);
+	const addARow = (desc, acct, amt) => { if (Math.abs(amt) < 0.0001) return; rows.push({ desc, account: String(acct || ''), account_label: acctLabel(acct), amount: amt }); };
+	addARow('A - Mileage', ma.reimbursement, aReimb);
+	addARow('A - Tolls', ma.tolls, aTolls);
+	addARow('A - Trailer', ma.trailer, aTrailer);
 
 	emit('B - Vehicle Expenses', groupRows(data.vehicle_expenses));
 	emit('C - Business Meals', groupRows(data.business_meals));
@@ -14564,6 +14623,15 @@ function renderExpenseReport(data, opts) {
 	html += `<tr class="sp-rep-total"><td>Total Due to Employee</td><td class="sp-num">${money(summary.total)}</td><td></td></tr>`;
 	html += '</tbody></table></div>';
 
+	// Quick-view document buttons: a receipt button on each expense row that has a photo (opens it
+	// full-screen), and one toll button on the Section A total (opens the uploaded toll CSV full-screen).
+	const docReceiptBtn = (url) => url
+		? `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-receipt sp-rep-doc-btn" title="View receipt" aria-label="View receipt" data-url="${esc(url)}">${ICON_RECEIPT}</button>`
+		: '';
+	const repTollTxns = data.toll_transactions || [];
+	// Same circular icon button as the receipts, with a grid/spreadsheet glyph so it reads as the CSV.
+	const tollDocBtn = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-receipt sp-rep-toll-btn" title="View toll statement (CSV)" aria-label="View toll statement"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></button>`;
+
 	// --- Section detail tables (only sections that have rows; mirrors the PDF body) ---
 	// A — Mileage: built EXACTLY like the on-screen Mileage screen — the `sp-mileage-table` class
 	// and one <tbody class="sp-mileage-day"> per day — so the global mileage CSS controls the look.
@@ -14603,10 +14671,18 @@ function renderExpenseReport(data, opts) {
 			html += '</tr>';
 			html += '</tbody>';
 		});
-		// Section A grand total — label + amount combined in one right-aligned cell so every
-		// section's total lines up on the right edge regardless of its columns.
+		// Section A totals — broken out so they reconcile with the Summary's A - Mileage / A - Tolls
+		// lines: total miles, total mileage reimbursement, and total tolls (+ trailer when present).
+		// Each on its own right-aligned band row. The toll-statement (CSV) button rides the Tolls line.
 		const aCols = 6 + (hasTrl ? 1 : 0) + (hasToll ? 1 : 0);
-		html += `<tbody><tr class="sp-vexp-grand"><td colspan="${aCols}" class="sp-rep-total-line">Section A Total · ${money(mileageReimb)}</td></tr></tbody>`;
+		const aGrand = (label) => `<tr class="sp-vexp-grand"><td colspan="${aCols}" class="sp-rep-total-line">${label}</td></tr>`;
+		let aFoot = aGrand(`Total Miles · ${mileageNumFmt(totalMiles)}`);
+		aFoot += aGrand(`Total Mileage · ${money(mileageReimb)}`);
+		if (mileageTolls > 0 || repTollTxns.length) {
+			aFoot += aGrand(`Total Tolls · ${money(mileageTolls)}${repTollTxns.length ? ' <span class="sp-rep-total-doc">' + tollDocBtn + '</span>' : ''}`);
+		}
+		if (mileageTrailer > 0) aFoot += aGrand(`Total Trailer · ${money(mileageTrailer)}`);
+		html += `<tbody>${aFoot}</tbody>`;
 		html += '</table></div>';
 	}
 
@@ -14615,45 +14691,45 @@ function renderExpenseReport(data, opts) {
 		const catLabel = k => (vcats[k] && vcats[k].label) || k || '—';
 		let bGrand = 0;
 		html += '<h3 class="sp-rep-section-title">B — Vehicle Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		vehicle.forEach(x => {
 			const amt = parseFloat(x.amount) || 0; bGrand += amt;
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(catLabel(x.category))}</td><td>${esc(x.description || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(amt)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(catLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(amt)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="5" class="sp-rep-total-line">Section B Total · ${money(bGrand)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="5" class="sp-rep-total-line">Section B Total · ${money(bGrand)}</td><td></td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
 	// C — Business Meals
 	if (meals.length) {
 		html += '<h3 class="sp-rep-section-title">C — Business Meals</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		meals.forEach(x => {
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="6" class="sp-rep-total-line">Section C Total · ${money(cTotal)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="6" class="sp-rep-total-line">Section C Total · ${money(cTotal)}</td><td></td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
 	// D — Competitive Shopping
 	if (shopping.length) {
 		html += '<h3 class="sp-rep-section-title">D — Competitive Shopping</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		shopping.forEach(x => {
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="6" class="sp-rep-total-line">Section D Total · ${money(dTotal)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="6" class="sp-rep-total-line">Section D Total · ${money(dTotal)}</td><td></td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
 	// E — Other Expenses
 	if (other.length) {
 		html += '<h3 class="sp-rep-section-title">E — Other Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Description</th><th>Account</th><th>Store&nbsp;#</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Vendor</th><th>Description</th><th>Account</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		other.forEach(x => {
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(x.description || '')}</td><td>${esc(x.account_code || '')}</td><td>${esc(x.store_number || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(x.place || '')}</td><td>${esc(x.description || '')}</td><td>${esc(x.account_code || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="5" class="sp-rep-total-line">Section E Total · ${money(eTotal)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="6" class="sp-rep-total-line">Section E Total · ${money(eTotal)}</td><td></td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
@@ -14661,16 +14737,19 @@ function renderExpenseReport(data, opts) {
 	if (travel.length) {
 		const tcatLabel = k => (tcats[k] && tcats[k].label) || k || '—';
 		html += '<h3 class="sp-rep-section-title">F — Travel Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		travel.forEach(x => {
-			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(tcatLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(x.amount)}</td></tr>`;
+			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(tcatLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
-		html += `<tr class="sp-vexp-grand"><td colspan="4" class="sp-rep-total-line">Section F Total · ${money(fTotal)}</td></tr>`;
+		html += `<tr class="sp-vexp-grand"><td colspan="4" class="sp-rep-total-line">Section F Total · ${money(fTotal)}</td><td></td></tr>`;
 		html += '</tbody></table></div>';
 	}
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
+	// Documentation quick-view: receipt buttons open the photo full-screen; the toll button opens the CSV.
+	$$('.sp-rep-doc-btn', wrap).forEach(b => b.addEventListener('click', () => spShowReceiptModal(b.dataset.url)));
+	$$('.sp-rep-toll-btn', wrap).forEach(b => b.addEventListener('click', () => spShowTollModal(data.toll_transactions || [])));
 	// Fill the toolbar's Submit slot (own Overview only) — button, or a status pill once submitted.
 	if (!readonly) {
 		const slot = $('#sp-rep-submit-slot');
@@ -14929,7 +15008,8 @@ async function exportMileagePDF(start, end, opts) {
 	const shopping = data.competitive_shopping || [];
 	const other = data.other_expenses || [];
 	const travel = data.travel_expenses || [];
-	if (!entries.length && !vehicle.length && !meals.length && !shopping.length && !other.length && !travel.length) { if (!opts.returnBase64) alert('No expenses for this period.'); return null; }
+	const tollTxns = data.toll_transactions || [];
+	if (!entries.length && !vehicle.length && !meals.length && !shopping.length && !other.length && !travel.length && !tollTxns.length) { if (!opts.returnBase64) alert('No expenses for this period.'); return null; }
 
 	const rate = parseFloat(data.rate) || 0;
 	const money = n => '$' + mileageNumFmt(n);
@@ -15047,11 +15127,20 @@ async function exportMileagePDF(start, end, opts) {
 		if (hasTrailer) { aCols[aci] = { cellWidth: 44, halign: 'right' }; aci++; }
 		if (hasTolls) { aCols[aci] = { cellWidth: 44, halign: 'right' }; aci++; }
 
+		// Section A totals — broken out (miles, mileage reimbursement, tolls, trailer) so they
+		// reconcile with the Summary's A - Mileage / A - Tolls lines.
+		const aFoot = [
+			[{ content: `Total Miles · ${mileageNumFmt(totalMiles)}`, colSpan: aHead.length, styles: { halign: 'right' } }],
+			[{ content: `Total Mileage · ${money(mileageReimb)}`, colSpan: aHead.length, styles: { halign: 'right' } }],
+		];
+		if (mileageTolls > 0) aFoot.push([{ content: `Total Tolls · ${money(mileageTolls)}`, colSpan: aHead.length, styles: { halign: 'right' } }]);
+		if (mileageTrailer > 0) aFoot.push([{ content: `Total Trailer · ${money(mileageTrailer)}`, colSpan: aHead.length, styles: { halign: 'right' } }]);
+
 		doc.autoTable({
 			startY: aY + 8,
 			head: [aHead],
 			body: aBody,
-			foot: [[{ content: `Section A Total · ${money(mileageReimb)}`, colSpan: aHead.length, styles: { halign: 'right' } }]],
+			foot: aFoot,
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 8.5, fontStyle: 'bold' },
 			footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9.5 },
 			bodyStyles: { fontSize: 8, textColor: [26, 26, 24], valign: 'top' },
@@ -15082,13 +15171,13 @@ async function exportMileagePDF(start, end, opts) {
 		let bGrand = 0;
 		const vBody = vehicle.map(x => {
 			const amt = parseFloat(x.amount) || 0; bGrand += amt;
-			return [formatDate(x.expense_date), vcatLabel(x.category), String(x.description || ''), String(x.store_number || ''), money(amt)];
+			return [formatDate(x.expense_date), String(x.store_number || ''), vcatLabel(x.category), String(x.description || ''), money(amt)];
 		});
 
 		const VDATE_W = 60, VCAT_W = 120, VSTORE_W = 56, VAMT_W = 72;
 		doc.autoTable({
 			startY: bY + 8,
-			head: [['Date', 'Category', 'Description', 'Store #', 'Amount']],
+			head: [['Date', 'Charge To', 'Category', 'Description', 'Amount']],
 			body: vBody,
 			foot: [[{ content: `Section B Total · ${money(bGrand)}`, colSpan: 5, styles: { halign: 'right' } }]],
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
@@ -15097,16 +15186,16 @@ async function exportMileagePDF(start, end, opts) {
 			alternateRowStyles: { fillColor: [248, 248, 245] },
 			columnStyles: {
 				0: { cellWidth: VDATE_W },
-				1: { cellWidth: VCAT_W },
-				2: { cellWidth: 532 - VDATE_W - VCAT_W - VSTORE_W - VAMT_W },
-				3: { cellWidth: VSTORE_W, halign: 'center' },
+				1: { cellWidth: VSTORE_W, halign: 'center' },
+				2: { cellWidth: VCAT_W },
+				3: { cellWidth: 532 - VDATE_W - VCAT_W - VSTORE_W - VAMT_W },
 				4: { cellWidth: VAMT_W, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
 	}
 
-	// Section C — Business Meals: Date | Place | Business Purpose | Attendees | Store # | Amount,
+	// Section C — Business Meals: Date | Place | Business Purpose | Attendees | Charge To | Amount,
 	// with a Section C total (all GL 91110).
 	if (meals.length) {
 		let cY = doc.lastAutoTable.finalY + 28;
@@ -15120,15 +15209,15 @@ async function exportMileagePDF(start, end, opts) {
 			const amt = parseFloat(x.amount) || 0;
 			cGrand += amt;
 			return [
-				formatDate(x.expense_date), String(x.place || ''), String(x.business_purpose || ''),
-				String(x.attendees || ''), String(x.store_number || ''), `$${mileageNumFmt(amt)}`,
+				formatDate(x.expense_date), String(x.store_number || ''), String(x.place || ''),
+				String(x.business_purpose || ''), String(x.attendees || ''), `$${mileageNumFmt(amt)}`,
 			];
 		});
 
 		const CDATE_W = 58, CSTORE_W = 44, CAMT_W = 64, CFREE = 532 - CDATE_W - CSTORE_W - CAMT_W;
 		doc.autoTable({
 			startY: cY + 8,
-			head: [['Date', 'Place', 'Business Purpose', 'Attendees', 'Store #', 'Amount']],
+			head: [['Date', 'Charge To', 'Place', 'Business Purpose', 'Attendees', 'Amount']],
 			body: cBody,
 			foot: [[{ content: `Section C Total · ${money(cGrand)}`, colSpan: 6, styles: { halign: 'right' } }]],
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
@@ -15137,17 +15226,17 @@ async function exportMileagePDF(start, end, opts) {
 			alternateRowStyles: { fillColor: [248, 248, 245] },
 			columnStyles: {
 				0: { cellWidth: CDATE_W },
-				1: { cellWidth: Math.round(CFREE * 0.30) },
-				2: { cellWidth: Math.round(CFREE * 0.40) },
-				3: { cellWidth: CFREE - Math.round(CFREE * 0.30) - Math.round(CFREE * 0.40) },
-				4: { cellWidth: CSTORE_W },
+				1: { cellWidth: CSTORE_W, halign: 'center' },
+				2: { cellWidth: Math.round(CFREE * 0.30) },
+				3: { cellWidth: Math.round(CFREE * 0.40) },
+				4: { cellWidth: CFREE - Math.round(CFREE * 0.30) - Math.round(CFREE * 0.40) },
 				5: { cellWidth: CAMT_W, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
 	}
 
-	// Section D — Competitive Shopping: Date | Place | Business Purpose | Attendees | Store # | Amount,
+	// Section D — Competitive Shopping: Date | Place | Business Purpose | Attendees | Charge To | Amount,
 	// with a Section D total (all GL 81095, R&D-Food).
 	if (shopping.length) {
 		let dY = doc.lastAutoTable.finalY + 28;
@@ -15161,15 +15250,15 @@ async function exportMileagePDF(start, end, opts) {
 			const amt = parseFloat(x.amount) || 0;
 			dGrand += amt;
 			return [
-				formatDate(x.expense_date), String(x.place || ''), String(x.business_purpose || ''),
-				String(x.attendees || ''), String(x.store_number || ''), `$${mileageNumFmt(amt)}`,
+				formatDate(x.expense_date), String(x.store_number || ''), String(x.place || ''),
+				String(x.business_purpose || ''), String(x.attendees || ''), `$${mileageNumFmt(amt)}`,
 			];
 		});
 
 		const DDATE_W = 58, DSTORE_W = 44, DAMT_W = 64, DFREE = 532 - DDATE_W - DSTORE_W - DAMT_W;
 		doc.autoTable({
 			startY: dY + 8,
-			head: [['Date', 'Place', 'Business Purpose', 'Attendees', 'Store #', 'Amount']],
+			head: [['Date', 'Charge To', 'Place', 'Business Purpose', 'Attendees', 'Amount']],
 			body: dBody,
 			foot: [[{ content: `Section D Total · ${money(dGrand)}`, colSpan: 6, styles: { halign: 'right' } }]],
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
@@ -15178,17 +15267,17 @@ async function exportMileagePDF(start, end, opts) {
 			alternateRowStyles: { fillColor: [248, 248, 245] },
 			columnStyles: {
 				0: { cellWidth: DDATE_W },
-				1: { cellWidth: Math.round(DFREE * 0.34) },
-				2: { cellWidth: Math.round(DFREE * 0.36) },
-				3: { cellWidth: DFREE - Math.round(DFREE * 0.34) - Math.round(DFREE * 0.36) },
-				4: { cellWidth: DSTORE_W },
+				1: { cellWidth: DSTORE_W, halign: 'center' },
+				2: { cellWidth: Math.round(DFREE * 0.34) },
+				3: { cellWidth: Math.round(DFREE * 0.36) },
+				4: { cellWidth: DFREE - Math.round(DFREE * 0.34) - Math.round(DFREE * 0.36) },
 				5: { cellWidth: DAMT_W, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
 	}
 
-	// Section E — Other Expenses: Date | Description | Account | Store # | Amount, with a Section E
+	// Section E — Other Expenses: Date | Description | Account | Charge To | Amount, with a Section E
 	// total. Each row carries its own GL account (free entry), so there's no single GL line here.
 	if (other.length) {
 		let eY = doc.lastAutoTable.finalY + 28;
@@ -15202,27 +15291,28 @@ async function exportMileagePDF(start, end, opts) {
 			const amt = parseFloat(x.amount) || 0;
 			eGrand += amt;
 			return [
-				formatDate(x.expense_date), String(x.description || ''), String(x.account_code || ''),
-				String(x.store_number || ''), `$${mileageNumFmt(amt)}`,
+				formatDate(x.expense_date), String(x.store_number || ''), String(x.place || ''),
+				String(x.description || ''), String(x.account_code || ''), `$${mileageNumFmt(amt)}`,
 			];
 		});
 
-		const EDATE_W = 58, EACCT_W = 64, ESTORE_W = 44, EAMT_W = 64, EDESC_W = 532 - EDATE_W - EACCT_W - ESTORE_W - EAMT_W;
+		const EDATE_W = 58, EACCT_W = 64, ESTORE_W = 44, EAMT_W = 64, EVEND_W = 92, EDESC_W = 532 - EDATE_W - EACCT_W - ESTORE_W - EAMT_W - EVEND_W;
 		doc.autoTable({
 			startY: eY + 8,
-			head: [['Date', 'Description', 'Account', 'Store #', 'Amount']],
+			head: [['Date', 'Charge To', 'Vendor', 'Description', 'Account', 'Amount']],
 			body: eBody,
-			foot: [[{ content: `Section E Total · ${money(eGrand)}`, colSpan: 5, styles: { halign: 'right' } }]],
+			foot: [[{ content: `Section E Total · ${money(eGrand)}`, colSpan: 6, styles: { halign: 'right' } }]],
 			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 9, fontStyle: 'bold' },
 			footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9 },
 			bodyStyles: { fontSize: 8.5, textColor: [26, 26, 24], valign: 'top' },
 			alternateRowStyles: { fillColor: [248, 248, 245] },
 			columnStyles: {
 				0: { cellWidth: EDATE_W },
-				1: { cellWidth: EDESC_W },
-				2: { cellWidth: EACCT_W },
-				3: { cellWidth: ESTORE_W },
-				4: { cellWidth: EAMT_W, halign: 'right' },
+				1: { cellWidth: ESTORE_W, halign: 'center' },
+				2: { cellWidth: EVEND_W },
+				3: { cellWidth: EDESC_W },
+				4: { cellWidth: EACCT_W },
+				5: { cellWidth: EAMT_W, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
@@ -15260,6 +15350,44 @@ async function exportMileagePDF(start, end, opts) {
 				1: { cellWidth: FCAT_W },
 				2: { cellWidth: 532 - FDATE_W - FCAT_W - FAMT_W },
 				3: { cellWidth: FAMT_W, halign: 'right' },
+			},
+			margin: { left: 40, right: 40 },
+		});
+	}
+
+	// Toll statement — the driver's uploaded toll-authority transactions (the "toll CSV"), rendered as a
+	// table so the report carries the source behind the reimbursed tolls, the same way the receipt photos
+	// back the expense lines. "Reimbursed" = this toll was reconciled onto a leg (allocation_status matched).
+	if (tollTxns.length) {
+		let tY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 28 : 54;
+		if (tY > pageH - 130) { doc.addPage(); tY = 54; }
+		doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(...NAVY);
+		doc.text('Toll Statement (uploaded)', 40, tY);
+		doc.setFont('helvetica', 'normal');
+
+		let tGrand = 0;
+		const tBody = tollTxns.map(x => {
+			const amt = parseFloat(x.amount) || 0; tGrand += amt;
+			const dt = x.txn_datetime ? String(x.txn_datetime).replace('T', ' ') : '';
+			return [dt, String(x.road || ''), String(x.gantry || ''), (x.allocation_status === 'matched' ? 'Yes' : ''), `$${mileageNumFmt(amt)}`];
+		});
+
+		const TT_DATE = 100, TT_REIMB = 64, TT_AMT = 60, TT_FREE = 532 - TT_DATE - TT_REIMB - TT_AMT;
+		doc.autoTable({
+			startY: tY + 8,
+			head: [['Date / Time', 'Road', 'Location', 'Reimbursed', 'Amount']],
+			body: tBody,
+			foot: [[{ content: `Toll Statement Total · $${mileageNumFmt(tGrand)}`, colSpan: 5, styles: { halign: 'right' } }]],
+			headStyles: { fillColor: NAVY, textColor: 255, fontSize: 8.5, fontStyle: 'bold' },
+			footStyles: { fillColor: SOFT, textColor: NAVY, fontStyle: 'bold', fontSize: 9 },
+			bodyStyles: { fontSize: 8, textColor: [26, 26, 24], valign: 'top' },
+			alternateRowStyles: { fillColor: [248, 248, 245] },
+			columnStyles: {
+				0: { cellWidth: TT_DATE },
+				1: { cellWidth: Math.round(TT_FREE * 0.5) },
+				2: { cellWidth: TT_FREE - Math.round(TT_FREE * 0.5) },
+				3: { cellWidth: TT_REIMB, halign: 'center' },
+				4: { cellWidth: TT_AMT, halign: 'right' },
 			},
 			margin: { left: 40, right: 40 },
 		});
@@ -15652,9 +15780,9 @@ async function loadAdminMileage() {
 		// Chart of Accounts editor — the GL accounts (number + description) that feed the Other
 		// Expenses account dropdown and the category account pickers below.
 		let secAccounts = card('Chart of Accounts');
-		secAccounts += '<p class="sp-text-secondary">Your GL accounts. These feed the account dropdown on <strong>Other Expenses</strong> and the account picker for each category below — shown to staff as “91200 Office Supplies”.</p>';
+		secAccounts += '<p class="sp-text-secondary">Your GL accounts. Give each a <strong>Number</strong>, a short <strong>Category</strong> (what shows on the expense report, e.g. “Office Supplies”), and an optional longer <strong>Description</strong> (extra detail, shown only in the staff account dropdown). Sorted by number.</p>';
 		secAccounts += '<div class="sp-exp-acct-rows" id="sp-exp-acct-list"></div>';
-		secAccounts += '<div class="sp-exp-add-row"><input type="text" id="sp-exp-acct-num" class="sp-input sp-exp-acct-num-in" placeholder="Number (e.g. 91200)"><input type="text" id="sp-exp-acct-desc" class="sp-input" placeholder="Description (e.g. Office Supplies)"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-exp-acct-add-btn">Add</button></div>';
+		secAccounts += '<div class="sp-exp-add-row"><input type="text" id="sp-exp-acct-num" class="sp-input sp-exp-acct-num-in" placeholder="Number (e.g. 91200)"><input type="text" id="sp-exp-acct-cat" class="sp-input sp-exp-acct-cat-in" placeholder="Category (e.g. Office Supplies)"><input type="text" id="sp-exp-acct-desc" class="sp-input sp-exp-acct-desc-in" placeholder="Description (details, optional)"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-exp-acct-add-btn">Add</button></div>';
 		secAccounts += cardEnd;
 
 		// Expense Categories editor — the categories inside each section + the GL account each posts
@@ -15762,7 +15890,7 @@ async function loadAdminMileage() {
 		$('#sp-mileage-purpose-new', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addPurpose(); } });
 
 		// ---- Expense config editors: Chart of Accounts, Categories, and mileage→account map ----
-		let acctList = (res.data.expense_accounts || []).map(a => ({ number: String(a.number || ''), description: String(a.description || '') }));
+		let acctList = (res.data.expense_accounts || []).map(a => ({ number: String(a.number || ''), category: String(a.category || ''), description: String(a.description || '') }));
 		const CAT_SECTIONS = [['B', 'Vehicle Expenses'], ['C', 'Business Meals'], ['D', 'Competitive Shopping'], ['F', 'Travel Expenses']];
 		const catSrc = res.data.expense_categories || {};
 		let catArrays = {};
@@ -15779,7 +15907,8 @@ async function loadAdminMileage() {
 			let o = '<option value="">— account —</option>';
 			acctList.forEach(a => {
 				if (!a.number) return;
-				const lbl = a.description ? `${a.number} ${a.description}` : a.number;
+				const name = a.category || a.description;
+				const lbl = name ? `${a.number} - ${name}` : String(a.number);
 				o += `<option value="${esc(a.number)}"${v === String(a.number) ? ' selected' : ''}>${esc(lbl)}</option>`;
 			});
 			if (v && !acctList.some(a => String(a.number) === v)) o += `<option value="${esc(v)}" selected>${esc(v)}</option>`;
@@ -15802,14 +15931,18 @@ async function loadAdminMileage() {
 		const renderAcctRows = () => {
 			const box = $('#sp-exp-acct-list', wrap);
 			if (!box) return;
+			// Always shown sorted by GL number (natural/numeric), not insertion order.
+			acctList.sort((a, b) => String(a.number).localeCompare(String(b.number), undefined, { numeric: true }));
 			box.innerHTML = acctList.length ? acctList.map((a, i) =>
 				`<div class="sp-exp-acct-row" data-i="${i}">`
 				+ `<input type="text" class="sp-input sp-exp-acct-num-in sp-exp-acct-num-edit" data-i="${i}" value="${esc(a.number)}" placeholder="Number">`
-				+ `<input type="text" class="sp-input sp-exp-acct-desc-edit" data-i="${i}" value="${esc(a.description)}" placeholder="Description">`
+				+ `<input type="text" class="sp-input sp-exp-acct-cat-in sp-exp-acct-cat-edit" data-i="${i}" value="${esc(a.category || '')}" placeholder="Category">`
+				+ `<input type="text" class="sp-input sp-exp-acct-desc-edit" data-i="${i}" value="${esc(a.description)}" placeholder="Description (details)">`
 				+ iconBtn('delete', 'sp-exp-acct-del', `data-i="${i}"`) + '</div>').join('')
 				: '<span class="unique sp-text-secondary">No accounts yet.</span>';
 			markUniqueSpans(box);
-			$$('.sp-exp-acct-num-edit', box).forEach(inp => inp.addEventListener('change', () => { acctList[+inp.dataset.i].number = inp.value.trim(); saveAccounts(); renderCatSections(); renderMileageAccts(); }));
+			$$('.sp-exp-acct-num-edit', box).forEach(inp => inp.addEventListener('change', () => { acctList[+inp.dataset.i].number = inp.value.trim(); saveAccounts(); renderAcctRows(); renderCatSections(); renderMileageAccts(); }));
+			$$('.sp-exp-acct-cat-edit', box).forEach(inp => inp.addEventListener('change', () => { acctList[+inp.dataset.i].category = inp.value.trim(); saveAccounts(); renderCatSections(); renderMileageAccts(); }));
 			$$('.sp-exp-acct-desc-edit', box).forEach(inp => inp.addEventListener('change', () => { acctList[+inp.dataset.i].description = inp.value.trim(); saveAccounts(); renderCatSections(); renderMileageAccts(); }));
 			$$('.sp-exp-acct-del', box).forEach(b => b.addEventListener('click', () => { acctList.splice(+b.dataset.i, 1); renderAcctRows(); renderCatSections(); renderMileageAccts(); saveAccounts(); }));
 		};
@@ -15852,14 +15985,15 @@ async function loadAdminMileage() {
 		renderMileageAccts();
 
 		const addAcct = () => {
-			const numI = $('#sp-exp-acct-num', wrap), descI = $('#sp-exp-acct-desc', wrap);
+			const numI = $('#sp-exp-acct-num', wrap), catI = $('#sp-exp-acct-cat', wrap), descI = $('#sp-exp-acct-desc', wrap);
 			const num = (numI.value || '').trim(); if (!num) return;
-			if (acctList.some(a => a.number === num)) { numI.value = ''; descI.value = ''; return; }
-			acctList.push({ number: num, description: (descI.value || '').trim() });
-			numI.value = ''; descI.value = '';
+			if (acctList.some(a => a.number === num)) { numI.value = ''; catI.value = ''; descI.value = ''; return; }
+			acctList.push({ number: num, category: (catI.value || '').trim(), description: (descI.value || '').trim() });
+			numI.value = ''; catI.value = ''; descI.value = '';
 			renderAcctRows(); renderCatSections(); renderMileageAccts(); saveAccounts();
 		};
 		$('#sp-exp-acct-add-btn', wrap)?.addEventListener('click', addAcct);
+		$('#sp-exp-acct-cat', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addAcct(); } });
 		$('#sp-exp-acct-desc', wrap)?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addAcct(); } });
 
 		// Accounting (AP) email — save on change.

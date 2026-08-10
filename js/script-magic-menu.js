@@ -1,7 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {	"use strict"; 
 														   
 // Raw Script: Magic Menu
-														   
+
+// Enqueued on every device now (cache-agnostic HTML — see functions.php). Bail on mobile so the
+// script-helpers.js magicMenu/setMagicMenu no-ops stay in place, exactly as when this file was
+// skipped server-side.
+	if ( window.bpIsMobile ) return;
+
 	window.magicMenu = function(menu='#desktop-navigation .menu', linkOn='active', linkOff='non-active', stateChange='false') {
 		const mainNav = getObject(menu);
 		const baseNav = mainNav.parentElement.parentElement;

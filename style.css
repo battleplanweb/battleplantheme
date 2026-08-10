@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v44.9
+Version: v44.10
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -633,6 +633,10 @@ ul.bullet-diamond li::before {
 
 ul.bullet-warning li::before {
 	content:                                                   '⚠️';
+}
+
+ul.bullet-star li::before {
+	content:                                                   '★';
 }
 
 ul.bullet-image li::before,

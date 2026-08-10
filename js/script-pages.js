@@ -2317,7 +2317,7 @@ document.addEventListener("DOMContentLoaded", function () {
 						if (obj.bottom < 0 || obj.top > deviceH) return;             // off-screen: skip
 						const objTop = obj.top, objHeight = obj.height;
 						const imageH = parseFloat(sec.dataset.imgHeight) || objHeight || 1;
-						const posX   = sec.dataset.posX || '50%';
+						const posX   = ( getDeviceW() <= mobileCutoff && sec.dataset.posXMobile ) ? sec.dataset.posXMobile : ( sec.dataset.posX || '50%' );
 						const adjTop = -(parseFloat(sec.dataset.topY) || 0);
 						const adjBot = -(parseFloat(sec.dataset.bottomY) || 0);
 						const startScroll = objTop - deviceH;

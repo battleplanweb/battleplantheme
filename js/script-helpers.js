@@ -64,6 +64,19 @@ window.setStyles = function (el, styles) {
 	Object.assign(el.style, styles);
 };
 
+// Safety net for window.bpIsMobile. battleplan_stampDeviceClass() sets this inline at the top of
+// <body>, which is the copy that matters (it runs before paint, and before this deferred file).
+// This fallback only covers a template that never calls wp_body_open(). Same UA pattern as PHP's
+// is_mobile() — if you change one, change the other.
+if ( typeof window.bpIsMobile === 'undefined' ) {
+	window.bpIsMobile = /(android|avantgo|blackberry|bolt|boost|cricket|docomo|fone|hiptop|mini|mobi|palm|phone|pie|tablet|up\.browser|up\.link|webos|wos)/i.test(navigator.userAgent);
+	document.addEventListener('DOMContentLoaded', function () {
+		if ( !document.body.classList.contains('screen-mobile') && !document.body.classList.contains('screen-desktop') ) {
+			document.body.classList.add( window.bpIsMobile ? 'screen-mobile' : 'screen-desktop' );
+		}
+	});
+}
+
 // Mobile no-op: the real parallaxBG/parallaxDiv live in script-desktop.js (desktop only).
 // On mobile the background is handled by CSS (.screen-mobile::before) — these stubs only
 // keep a site's parallax call from throwing and aborting script-site. Overridden on desktop.
@@ -73,9 +86,11 @@ window.parallaxDiv = function () {};
 // Same guard for the desktop-only menu enhancements (real versions in script-desktop.js /
 // script-magic-menu.js, neither of which loads on mobile). Without these, a script-site.js that
 // calls splitMenu()/magicMenu()/addMenuLogo() throws on mobile and aborts the rest of the file.
-window.splitMenu   = function () {};
-window.magicMenu   = function () {};
-window.addMenuLogo = function () {};
+window.splitMenu     = function () {};
+window.magicMenu     = function () {};
+window.setMagicMenu  = function () {};
+window.addMenuLogo   = function () {};
+window.addMenuIcon   = function () {};
 
 window.__BP_STYLE_SHEET__ = null;
 const RULE_PREFIX = '/*bp*/';

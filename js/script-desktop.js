@@ -2,6 +2,12 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 // Raw Script: Desktop
 
+// This file is now enqueued on EVERY device so the cached HTML stays device-agnostic (a phone-warmed
+// EverCache entry used to ship desktop visitors a page with no script-desktop at all). Bail here on
+// mobile so nothing below runs and the no-op stubs in script-helpers.js stay in place — mobile
+// behaviour is exactly what it was when this file wasn't loaded at all.
+	if ( window.bpIsMobile ) return;
+
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------

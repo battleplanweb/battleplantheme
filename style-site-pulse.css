@@ -1222,7 +1222,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 }
 
 .sp-card.sp-table-card tbody:not(:last-of-type) {
-	border-bottom:                                             1px solid var(--sp-secondary-light);
+	border-bottom:                                             1px solid var(--sp-secondary-color);
 }
 
 .sp-card.sp-table-card tbody tr:first-of-type td {
@@ -1231,6 +1231,33 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 
 .sp-card.sp-table-card tbody tr:last-of-type td {
 	padding-bottom:                                            8px;
+}
+
+/* Header & footer bands bleed to the card's edges (like the full-width panel-header bar in the mockup).
+   A <thead> or total row can't use the card-header negative-margin trick — table internals ignore
+   width/margin, which is why the band sat inset. Instead: zero the CARD's own padding so the table
+   fills it edge-to-edge (.sp-card's overflow:hidden + radius still clip the corners), and move the
+   spacing onto the CELLS — every cell gets a little side padding, and the first/last column carries the
+   full card-padding so content still clears the rounded edge. */
+.sp-card.sp-table-card {
+	padding:                                                   0;
+}
+.sp-card.sp-table-card thead {
+	width:                                                     auto;   /* neutralize the (table-ignored) card-header bleed trick */
+	margin:                                                    0;
+}
+.sp-card.sp-table-card th,
+.sp-card.sp-table-card td {
+	padding-left:                                              12px;
+	padding-right:                                             12px;
+}
+.sp-card.sp-table-card th:first-child,
+.sp-card.sp-table-card td:first-child {
+	padding-left:                                              var(--card-padding);
+}
+.sp-card.sp-table-card th:last-child,
+.sp-card.sp-table-card td:last-child {
+	padding-right:                                             var(--card-padding);
 }
 
 .sp-card-drag {
@@ -2011,6 +2038,20 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	border-top:                                                1px solid var(--sp-secondary-light);
 }
 
+/* The section-total band must span the WHOLE row — including the trailing receipt-button column, whose
+   empty <td> otherwise leaves a white gap on the right. Give every cell in the grand-total row the band. */
+.sp-table-card .sp-vexp-grand td {
+	background:                                                var(--sp-secondary-lightest);
+	border-top:                                                1px solid var(--sp-secondary-light);
+}
+
+/* Charge To column: sits right after Date on every expense section and is centered, matching A-Mileage.
+   High-specificity so it wins on the list tables (which carry .sp-mileage-table's own cell rules). */
+body.has-site-pulse .sp-table th.sp-charge-col,
+body.has-site-pulse .sp-table td.sp-charge-col {
+	text-align:                                                center;
+}
+
 .sp-rep-content .sp-table-card .sp-rep-total-line {
 	text-align:                                                right;
 	padding-right:                                             32px;
@@ -2350,7 +2391,7 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 
 .sp-mileage-day-total td.sp-mileage-day-total-label,
 .sp-mileage-day-total td.sp-num {
-	border-top:                                                1px solid var(--sp-secondary-color);
+	border-top:                                                1px solid var(--sp-secondary-light);
 }
 
 .sp-mileage-day-total {
@@ -2743,7 +2784,9 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-exp-add-row .sp-exp-acct-num-in {
 	max-width:                                                 150px;
 }
-.sp-exp-acct-desc-edit { flex: 1 1 240px; }
+.sp-exp-acct-cat-in    { flex: 0 1 200px; max-width: 240px; }
+.sp-exp-acct-desc-edit,
+.sp-exp-acct-desc-in   { flex: 1 1 240px; min-width: 0; }
 .sp-exp-cat-label      { flex: 1 1 200px; }
 .sp-exp-cat-acct       { flex: 0 1 320px; }
 .sp-exp-cat-group {
@@ -2887,6 +2930,53 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-import-status {
 	font-size:                                                 var(--font-size-text);
 	color:                                                     var(--sp-text);
+}
+
+/* Overview "documentation" quick-view: the receipt / toll-CSV icon button column on each expense
+   section, plus the toll button that sits just right of the Section A total. */
+.sp-rep-table th.sp-rep-doc-th,
+.sp-rep-table td.sp-rep-doc-cell {
+	width:                                                     40px;
+	text-align:                                                center;
+	padding-left:                                              4px;
+	padding-right:                                             6px;
+	white-space:                                               nowrap;
+}
+.sp-rep-total-doc {
+	display:                                                   inline-flex;
+	vertical-align:                                            middle;
+	margin-left:                                               8px;
+}
+
+/* Full-screen toll statement (the "CSV"), modelled on the receipt image modal but sized for a table. */
+.sp-toll-modal-box {
+	position:                                                  relative;
+	background:                                                var(--sp-bg-white);
+	border-radius:                                             var(--sp-radius);
+	padding:                                                   18px;
+	max-width:                                                 min(94vw, 860px);
+	max-height:                                                90vh;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       12px;
+	box-shadow:                                                0 20px 60px rgba(0, 0, 0, 0.35);
+}
+.sp-toll-modal-title { margin: 0 24px 0 0; }
+.sp-toll-modal-scroll { overflow: auto; }
+.sp-toll-modal-close {
+	position:                                                  absolute;
+	top:                                                       -12px;
+	right:                                                     -12px;
+	width:                                                     32px;
+	height:                                                    32px;
+	border-radius:                                             var(--sp-radius-circle);
+	border:                                                    none;
+	background:                                                var(--sp-text);
+	color:                                                     var(--white);
+	font-size:                                                 20px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	box-shadow:                                                0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /*==============================================================================

@@ -1559,6 +1559,18 @@ When styling a hero text container (the `[col]` that holds the headline/subhead/
 
 Adjust `max-width` per design (typically 500–700px). Don't omit padding/margin/max-width — text running edge-to-edge over a parallax background is the wrong default.
 
+**7. Hero focal point on narrow screens — `pos-x-mobile`**
+
+`[parallax]` takes `pos-x` (default `50%`) for the horizontal focal point of the background image. A wide hero crops hard on a phone, so the subject usually needs a different X there — set `pos-x-mobile` and leave `pos-x` alone:
+
+```
+[parallax name="home-page-hero" image="/wp-content/uploads/hero.webp" pos-x="50%" pos-x-mobile="75%" top-y="900" bottom-y="-300"]
+```
+
+It applies at ≤1024px (`window.mobileCutoff`), viewport-based rather than `is_mobile()` — the UA branch is page-cached, so phones are often served the desktop `<img class="hero-bg">` markup anyway. Don't set `object-position` inline on `.hero-bg`; it's in `style-grid.css` driven by the `--hero-x` / `--hero-x-m` custom properties so the mobile media query can win.
+
+The **Y** value is not settable — the parallax drift in `script-pages.js` recomputes it on every scroll from `top-y` / `bottom-y`, which is why a hero's inline style reads e.g. `object-position: 50% 6%`. Only the X is yours.
+
 ### Rendered HTML — what your CSS selectors must match
 
 Write selectors against the HTML the shortcodes actually emit, not against the shortcode names. Verified output:
@@ -1593,29 +1605,37 @@ Always vanilla JS — never jQuery.
 
 ## JS Minification
 
-Node.js is **not** in the system PATH. Use Adobe Dreamweaver's bundled Node:
+**Node:** system Node at `C:\Program Files\nodejs\node.exe` — it **is** on the PATH, so just call `node`.
 
-**Node:** `C:/Program Files/Adobe/Adobe Dreamweaver 2021/node/node.exe`
+> Older versions of this file pointed at Adobe Dreamweaver 2021's bundled Node. **Dreamweaver 2021 was uninstalled — that path is dead.** Use the system Node.
 
-**UglifyJS** (self-contained, no npm needed) is stored under the current Windows user's AppData. On this machine:
-`C:/Users/Glendon Guttenfelder/AppData/Local/Temp/terser_install/uglify_pkg/package/tools/node.js`
+**UglifyJS** 3.19.3 (self-contained, no npm needed) lives in the user's home folder:
+`C:/Users/Glendon Guttenfelder/uglify-js/package/`
 
-If your Windows username differs, swap in `%USERPROFILE%/AppData/Local/Temp/terser_install/uglify_pkg/package/tools/node.js`.
-
-If that temp folder is gone, re-download:
+It was moved here from `AppData/Local/Temp/` because Windows clears that directory. If your Windows username differs, swap in `%USERPROFILE%/uglify-js/package/`. If it's missing entirely, re-download and extract:
 ```
 https://registry.npmjs.org/uglify-js/-/uglify-js-3.19.3.tgz
 ```
-Extract and use `tools/node` as the require path.
 
-**Minification options to use:**
+**CLI form (what actually works from bash):**
+```bash
+node "C:/Users/Glendon Guttenfelder/uglify-js/package/bin/uglifyjs" in.js -c -m -o out.min.js
+```
+
+⚠️ **Note the `package/` segment in both paths.** The shorter `uglify-js/bin/uglifyjs` does **not** exist and fails with `MODULE_NOT_FOUND` — which silently leaves the **stale** `.min.js` on disk. It still passes `node --check`, so a syntax check won't catch it. After minifying, verify the new content actually landed by grepping the `.min.js` for a token you just added.
+
+**Scripted form / minification options to use:**
 ```js
-const UglifyJS = require('...path above...');
-const result = UglifyJS.minify({ 'filename.js': code }, {
+const UglifyJS = require('C:/Users/Glendon Guttenfelder/uglify-js/package/tools/node');
+const fs = require('fs');
+const code = fs.readFileSync('path/to/script.js', 'utf8');
+const result = UglifyJS.minify({ 'script.js': code }, {
   mangle: true,
   compress: { drop_console: false, dead_code: true, unused: false },
   output: { comments: false }
 });
+if (result.error) { console.error(result.error); process.exit(1); }
+fs.writeFileSync('path/to/script.min.js', result.code);
 ```
 
 **To find files needing minification:** compare mtimes in `js/` — re-minify if the `.js` is newer than its `.min.js`, or no `.min.js` exists.

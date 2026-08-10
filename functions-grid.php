@@ -585,7 +585,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 // Parallax Section
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'50%', 'top-y'=>0, 'bottom-y'=>0, 'image'=>'', 'class'=>'', 'fixed'=>'false', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'50%', 'pos-x-mobile'=>'', 'top-y'=>0, 'bottom-y'=>0, 'image'=>'', 'class'=>'', 'fixed'=>'false', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);
@@ -603,6 +603,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		$height = $height."px";
 	endif;
 	$posX = esc_attr($a['pos-x']);
+	$posXM = esc_attr($a['pos-x-mobile']);
 	$padding = esc_attr($a['padding']);
 	$fixed = esc_attr($a['fixed']);
 	$image = esc_attr($a['image']);
@@ -659,7 +660,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 			bp_register_hero_preload( $oneUrl );
 
 			$hasContent = trim($content) !== '';
-			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ' background-image:url(' . $oneUrl . ');background-size:cover;background-position:'.$posX.' center;';
+			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ' background-image:url(' . $oneUrl . ');background-size:cover;background-position:'.( $posXM !== '' ? $posXM : $posX ).' center;';
 		} else {
 			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;';
 		}
@@ -684,13 +685,15 @@ function battleplan_buildParallax( $atts, $content = null ) {
 			$heroImg = '<img class="hero-bg" src="' . esc_url( $image ) . '"'
 				. ( $srcset ? ' srcset="' . esc_attr( $srcset ) . '" sizes="100vw"' : '' )
 				. ' width="' . esc_attr( $imgW ) . '" height="' . esc_attr( $imgH ) . '"'
-				. ' style="object-position:' . esc_attr( $posX ) . ' center;"'
+				// object-position lives in style-grid.css so the mobile media query can beat it - inline it
+				// here and the desktop X would win at every width (inline always outranks a stylesheet rule).
+				. ' style="--hero-x:' . esc_attr( $posX ) . ';' . ( $posXM !== '' ? '--hero-x-m:' . esc_attr( $posXM ) . ';' : '' ) . '"'
 				. ' alt="' . esc_attr( $alt_text ) . '" fetchpriority="high" decoding="async">';
 
 			// No data-parallax="scroll": that triggers the old parallaxBG auto-loop in script-desktop.js
 			// (which reads data-image-src etc.). The <img class="hero-bg"> hero uses the CSS view() drift
 			// / .hero-bg JS fallback instead. top-y/bottom-y kept as future drift hooks.
-			$dataAttrs     = ' data-img-height="' . $imgH . '" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '"';
+			$dataAttrs     = ' data-img-height="' . $imgH . '" data-pos-x="' . $posX . '"' . ( $posXM !== '' ? ' data-pos-x-mobile="' . $posXM . '"' : '' ) . ' data-top-y="' . $topY . '" data-bottom-y="' . $botY . '"';
 			$parallaxClass = ' ' . $type . '-parallax';
 		} else {
 			$heroImg       = '';

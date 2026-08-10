@@ -756,34 +756,39 @@ add_action( 'init', function() {
 		update_option( 'site_pulse_mileage_seeded', '1' );
 	}
 
-	// One-time: widen config_value TEXT → LONGTEXT. dbDelta doesn't reliably issue MODIFY for a
-	// TEXT→LONGTEXT change, and this is the fix for large JSON values (agency review cache + the
-	// "dismissed reviews" list) truncating at TEXT's 64KB cap and corrupting. Guarded + type-checked.
-	if ( ! get_option( 'site_pulse_config_longtext' ) ) {
-		global $wpdb;
-		$tbl  = site_pulse_table( 'config' );
-		$type = $wpdb->get_var( $wpdb->prepare(
-			"SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'config_value'",
-			$tbl
-		) );
-		if ( $type && strtolower( (string) $type ) !== 'longtext' ) {
-			$wpdb->query( "ALTER TABLE $tbl MODIFY config_value LONGTEXT DEFAULT NULL" );
+	// One-time schema cleanups (config_value → LONGTEXT; drop the retired alcohol column). These are
+	// blocking ALTER TABLE statements. Run ONLY in admin context (wp-admin has far lower concurrency
+	// than front-end/AJAX/cron) and set each "done" flag BEFORE running the DDL — so a slow or
+	// lock-blocked ALTER is attempted at most once and can never be re-run by every request, which
+	// would pile onto the same table lock and hang the whole site (502s). Front-end requests skip this
+	// entirely; the cleanups are optional (nothing references the alcohol column, and TEXT still works),
+	// so deferring them to the next admin load costs nothing.
+	if ( is_admin() ) {
+		// config_value TEXT → LONGTEXT (fixes the 64KB truncation of the agency review cache / dismissed list).
+		if ( ! get_option( 'site_pulse_config_longtext' ) ) {
+			update_option( 'site_pulse_config_longtext', '1' );
+			global $wpdb;
+			$tbl  = site_pulse_table( 'config' );
+			$type = $wpdb->get_var( $wpdb->prepare(
+				"SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'config_value'",
+				$tbl
+			) );
+			if ( $type && strtolower( (string) $type ) !== 'longtext' ) {
+				$wpdb->query( "ALTER TABLE $tbl MODIFY config_value LONGTEXT DEFAULT NULL" );
+			}
 		}
-		update_option( 'site_pulse_config_longtext', '1' );
-	}
 
-	// One-time: drop the retired alcohol-detection column. The feature (scanner flagging + badges)
-	// was removed for too many false positives; dbDelta never drops columns, so retire it explicitly.
-	// Self-guards on its own flag and checks the column exists first.
-	if ( ! get_option( 'site_pulse_alcohol_flag_dropped' ) ) {
-		global $wpdb;
-		$tbl = site_pulse_table( 'expenses' );
-		$has = $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'alcohol_flag'",
-			$tbl
-		) );
-		if ( $has ) $wpdb->query( "ALTER TABLE $tbl DROP COLUMN alcohol_flag" );
-		update_option( 'site_pulse_alcohol_flag_dropped', '1' );
+		// Drop the retired alcohol-detection column (dbDelta never drops columns, so do it explicitly).
+		if ( ! get_option( 'site_pulse_alcohol_flag_dropped' ) ) {
+			update_option( 'site_pulse_alcohol_flag_dropped', '1' );
+			global $wpdb;
+			$tbl = site_pulse_table( 'expenses' );
+			$has = $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'alcohol_flag'",
+				$tbl
+			) );
+			if ( $has ) $wpdb->query( "ALTER TABLE $tbl DROP COLUMN alcohol_flag" );
+		}
 	}
 
 	// One-time: stand up the Supervisor report (independent copy of the GM report) and bring
@@ -9799,7 +9804,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	if ( $start ) { $ewhere .= " AND expense_date >= %s"; $evalues[] = $start; }
 	if ( $end )   { $ewhere .= " AND expense_date <= %s"; $evalues[] = $end; }
 	$other = $wpdb->get_results( $wpdb->prepare(
-		"SELECT expense_date, description, account_code, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
+		"SELECT expense_date, place, description, account_code, store_number, amount, receipt_path FROM " . site_pulse_table('expenses') . "
 		 $ewhere ORDER BY expense_date ASC, id ASC LIMIT 500",
 		...$evalues
 	), ARRAY_A ) ?: [];
@@ -9823,6 +9828,20 @@ function site_pulse_ajax_get_mileage_report(): void {
 	}
 	unset( $_set );
 
+	// Toll statement — the driver's uploaded toll-authority transactions for this period, so the report
+	// PDF can append the toll CSV as its own table (the source doc behind the reimbursed tolls, exactly
+	// like the receipt photos are the source behind the expense lines). allocation_status = 'matched'
+	// means that toll was reconciled onto a leg (i.e. reimbursed).
+	$toll_where  = "WHERE user_id = %d";
+	$toll_values = [ $user_id ];
+	if ( $start ) { $toll_where .= " AND DATE(txn_datetime) >= %s"; $toll_values[] = $start; }
+	if ( $end )   { $toll_where .= " AND DATE(txn_datetime) <= %s"; $toll_values[] = $end; }
+	$toll_txns = $wpdb->get_results( $wpdb->prepare(
+		"SELECT txn_datetime, road, gantry, amount, allocation_status FROM " . site_pulse_table('mileage_toll_transactions') . "
+		 $toll_where ORDER BY txn_datetime ASC, id ASC LIMIT 2000",
+		...$toll_values
+	), ARRAY_A ) ?: [];
+
 	wp_send_json_success( [
 		'entries'             => $entries,
 		'rate'                => site_pulse_mileage_rate(),
@@ -9837,6 +9856,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 		'other_expenses'      => $other,
 		'travel_expenses'     => $travel,
 		'travel_categories'   => site_pulse_expense_sections()['F']['categories'],
+		'toll_transactions'   => $toll_txns,
 		// Chart of accounts + mileage→account map, so the Overview/PDF can roll the Summary of
 		// Expenses up dynamically by GL account (one line per account) and label each account.
 		'accounts'            => site_pulse_expense_accounts(),
@@ -9969,9 +9989,17 @@ function site_pulse_expense_accounts(): array {
 			if ( ! is_array( $a ) ) continue;
 			$num = sanitize_text_field( (string) ( $a['number'] ?? '' ) );
 			if ( $num === '' ) continue;
-			$out[] = [ 'number' => $num, 'description' => sanitize_text_field( (string) ( $a['description'] ?? '' ) ) ];
+			// category = short GL name (shown on the report Overview); description = the long detail
+			// (shown only in the staff account dropdown, so accounting notes don't clutter the report).
+			$out[] = [
+				'number'      => $num,
+				'category'    => sanitize_text_field( (string) ( $a['category'] ?? '' ) ),
+				'description' => sanitize_text_field( (string) ( $a['description'] ?? '' ) ),
+			];
 		}
 	}
+	// Sort by GL number (natural/numeric), so the dropdown, settings list, and Summary all read in order.
+	usort( $out, fn( $a, $b ) => strnatcasecmp( $a['number'], $b['number'] ) );
 	$cache = $out;
 	return $out;
 }
@@ -9982,7 +10010,8 @@ function site_pulse_expense_account_label( string $number ): string {
 	if ( $number === '' ) return '';
 	foreach ( site_pulse_expense_accounts() as $a ) {
 		if ( $a['number'] === $number ) {
-			return $a['description'] !== '' ? $number . ' ' . $a['description'] : $number;
+			$name = $a['category'] !== '' ? $a['category'] : $a['description'];
+			return $name !== '' ? $number . ' - ' . $name : $number;
 		}
 	}
 	return $number;
@@ -10061,6 +10090,9 @@ function site_pulse_seed_expense_config(): void {
 			[ 'number' => '92026', 'description' => 'Sales Tax Over/Short' ],
 			[ 'number' => '93010', 'description' => 'Charitable Contributions' ],
 		];
+		// The seed's short names ARE the categories (what the report Overview shows). The long per-account
+		// detail lives in `description` and is left blank for the admin to fill. Reshape accordingly.
+		$chart = array_map( fn( $a ) => [ 'number' => $a['number'], 'category' => $a['description'], 'description' => '' ], $chart );
 		site_pulse_set_setting( 'expense_accounts', wp_json_encode( $chart ) );
 	}
 
@@ -12208,7 +12240,11 @@ function site_pulse_ajax_admin_save_expense_accounts(): void {
 		$num = sanitize_text_field( (string) ( $item['number'] ?? '' ) );
 		if ( $num === '' || isset( $seen[ $num ] ) ) continue;
 		$seen[ $num ] = true;
-		$clean[] = [ 'number' => $num, 'description' => sanitize_text_field( (string) ( $item['description'] ?? '' ) ) ];
+		$clean[] = [
+			'number'      => $num,
+			'category'    => sanitize_text_field( (string) ( $item['category'] ?? '' ) ),
+			'description' => sanitize_text_field( (string) ( $item['description'] ?? '' ) ),
+		];
 	}
 	site_pulse_set_setting( 'expense_accounts', wp_json_encode( $clean ) );
 	wp_send_json_success( [ 'accounts' => $clean ] );

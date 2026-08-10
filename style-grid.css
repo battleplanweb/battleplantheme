@@ -51,8 +51,15 @@ section.section-parallax {
 	width:                                                     100%;
 	height:                                                    100%;
 	object-fit:                                                cover;
+	object-position:                                           var(--hero-x, 50%) center;   /* --hero-x / --hero-x-m are set inline from pos-x / pos-x-mobile */
 	z-index:                                                   -1;
 	transform:                                                 translateZ(0);   /* own layer: confines the object-position drift repaint */
+}
+/* Narrow screens crop a wide hero hard, so the subject often needs a different X than desktop.
+   Viewport-based, not is_mobile(): the UA branch is page-cached, so phones can still be served
+   the desktop <img class="hero-bg"> markup. 1024 = window.mobileCutoff in script-helpers.js. */
+@media (max-width: 1024px) {
+	.hero-bg { object-position: var(--hero-x-m, var(--hero-x, 50%)) center; }
 }
 /* Parallax drift is JS (script-pages.js): it animates object-position on .hero-bg, reproducing the
    framework's original background-position parallax math (so existing top-y/bottom-y values are honored

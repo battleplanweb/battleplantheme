@@ -624,88 +624,56 @@ function battleplan_buildParallax( $atts, $content = null ) {
 
 	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
 
-	if ( is_mobile() ) {
-		if ( $hasImage ) {
-			$mobileSrc = explode('.', $image);
-			$imgExt    = array_pop($mobileSrc);
-			$imgBase   = implode('.', $mobileSrc);
-			$imgBase   = preg_replace('/-\d+x\d+$/', '', $imgBase);
-			$imgBase   = ltrim(basename($imgBase), '/');
-			$upload_dir = wp_upload_dir();
+	// ONE markup path for every device. There is deliberately no is_mobile() branch here: EverCache
+	// stores a single HTML entry per URL with no Vary: User-Agent, so whichever device warms the cache
+	// is served to every other one (see the is_mobile() notes in functions.php). This function used to
+	// return two completely different documents — CSS-background + PHP-picked 1280px file + pixel height
+	// on mobile, responsive <img> + min-height on desktop — which meant a phone could warm the cache and
+	// hand desktop visitors an upscaled 1280px backdrop, or vice versa.
+	//
+	// Everything that legitimately differs by device is now a viewport rule in style-grid.css, keyed off
+	// the custom properties emitted below (--hero-h / --hero-pad / --hero-ar / --hero-x / --hero-x-m).
+	// Same cached HTML everywhere; the breakpoint decides. The image size is no longer picked in PHP at
+	// all — srcset/sizes lets the browser choose on width AND DPR, which it does better than a glob().
+	if ( $hasImage ) {
+		// Responsive <img> hero backdrop: the browser picks the file via srcset/sizes (native, width +
+		// DPR aware); the parallax drift is a compositor transform on that same <img> (.hero-bg in
+		// style-grid.css). Replaces the old CSS-background + .load-bg-img JS sizer (which double-loaded:
+		// preload the original, then JS-fetch a responsive size).
+		$srcset  = $attachment_id ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_id, 'full' ) ) : '';
 
-			// Resolve a WordPress-generated size by width → ['file'=>basename, 'h'=>height] or null.
-			$bpFindSize = function( $w ) use ( $upload_dir, $imgBase, $imgExt ) {
-				$m = glob( $upload_dir['basedir'] . '/' . $imgBase . '-' . $w . 'x*.' . $imgExt );
-				if ( empty($m) ) return null;
-				$file = basename($m[0]);
-				preg_match( '/-' . $w . 'x(\d+)\./', $file, $d );
-				return array( 'file' => $file, 'h' => !empty($d[1]) ? (int)$d[1] : 0 );
-			};
+		// Preload the SAME candidate set the <img> resolves so the LCP image is fetched high-priority
+		// and correctly sized - one download, no downgrade.
+		bp_register_hero_preload( $image, $srcset, '100vw' );
 
-			// is_mobile() is UA-based (phones + tablets). The old fixed 640 upscaled badly on
-			// modern phones. A single 1280-wide image is sharp on every portrait phone — even a
-			// DPR-3 iPhone Pro Max needs only ~1290px — while staying light for LCP. Retina tablets
-			// go slightly soft; that's an accepted trade (≈no tablet traffic). Fall back 1280→640→original.
-			$s640  = $bpFindSize(640);
-			$s1280 = $bpFindSize(1280);
-			$one   = $s1280 ?: ( $s640 ?: null );
-			$small = $s640  ?: $one;                        // legacy proportions for the height proxy
+		$heroImg = '<img class="hero-bg" src="' . esc_url( $image ) . '"'
+			. ( $srcset ? ' srcset="' . esc_attr( $srcset ) . '" sizes="100vw"' : '' )
+			. ' width="' . esc_attr( $imgW ) . '" height="' . esc_attr( $imgH ) . '"'
+			. ' alt="' . esc_attr( $alt_text ) . '" fetchpriority="high" decoding="async">';
 
-			$oneUrl   = $one ? '/wp-content/uploads/' . $one['file'] : $image;
-			$initialH = $small ? $small['h'] : 0;
-
-			// Record the FIRST hero image as the page's LCP image for the cache-safe head preload
-			// (bp_register_hero_preload / the ob injector below). This is what actually lands the
-			// preload in the head — scoped to THIS page's real hero, not an accumulated site-wide set.
-			bp_register_hero_preload( $oneUrl );
-
-			$hasContent = trim($content) !== '';
-			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;' . ( $hasContent ? ' height:auto;' : ( $initialH ? ' height:' . $initialH . 'px;' : '' ) ) . ' background-image:url(' . $oneUrl . ');background-size:cover;background-position:'.( $posXM !== '' ? $posXM : $posX ).' center;';
-		} else {
-			$styleAttr = 'padding-top:' . $padding . 'px; padding-bottom:' . $padding . 'px;';
-		}
-		return do_shortcode(
-			'<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . ( $hasImage ? ' ' . $type . '-parallax-disabled' : '' ) . $class . '"' . $tracking . ' style="' . $styleAttr . '">'
-			. $content .
-			'</' . $div . '>'
-		);
-
+		// No data-parallax="scroll": that triggers the old parallaxBG auto-loop in script-desktop.js
+		// (which reads data-image-src etc.). The <img class="hero-bg"> hero uses the CSS view() drift
+		// / .hero-bg JS fallback instead.
+		$dataAttrs     = ' data-img-height="' . $imgH . '" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '"';
+		// hero-empty reproduces the old mobile branch's "no content, so fall back to the image's own
+		// proportions" height; with content the hero grows instead, same as it always did.
+		$parallaxClass = ' ' . $type . '-parallax' . ( trim($content) === '' ? ' hero-empty' : '' );
 	} else {
-		if ( $hasImage ) {
-// Responsive <img> hero backdrop: the browser picks the file via srcset/sizes (native, width +
-			// DPR aware); the parallax drift is a compositor transform on that same <img> (.hero-bg in
-			// style-grid.css). Replaces the old CSS-background + .load-bg-img JS sizer (which double-loaded:
-			// preload the original, then JS-fetch a responsive size).
-			$srcset  = $attachment_id ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_id, 'full' ) ) : '';
-
-			// Preload the SAME candidate set the <img> resolves so the LCP image is fetched high-priority
-			// and correctly sized - one download, no downgrade.
-			bp_register_hero_preload( $image, $srcset, '100vw' );
-
-			$heroImg = '<img class="hero-bg" src="' . esc_url( $image ) . '"'
-				. ( $srcset ? ' srcset="' . esc_attr( $srcset ) . '" sizes="100vw"' : '' )
-				. ' width="' . esc_attr( $imgW ) . '" height="' . esc_attr( $imgH ) . '"'
-				// object-position lives in style-grid.css so the mobile media query can beat it - inline it
-				// here and the desktop X would win at every width (inline always outranks a stylesheet rule).
-				. ' style="--hero-x:' . esc_attr( $posX ) . ';' . ( $posXM !== '' ? '--hero-x-m:' . esc_attr( $posXM ) . ';' : '' ) . '"'
-				. ' alt="' . esc_attr( $alt_text ) . '" fetchpriority="high" decoding="async">';
-
-			// No data-parallax="scroll": that triggers the old parallaxBG auto-loop in script-desktop.js
-			// (which reads data-image-src etc.). The <img class="hero-bg"> hero uses the CSS view() drift
-			// / .hero-bg JS fallback instead. top-y/bottom-y kept as future drift hooks.
-			$dataAttrs     = ' data-img-height="' . $imgH . '" data-pos-x="' . $posX . '"' . ( $posXM !== '' ? ' data-pos-x-mobile="' . $posXM . '"' : '' ) . ' data-top-y="' . $topY . '" data-bottom-y="' . $botY . '"';
-			$parallaxClass = ' ' . $type . '-parallax';
-		} else {
-			$heroImg       = '';
-			$dataAttrs     = '';
-			$parallaxClass = '';
-		}
-
-		// min-height (not height) so a hero with tall content grows instead of clipping under
-		// overflow:hidden; the absolutely-positioned .hero-bg still fills whatever height results.
-		return do_shortcode( '<' . $div . ' id="' . $name . '" class="' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . $class . '"' . $tracking . ' style="min-height:' . $height . ';"' . $dataAttrs . '>' . $heroImg . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
-
+		$heroImg       = '';
+		$dataAttrs     = '';
+		$parallaxClass = '';
 	}
+
+	// Box metrics as custom properties, NOT as concrete inline declarations: an inline declaration
+	// outranks every stylesheet rule, so an inline min-height/object-position would win at all widths
+	// and the mobile media query could never take over.
+	$heroVars = '--hero-h:' . $height . ';--hero-pad:' . $padding . 'px;--hero-x:' . $posX . ';'
+		. ( $posXM !== '' ? '--hero-x-m:' . $posXM . ';' : '' )
+		. ( $hasImage ? '--hero-ar:' . $imgW . '/' . $imgH . ';' : '' );
+
+	// min-height (not height) so a hero with tall content grows instead of clipping under
+	// overflow:hidden; the absolutely-positioned .hero-bg still fills whatever height results.
+	return do_shortcode( '<' . $div . ' id="' . $name . '" class="hero-box ' . $type . $style . ' ' . $type . '-' . $width . $parallaxClass . $class . '"' . $tracking . ' style="' . esc_attr( $heroVars ) . '"' . $dataAttrs . '>' . $heroImg . $content . ( $hasImage ? $buildScrollBtn : '' ) . '</' . $div . '>'  );
 }
 
 /*--------------------------------------------------------------
@@ -729,13 +697,13 @@ function bp_inject_hero_preload( $html ) {
 	if ( empty($GLOBALS['bp_hero_preload']) || ! is_string($html) || stripos($html, '</head>') === false ) return $html;
 
 	$hero   = $GLOBALS['bp_hero_preload'];
-	$url    = is_array($hero) ? ( $hero['url']    ?? '' ) : $hero;   // mobile passes a plain URL string
+	$url    = is_array($hero) ? ( $hero['url']    ?? '' ) : $hero;   // plain-string form: legacy callers
 	$srcset = is_array($hero) ? ( $hero['srcset'] ?? '' ) : '';
 	$sizes  = is_array($hero) ? ( $hero['sizes']  ?? '' ) : '';
 	if ( ! $url ) return $html;
 
-	// Responsive preload when a srcset exists (desktop hero) so the preloader fetches the SAME
-	// candidate the <img srcset> resolves; href stays as fallback for browsers ignoring imagesrcset.
+	// Responsive preload when a srcset exists so the preloader fetches the SAME candidate the
+	// <img srcset> resolves; href stays as fallback for browsers ignoring imagesrcset.
 	$attr = $srcset
 		? 'imagesrcset="' . esc_attr($srcset) . '"' . ( $sizes ? ' imagesizes="' . esc_attr($sizes) . '"' : '' ) . ' href="' . esc_url($url) . '"'
 		: 'href="' . esc_url($url) . '"';

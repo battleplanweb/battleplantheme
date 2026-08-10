@@ -1567,9 +1567,28 @@ Adjust `max-width` per design (typically 500–700px). Don't omit padding/margin
 [parallax name="home-page-hero" image="/wp-content/uploads/hero.webp" pos-x="50%" pos-x-mobile="75%" top-y="900" bottom-y="-300"]
 ```
 
-It applies at ≤1024px (`window.mobileCutoff`), viewport-based rather than `is_mobile()` — the UA branch is page-cached, so phones are often served the desktop `<img class="hero-bg">` markup anyway. Don't set `object-position` inline on `.hero-bg`; it's in `style-grid.css` driven by the `--hero-x` / `--hero-x-m` custom properties so the mobile media query can win.
+It applies at ≤1024px (`window.mobileCutoff`). Don't set `object-position` inline on `.hero-bg`; it's in `style-grid.css` driven by the `--hero-x` / `--hero-x-m` custom properties so the mobile media query can win.
 
-The **Y** value is not settable — the parallax drift in `script-pages.js` recomputes it on every scroll from `top-y` / `bottom-y`, which is why a hero's inline style reads e.g. `object-position: 50% 6%`. Only the X is yours.
+The **Y** value is not settable above the breakpoint — the parallax drift in `script-pages.js` recomputes it on every scroll from `top-y` / `bottom-y`, which is why a desktop hero's inline style reads e.g. `object-position: 50% 6%`. Only the X is yours. Below the breakpoint the drift is off entirely and the CSS value stands.
+
+**8. `[parallax]` renders ONE markup path for every device**
+
+`battleplan_buildParallax()` has no `is_mobile()` branch and must never get one back. EverCache keeps a single HTML entry per URL with no `Vary: User-Agent`, so whichever device warms the cache is served to all the others — a device-dependent hero means phones can hand desktop visitors an upscaled backdrop, or the reverse. See the `is_mobile()` notes in `functions.php`.
+
+Everything that differs by device is a viewport rule in `style-grid.css`, fed by custom properties the shortcode emits on the section:
+
+| property | from | drives |
+|---|---|---|
+| `--hero-h` | `height` | `min-height` above 1024px |
+| `--hero-pad` | `padding` | top/bottom padding at ≤1024px only |
+| `--hero-ar` | `img-w` / `img-h` | `aspect-ratio` when the hero has no content (`.hero-empty`) |
+| `--hero-x` / `--hero-x-m` | `pos-x` / `pos-x-mobile` | `object-position` |
+
+Emit box metrics as custom properties, never as concrete inline declarations — an inline declaration outranks every stylesheet rule, so an inline `min-height` or `object-position` wins at all widths and no media query can take over.
+
+Image size is not chosen in PHP. `srcset` + `sizes="100vw"` lets the browser pick on width *and* DPR; the `<head>` preload registers the same candidate set so the LCP fetch matches what the `<img>` resolves.
+
+`.section-parallax-disabled` is retired — it only ever existed on the mobile branch. Hero sections carry `.hero-box` (box metrics) and, when they have an image, `.section-parallax` (layout + backdrop).
 
 ### Rendered HTML — what your CSS selectors must match
 

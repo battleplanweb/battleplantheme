@@ -2295,7 +2295,10 @@ document.addEventListener("DOMContentLoaded", function () {
 		// When using parallax in #wrapper-top, slide the .message below the image on mobile
 		const message = getObject('#wrapper-top .message');
 		if (message && thisDeviceW < mobileCutoff) {
-			moveDiv(message, '#wrapper-top .section-parallax-disabled', 'after');
+			// .section-parallax, not the retired .section-parallax-disabled: that class only ever existed
+			// on the is_mobile() branch, so once a desktop-warmed cache entry was served to a phone this
+			// selector matched nothing and the message silently stopped moving.
+			moveDiv(message, '#wrapper-top .section-parallax', 'after');
 		}
 
 		// Hero background parallax: animate object-position on the responsive <img class="hero-bg">,
@@ -2309,6 +2312,16 @@ document.addEventListener("DOMContentLoaded", function () {
 			if ( heroLayers.length && !reduceMotion ) {
 				let heroTicking = false;
 				const driftHeroes = () => {
+					// Parallax stays off at mobile widths, as it always was under the old is_mobile() branch —
+					// but by viewport now, so one cached page behaves correctly on every device. Bailing here
+					// also leaves object-position to style-grid.css, which is what applies --hero-x-m: the
+					// mobile focal point has ONE implementation, not a CSS rule racing a JS writer.
+					// Clearing the inline value matters on a resize across the breakpoint: whatever the drift
+					// last wrote would otherwise outrank the stylesheet and pin the desktop X on a phone width.
+					if ( getDeviceW() <= mobileCutoff ) {
+						heroLayers.forEach(img => img.style.removeProperty('object-position'));
+						return;
+					}
 					const deviceH = window.innerHeight;
 					heroLayers.forEach(img => {
 						const sec = img.parentElement;
@@ -2317,7 +2330,7 @@ document.addEventListener("DOMContentLoaded", function () {
 						if (obj.bottom < 0 || obj.top > deviceH) return;             // off-screen: skip
 						const objTop = obj.top, objHeight = obj.height;
 						const imageH = parseFloat(sec.dataset.imgHeight) || objHeight || 1;
-						const posX   = ( getDeviceW() <= mobileCutoff && sec.dataset.posXMobile ) ? sec.dataset.posXMobile : ( sec.dataset.posX || '50%' );
+						const posX   = sec.dataset.posX || '50%';
 						const adjTop = -(parseFloat(sec.dataset.topY) || 0);
 						const adjBot = -(parseFloat(sec.dataset.bottomY) || 0);
 						const startScroll = objTop - deviceH;

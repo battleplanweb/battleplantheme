@@ -13,7 +13,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v44.9' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v45.0' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 /**
@@ -105,6 +105,81 @@ function bp_ai_model_alert( int $status, $body, string $model, string $context =
 	);
 	error_log( "bp_ai_model_alert: HTTP 404 model '{$model}' at '{$context}' on {$site}" );
 }
+
+/**
+ * Find an already-uploaded product image by its source filename.
+ *
+ * The product uploader stores each attachment under sanitize_file_name() of the source filename,
+ * so match on that. Returns false when the attachment is missing OR when its file is gone/empty —
+ * wp_upload_bits() still creates an attachment when the bits are empty, so the existence of a row
+ * is not proof the photo is there.
+ */
+function bp_product_image_id( string $filename ) {
+	$found = get_posts([
+		'post_type'      => 'attachment',
+		'post_status'    => 'any',
+		'title'          => sanitize_file_name( $filename ),
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	]);
+
+	if ( empty( $found ) ) return false;
+
+	$file = get_attached_file( $found[0] );
+	if ( !$file || !file_exists( $file ) || @filesize( $file ) < 1 ) return false;
+
+	return (int) $found[0];
+}
+
+
+/**
+ * Record a product image that failed to install, for bp_product_image_report() to mail out.
+ *
+ * The imports ride an unattended nightly bot hit, so a failure here has no one watching it.
+ * Every failure path in the uploader funnels through this rather than continuing silently.
+ */
+function bp_product_image_failed( string $brand, string $filename, string $reason ): void {
+	$GLOBALS['bp_product_image_failures'][ $brand ][ $filename ] = $reason;
+	error_log( "bp_product_image_failed: {$brand}/{$filename} — {$reason} on " . home_url() );
+}
+
+
+/**
+ * Mail the maintainer the product images that failed to install for one brand, then clear them.
+ *
+ * Throttled to one email per brand per day per site so a nightly retry can't flood the inbox.
+ */
+function bp_product_image_report( string $brand ): void {
+	$failures = $GLOBALS['bp_product_image_failures'][ $brand ] ?? [];
+	unset( $GLOBALS['bp_product_image_failures'][ $brand ] );
+
+	if ( empty( $failures ) ) return;
+
+	$key = 'bp_product_image_report_' . md5( $brand );
+	if ( get_transient( $key ) ) return;
+	set_transient( $key, 1, DAY_IN_SECONDS );
+
+	$site = home_url();
+	$host = wp_parse_url( $site, PHP_URL_HOST ) ?: $site;
+
+	$body_lines = [
+		"A Battle Plan product import created its products but could not install " . count( $failures ) . " of the images.",
+		"The products are live on the site with no featured image until this is fixed.",
+		"",
+		"Site:  {$site}",
+		"Brand: {$brand}",
+		"",
+	];
+
+	foreach ( $failures as $filename => $reason ) $body_lines[] = "  {$filename} — {$reason}";
+
+	wp_mail(
+		'glendon@bp-webdev.com',
+		"[Battle Plan] Product images failed to install on {$host}",
+		implode( "\n", $body_lines )
+	);
+}
+
 
 if ( !defined('_BP_NONCE') ) define( '_BP_NONCE', base64_encode(random_bytes(20)) );
 if ( !defined('_HEADER_ID') ) define( '_HEADER_ID', get_page_by_path('site-header', OBJECT, 'elements')->ID );

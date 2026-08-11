@@ -493,13 +493,31 @@ document.addEventListener('DOMContentLoaded', function() {
 		.then(function(r) { return r.json(); })
 		.then(function(data) {
 			btn.textContent = data.success ? 'Cleared!' : 'Error';
-			if (data.data && data.data.message) btn.title = data.data.message;
-			setTimeout(function() { btn.textContent = original; btn.title = ''; btn.disabled = false; }, 4000);
+			report(data.data && data.data.message, data.success);
+			setTimeout(function() { btn.textContent = original; btn.disabled = false; }, 4000);
 		})
 		.catch(function() {
 			btn.textContent = 'Failed';
+			report('request failed', false);
 			setTimeout(function() { btn.textContent = original; btn.disabled = false; }, 3000);
 		});
+
+		// Show what actually happened. This used to go into btn.title, a hover tooltip nobody
+		// ever checks — so a skipped Cloudflare purge or a missing opcache flush looked exactly
+		// like a clean run.
+		function report(message, ok) {
+			if (!message) return;
+			var out = document.getElementById('bp-clear-cache-msg');
+			if (!out) {
+				out = document.createElement('span');
+				out.id = 'bp-clear-cache-msg';
+				out.style.cssText = 'display:block; margin-top:6px; font-size:11px; line-height:1.5;';
+				btn.parentNode.insertBefore(out, btn.nextSibling);
+			}
+			out.style.color = ok ? '#1a7f37' : '#b32d2e';
+			out.textContent = message;
+			btn.title = message;
+		}
 	});
 });
 
@@ -1147,14 +1165,29 @@ document.addEventListener('DOMContentLoaded', function () {
 
 		var order = vis.slice().sort(function (a, b) { return (a.emph?1:0) - (b.emph?1:0); });
 		var ends = [];
+		// gapAtZero: a 0 in these series means "not measured", not "instant". On a normal axis that dips
+		// harmlessly to the bottom, but on an INVERTED axis it spikes to the very top and reads as a
+		// perfect score — so break the line at those points and skip them entirely instead.
 		order.forEach(function (s) {
-			var coords = s.values.map(function (val, i) { return [xS(i), yS(val)]; });
-			marks.appendChild(el('path', { 'class': 'bp-an-line k-'+s.cls + (s.emph ? ' emph' : ''), d: monotonePath(coords) }));
+			var runs = [], cur = [];
+			s.values.forEach(function (val, i) {
+				if (opts.gapAtZero && !(val > 0)) { if (cur.length) { runs.push(cur); cur = []; } return; }
+				cur.push([xS(i), yS(val)]);
+			});
+			if (cur.length) runs.push(cur);
+			runs.forEach(function (coords) {
+				marks.appendChild(el('path', { 'class': 'bp-an-line k-'+s.cls + (s.emph ? ' emph' : ''), d: monotonePath(coords) }));
+			});
 			if (opts.endLabels && s.values.length) {
-				var li = s.values.length - 1, ex = xS(li), ey = yS(s.values[li]);
-				marks.appendChild(el('circle', { 'class': 'bp-an-dotring', cx: ex, cy: ey, r: 5 }));
-				marks.appendChild(el('circle', { 'class': 'bp-an-dot k-'+s.cls, cx: ex, cy: ey, r: 3.5 }));
-				ends.push({ y: Math.max(plotT, Math.min(plotB, ey)), label: s.label, cls: s.cls }); // clamp so off-scale labels sit at the edge
+				// Anchor the end dot/label on the last REAL reading, not on a trailing gap.
+				var li = s.values.length - 1;
+				if (opts.gapAtZero) { while (li >= 0 && !(s.values[li] > 0)) li--; }
+				if (li >= 0) {
+					var ex = xS(li), ey = yS(s.values[li]);
+					marks.appendChild(el('circle', { 'class': 'bp-an-dotring', cx: ex, cy: ey, r: 5 }));
+					marks.appendChild(el('circle', { 'class': 'bp-an-dot k-'+s.cls, cx: ex, cy: ey, r: 3.5 }));
+					ends.push({ y: Math.max(plotT, Math.min(plotB, ey)), label: s.label, cls: s.cls }); // clamp so off-scale labels sit at the edge
+				}
 			}
 		});
 
@@ -1198,10 +1231,14 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (opts.showPct) fdots.forEach(function (f) { total += (f.s.values[i] || 0); });
 			fdots.forEach(function (f) {
 				var val = f.s.values[i] || 0, py = yS(val);
+				// Same gap rule as the line: no reading here, so hide the dot and say so rather than
+				// parking it at the top of an inverted axis where it would look like a perfect score.
+				var gap = opts.gapAtZero && !(val > 0);
+				f.dot.style.display = gap ? 'none' : ''; f.ring.style.display = gap ? 'none' : '';
 				f.dot.setAttribute('cx', cx); f.dot.setAttribute('cy', py);
 				f.ring.setAttribute('cx', cx); f.ring.setAttribute('cy', py);
-				var vtxt = vfmt(val);
-				if (opts.showPct && total > 0) vtxt += ' <span class="bp-an-tip-pct">(' + Math.round((val / total) * 100) + '%)</span>';
+				var vtxt = gap ? '<span class="bp-an-tip-pct">no reading</span>' : vfmt(val);
+				if (!gap && opts.showPct && total > 0) vtxt += ' <span class="bp-an-tip-pct">(' + Math.round((val / total) * 100) + '%)</span>';
 				html += '<div class="bp-an-tip-row"><span class="bp-an-key k-'+f.s.cls+'"></span>' + f.s.label + '<span class="bp-an-tip-v">' + vtxt + '</span></div>';
 			});
 			if (opts.tooltipExtra) html += opts.tooltipExtra(i);
@@ -1270,6 +1307,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		drawLineChart(container, d.periods, defs, {
 			grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true,
 			yFmt: fmtV, vFmt: fmtV,
+			// Every chart on this page reads the same way: HIGHER = BETTER. For a "lower is better"
+			// metric (seconds) that means inverting the axis, so fast sits at the top. gapAtZero rides
+			// along because an unmeasured 0 would otherwise plot as the fastest possible reading.
+			invertY: meta.dir === 'low', gapAtZero: meta.dir === 'low',
 			threshold: meta.good, thresholdLabel: fmtV(meta.good) + (meta.dir === 'high' ? ' goal' : ' good'),
 			rerender: function () { renderSpeed(container); }
 		});
@@ -1315,6 +1356,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		drawLineChart(container, periods, defs, {
 			grain: grain, fmt: 'int', interactiveLegend: false, endLabels: true,
 			yFmt: fmtV, vFmt: fmtV,
+			// HIGHER = BETTER everywhere: FCP / TBT / Speed Index / LCP / CLS are all "lower is better",
+			// so their axis flips. The four 0-100 scores already read the right way and stay as they are.
+			invertY: meta.dir === 'low', gapAtZero: meta.dir === 'low',
 			threshold: meta.good, thresholdLabel: fmtV(meta.good) + (meta.dir === 'high' ? ' goal' : ' good'),
 			rerender: function () { renderCWV(container); }
 		});

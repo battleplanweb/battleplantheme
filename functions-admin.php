@@ -1518,6 +1518,40 @@ function battleplan_customize_admin_menus() {
 			'bp_geo_taxonomy_cleanup_page'
 		);
 	}
+
+	// Tools submenu order: what we use most first, WordPress's own utilities after, the ⚙️ site-ops
+	// group last. WordPress orders submenus by registration, so this runs here — at the end of the
+	// PHP_INT_MAX admin_menu callback — where every item above (and every plugin's) is already in.
+	// Matched on SLUG, not label, so relabelling an item doesn't quietly drop it back to the bottom.
+	$bp_tools_order = [
+		'bp-seo-redirects',                          // SEO Redirects
+		'bp-search-replace',                         // Search & Replace (BP_SR_PAGE)
+		'kw-rankings',                               // Keywords
+		'admin.php?page=microsoft-clarity',          // Clarity
+		'site-health.php',
+		'import.php',
+		'export.php',
+		'options-general.php?page=wp-mail-smtp',     // Mail SMTP
+		'clear-all',                                 // ⚙️ site-ops group, battleplanweb only
+		'clear-hvac',
+		'launch-site',
+	];
+	if ( ! empty( $submenu['tools.php'] ) && is_array( $submenu['tools.php'] ) ) {
+		// Ranks are doubled so an odd number can sit BETWEEN two listed items: anything not in the list
+		// (Git Updater, Admin Columns, a plugin's own page) lands just above the ⚙️ group, keeping its
+		// relative order, rather than being dropped or interleaved into that group.
+		$bp_rank     = [];
+		foreach ( $bp_tools_order as $bp_n => $bp_slug ) $bp_rank[ $bp_slug ] = $bp_n * 2;
+		$bp_unlisted = ( (int) array_search( 'clear-all', $bp_tools_order, true ) * 2 ) - 1;
+
+		$bp_i = 0;
+		$bp_keyed = [];
+		foreach ( $submenu['tools.php'] as $bp_item ) {
+			$bp_keyed[] = [ $bp_rank[ $bp_item[2] ] ?? $bp_unlisted, $bp_i++, $bp_item ];   // $bp_i keeps ties in registration order
+		}
+		usort( $bp_keyed, function( $a, $b ) { return ( $a[0] <=> $b[0] ) ?: ( $a[1] <=> $b[1] ); } );
+		$submenu['tools.php'] = array_column( $bp_keyed, 2 );
+	}
 }
 
 // Reorder WP Admin Menu Items

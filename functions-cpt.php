@@ -8,6 +8,40 @@
 # Import Advanced Custom Fields
 
 /*--------------------------------------------------------------
+# Testimonials archive SEO
+--------------------------------------------------------------*/
+// The /testimonials/ archive is dynamically generated, so there's no editor field to set its
+// title or meta description — it would otherwise ship with a bare auto-title and no description
+// on every site. Supply framework defaults built from customer_info via [get-biz] shortcodes, so
+// each site gets accurate, specific meta with zero per-site setup. Uses the SEO module's own
+// title-template + pre-description hooks (same mechanism the jobsite_geo /service/ archives use).
+
+add_filter( 'bp_seo_title_template', function ( $tpl ) {
+	return is_post_type_archive( 'testimonials' )
+		? 'Reviews & Testimonials %%sep%% %%sitename%%'
+		: $tpl;
+} );
+
+add_filter( 'bp_seo_pre_description', function ( $desc ) {
+	// Respect any earlier hook, and only act on the testimonials archive.
+	if ( $desc !== '' || ! is_post_type_archive( 'testimonials' ) || ! function_exists( 'bp_seo_render_value' ) ) {
+		return $desc;
+	}
+
+	// Business-type gated: only HVAC sites get HVAC wording; every other type gets a generic
+	// descriptor so the copy is never wrong for whatever site is using it.
+	$ci   = function_exists( 'customer_info' ) ? (array) customer_info() : [];
+	$verb = ( strtolower( (string) ( $ci['site-type'] ?? '' ) ) === 'hvac' ) ? 'HVAC ' : '';
+
+	$raw = 'See why [get-biz info="city"], [get-biz info="state-abbr"] customers trust '
+		. '[get-biz info="name"] for honest, reliable ' . $verb . 'service. Read real reviews '
+		. 'and ratings, then call [get-biz info="phone-notrack"].';
+
+	return bp_seo_render_value( $raw );
+} );
+
+
+/*--------------------------------------------------------------
 # Register Custom Post Types
 --------------------------------------------------------------*/
 

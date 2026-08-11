@@ -1581,7 +1581,7 @@ Everything that differs by device is a viewport rule in `style-grid.css`, fed by
 |---|---|---|
 | `--hero-h` | `height` | `min-height` above 1024px |
 | `--hero-pad` | `padding` | top/bottom padding at ≤1024px only |
-| `--hero-ar` | `img-w` / `img-h` | `aspect-ratio` when the hero has no content (`.hero-empty`) |
+| `--hero-ar` | the attachment's real dimensions, falling back to `img-w`/`img-h` | `aspect-ratio` when the hero has no content (`.hero-empty`) |
 | `--hero-x` / `--hero-x-m` | `pos-x` / `pos-x-mobile` | `object-position` |
 
 Emit box metrics as custom properties, never as concrete inline declarations — an inline declaration outranks every stylesheet rule, so an inline `min-height` or `object-position` wins at all widths and no media query can take over.

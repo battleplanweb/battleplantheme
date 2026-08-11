@@ -36,6 +36,38 @@ function battleplan_clear_wpe_cache_ajax() {
 	check_ajax_referer( 'bp_clear_wpe_cache' );
 
 	$results = array();
+	$failed  = false;
+
+	// PHP bytecode FIRST. A deployed .php file that OPcache is still holding is invisible to
+	// every purge below — the page regenerates, but from the OLD code, so the button appears to
+	// do nothing. Worse: an SFTP upload that preserves the source mtime gives OPcache nothing
+	// newer to revalidate against, so it never recompiles on its own and the stale copy sticks
+	// indefinitely. opcache_invalidate($file, true) forces it regardless of timestamp.
+	if ( function_exists( 'opcache_reset' ) && @opcache_reset() ) {
+		$results[] = 'opcache: reset';
+	} elseif ( function_exists( 'opcache_invalidate' ) ) {
+		$invalidated = 0;
+		foreach ( array( get_stylesheet_directory(), get_template_directory() ) as $theme_dir ) {
+			foreach ( bp_theme_php_files( $theme_dir ) as $php_file ) {
+				if ( @opcache_invalidate( $php_file, true ) ) $invalidated++;
+			}
+		}
+		$results[] = 'opcache: invalidated ' . $invalidated;
+	} else {
+		$results[] = 'opcache: not available';
+	}
+
+	// Site config. functions-site.php is a DB seeder, not runtime config — its values only reach
+	// wp_options through battleplan_updateSiteOptions(), which otherwise runs ONLY inside Chron B
+	// (nightly, and only on a bot pageview). Without this, a freshly deployed functions-site.php
+	// can sit unapplied for a full day no matter how many caches you clear.
+	if ( function_exists( 'battleplan_updateSiteOptions' ) ) {
+		battleplan_updateSiteOptions();
+		if ( function_exists( 'customer_info' ) ) customer_info( true );
+		$results[] = 'site options: synced';
+	} else {
+		$results[] = 'site options: no sync fn';
+	}
 
 	// WP Engine
 	if ( class_exists( 'WpeCommon' ) ) {
@@ -43,6 +75,7 @@ function battleplan_clear_wpe_cache_ajax() {
 		WpeCommon::purge_varnish_cache();
 		$results[] = 'WPE: cleared';
 	} else {
+		$failed    = true;
 		$results[] = 'WPE: WpeCommon not available';
 	}
 
@@ -50,22 +83,13 @@ function battleplan_clear_wpe_cache_ajax() {
 	$api_key = _CF_CACHE_KEY;
 
 	if ( $api_key ) {
+		$domain = parse_url( get_site_url(), PHP_URL_HOST );
+
 		// Resolve zone ID from site domain — cached so the lookup only runs once per site
 		$zone_id = get_transient( 'bp_cf_zone_id' );
 		if ( ! $zone_id ) {
-			$domain   = parse_url( get_site_url(), PHP_URL_HOST );
-			$lookup   = wp_remote_get(
-				'https://api.cloudflare.com/client/v4/zones?name=' . rawurlencode( $domain ) . '&status=active',
-				array(
-					'headers' => array( 'Authorization' => 'Bearer ' . $api_key ),
-					'timeout' => 15,
-				)
-			);
-			if ( ! is_wp_error( $lookup ) ) {
-				$lookup_body = json_decode( wp_remote_retrieve_body( $lookup ), true );
-				$zone_id     = $lookup_body['result'][0]['id'] ?? '';
-				if ( $zone_id ) set_transient( 'bp_cf_zone_id', $zone_id, WEEK_IN_SECONDS );
-			}
+			$zone_id = bp_cf_resolve_zone_id( $api_key, $domain );
+			if ( $zone_id ) set_transient( 'bp_cf_zone_id', $zone_id, WEEK_IN_SECONDS );
 		}
 
 		if ( $zone_id ) {
@@ -83,16 +107,27 @@ function battleplan_clear_wpe_cache_ajax() {
 			);
 
 			if ( is_wp_error( $cf_response ) ) {
+				$failed    = true;
 				$results[] = 'CF: ' . $cf_response->get_error_message();
 			} else {
-				$cf_body   = json_decode( wp_remote_retrieve_body( $cf_response ), true );
-				$results[] = ! empty( $cf_body['success'] ) ? 'CF: cleared' : 'CF: ' . ( $cf_body['errors'][0]['message'] ?? 'unknown error' );
+				$cf_body = json_decode( wp_remote_retrieve_body( $cf_response ), true );
+				if ( ! empty( $cf_body['success'] ) ) {
+					$results[] = 'CF: cleared';
+				} else {
+					// A cached zone ID that the API now rejects is poison for a full week —
+					// drop it so the next click re-resolves instead of failing identically.
+					delete_transient( 'bp_cf_zone_id' );
+					$failed    = true;
+					$results[] = 'CF: ' . ( $cf_body['errors'][0]['message'] ?? 'unknown error' );
+				}
 			}
 		} else {
-			$results[] = 'CF: zone not found for ' . ( $domain ?? 'unknown domain' );
+			$failed    = true;
+			$results[] = 'CF: zone not found for ' . ( $domain ?: 'unknown domain' );
 		}
 	} else {
-		$results[] = 'CF: not configured';
+		$failed    = true;
+		$results[] = 'CF: not configured (BP_CLOUDFLARE_KEY)';
 	}
 
 	// Compiled CSS — wipe the child theme's /dist folder so nothing stale survives.
@@ -113,7 +148,78 @@ function battleplan_clear_wpe_cache_ajax() {
 	if ( function_exists( 'bp_build_site_css' ) ) { bp_build_site_css(); $warmed[] = 'site'; }
 	$results[] = $warmed ? 'dist: rebuilt (' . implode( '+', $warmed ) . ')' : 'dist: no rebuild fn';
 
-	wp_send_json_success( array( 'message' => implode( ' · ', $results ) ) );
+	// Report honestly. This used to always return success, so a silently skipped Cloudflare purge
+	// looked identical to a clean run and the button stayed green for months while doing half a job.
+	$payload = array( 'message' => implode( ' · ', $results ) );
+	if ( $failed ) wp_send_json_error( $payload );
+	wp_send_json_success( $payload );
+}
+
+// Every .php file under a theme, skipping vendor/ and node_modules/ — the OPcache invalidation
+// fallback's file list. Only used when opcache_reset() is unavailable or restricted.
+function bp_theme_php_files( $dir ) {
+	if ( ! is_dir( $dir ) ) return array();
+
+	$files = array();
+	$it    = new RecursiveDirectoryIterator( $dir, FilesystemIterator::SKIP_DOTS );
+	$walk  = new RecursiveIteratorIterator(
+		new RecursiveCallbackFilterIterator( $it, function ( $current ) {
+			if ( ! $current->isDir() ) return true;
+			return ! in_array( $current->getFilename(), array( 'vendor', 'node_modules', 'dist' ), true );
+		} ),
+		RecursiveIteratorIterator::LEAVES_ONLY
+	);
+
+	foreach ( $walk as $file ) {
+		if ( $file->isFile() && strtolower( $file->getExtension() ) === 'php' ) $files[] = $file->getPathname();
+	}
+
+	return $files;
+}
+
+// Cloudflare zone names are the registrable apex, so an exact ?name= lookup on a site whose WP
+// Address carries a www. (or any subdomain) matches nothing and the purge silently no-ops. Walk
+// the host down label by label, then fall back to suffix-matching the account's zone list.
+function bp_cf_resolve_zone_id( $api_key, $host ) {
+	if ( ! $host ) return '';
+
+	$headers = array( 'Authorization' => 'Bearer ' . $api_key );
+	$labels  = explode( '.', $host );
+
+	for ( $i = 0; $i <= count( $labels ) - 2; $i++ ) {
+		$candidate = implode( '.', array_slice( $labels, $i ) );
+		$lookup    = wp_remote_get(
+			'https://api.cloudflare.com/client/v4/zones?name=' . rawurlencode( $candidate ) . '&status=active',
+			array( 'headers' => $headers, 'timeout' => 15 )
+		);
+		if ( is_wp_error( $lookup ) ) continue;
+		$body    = json_decode( wp_remote_retrieve_body( $lookup ), true );
+		$zone_id = $body['result'][0]['id'] ?? '';
+		if ( $zone_id ) return $zone_id;
+	}
+
+	// Last resort — covers multi-part TLDs (.co.uk) that the label walk overshoots.
+	$list = wp_remote_get(
+		'https://api.cloudflare.com/client/v4/zones?per_page=50&status=active',
+		array( 'headers' => $headers, 'timeout' => 15 )
+	);
+	if ( is_wp_error( $list ) ) return '';
+
+	$body = json_decode( wp_remote_retrieve_body( $list ), true );
+	$best = '';
+	$len  = 0;
+
+	foreach ( $body['result'] ?? array() as $zone ) {
+		$name = $zone['name'] ?? '';
+		if ( ! $name ) continue;
+		$match = $host === $name || substr( $host, - ( strlen( $name ) + 1 ) ) === '.' . $name;
+		if ( $match && strlen( $name ) > $len ) {
+			$best = $zone['id'];
+			$len  = strlen( $name );
+		}
+	}
+
+	return $best;
 }
 
 // Recursively delete a directory and everything inside it. Returns true on full removal.

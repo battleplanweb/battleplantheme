@@ -1173,9 +1173,14 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			$width = $image[1];
 			$height = $image[2];
 
+			// Only claim the LCP slot when no hero already owns it. On a page with a server-rendered
+			// hero (which registers its own high-priority preload above this block), the first archive
+			// card is below the fold — eager-loading and high-prioritising it there steals the slot
+			// from the real LCP (e.g. a testimonial avatar competing with the hero on the home page).
 			$isFirstImg  = ( $bpArchiveImgCount++ === 0 );
-			$imgLoading  = $isFirstImg ? 'eager' : $lazy;
-			$imgPriority = $isFirstImg ? ' fetchpriority="high"' : '';
+			$ownsLcp     = $isFirstImg && empty( $GLOBALS['bp_hero_preload'] );
+			$imgLoading  = $ownsLcp ? 'eager' : $lazy;
+			$imgPriority = $ownsLcp ? ' fetchpriority="high"' : '';
 
 			$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']<img class="image-'.$type.' img-archive '.$tags[0].'-img" src = "'.$image[0].'" loading="'.$imgLoading.'"'.$imgPriority.' width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" srcset="'.$imgSet.'" sizes="'.get_srcset($width).'" alt="'.readMeta(get_the_ID($picID), "_wp_attachment_image_alt", true).'">[/img]');
 		endwhile; wp_reset_postdata(); endif;
@@ -1190,8 +1195,9 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$thumbH = $meta['sizes'][$size]['height'];
 
 		$isFirstImg = ( $bpArchiveImgCount++ === 0 );
-		$thumbAttr  = array( 'loading' => $isFirstImg ? 'eager' : $lazy, 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH );
-		if ( $isFirstImg ) $thumbAttr['fetchpriority'] = 'high';
+		$ownsLcp    = $isFirstImg && empty( $GLOBALS['bp_hero_preload'] );
+		$thumbAttr  = array( 'loading' => $ownsLcp ? 'eager' : $lazy, 'class'=>'img-archive img-'.$type, 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH );
+		if ( $ownsLcp ) $thumbAttr['fetchpriority'] = 'high';
 
 		$archiveImg = do_shortcode('[img size="'.$picSize.'" class="image-'.$type.'" link="'.$linkLoc.'" '.$picADA.']'.get_the_post_thumbnail( $postID, $size, $thumbAttr ).'[/img]');
 		if ( $textSize == "" ) :

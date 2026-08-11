@@ -810,12 +810,30 @@ add_action('current_screen', function( $screen ) {
 	if ( ! in_array( $pt, bp_seo_metabox_types(), true ) ) return;
 
 	add_filter( "get_user_option_meta-box-order_{$pt}", function( $order ) use ( $pt ) {
-		if ( ! is_array($order) || empty($order['normal']) ) return $order; // no saved order → priority 'low' handles it
-		$ids = array_values( array_diff( array_filter( array_map('trim', explode(',', $order['normal'])) ), ['bp-seo'] ) );
-		$pos = array_search( "{$pt}-bottom", $ids, true );
-		if ( $pos === false ) $ids[] = 'bp-seo';
-		else array_splice( $ids, $pos + 1, 0, 'bp-seo' );
-		$order['normal'] = implode( ',', $ids );
+		if ( ! is_array($order) ) return $order;   // no saved order at all → priority 'low' already lands it last
+
+		// Strip bp-seo out of EVERY column first. do_meta_boxes() re-adds each id named in the saved
+		// order with that column's context, and add_meta_box() then MOVES the box out of wherever it
+		// was registered - so one stale 'bp-seo' left in side/advanced silently outranks anything we
+		// do to 'normal'. Only looking at $order['normal'] was the bug: the box floated back up.
+		$cols = [];
+		foreach ( $order as $ctx => $ids ) {
+			$cols[$ctx] = array_values( array_diff( array_filter( array_map('trim', explode(',', (string) $ids)) ), ['bp-seo'] ) );
+		}
+
+		// Re-insert directly after Page Bottom, in whichever column the user actually dragged it to.
+		foreach ( $cols as $ctx => $ids ) {
+			$pos = array_search( "{$pt}-bottom", $ids, true );
+			if ( $pos === false ) continue;
+			array_splice( $ids, $pos + 1, 0, 'bp-seo' );
+			$cols[$ctx] = $ids;
+			break;
+		}
+
+		// If Page Bottom appears in no column it's still on its registered 'high' priority, and bp-seo
+		// is now absent from the saved order entirely - which drops it back to its own 'low' bucket.
+		// do_meta_boxes() walks high → sorted → core → default → low, so that is last either way.
+		foreach ( $cols as $ctx => $ids ) $order[$ctx] = implode( ',', $ids );
 		return $order;
 	} );
 });
@@ -963,7 +981,6 @@ add_action('init', function() {
 // Redirects engine + admin (loaded everywhere — the template_redirect engine
 // must run on the front end; the admin UI self-gates with is_admin()).
 require_once get_template_directory() . '/includes/includes-seo-redirects.php';
-// Yoast → _bp_seo_* importer. Loaded everywhere: the admin page self-gates via
-// admin_menu, but the run-once housekeeping migration calls bp_seo_import_run()
-// from the front-end cron, so the functions must be available outside admin too.
-require_once get_template_directory() . '/includes/includes-seo-import.php';
+// The Yoast → _bp_seo_* importer (includes-seo-import.php, Tools → Import Yoast SEO)
+// was removed once the fleet had migrated. Yoast REDIRECT import is a separate thing
+// and still lives in includes-seo-redirects.php as bp_seo_import_yoast_redirects().

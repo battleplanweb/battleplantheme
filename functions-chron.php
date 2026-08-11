@@ -177,17 +177,6 @@ if ($forceD || $autoTriggerD) {
 }
 
 
-/*--------------------------------------------------------------
-# Chron E — Site Audit  [REMOVED]
-#
-# The site audit is now MANUAL ONLY: Dashboard → Run Audit, driven step-by-step from the browser
-# (see the stepped runner in functions-site-audit-ai.php). It never runs unattended.
-#
-# It briefly lived here because the audit is too slow for one web request, and the chron rides a
-# live bot page view — which meant it 502'd the visitor. Cron was a workaround for the timeout,
-# not a reason for the audit to be automatic, so both are gone.
---------------------------------------------------------------*/
-
 
 /*--------------------------------------------------------------
 # One-Off Tasks
@@ -215,6 +204,38 @@ function bp_run_one_off_tasks(): void {
             updateOption('bp_product_upload_2026-07-27', 'completed', false);
         }, 20);
     }
+
+    // 2026-08-07 — the 07-27 job created the Samsung products everywhere, but on some sites none of
+    // the photos reached the media library: every failure path in the image half of the uploader was
+    // silent. Re-run Samsung alone where photos are missing. The uploader now emails the failures,
+    // so this fires once rather than retrying a broken upload nightly.
+    if (get_option('bp_product_upload_2026-08-07') != 'completed' && bp_site_sells_brand('american standard')) {
+        if (bp_brand_photos_missing('samsung')) {
+            require_once get_template_directory() . '/includes/include-hvac-products/includes-samsung-products.php';
+        }
+
+        add_action('wp_loaded', function () {
+            updateOption('bp_product_upload_2026-08-07', 'completed', false);
+        }, 20);
+    }
+}
+
+
+/**
+ * Is any of a brand's product photos missing from the media library?
+ *
+ * Compares the photos the theme ships for the brand against what bp_product_image_id() can find,
+ * so a re-import only runs on the sites that actually need one.
+ */
+function bp_brand_photos_missing(string $brand): bool {
+    $photos = glob(get_template_directory() . '/common/hvac-' . $brand . '/products/*');
+    if (empty($photos)) return false;
+
+    foreach ($photos as $photo) {
+        if (bp_product_image_id(basename($photo)) === false) return true;
+    }
+
+    return false;
 }
 
 

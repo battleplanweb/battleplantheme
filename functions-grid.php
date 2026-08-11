@@ -667,9 +667,19 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	// Box metrics as custom properties, NOT as concrete inline declarations: an inline declaration
 	// outranks every stylesheet rule, so an inline min-height/object-position would win at all widths
 	// and the mobile media query could never take over.
+	// --hero-ar comes from the attachment's REAL dimensions where we can get them, not from img-w/img-h:
+	// those are author-supplied and default to 2000/1333, so a hero that omits them would size its
+	// no-content mobile box to a 3:2 image it isn't. The old mobile branch read the generated file's
+	// height, so it self-corrected; this keeps that property. Falls back to the declared attrs.
+	$heroAR = $imgW . '/' . $imgH;
+	if ( $hasImage && $attachment_id ) {
+		$meta = wp_get_attachment_metadata( $attachment_id );
+		if ( ! empty($meta['width']) && ! empty($meta['height']) ) $heroAR = (int) $meta['width'] . '/' . (int) $meta['height'];
+	}
+
 	$heroVars = '--hero-h:' . $height . ';--hero-pad:' . $padding . 'px;--hero-x:' . $posX . ';'
 		. ( $posXM !== '' ? '--hero-x-m:' . $posXM . ';' : '' )
-		. ( $hasImage ? '--hero-ar:' . $imgW . '/' . $imgH . ';' : '' );
+		. ( $hasImage ? '--hero-ar:' . $heroAR . ';' : '' );
 
 	// min-height (not height) so a hero with tall content grows instead of clipping under
 	// overflow:hidden; the absolutely-positioned .hero-bg still fills whatever height results.

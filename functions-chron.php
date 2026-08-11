@@ -115,9 +115,8 @@ if ($forceB || $autoTriggerB) {
     delete_option('bp_force_chron_b');
     update_option('bp_chron_b_time', time());
     update_option('bp_chron_b_next', bp_next_nightly_window());
-    bp_run_one_off_tasks();   // dated run-once jobs — see the bottom of this file
     require_once get_template_directory() . '/functions-chron-housekeeping.php';
-    bp_run_chron_housekeeping($forceB);
+    bp_run_chron_housekeeping($forceB);   // runs the dated one-off jobs too
 }
 
 
@@ -181,43 +180,68 @@ if ($forceD || $autoTriggerD) {
 /*--------------------------------------------------------------
 # One-Off Tasks
 #
-# Dated, run-once jobs that ride Chron B's nightly slot, so they land on a bot
-# hit inside the 10pm-5am window rather than on a real visitor's page view.
+# Dated, run-once jobs. They're called from bp_run_chron_housekeeping(), so they ride
+# Chron B's nightly slot (a bot hit inside the 10pm-5am window, not a real visitor's
+# page view) AND can be forced on demand from Dashboard → Settings.
 # Each job carries its own option gate, so it fires exactly once per install and
 # is a no-op forever after — safe to leave in place, safe to delete once the
 # whole fleet has caught up.
+#
+# Use bp_load_product_file() / bp_one_off_complete() rather than requiring the file and
+# writing the option by hand — see their notes below for why.
 --------------------------------------------------------------*/
 
 function bp_run_one_off_tasks(): void {
 
-    if (get_option('bp_product_upload_2026-07-27') != 'completed' && bp_site_sells_brand('american standard')) {
-        require_once get_template_directory() . '/includes/include-hvac-products/includes-american-standard-products.php';
-        require_once get_template_directory() . '/includes/include-hvac-products/includes-samsung-products.php';
-
-        add_action('wp_loaded', function () {
-            updateOption('bp_product_upload_2026-07-27', 'completed', false);
-        }, 20);
+    if (get_option('bp_product_upload_2026-07-27') !== 'completed' && bp_site_sells_brand('american standard')) {
+        bp_load_product_file('american-standard');
+        bp_load_product_file('samsung');
+        bp_one_off_complete('bp_product_upload_2026-07-27');
     }
 
-    if (get_option('bp_product_upload_2026-08-07') != 'completed' && bp_site_sells_brand('american standard')) {
-        if (bp_brand_photos_missing('samsung')) {
-            require_once get_template_directory() . '/includes/include-hvac-products/includes-samsung-products.php';
-        }
-
-        add_action('wp_loaded', function () {
-            updateOption('bp_product_upload_2026-08-07', 'completed', false);
-        }, 20);
+    if (get_option('bp_product_upload_2026-08-07') !== 'completed' && bp_site_sells_brand('american standard')) {
+        if (bp_brand_photos_missing('samsung')) bp_load_product_file('samsung');
+        bp_one_off_complete('bp_product_upload_2026-08-07');
     }
 
-    if (get_option('bp_product_upload_2026-08-11') != 'completed' && bp_site_sells_brand('amana')) {
-        require_once get_template_directory() . '/includes/include-hvac-products/includes-amana-products.php';
-
-        add_action('wp_loaded', function () {
-            updateOption('bp_product_upload_2026-08-11', 'completed', false);
-        }, 20);
+    if (get_option('bp_product_upload_2026-08-11') !== 'completed' && bp_site_sells_brand('amana')) {
+        bp_load_product_file('amana');
+        bp_one_off_complete('bp_product_upload_2026-08-11');
     }
 
 
+}
+
+
+/**
+ * Load a brand's product include and make sure its importer actually runs.
+ *
+ * Every includes-{brand}-products.php file ends in add_action('wp_loaded', 'add_{brand}_products'),
+ * which is fine when a one-off fires at theme-load time (the nightly path) but a DEAD HOOK when it
+ * fires from an admin page callback — wp_loaded is long gone by then, so requiring the file would
+ * silently import nothing. Call the importer directly in that case.
+ */
+function bp_load_product_file(string $brand): void {
+    require_once get_template_directory() . '/includes/include-hvac-products/includes-' . $brand . '-products.php';
+
+    $fn = 'add_' . str_replace('-', '_', $brand) . '_products';
+    if (did_action('wp_loaded') && function_exists($fn)) $fn();
+}
+
+
+/**
+ * Stamp a one-off job complete — immediately if wp_loaded has already fired, otherwise after the
+ * importers have had their turn at wp_loaded:10, so a job never marks itself done before it ran.
+ */
+function bp_one_off_complete(string $option): void {
+    if (did_action('wp_loaded')) {
+        updateOption($option, 'completed', false);
+        return;
+    }
+
+    add_action('wp_loaded', function () use ($option) {
+        updateOption($option, 'completed', false);
+    }, 20);
 }
 
 

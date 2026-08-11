@@ -4,6 +4,16 @@
 function bp_run_chron_housekeeping(bool $force = false): void {
 
 /*--------------------------------------------------------------
+# One-off dated jobs
+#
+# Defined at the bottom of functions-chron.php. Running them from here means they ride
+# the nightly Chron B slot AND fire on demand from Dashboard → Settings, which is the
+# only way to force one without waiting for a bot hit in the overnight window.
+--------------------------------------------------------------*/
+
+	bp_run_one_off_tasks();
+
+/*--------------------------------------------------------------
 # Form attachment temp folder — sweep orphans
 #
 # bp_handle_form_submission registers a shutdown function to delete

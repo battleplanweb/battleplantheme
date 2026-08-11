@@ -2132,7 +2132,7 @@ function battleplan_chron_housekeeping_status() {
     update_option('bp_chron_b_time', time());
     update_option('bp_chron_b_next', bp_next_nightly_window());
     require_once get_template_directory() . '/functions-chron-housekeeping.php';
-    bp_run_chron_housekeeping(true);
+    bp_run_chron_housekeeping(true);   // runs the dated one-off jobs too
     wp_safe_redirect(admin_url());
     exit;
 }

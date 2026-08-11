@@ -1376,6 +1376,28 @@ Key CSS variable groups (defined in `:root` in `style-site.css`):
 - `--font-primary`, `--font-secondary`, `--font-tertiary`, `--font-text`
 - Color palette: `--main-red`, `--main-blue`, `--black`, `--white`, `--light-grey`, etc.
 
+### NEVER put animated text inside a `background-clip: text` element
+
+A textured headline — `background-image` + `background-clip: text` + `-webkit-text-fill-color: transparent` — clips that texture to **every glyph inside the element, descendants included**. Put `animateCharacters()` (or any transform/opacity animation) on text inside it and the headline renders **twice**: the real characters animating correctly, plus a ghost copy of them piled up at the container's origin, textured, for the whole animation. Chrome promotes an animating element to its own compositor layer, and a promoted descendant is drawn at the wrong coordinates inside the ancestor's text-clip mask.
+
+**There is no CSS fix on the animated element.** `isolation: isolate`, `will-change: transform`, `transform: translateZ(0)`, and forcing `transform: none` were all tested against a live case — the ghost survives every one. Clearing the animation on `animationend` only hides it *after* the animation, which is the wrong half.
+
+The texture has to come **off the animated text's ancestor**. Keep the headline plain and move the texture onto the static lines, each in its own span:
+
+```html
+<div class="headline"><span class="textured">New Customer Special</span><br>
+ <span class="amount">$20 OFF</span><br>
+ <span class="textured">Your Service Call</span></div>
+```
+```css
+#coupon .headline  { background-image: none; -webkit-background-clip: border-box; background-clip: border-box;
+                     -webkit-text-fill-color: var(--white); color: var(--white); }
+#coupon .headline .textured { background-image: url('/wp-content/uploads/font-grunge-text.webp'); background-size: cover;
+                     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+```
+
+The animated span inherits the plain fill from the headline and animates cleanly; the static lines keep the texture. Same rule applies to `h1`/`h2` when a site textures them globally — check what's *inside* a textured heading before animating it. (Diagnosed on Blu Collar Mechanical's `#coupon`, Aug 2026.)
+
 ### Custom brand headline fonts — ALWAYS ship a metric-matched fallback
 
 A heavy/wide display font (e.g. Rammetto One) used for headlines will, before it loads, fall back to a plain system font at the same `font-size` — which renders **small, thin, and re-wrapped**. That's an ugly flash *and* a large CLS when the real font finally swaps in (the headline re-wraps, changing its height). `font-display: block` doesn't fix it (invisible text, then the same shift); `optional` fixes CLS but shows the wrong-sized fallback on every cold/throttled load (which is exactly what PSI-mobile lab tests). The real fix is a companion fallback `@font-face` that scales a **local** system font to the brand font's exact box:
@@ -1430,6 +1452,63 @@ This applies to **every** hoverable element, not just links — buttons, cards, 
 	box-shadow: 0 8px 24px rgba(0,0,0,.15);
 }
 ```
+
+### Headings are variable-driven — style by `--h-*`, and use the tag for OUTLINE, not for size
+
+`h1`–`h6` are styled entirely through `--h-*` custom properties (`--h-font-size`, `--h-font-family`, `--h-font-weight`, `--h-color`, `--h-line-height`, `--h-letter-spacing`, `--h-text-align`, `--h-margin`, `--h-transform`, …). Each tag just carries a different `--h-font-size` default (`h2` → `--font-size-h2`, and so on). **So pick the heading tag for the document outline — h1, then h2, then h3, in order — and get the look you want by overriding the variable.** No more `h1 → h4 → h2` on a page just because h4 happened to be the right size; that's an accessibility failure the variables now make unnecessary.
+
+```css
+#services h2       { --h-font-size: var(--font-size-h4); }   /* h2 in the outline, h4-sized on screen */
+#hero h1 span      { --h-font-size: 20px; }                  /* sub-head inside the headline */
+```
+
+**A `<span>` / `<a>` inside a heading reads the tokens too**, via `:is(h1, h2, h3, h4, h5, h6) > :is(a, span)` — so the two-line headline pattern works with nothing but a variable:
+
+```html
+<h1>Headline<br><span>Sub-head</span></h1>
+```
+```css
+h1 span { --h-font-size: 20px; }
+```
+
+**A sub-head span defaults to one size step down** — `h1 > span` gets `--font-size-h2`, `h2 > span` gets `--font-size-h3`, and so on, declared alongside each heading's own default. So the pattern is already correctly proportioned before you write any CSS; set `--h-font-size` on the span only when you want something other than the next step down.
+
+Three things to know about how the consumer block is built, because all three are load-bearing:
+
+- **Declaring the variable is not enough — something has to *consume* it.** The `font-size: var(--h-font-size)` declaration lives in the `h1…h6` rule, which a `<span>` does not match. Before the consumer block existed, `h1 span { --h-font-size: 20px }` set the variable perfectly and changed nothing on screen (the span was just inheriting the heading's computed `font-size`). DevTools tells you which case you're in: inspect the span → **Computed** → the custom property shows `20px` while `font-size` still shows the heading's value.
+- **The tokens default to `initial`, not `inherit`, in that block** — `initial` is the *guaranteed-invalid* value, so `var(--h-font-size, inherit)` falls through to `inherit` and the element keeps whatever the heading computed. That matters for `> a`, and for every token a span doesn't get a step-down default for: plenty of sites set a **raw** `font-size` on a heading (`.section.style-alt h2 { font-size: 2.6em }`) rather than the token, and an unconditional `font-size: var(--h-font-size)` would *beat* inheritance — an author declaration outranks an inherited value no matter how specific the parent's rule was — snapping the child back to the framework token size. **Keep that shape if you add another `--h-*` consumer.**
+- **The one place that safety doesn't reach is a span's `--h-font-size`,** because the step-down rules set it explicitly. On a heading sized by a raw `font-size` rather than the token, a sub-head span renders at the framework's step-down token, not at a proportion of what the heading actually shows. Size that heading with `--h-font-size` and the two stay in step.
+
+**Selector shape matters here.** The consumer block uses `:is()`, not `:where()`: `:is()` scores its most specific argument, and since every argument is a type selector the whole thing scores exactly what `h1 > span` scores (0-0-2) — sites keep overriding it with plain `h1 span { … }`. Two traps if you rewrite it: `:where()` would zero the specificity and drop the block into a tie with the framework's own `a { }` rule further down the file, and folding the old `a:hover` / `a:visited` / `a.tab-focus` variants into the child `:is()` would score *every* branch at 0-1-2 — including `span` — so the framework would start outranking site overrides. (Those `a` state variants were dropped: they only ever existed to out-specify the link rules, which declare `color` / `background-color` / `cursor` / `transition` and never touch the font properties this block sets.)
+
+**A span in a heading is a SUB-HEAD by default — the framework already blocks it out for you.** Write the markup and set tokens; nothing else:
+
+```html
+<h1>Headline<br><span>Sub-head</span></h1>
+```
+```css
+h1 span { --h-font-size: var(--font-size-h2); --h-line-height: 0.5; margin-top: -30px; }
+```
+
+The framework supplies `display: block` on `:where(h1…h6) > span` plus a rule hiding the `<br>` in front of it. Both are mechanism, not design — **don't restate them in `style-site.css`.**
+
+Why `display: block` is load-bearing rather than cosmetic: `--h-font-size` works on an inline span, but `--h-line-height` does **not**, and neither do vertical margins. Every line box carries a **strut** — an invisible box sized by the *block container's* own `font-size` × `line-height` — and the line box can never be shorter than it, so an inline span asking for tighter leading is simply overruled by the heading. `margin-top` doesn't apply to non-replaced inline elements at all. Both declarations sit there looking correct and doing nothing. The `<br>` gets hidden because a `<br>` immediately before a block-level sibling leaves a *second, empty* line box at the heading's full strut height — the classic mystery gap.
+
+**The rare inline highlight opts out with `class="inline"`:**
+
+```html
+<h2>Call <span class="inline">Today</span> — we answer</h2>
+```
+
+The default rule is `:where(…)`-wrapped, so its specificity is 0-0-1 and *any* site rule outranks it; `h2 span { display: inline }` in `style-site.css` works just as well for a whole site or section.
+
+**The shape to watch** when a heading isn't behaving: a span at the *start* of a heading followed by loose text — `<h1><span>Welcome to</span> Blu Collar</h1>` — now puts "Welcome to" on its own line. That's the one silent false positive of defaulting sub-head on. Add `.inline` when you hit it.
+
+And expect to re-tune values the first time an existing site's span becomes a block: its line-height and margin were inert until that moment, so the sub-head can jump a long way when they take effect together.
+
+**Size tokens are `rem` (`--font-size-h1: 48rem`), so nesting never compounds.** If you set `--h-font-size` in `em` on a span, it resolves against the parent heading's computed size and doubles up — use `rem`/`px`, or the existing tokens.
+
+`--h-color` is intentionally **not** consumed on the span/link block: that selector list includes `> a:hover`, so a `color` declaration there would stomp link hover colors fleet-wide. To make span color overridable on a site, split the `> span` selectors into their own rule.
 
 ### Buttons are variable-driven — set `--button-*`, don't override `.button` directly
 

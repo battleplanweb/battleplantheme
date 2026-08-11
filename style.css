@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v45.0
+Version: v45.1
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -308,63 +308,98 @@ h3,
 h4,
 h5,
 h6 {
-	font-family:                                               var(--font-primary);
-	font-weight:                                               normal;
-	line-height:                                               1.3;
-	color:                                                     var(--black);
-	text-transform:                                            capitalize;
-	text-align:                                                center;
-	margin:                                                    0;
+	--h-font-family:                                           var(--font-primary);
+	--h-font-weight:                                           normal;
+	--h-font-size:                                             var(--font-size-h1);
+	--h-line-height:                                           1.3;
+	--h-color:                                                 var(--black);
+	--h-text-transform:                                        uppercase;
+	--h-text-align:                                            center;
+	--h-margin:                                                0;
+	--h-letter-spacing:                                        0;
+	--h-filter:                                                none;
+	--h-transform:                                             none;
+	--h-transform-origin:                                      50% 50%;
+
+	font-family:                                               var(--h-font-family);
+	font-weight:                                               var(--h-font-weight);
+	font-size:                                                 var(--h-font-size);
+	line-height:                                               var(--h-line-height);
+	color:                                                     var(--h-color);
+	text-transform:                                            var(--h-text-transform);
+	text-align:                                                var(--h-text-align);
+	margin:                                                    var(--h-margin);
+	letter-spacing:                                            var(--h-letter-spacing);
+	filter:                                                    var(--h-filter);
+	transform:                                                 var(--h-transform);
+	transform-origin:                                          var(--h-transform-origin);
 }
 
-h1 {
-	font-size:                                                 var(--font-size-h1);
+:is(h1, h2, h3, h4, h5, h6) > :is(a, span) {
+	--h-font-family:                                           initial;
+	--h-font-size:                                             initial;
+	--h-font-weight:                                           initial;
+	--h-line-height:                                           initial;
+	--h-letter-spacing:                                        initial;
+
+	font-family:                                               var(--h-font-family, inherit);
+	font-size:                                                 var(--h-font-size, inherit);
+	font-weight:                                               var(--h-font-weight, inherit);
+	line-height:                                               var(--h-line-height, inherit);
+	letter-spacing:                                            var(--h-letter-spacing, inherit);
+}
+
+:where(h1, h2, h3, h4, h5, h6) > span {
+	display:                                                   block;
+}
+
+:where(h1, h2, h3, h4, h5, h6) > span.inline {
+	display:                                                   inline;
+}
+
+:where(h1, h2, h3, h4, h5, h6) > br:has(+ span:not(.inline)) {
+	display:                                                   none;
 }
 
 h2,
-h1 > span.h1-small {
-	font-size:                                                 var(--font-size-h2);
+h1 > span {
+	--h-font-size:                                             var(--font-size-h2);
 }
 
 h3,
-h2 > span.h2-small {
-	font-size:                                                 var(--font-size-h3);
+h2 > span {
+	--h-font-size:                                             var(--font-size-h3);
 }
 
 h4,
-h3 > span.h3-small{
-	font-size:                                                 var(--font-size-h4);
+h3 > span {
+	--h-font-size:                                             var(--font-size-h4);
 }
 
-h5 {
-	font-size:                                                 var(--font-size-h5);
+h5,
+h4 > span {
+	--h-font-size:                                             var(--font-size-h5);
 }
 
-h6 {
-	font-size:                                                 var(--font-size-h6);
+h6,
+h5 > span {
+	--h-font-size:                                             var(--font-size-h6);
 }
 
 .widget-title {
-	font-size:                                                 var(--font-size-title);
+	--h-font-size:                                             var(--font-size-title);
 }
 
-h1 > a, h1 > a:hover, h1 > a.tab-focus, h1 > a:visited, h1 > span:not(.h1-small),
-h2 > a, h2 > a:hover, h2 > a.tab-focus, h2 > a:visited, h2 > span:not(.h2-small),
-h3 > a, h3 > a:hover, h3 > a.tab-focus, h3 > a:visited, h3 > span:not(.h3-small),
-h4 > a, h4 > a:hover, h4 > a.tab-focus, h4 > a:visited, h4 > span,
-h5 > a, h5 > a:hover, h5 > a.tab-focus, h5 > a:visited, h5 > span,
-h6 > a, h6 > a:hover, h6 > a.tab-focus, h6 > a:visited, h6 > span,
-a > span,
+
+/*a > span,span:not(.page-numbers):not(.icon):not(.unique)*/
 .phone-number a.phone-link,
 .phone-number a.phone-link:hover,
 .phone-number a.phone-link.tab-focus,
 b,
 strong,
-i:not(.fa),
-em,
-span:not(.page-numbers):not(.icon):not(.unique):not(.h1-small):not(.h2-small):not(.h3-small) {
+i,
+em {
 	font-family:                                               inherit;
-	/*color:                                                     inherit !important;*/
 	color:                                                     inherit;
 	text-align:                                                inherit;
 	font-size:                                                 inherit;
@@ -1431,7 +1466,7 @@ body.screen-desktop.administrator #query-monitor-main {
 	.screen-mobile h4,
 	.screen-mobile h5,
 	.screen-mobile h6 {
-		text-align:                                               center;
+		--h-text-align:                                           center;
 	}
 
 	body {

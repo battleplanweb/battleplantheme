@@ -1058,7 +1058,7 @@ function bp_analytics_page() {
 	// Chart 1 — traffic by channel.
 	echo '<div class="bp-an-card">';
 	echo   '<h2 class="bp-an-h2">Traffic by channel</h2>';
-	echo   '<div class="bp-an-cardnote">Your work (Organic Search + GBP) vs paid &amp; direct. Click a channel in the legend to isolate it. Click a y-axis number to cap the scale (again to reset) — handy when a spike flattens everything else.</div>';
+	echo   '<div class="bp-an-cardnote">Your work (Organic Search + GBP) vs paid &amp; direct. Click a channel in the legend to isolate it. Click a y-axis number to cap the scale (again to reset) — handy when a spike flattens everything else. Click the plot itself to hide the hover tooltip (crosshair stays) for a clean screenshot — click again to bring it back.</div>';
 	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-chart"></div><div class="bp-analytics-pie" data-pie="channel"></div></div>';
 	echo '</div>';
 
@@ -1071,7 +1071,7 @@ function bp_analytics_page() {
 	     .   '<a href="#" class="bp-an-mbtn" data-metric="pageviews">Pageviews</a>'
 	     .   '<a href="#" class="bp-an-mbtn" data-metric="duration">Duration</a>'
 	     . '</div></div>';
-	echo   '<div class="bp-an-cardnote">Click a y-axis number to cap the scale (again to reset) — handy when a spike flattens everything else.</div>';
+	echo   '<div class="bp-an-cardnote">Click a y-axis number to cap the scale (again to reset) — handy when a spike flattens everything else. Click the plot itself to hide the hover tooltip (crosshair stays) for a clean screenshot — click again to bring it back.</div>';
 	echo   '<div class="bp-an-chartrow"><div class="bp-analytics-behavior"></div><div class="bp-analytics-pie" data-pie="behavior"></div></div>';
 	echo '</div>';
 

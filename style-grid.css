@@ -76,18 +76,18 @@ section.section-parallax {
 }
 @media (max-width: 1024px) {
 	.hero-box {
-		min-height:                                            0;
-		padding-top:                                           var(--hero-pad, 0);
-		padding-bottom:                                        var(--hero-pad, 0);
+		min-height:                                               0;
+		padding-top:                                              var(--hero-pad, 0);
+		padding-bottom:                                           var(--hero-pad, 0);
 	}
 	/* No content to give the section height, so let the image's aspect ratio set it - the equivalent of
 	   the old branch's height:{generated 640px file's height}px, without the glob() or the UA sniff. */
 	.hero-box.hero-empty {
-		aspect-ratio:                                          var(--hero-ar);
+		aspect-ratio:                                             var(--hero-ar);
 	}
 	/* The mobile branch never rendered the scroll button; keep it hidden rather than device-branching. */
 	.hero-box .scroll-down {
-		display:                                               none;
+		display:                                                  none;
 	}
 }
 
@@ -595,6 +595,7 @@ section.section .flex.nested .flex,
 #page,
 .wp-gr.wp-google-badge,
 .stuck {
+	box-shadow:                                                0 0 10px 0 var(--black-high);
 	max-width:                                                 1920px;
 	margin:                                                    0 auto;
 }
@@ -648,11 +649,11 @@ section.section .flex.nested .flex,
 @media (min-width: 1025px) {
 
 	.menu-clip .menu-strip {
-		clip-path:                                             polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+		clip-path:                                                polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
 	}
 
 	.menu-clip .menu-strip.menu-revealed {
-		clip-path:                                             polygon(0% 0%, 100% 0%, 100% 1000%, 0% 1000%);
+		clip-path:                                                polygon(0% 0%, 100% 0%, 100% 1000%, 0% 1000%);
 	}
 
 }
@@ -1224,17 +1225,20 @@ figure.col-inner {
 	div.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col .col-inner,
 	div.grid-1-3-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col .col-inner,
 	div.grid-2-1-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner {
+		width:                                                    75%;
 		max-width:                                                75%;
 		margin:                                                   0 auto;
 	}
 
 	div.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner,
 	div.grid-1-2-1:not(.break-none):not(.break-3):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner {
+		width:                                                    50%;
 		max-width:                                                50%;
 		margin:                                                   0 auto;
 	}
 
 	.flex.break-4 .col .col-inner {
+		width:                                                    100%;
 		max-width:                                                100% !important;
 	}
 
@@ -1245,8 +1249,8 @@ figure.col-inner {
 	.grid-8e li:not(.product):nth-child(1),
 	.grid-7e .col-row-of-pics:nth-last-child(1),
 	.grid-7e li:not(.product):nth-last-child(1) {
-	display:                                                   none !important;
-}
+		display:                                                  none !important;
+	}
 
 /* Galleries */
 .grid-7e,
@@ -1349,17 +1353,20 @@ figure.col-inner {
 	div.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col .col-inner,
 	div.grid-1-3-1:not(.break-none):not(.break-2):not(.break-1) .col .col-inner,
 	div.grid-2-1-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner {
+		width:                                                    75%;
 		max-width:                                                75%;
 		margin:                                                   0 auto;
 	}
 
 	div.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+1) .col-inner,
 	div.grid-1-2-1:not(.break-none):not(.break-2):not(.break-1) .col:nth-child(3n+3) .col-inner {
+		width:                                                    50%;
 		max-width:                                                50%;
 		margin:                                                   0 auto;
 	}
 
 	.flex.break-3 .col .col-inner {
+		width:                                                    100%;
 		max-width:                                                100% !important;
 		margin:                                                   0 auto;
 	}
@@ -1512,6 +1519,7 @@ figure.col-inner {
 	.top-strip .flex .col .col-inner,
 	.divider-strip .flex .col .col-inner,
 	.site-info .col .col-inner {
+		width:                                                    100% !important;
 		max-width:                                                100% !important;
 	}
 
@@ -1519,6 +1527,7 @@ figure.col-inner {
 	.align-right.size-half-f,
 	.align-left.size-half-s,
 	.align-right.size-half-s {
+		width:                                                    40%;
 		max-width:                                                40%;
 	}
 
@@ -1581,6 +1590,7 @@ figure.col-inner {
 	.logo-strip .flex:not(.grid-1) .col .col-inner,
 	.flex.break-2 .col .col-inner,
 	div.grid-1-1-1.break-2 .col:nth-child(3n+3) .col-inner {
+		width:                                                    85%;
 		max-width:                                                85%;
 		margin:                                                   0 auto;
 	}
@@ -1589,6 +1599,7 @@ figure.col-inner {
 	div.grid-1-3:not(.break-none):not(.break-1) .col:nth-child(2n+1) .col-inner,
 	div.grid-2-1:not(.break-none):not(.break-1) .col:nth-child(2n+2) .col-inner,
 	div.grid-1-2:not(.break-none):not(.break-1) .col:nth-child(2n+1) .col-inner {
+		width:                                                    75%;
 		max-width:                                                75%;
 		margin:                                                   0 auto;
 	}
@@ -1727,6 +1738,7 @@ figure.col-inner {
 	.align-right.size-half-f,
 	.align-left.size-half-s,
 	.align-right.size-half-s {
+		width:                                                    100%;
 		max-width:                                                100%;
 		float:                                                    none !important;
 		margin:                                                   var(--measure-base) auto !important;
@@ -1736,6 +1748,7 @@ figure.col-inner {
 	.align-right.size-third-f,
 	.align-left.size-third-s,
 	.align-right.size-third-s {
+		width:                                                    65%;
 		max-width:                                                65%;
 		float:                                                    none !important;
 		margin:                                                   var(--measure-base) auto !important;
@@ -1745,8 +1758,8 @@ figure.col-inner {
 	.align-right.size-quarter-f,
 	.align-left.size-quarter-s,
 	.align-right.size-quarter-s {
-		max-width:                                                calc(45% - var(--measure-base));
-	}
+		width:                                                    calc(45% - var(--measure-base));
+		max-width: calc(45% - var(--measure-base));	}
 
 	.inset-shadow img.align-left.size-half-f,
 	.inset-shadow img.align-right.size-half-f,
@@ -1806,6 +1819,7 @@ figure.col-inner {
 	}
 
 	.flex .col .col-inner {
+		width:                                                    100% !important;
 		max-width:                                                100% !important;
 	}
 

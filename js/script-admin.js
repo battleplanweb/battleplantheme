@@ -1242,11 +1242,15 @@ document.addEventListener('DOMContentLoaded', function () {
 				html += '<div class="bp-an-tip-row"><span class="bp-an-key k-'+f.s.cls+'"></span>' + f.s.label + '<span class="bp-an-tip-v">' + vtxt + '</span></div>';
 			});
 			if (opts.tooltipExtra) html += opts.tooltipExtra(i);
+			if (container._noTip) { tip.style.display = 'none'; return; }   // tooltip toggled off — crosshair + dots stay
 			tip.innerHTML = html; tip.style.display = 'block';
 			var tw = tip.offsetWidth;
 			tip.style.left = (cx + 14 + tw > width ? Math.max(2, cx - 14 - tw) : cx + 14) + 'px';
 		});
 		hit.addEventListener('mouseleave', function () { focus.style.display = 'none'; tip.style.display = 'none'; });
+		// Click the plot to toggle the tooltip off (crosshair lines stay on) — for clean screenshots.
+		hit.addEventListener('click', function () { container._noTip = !container._noTip; if (container._noTip) tip.style.display = 'none'; });
+		hit.style.cursor = 'pointer';
 	}
 
 	function renderChannels(container) {

@@ -25,343 +25,416 @@ function add_amana_products() {
 	$brand = "amana"; // lowercase
 	$productImgAlt = "Amana Heating & Cooling Product";
 
+	$removeImages = array('Amana-AH-01.jpg', 'Amana-F-02.jpg', 'Amana-F-01.jpg', 'Amana-02.jpg', 'Amana-01.jpg');
 
-	/*
-	$removeProducts = array('silver-15-heat-pump', 'american-standard-80-furnace', 'silver-95-furnace');
-	*/
+	$removeProducts = array('asxv9-air-conditioner', 'asxc7-air-conditioner', 'asxh5-air-conditioner', 'asxh4-air-conditioner', 'aszv9-heat-pump', 'aszc7-heat-pump', 'aszh5-heat-pump', 'aszh4-heat-pump', 'amvc96-90-afue-gas-furnace', 'amvc8-advc8-80-afue-gas-furnace', 'am9s96-u-90-afue-gas-furnace', 'am9s80-80-afue-gas-furnace', 'amve-air-handler', 'ahve-air-handler', 'amst-air-handler' );
+
 
 
 	$addProducts = array (
 
 	// Air Conditioners
-array ( 'post_title'	=>	'ASXV9 Air Conditioner',
-	   	'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
+array ( 'post_title'	=>	'AXV9S Air Conditioner',
+	   	'post_content' 	=>	'<span class="descriptionText">A slim side discharge style system that provides a premium mid-efficiency solution at an affordable price. It connects to traditional ducted equipment with ease, and the slim profile provides a solution when traditional cube style options cannot.</span>
 
-<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
+<p>Compatible with the S-Series Smart Thermostat System, its slim design and compact footprint provide flexible installation options, including pad or wall mounting, making it ideal for zero-lot-line homes and small patios or backyards.</p>
 
 <ul>
+	<li>R-32 Split System Air Conditioner</li>
+	<li>Up TO 19 SEER2</li>
 	<li>Variable-Speed, Inverter Driven</li>
-	<li>Up TO 22.5 SEER2</li>
-	<li>2 to 5 Tons</li>
+	<li>Compatible with the Amana® brand Smart thermostat</li>
+	<li><b>Blue Fin Corrosion Coating:</b> 1000 hours salt spray rated coil as standard. This hydrophilic coating helps keep the coil clean.</li>
+	<li><b>Quiet Mode:</b> provides enhanced acoustical comfort. When activated (before sleep, etc.) homeowners will enjoy additional quiet within their space.</li>
+	<li><b>Intelligent Defrost Mode:</b> prevents frost/ice from building up in cold climate conditions and helps with longer heating operation time for additional comfort for occupants.</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Split System Air Conditioner',
+		'post_excerpt'	=>	'A slim side discharge style system that provides a premium mid-efficiency solution at an affordable price. It connects to traditional ducted equipment with ease, and the slim profile provides a solution when traditional cube style options cannot.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1000,
 		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/ss-asxv9.pdf?view=true'),
-		'image_name'	=>	'Amana-01.jpg'
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-s-series-heac.pdf?view=true'),
+		'image_name'	=>	'AXV9S.webp'
 ),
 
-array ( 'post_title'	=>	'ASXC7 Air Conditioner',
-		'post_content' 	=>	'<ul>
-	<li>Up to 17.2 SEER2 Performance</li>
-	<li>High efficiency 2-stage scroll compressor </li>
-	<li>Enhanced air flow</li>
+
+
+
+
+
+array ( 'post_title'	=>	'AXV6S Air Conditioner',
+	   	'post_content' 	=>	'<span class="descriptionText">An affordable, premium mid-efficiency solution with a slim, side-discharge design that easily connects to traditional ducted systems. Its compact profile makes it an excellent choice for tight spaces where conventional cube-style outdoor units may not fit.</span>
+
+<p>Compatible with the S-Series Smart Thermostat System and features a slim, space-saving design for greater installation flexibility. It can be installed on a pad or wall-mounted, making it ideal for zero-lot-line properties, small patios, backyards, and other tight spaces.</p>
+
+<ul>
+	<li>R-32 Split System Air Conditioner</li>
+	<li>Up TO 17.2 SEER2</li>
+	<li>Slim style, small footprint</li>
+	<li>Compatible with the Amana® brand Smart thermostat</li>
+	<li><b>Blue Fin Corrosion Coating:</b> 1000 hours salt spray rated coil as standard. This hydrophilic coating helps keep the coil clean.</li>
+	<li><b>Quiet Mode:</b> provides enhanced acoustical comfort. When activated (before sleep, etc.) homeowners will enjoy additional quiet within their space.</li>
+	<li><b>Intelligent Defrost Mode:</b> prevents frost/ice from building up in cold climate conditions and helps with longer heating operation time for additional comfort for occupants.</li>
+</ul>',
+		'post_excerpt'	=>	'An affordable, premium mid-efficiency solution with a slim, side-discharge design that easily connects to traditional ducted systems. Its compact profile makes it an excellent choice for tight spaces where conventional cube-style outdoor units may not fit.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1010,
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-s-series-heac.pdf?view=true'),
+		'image_name'	=>	'AXV6S.webp'
+),
+
+
+
+
+
+
+array ( 'post_title'	=>	'ALXT7C Air Conditioner',
+	   	'post_content' 	=>	'<span class="descriptionText">Engineered for quiet, efficient comfort, featuring a specially designed sound-control top to help minimize operating noise. With energy-efficiency ratings of up to 17.2 SEER2, it can also help reduce energy consumption and potentially lower cooling costs while keeping your home comfortable.</span>
+
+<p>Features a durable copper tube and enhanced aluminum fin coil, simplified communicating or non-communicating setup, and numerous factory-installed components for easier installation and reliable operation. Additional features include a compressor sound blanket for quieter performance, ambient temperature sensors, factory refrigerant charge for up to 15 feet of tubing, and built-in high- and low-pressure switches. AHRI Certified and ETL Listed.</p>
+
+<ul>
+	<li>R-32 High-Efficiency Air Conditioner</li>
+	<li>Up to 17.2 SEER2</li>
 	<li>Two-Stage Copeland Ultra-Tech scroll compressor</li>
 	<li>Quiet two-speed ECM outdoor fan motor</li>
 	<li>Integrated communicating ComfortBridge™ Technology</li>
 	<li>Commissioning and diagnostics via Bluetooth indoor board via CoolCloud™ App</li>
-	<li>Copeland® ComfortAlert™ built in diagnostics </li>
+	<li>Copeland® ComfortAlert™ built in diagnostics</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Air Conditioner',
+		'post_excerpt'	=>	'Engineered for quiet, efficient comfort, featuring a specially designed sound-control top to help minimize operating noise. With energy-efficiency ratings of up to 17.2 SEER2, it can also help reduce energy consumption and potentially lower cooling costs.',
 		'post_type'     =>	'products',
-		'menu_order'  	=>  1010,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-asxc7.pdf'),
-		'image_name'	=>	'Amana-01.jpg'
+		'menu_order'  	=>  1020,
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_acsplits.pdf?view=true'),
+		'image_name'	=>	'Amana-AC-01.webp'
 ),
 
-array ( 'post_title'	=>	'ASXH5 Air Conditioner',
-		'post_content' 	=>	'<ul>
-	<li>Split System Air Conditioner</li>
-	<li>Up to 15.2 SEER2</li>
-	<li>1½ To 5 Tons</li>
+
+
+
+
+
+array ( 'post_title'	=>	'ALXS5B Air Conditioner',
+	   	'post_content' 	=>	'<span class="descriptionText">Built to deliver dependable cooling, lasting durability, and comfortable indoor temperatures—even during the hottest weather. With a range of efficiency options available, choosing a system with a higher SEER2 rating can provide greater energy efficiency and help reduce cooling costs over time.</span>
+
+<p>Built for efficient, quiet, and dependable performance, this system features a high-efficiency scroll compressor with a sound-reducing foam blanket and advanced Copeland® CoreSense™ Technology. Durable components include an enhanced copper tube/aluminum fin coil, extended-life capacitors, factory-installed filter drier, high-pressure protection, and convenient service connections. The unit comes factory charged for 15 feet of tubing and is AHRI Certified and ETL Listed.</p>
+
+<ul>
+	<li>R-32 Split System Air Conditioner</li>
+	<li>Up to 17 SEER2</li>
 	<li>Heavy-gauge galvanized-steel cabinet</li>
 	<li>Baked-on powder-paint finish with 500-hour salt-spray approval</li>
 	<li>Steel louver coil guard with Rust-resistant screws</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Air Conditioner',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1020,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-asxh5.pdf'),
-		'image_name'	=>	'Amana-01.jpg'
-),
-
-array ( 'post_title'	=>	'ASXH4 Air Conditioner',
-		'post_content' 	=>	'<span class="descriptionText">Constantly monitoring the performance of your Amana® brand air conditioner, this advanced diagnostics system provides insight for accurate troubleshooting and quick diagnosis and repairs. Using the compressor as a sensor, CoreSense Diagnostics delivers active protection and will proactively shut the system down should it detect conditions that could damage the compressor. As a result, catastrophic failures and extensive, costly repairs are often avoided. </span>
-<ul>
-	<li>UP TO 14.3 SEER2</li>
-	<li>1½ TO 5 Tons </li>
-</ul>',
-		'post_excerpt'	=>	'Energy-Efficient Base Plus Air Conditioner',
+		'post_excerpt'	=>	'Built to deliver dependable cooling, lasting durability, and comfortable indoor temperatures—even during the hottest weather. With a range of efficiency options available, choosing a system with a higher SEER2 rating can provide greater energy efficiency and help reduce cooling costs over time.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1030,
 		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-asxh4.pdf'),
-		'image_name'	=>	'Amana-02.jpg'
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_acsplits.pdf?view=true'),
+		'image_name'	=>	'Amana-AC-01.webp'
 ),
+
+
+
+
+
+
+array ( 'post_title'	=>	'ALXS4B Air Conditioner',
+	   	'post_content' 	=>	'<span class="descriptionText">Combines reliable performance, lasting durability, and powerful cooling to keep your home comfortable even on the hottest days. With a variety of efficiency options available, systems with higher SEER2 ratings provide greater energy efficiency and the potential for increased savings on cooling costs.</span>
+
+<p>Built for efficient, reliable performance, this system features an energy-efficient compressor with advanced Copeland® technology, a sound-reducing compressor blanket, and a durable copper tube/aluminum fin coil. Factory-installed components and easy-access service connections help simplify installation and maintenance, while extended-life capacitors and high-pressure protection enhance durability. The unit comes factory charged for 15 feet of tubing and is AHRI Certified and ETL Listed.</p>
+
+<ul>
+	<li>R-32 Split System Air Conditioner</li>
+	<li>Up to 15.2 SEER2</li>
+	<li><b>Copeland® CoreSense Diagnostics:</b> Using the compressor as a sensor, CoreSense Diagnostics delivers active protection and will proactively shut the system down should it detect conditions that could damage the compressor. As a result, catastrophic failures and extensive, costly repairs are often avoided.</li>
+	<li><b>Quiet Performance:</b> Acoustically engineered with enhancements such as a specially designed sound-control top.</li>
+	<li><b>Energy Efficiency:</b> Provides significant savings on your electric bill compared to lower SEER units found in many homes.</li>
+</ul>',
+		'post_excerpt'	=>	'Combines reliable performance, lasting durability, and powerful cooling to keep your home comfortable even on the hottest days. With a variety of efficiency options available, systems with higher SEER2 ratings provide greater energy efficiency and the potential for increased savings on cooling costs.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1040,
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-conditioners', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_acsplits.pdf?view=true'),
+		'image_name'	=>	'Amana-AC-01.webp'
+),
+
+
+
 
 
 
 
 
 	// Heat Pumps
-array ( 'post_title'	=>	'ASZV9 Heat Pump',
-		'post_content' 	=>	'<span class="descriptionText">SEER or Seasonal Energy Efficiency Rating is a measure designated by the U.S. Department of Energy and gives you a good idea of the performance you can expect from heat pumps.</span>
+array ( 'post_title'	=>	'AZV9S Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">A slim, side-discharge design with dependable mid-efficiency performance at an affordable price. It easily connects with traditional ducted equipment, while its compact profile makes it an ideal solution for tight spaces where conventional cube-style outdoor units may not fit.</span>
 
-<p>When you choose an energy efficient Amana brand heat pump, year-round indoor comfort is combined with year-round savings compared to lower SEER-rated heat pumps. </p>
+<p>Designed for efficient, quiet, and dependable year-round comfort, this system features a variable-speed swing compressor with strong heating performance for cold climates and reliable operation in high-ambient conditions. Advanced communicating controls provide smart diagnostics, simplified two-wire installation, Amana Smart Thermostat compatibility, and selectable performance settings. Quiet-mode operation can reduce sound levels to as low as 47 dBA, while boost mode provides additional capacity during unusually high heating or cooling demands.</p>
+
 <ul>
 	<li>Inverter Driven</li>
-    <li>Up to 22.5 SEER2</li>
-    <li>Quiet DC outdoor fan motor</li>
+    	<li>Up to 21 SEER2</li>
+    	<li>Quiet DC outdoor fan motor</li>
+   	<li>Variable-speed swing compressors</li>
+    	<li><b>Quiet Performance:</b> Acoustically engineered with enhancements such as a specially designed sound-control top.</li>
+    	<li><b>Energy Efficiency:</b> Provides significant savings on your electric bill compared to lower SEER units found in many homes.</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Split System Heat Pump',
+		'post_excerpt'	=>	'A slim, side-discharge design with dependable mid-efficiency performance at an affordable price. It easily connects with traditional ducted equipment, while its compact profile makes it an ideal solution for tight spaces where conventional cube-style outdoor units may not fit.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1100,
 		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszv9.pdf'),
-		'image_name'	=>	'Amana-01.jpg'
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-s-series-hehp.pdf?view=true'),
+		'image_name'	=>	'AZV9S.webp'
 ),
 
-array ( 'post_title'	=>	'ASZC7 Heat Pump',
-		'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
 
-<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
+
+
+
+array ( 'post_title'	=>	'AZV6S Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">Delivers efficient year-round comfort with ratings of up to 19.0 SEER2 and 8.8 HSPF2, available in 1½- to 5-ton capacities. Its slim, space-saving design features intelligent defrost, compatibility with the Amana Smart Thermostat, and multiple quiet-mode settings with operation as low as 45 dBA.</span>
+
+<p>Compatible with the S-Series Smart Thermostat System, this unit features a slim, compact design that provides greater installation flexibility. It can be installed on a pad or wall-mounted, making it an excellent solution for zero-lot-line homes, small patios, backyards, and other limited spaces.</p>
 
 <ul>
-	<li>UP TO 17.2 SEER2 and 8.2 HSPF2</li>
-    <li>ComfortBridge™ Technology</li>
-    <li>Two-Stage scroll compressors</li>
+	<li>Heat Pump with Inverter Technology</li>
+    	<li>Up to 19 SEER2</li>
+	<li>Up to 8.8 HSPF2</li>
+	<li>Slim style, small footprint</li>
+    	<li>Compatible with the Amana® Brand Smart thermostat</li>
+	<li><b>Blue Fin Corrosion Coating:</b> 1000 hours salt spray rated coil as standard. This hydrophilic coating helps keep the coil clean.</li>
+	<li><b>Quiet Mode:</b> provides enhanced acoustical comfort. When activated (before sleep, etc.) homeowners will enjoy additional quiet within their space.</li>
+	<li><b>Intelligent Defrost Mode:</b> prevents frost/ice from building up in cold climate conditions and helps with longer heating operation time for additional comfort for occupants.</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Heat Pump Two-Stage',
+		'post_excerpt'	=>	'Delivers efficient year-round comfort with ratings of up to 19.0 SEER2 and 8.8 HSPF2, available in 1½- to 5-ton capacities. Its slim, space-saving design features intelligent defrost, compatibility with the Amana Smart Thermostat, and multiple quiet-mode settings with operation as low as 45 dBA.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1110,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszc7.pdf'),
-		'image_name'	=>	'Amana-01.jpg'
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-s-series-achp.pdf?view=true'),
+		'image_name'	=>	'AZV9S.webp'
 ),
 
-array ( 'post_title'	=>	'ASZH5 Heat Pump',
-		'post_content' 	=>	'<span class="descriptionText">SEER or Seasonal Energy Efficiency Rating is a measure designated by the U.S. Department of Energy and gives you a good idea of the performance you can expect from heat pumps. At a 15.2-SEER2 cooling rating, the Amana® brand ASZH5 Heat Pump can deliver an up to 7.8 HSPF2 (Heating Seasonal Performance Factor). </span>
+
+
+
+
+
+
+array ( 'post_title'	=>	'ALZT7C Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">Provides efficient heating and cooling from a single system, and helps keep your home comfortable throughout the year. With options designed to fit a variety of needs and budgets, higher-efficiency models can help reduce energy costs compared with lower-rated systems. For the greatest potential energy savings, look for models with higher SEER2 and HSPF2 ratings.</span>
+
+<p>This system combines a two-stage Copeland® UltraTech scroll compressor with advanced ComfortBridge™ communicating technology for efficient, dependable comfort. Built-in diagnostics, Bluetooth commissioning through the CoolCloud™ app, two-speed condenser fan operation, and simplified wiring make setup and service easier. Additional protections include high- and low-pressure switches, fault-code storage, and short-cycle protection for quiet, reliable operation and defrost performance.</p>
+
 <ul>
-	<li>UP TO 15.2 SEER2 & 7.8 HSPF2</li>
-	<li>1½ to 5 Tons</li>
+	<li>High-Efficiency Heat Pump</li>
+	<li>Up to 17.5 SEER2</li>
+	<li>Up to 8.2HSPF2</li>
+    	<li>Two-Stage scroll compressors</li>
+   	<li><b>ComfortBridge™ Technology:</b> Bridges indoor comfort with smart technology, and helps cost-effectively operate at peak performance.	   </li>
+    	<li><b>Quiet Performance:</b> Acoustically engineered with enhancements such as a specially designed sound-control top.</li>
+    	<li><b>Energy Efficiency:</b> Provides significant savings on your electric bill compared to lower SEER units found in many homes.</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Heat Pump',
+		'post_excerpt'	=>	'Provides efficient heating and cooling from a single system, and helps keep your home comfortable throughout the year. With options designed to fit a variety of needs and budgets, higher-efficiency models can help reduce energy costs compared with lower-rated systems.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1120,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszh5.pdf'),
-		'image_name'	=>	'Amana-01.jpg'
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_hp.pdf?view=true'),
+		'image_name'	=>	'Amana-AC-01.webp'
 ),
 
-array ( 'post_title'	=>	'ASZH4 Heat Pump',
-		'post_content' 	=>	'<span class="descriptionText">SEER or Seasonal Energy Efficiency Rating is a measure designated by the U.S. Department of Energy and gives you a good idea of the performance you can expect from heat pumps. At a 14.3 SEER2 cooling rating, the Amana® brand ASZH4 Heat Pump can deliver an 7.5 HSPF2 (Heating Seasonal Performance Factor).</span>
 
-<p>When you choose an energy efficient Amana brand heat pump, year-round indoor comfort is combined with year-round savings compared to lower SEER-rated heat pumps.</p>
+
+
+
+
+
+array ( 'post_title'	=>	'ALZS5B Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">Provides reliable heating and cooling from a single system, delivering comfortable indoor temperatures throughout the year. A system with higher SEER2 and HSPF2 ratings can provide greater energy efficiency and help reduce year-round heating and cooling costs.</span>
+
+<p>Built for efficient, quiet, and dependable year-round performance, this heat pump features a high-efficiency Copeland scroll compressor with advanced CoreSense® technology and durable copper tube/aluminum fin coils. SmartShift® technology helps provide quiet, reliable defrost operation, while factory-installed protective components, extended-life capacitors, and easy-access service connections enhance durability and serviceability. The system is AHRI Certified and ETL Listed..</p>
+
 <ul>
-	<li>14.3 SEER2/ 7.5 HSPF2</li>
-    <li>High-Efficiency Copeland® scroll compressor</li>
-    <li>Advanced Copeland® CoreSense technology</li>
-    <li>SmartShift® technology</li>
+	<li>R-32 Split System Heat Pump</li>
+    	<li>Up to 16 SEER2</li>
+    	<li>Up to 8.2 HSPF2</li>
+    	<li>Enhanced aluminum fin coil</li>
+   	<li>Heavy-gauge galvanized-steel cabinet</li>
+    	<li>Baked-on powder-paint finish with 500-hour salt-spray approval</li>
+    	<li>Top and side maintenance access</li>
 </ul>',
-		'post_excerpt'	=>	'High-Efficiency Split System Heat Pump',
+		'post_excerpt'	=>	'Provides reliable heating and cooling from a single system, delivering comfortable indoor temperatures throughout the year. A system with higher SEER2 and HSPF2 ratings can provide greater energy efficiency and help reduce year-round heating and cooling costs.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1130,
 		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-aszh4.pdf'),
-		'image_name'	=>	'Amana-02.jpg'
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_hp.pdf?view=true'),
+		'image_name'	=>	'Amana-AC-01.webp'
 ),
+
+
+
+
+
+
+
+array ( 'post_title'	=>	'ALZS4B Heat Pump',
+		'post_content' 	=>	'<span class="descriptionText">Provides dependable heating and cooling for year-round indoor comfort while helping reduce energy consumption. Compared with lower SEER-rated systems, a higher-efficiency Amana heat pump can deliver greater energy savings throughout the year.</span>
+
+<p>Built for efficient, quiet, and reliable performance, this heat pump features a high-efficiency Copeland scroll compressor with advanced CoreSense technology, durable copper tube/aluminum fin coils, and SmartShift® technology for quieter, dependable defrost operation. Factory-installed protective components, extended-life capacitors, a compressor sound blanket, and convenient service connections enhance durability, comfort, and serviceability. The system is AHRI Certified and ETL Listed.</p>
+
+<ul>
+	<li>R-32 Split System Heat Pump</li>
+    	<li>Up to 15.2 SEER2</li>
+    	<li>Up to 7.8 HSPF2</li>
+    	<li>Enhanced aluminum fin coil</li>
+   	<li>Variable-speed swing compressors</li>
+    	<li>Quiet reliable defrost</li>
+</ul>',
+		'post_excerpt'	=>	'Provides dependable heating and cooling for year-round indoor comfort while helping reduce energy consumption. Compared with lower SEER-rated systems, a higher-efficiency Amana heat pump can deliver greater energy savings throughout the year.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1140,
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'heat-pumps', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_hp.pdf?view=true'),
+		'image_name'	=>	'Amana-AC-01.webp'
+),
+
+
+
+
 
 
 
 
 
 	// Furnaces
-array ( 'post_title'	=>	'AMVC96 - 90+% AFUE Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
+	array ( 'post_title'	=>	'ARVT96 90+% AFUE Gas Furnaces',
+	'post_content' 	=>	'<span class="descriptionText">Provides efficient, reliable heating to keep your home warm and comfortable throughout the colder months. When an aging furnace becomes less dependable or costly to repair, replacing it with a high-efficiency Amana system can provide improved performance, greater efficiency, and dependable long-term comfort.</span>
 
-<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
+<p>Built for **quiet, efficient, and dependable heating**, this furnace features **ComfortBridge™ communicating technology**, a two-stage gas valve, durable stainless-steel heat exchangers, and a variable-speed airflow system that automatically adjusts to your home\'s comfort demands. Built-in Bluetooth commissioning and advanced diagnostics through the CoolCloud™ app simplify setup and service, while multiple fan speeds and enhanced dehumidification options provide greater control over year-round indoor comfort.
+</p>
 
-<p>Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana® brand AMVC96 Variable-Speed Furnace strives to operate on low capacity as often and as long as possible providing quiet and highly-efficient performance compared to units containing a single speed motor.</p>
-
-<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace.</p>
 <ul>
-	<li>96% AFUE</li>
-	<li>Stainless-Steel Tubular Primary Heat Exchanger</li>
-    <li>Integrated communicating ComfortBridge™ Technology</li>
-    <li>Efficient and Quiet Variable-Speed Circulator Motor</li>
-    <li>Durable silicon nitride igniter</li>
-    <li>Two-Stage Gas Valve</li>
-    <li>Quiet, Two-Stage, Induced-Draft Blower</li>
-    <li>Continuous Air Circulation</li>
-    <li>Self-Diagnostic Control Board</li>
-    <li>Heavy-Gauge Steel Cabinet with Durable Finish</li>
-    <li>Thermally Insulated Cabinet</li>
+	<li>Two-Stage Variable-Speed Gas Furnace</li>
+	<li>97.5% AFUE</li>
+	<li>Efficient and Quiet Variable-Speed Circulator Motor</li>
+	<li>Quiet comfort</li>
+	<li>Energy Efficient</li>
+	<li><b>ComfortBridge™ Technology:</b> Bridges indoor comfort with smart technology, and cost-effectively operate at peak performance.</li>
 </ul>',
-		'post_excerpt'	=>	'Two-Stage Variable-Speed Gas Furnace',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1200,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/pb-amvc9694d9450022fa6258827eff0a00754798.pdf'),
-		'image_name'	=>	'Amana-F-01.jpg'
+  'post_excerpt'	=>	'Provides efficient, reliable heating to keep your home warm and comfortable throughout the colder months. A high-efficiency Amana system can provide improved performance, greater efficiency, and dependable long-term comfort.',
+  'post_type'     =>	'products',
+  'menu_order'  	=>  1200,
+  'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'best'),
+  'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_90furn.pdf?view=true'),
+  'image_name'	=>	'Amana-F-01.webp'
 ),
 
-array ( 'post_title'	=>	'AM9S96-U - 90+% AFUE Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana® brand AM9S96-U Multi-Speed Furnace is insulated for noise reduction. With a sound-isolated blower assembly and a heavy-gauge steel cabinet, it offers quiet and efficient performance as compared to a natural draft furnace.</span>
 
-			<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace</p>
-<ul>
-	<li>Up to 96% AFUE</li>
-    <li>Super-ferritic stainless-steel secondary heat exchanger</li>
-    <li>Efficient and Quiet Multi-Speed ECM Blower Motor</li>
-    <li>Durable silicon nitride igniter</li>
-    <li>Quiet, Single-Speed, Induced-Draft Blower</li>
-    <li>Continuous Air Circulation</li>
-    <li>Self-Diagnostic Control Board</li>
-    <li>Heavy-Gauge Steel Cabinet with Durable Finish</li>
-    <li>Thermally insulated cabinet</li>
-</ul>',
-		'post_excerpt'	=>	'Single-Stage Multi-Speed Gas Furnace',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1210,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/cb-am9s96-u_12-21.pdf'),
-		'image_name'	=>	'Amana-F-01.jpg'
+
+
+
+array ( 'post_title'	=>	'ARVT80 80% AFUE Gas Furnaces',
+	'post_content' 	=>	'<span class="descriptionText">Provides reliable, efficient heating to keep your home warm and comfortable throughout the colder months. When an older furnace becomes unreliable or increasingly expensive to repair, replacing it with an Amana system can provide dependable performance, improved comfort, and reliable heating for years to come.</span>
+
+	<p>Designed for quiet, efficient, and dependable heating, this furnace features ComfortBridge communicating technology, a two-stage gas valve, and a variable-speed ECM motor that automatically adjusts airflow based on your home\'s heating and cooling needs. CoolCloud Bluetooth diagnostics, a long-life SureStart igniter, built-in fault-code history, and quiet two-speed operation help simplify service while delivering consistent comfort. AHRI Certified and ETL Listed.</p>
+
+	<ul>
+		<li>80% AFUE</li>
+		<li>Efficient and Quiet Variable-Speed Circulator Motor</li>
+		<li>Quiet comfort</li>
+		<li>Energy Efficient</li>
+		<li><b>ComfortBridge™ Technology:</b> Bridges indoor comfort with smart technology, and cost-effectively operate at peak performance.</li>
+	</ul>',
+	'post_excerpt'	=>	'Provides reliable, efficient heating to keep your home warm and comfortable throughout the colder months. Provides dependable performance, improved comfort, and reliable heating for years to come.',
+	'post_type'     =>	'products',
+	'menu_order'  	=>  1210,
+	'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'better'),
+	'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_80furn.pdf?view=true'),
+	'image_name'	=>	'Amana-F-02.webp'
 ),
 
-array ( 'post_title'	=>	'AM9S80 - 80% AFUE Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">A gas furnace is a piece of equipment from which you expect years of uninterrupted service. Amana® brand gas furnaces live up to expectations through intelligently designed components that benefit from decades of performance testing and refinement, like our new stainless-steel heat exchanger. And with outstanding warranties* that demonstrate our confidence, you can purchase an Amana brand furnace safe in the knowledge it will Last and Last and Last®.</span>
-
-			<p>Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana brand AM9S80/AC9S80 Multi-Speed ECM Furnace is insulated for noise reduction. With a sound-isolated blower assembly and a heavy-gauge steel cabinet, it offers quiet and efficient performance compared to furnaces with single-speed motors.</p>
-
-			<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace.</p>
-<ul>
-	<li>80% AFUE</li>
-	<li>Heavy-Duty Aluminized-Steel, Dual-diameter Tubular Heat Exchanger</li>
-    <li>Single-stage Gas Valve</li>
-    <li>Durable Hot-surface igniter</li>
-    <li>Quiet, Single-speed Draft Induced</li>
-    <li>Self-diagnostic Control Bboard</li>
-   <li>Color-coded Low-voltage Terminals</li>
-    <li>Multi-speed ECM Blower Motor</li>
-    <li>Heavy-gauge Steel Cabinet with Durable Baked-enamel Finish</li>
-    <li>Foil Faced Insulated Heat Exchanger</li>
-</ul>',
-		'post_excerpt'	=>	'Single-Stage Multi-Speed Gas Furnace',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1220,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/cb-am9s80.pdf'),
-		'image_name'	=>	'Amana-F-02.jpg'
-),
-
-array ( 'post_title'	=>	'AMVC8 / ADVC8 - 80% AFUE Gas Furnace',
-		'post_content' 	=>	'<span class="descriptionText">A gas furnace is a piece of equipment from which you expect years of uninterrupted service. Amana® brand gas furnaces live up to expectations through intelligently designed components that benefit from decades of performance testing and refinement, like our new stainless-steel heat exchanger. And with outstanding warranties* that demonstrate our confidence, you can purchase an Amana brand furnace safe in the knowledge it will Last and Last and Last®.</span>
-
-			<p>Many homeowners may think the best gas furnaces are not seen or heard. That’s why an Amana brand AM9S80/AC9S80 Multi-Speed ECM Furnace is insulated for noise reduction. With a sound-isolated blower assembly and a heavy-gauge steel cabinet, it offers quiet and efficient performance compared to furnaces with single-speed motors.</p>
-
-			<p>Energy efficiency equates to cost savings. A gas furnace’s efficiency rating can primarily be determined by two factors: its AFUE rating (Annual Fuel Utilization Efficiency), which indicates what percentage of each dollar of natural gas purchased is actually used to heat your home; and the type of blower used in the furnace.</p>
-<ul>
-	<li>80% AFUE</li>
-	<li>Heavy-Duty Aluminized-Steel, Dual-diameter Tubular Heat Exchanger</li>
-    <li>Single-stage Gas Valve</li>
-    <li>Durable Hot-surface igniter</li>
-    <li>Quiet, Single-speed Draft Induced</li>
-    <li>Self-diagnostic Control Bboard</li>
-    <li>Color-coded Low-voltage Terminals</li>
-    <li>Multi-speed ECM Blower Motor</li>
-    <li>Heavy-gauge Steel Cabinet with Durable Baked-enamel Finish</li>
-    <li>Foil Faced Insulated Heat Exchanger</li>
-</ul>',
-		'post_excerpt'	=>	'Two-Stage Multi-Speed Gas Furnace',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1230,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'furnaces', 'product-class'=>'good'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/cb-amvc8.pdf'),
-		'image_name'	=>	'Amana-F-02.jpg'
-),
 
 
 
 
 
 	// Air Handlers
-array ( 'post_title'	=>	'AMVE Air Handler',
-		'post_content' 	=>	'<span class="descriptionText">ComfortBridge™ Technology ‘bridges’ indoor comfort with smart technology, and is factory-installed into select, premium Amana® brand gas furnaces and air handlers. ComfortBridge™ Technology helps your Amana® brand air conditioner heating and cooling systems cost-effectively operate at peak performance.</span>
+	array ( 'post_title'	=>	'AMST R-32 Air Handler',
+			'post_content' 	=>	'<span class="descriptionText">This 9-Speed ECM Air Handler with Internal TXV efficiently circulates heated and cooled air throughout your home for consistent, year-round comfort. The flexible multi-position design helps provide dependable airflow and efficient performance when properly matched with an Amana heat pump.</span>
 
-<p>In the past, communicating technology was limited to a few expensive, proprietary thermostats. Now, ComfortBridge™ Technology technology is installed securely in Amana® brand furnace and air handler equipment, providing you consistent, energy-efficient home comfort.</p>
+	<p>Available in 1½- to 5-ton capacities, this air handler offers flexible horizontal or vertical installation to accommodate a variety of home layouts. A factory-installed thermal expansion valve and durable all-aluminum evaporator coil support efficient performance, while the coil mounting track allows for quick repositioning and easier installation.</p>
 
-<p>Variable Speed ECM Blower Motors provide gradual startup and shutdown for quiet, unobtrusive operation with lower energy consumption compared to standard efficiency motors across a wide range of operating speeds. Constant low-speed operation for outstanding filtration and comfort level (models AVPEC and MBVC).</p>
+	<ul>
+		<li>All-Aluminum Coil</li>
+	    <li>SmartFrame™ Sub-Structure</li>
+
+	    <li>Internal factory-installed thermal expansion valves for cooling and heat pump applications</li>
+	    <li>Direct-Drive, 9-speed ECM blower motor</li>
+	    <li>Designed to work with R32 refrigerant to provide the best performance</li>
+	</ul>',
+			'post_excerpt'	=>	'This 9-Speed ECM Air Handler with Internal TXV efficiently circulates heated and cooled air throughout your home for consistent, year-round comfort. The flexible multi-position design helps provide dependable airflow and efficient performance when properly matched with an Amana heat pump.',
+			'post_type'     =>	'products',
+			'menu_order'  	=>  1300,
+			'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'best'),
+			'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_ah.pdf?view=true'),
+			'image_name'	=>	'Amana-AH-01.jpg'
+	),
+
+
+
+
+
+array ( 'post_title'	=>	'AMVT R-32 Air Handler',
+		'post_content' 	=>	'<span class="descriptionText">Efficiently circulates heated or cooled air throughout your home\'s ductwork to help maintain consistent indoor comfort. Helps deliver efficient airflow, dependable performance, and comfortable temperatures throughout your home.</span>
+
+<p>This Amana Brand air handler combines a variable-speed ECM blower motor with integrated ComfortBridge™ Technology to automatically optimize airflow, efficiency, humidity control, and overall comfort. Built-in Bluetooth commissioning and CoolCloud™ diagnostics simplify setup and service, while the system can automatically configure airflow and tonnage when operating in communicating mode. Additional features include a durable all-aluminum coil, factory-installed expansion valve, R-32 sensor, SmartFrame™ sub-structure, and compatibility with multi-stage heat pump and cooling systems. AHRI Certified and ETL Listed.</p>
+
 <ul>
 	<li>All-Aluminum Coil</li>
     <li>ComfortBridge™ Technology</li>
-    <li>Electronic Expansion Valve, Inverter-tuned</li>
+    <li>Factory mounted Expansion Valve</li>
     <li>SmartFrame™ Sub-Structure</li>
-    <li>2 to 5 tons</li>
-    <li>Integrated communicating ComfortBridge™ Technology</li>
+
+    <li>Factory installed R32 Sensor designed to last life span of coil</li>
     <li>Variable-speed ECM blower motor</li>
-    <li>Provides constant CFM over a wide range of static pressure conditions independent of duct system</li>
+    <li>Provides adjustable low CFM for efficient fan-only operation</li>
     <li>Improved humidity and comfort control</li>
-    <li>Horizontal or vertical configuration capabilities</li>
+    <li>Built-in compatibility with multi-stage heat pump and cooling applications</li>
+    <li><b>ComfortBridge™ Technology:</b> Bridges indoor comfort with smart technology, and cost-effectively operate at peak performance.</li>
 </ul>',
-		'post_excerpt'	=>	'Multi-Position, Variable-Speed Air Handler',
+		'post_excerpt'	=>	'Efficiently circulates heated or cooled air throughout your home\'s ductwork to help maintain consistent indoor comfort. Helps deliver efficient airflow, dependable performance, and comfortable temperatures throughout your home.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1300,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-amve.pdf'),
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_ah.pdf?view=true'),
 		'image_name'	=>	'Amana-AH-01.jpg'
 ),
 
-array ( 'post_title'	=>	'AHVE Air Handler',
-		'post_content' 	=>	'<ul>
-	<li>ECM-Based Air Handler with Internal EEV</li>
-    <li>Communicating For S-Series matchups 1½ to 5 Tons </li>
-    <li>Electronic Expansion Valve (EEV) for cooling and heat pump applications.</li>
-    <li>7mm evaporator coil tube size</li>
-    <li>Variable-speed ECM blower motor</li>
-    <li>Compatible with Amana® brand smart thermostat</li>
-    <li>Provides constant CFM over a wide range of static pressure conditions independent of duct system</li>
-    <li>CFM indicator</li>
-    <li>Thermostat provides adjustable low-CFM for efficient fan-only operation</li>
+
+
+
+
+
+array ( 'post_title'	=>	'AHVE R-32 Air Handler',
+		'post_content' 	=>	'<span class="descriptionText">Maintains consistent indoor comfort by efficiently circulating heated or cooled air throughout your home\'s ductwork. When properly matched with an Amana heat pump, the air handler helps your system deliver balanced airflow, efficient performance, and dependable year-round comfort.</span>
+
+<p>Designed for efficient airflow and flexible installation, this air handler features a tightly sealed cabinet that minimizes air leakage and helps support overall system efficiency. Its horizontal or vertical configuration options, compact 21-inch depth for easier attic access, and durable DecaBDE-free thermoplastic drain pan make it adaptable to a wide range of home installations.</p>
+
+<ul>
+	<li>Variable-Speed Air Handler</li>
+    <li>ECM-Based Air Handler with Internal EEV</li>
+    <li>Factory installed R32 Sensor designed to last life span of coil</li>
     <li>All-aluminum evaporator coil</li>
-    <li>Fault recall of six most recent faults</li>
-    <li>Improved humidity and comfort control</li>
-    <li>AHRI certified; ETL listed</li>
     <li>Coil mounting track for quick repositioning</li>
-    <li>Rigid SmartFrame™ cabinet</li>
+    <li>Improved humidity and comfort control</li>
+    <li>Compatible with Amana® brand smart thermostat</li>
 </ul>',
-		'post_excerpt'	=>	'Variable-Speed Air Handler',
+		'post_excerpt'	=>	'Maintains consistent indoor comfort by efficiently circulating heated or cooled air throughout your home\'s ductwork and delivers balanced airflow, efficient performance, and dependable year-round comfort.',
 		'post_type'     =>	'products',
 		'menu_order'  	=>  1310,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'great'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-ahve.pdf'),
-		'image_name'	=>	'Amana-AH-01.jpg'
-),
-
-array ( 'post_title'	=>	'AMST Air Handler',
-		'post_content' 	=>	'<span class="descriptionText">The AMST Multi-Position, 9-Speed ECM air handler with internal TXV is optimized for single-stage AC and HP outdoor units up to 15.2 SEER2.</span>
-<ul>
-	<li>Energy-Efficient</li>
-    <li>Multi-Position</li>
-    <li>Electronic Expansion Valve, Inverter-tuned</li>
-    <li>Internal factory-installed thermal expansion valves for cooling and heat pump applications</li>
-	<li>7mm evaporator coil tube size on 1½ - 3½ Ton models and ⅜" evaporator coil tube size on 4 to 5 Ton models</li>
-	<li>Direct-Drive, 9-speed ECM blower motor</li>
-	<li>All-aluminum evaporator coil with high performance coated fin stock</li>
-	<li>Coil mounting track for quick repositioning</li>
-	<li>Optimized for use with R-410A refrigerant</li>
-	<li>Cabinet air leakage less than 2.0%at 1.0 inch H₂O when tested in accordance with ASHRAE standard 193</li>
-	<li>Cabinet air leakage less than 1.4%at 0.5 inch H₂O when tested in accordance with ASHRAE standard 193</li>
-	<li>3 kW – 25 kW electric heater kits</li>
-	<li>AHRI certified; ETL listed</li>
-</ul>',
-		'post_excerpt'	=>	'Energy Efficient Air Handlers',
-		'post_type'     =>	'products',
-		'menu_order'  	=>  1320,
-		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'best'),
-		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/docs/default-source/default-document-library/ss-amve.pdf'),
+		'tax_input'		=>  array('product-brand'=>'amana', 'product-type'=>'air-handlers', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://www.amana-hac.com/pdfviewer.aspx?pdfurl=docs/default-source/default-document-library/pf-a_ah.pdf?view=true'),
 		'image_name'	=>	'Amana-AH-01.jpg'
 ),
 

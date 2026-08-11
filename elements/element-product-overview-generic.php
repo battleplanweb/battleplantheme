@@ -33,12 +33,20 @@
 		$alt 		= "Daikin Ductless Systems";
 	endif;
 
-	if ( $type == "indoor air quality" ) :
+	if ( $type == "indoor air quality"  || $type == "indoor-air-quality" ) :
 		$title 		= "Indoor Air Quality";
 		$excerpt	= "<p>Indoor air quality is known to affect the health, comfort and well-being of people inside your home. Poor IAQ has been linked to all sorts of health and productivity issues. Our IAQ products can help make your home safer and more comfortable.</p>";
 		$link 		= "/product-type/indoor-air-quality/";
 		$pic 		= "indoor-air-quality-320x320";
 		$alt 		= "Indoor Air Quality";
+	endif;
+
+	if ( $type == "surge protection" || $type == "surge-protection" ) :
+		$title 		= "Surge Protection";
+		$excerpt	= "<p>HVAC surge protection helps shield sensitive electrical components from power surges, voltage spikes, and other electrical disturbances that can cause costly damage. It adds an extra layer of protection for circuit boards, compressors, motors, and other critical system components.</p>";
+		$link 		= "/product-type/surge-protection/";
+		$pic 		= "surge-protection-320x320";
+		$alt 		= "Surge Protection";
 	endif;
 
 ?>

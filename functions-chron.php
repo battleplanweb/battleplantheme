@@ -190,25 +190,15 @@ if ($forceD || $autoTriggerD) {
 
 function bp_run_one_off_tasks(): void {
 
-    // 2026-07-27 — refresh the American Standard catalogue on every dealer that carries the brand,
-    // plus the Samsung ductless line those same dealers sell (no site lists Samsung in site-brand,
-    // so it rides the American Standard gate rather than getting one of its own).
     if (get_option('bp_product_upload_2026-07-27') != 'completed' && bp_site_sells_brand('american standard')) {
         require_once get_template_directory() . '/includes/include-hvac-products/includes-american-standard-products.php';
         require_once get_template_directory() . '/includes/include-hvac-products/includes-samsung-products.php';
 
-        // Both importers run on wp_loaded, so flag the job complete just after them
-        // (priority 20 vs their 10). If an import times out mid-way the option is never
-        // written and the job simply retries on the next nightly run.
         add_action('wp_loaded', function () {
             updateOption('bp_product_upload_2026-07-27', 'completed', false);
         }, 20);
     }
 
-    // 2026-08-07 — the 07-27 job created the Samsung products everywhere, but on some sites none of
-    // the photos reached the media library: every failure path in the image half of the uploader was
-    // silent. Re-run Samsung alone where photos are missing. The uploader now emails the failures,
-    // so this fires once rather than retrying a broken upload nightly.
     if (get_option('bp_product_upload_2026-08-07') != 'completed' && bp_site_sells_brand('american standard')) {
         if (bp_brand_photos_missing('samsung')) {
             require_once get_template_directory() . '/includes/include-hvac-products/includes-samsung-products.php';
@@ -218,6 +208,16 @@ function bp_run_one_off_tasks(): void {
             updateOption('bp_product_upload_2026-08-07', 'completed', false);
         }, 20);
     }
+
+    if (get_option('bp_product_upload_2026-08-11') != 'completed' && bp_site_sells_brand('amana')) {
+        require_once get_template_directory() . '/includes/include-hvac-products/includes-amana-products.php';
+
+        add_action('wp_loaded', function () {
+            updateOption('bp_product_upload_2026-08-11', 'completed', false);
+        }, 20);
+    }
+
+
 }
 
 

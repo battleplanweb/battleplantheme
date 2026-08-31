@@ -28,7 +28,8 @@ get_header(); ?>
 				$page_content .= '<li>Email us for help: <a href="mailto:[get-biz info="email"]">[get-biz info="email"]</a>';
 				$page_content .= '<li>Use the form below to send us a message</li>';
 				$page_content .= '</ul><p>Thank you for your patience.  We appreciate your business!</p>';
-  				$page_content .= '[/txt][/col][/layout][layout][col][bp-contact-form][/col][/layout][/section]';
+  				// Site's primary form when one is declared (bp_set_primary_form), else the standard contact form.
+				$page_content .= '[/txt][/col][/layout][layout][col]'.bp_primary_form_or('[bp-contact-form]').'[/col][/layout][/section]';
 
 				echo do_shortcode($page_content);
 			?>

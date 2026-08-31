@@ -425,7 +425,7 @@ function bp_check_for_post_updates(): void {
 	$body = '';
 	if ($other) $body .= '<h3>Updated by Other Users</h3><ul>' . $other . '</ul>';
 	if ($mine)  $body .= '<h3>Updated by battleplanweb</h3><ul>' . $mine . '</ul>';
-	if ($body)  emailMe('Content Updates Detected · ' . get_bloginfo('name'), $body);
+	if ($body)  emailMe('Content Updates Detected · ' . bp_business_name(), $body);
 }
 
 
@@ -446,7 +446,7 @@ function bp_brevo_key_alert(string $site, array $wpMailSettings, array $customer
 	if (get_transient('bp_brevo_key_alert')) return;
 	set_transient('bp_brevo_key_alert', 1, WEEK_IN_SECONDS);
 
-	$biz        = $customer_info['name'] ?? get_bloginfo('name');
+	$biz        = bp_decode_text( $customer_info['name'] ?? get_bloginfo('name') );
 	$from       = $wpMailSettings['mail']['from_email'] ?? '(unset)';
 	$from_name  = $wpMailSettings['mail']['from_name'] ?? '(unset)';
 	$brevo_dom  = $wpMailSettings['sendinblue']['domain'] ?? '(unset)';

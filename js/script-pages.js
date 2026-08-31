@@ -264,6 +264,23 @@ document.addEventListener("DOMContentLoaded", function () {
 		if (bp_page) bp_page.style.paddingTop = pagePadding + "px";
 	};
 
+	// A nav that locks re-lays-out: .stuck flips it to position:fixed with its own max-width, and
+	// .menu-with-logo.stuck pushes .flex over by 100px. That changes the parent <li> widths (and the
+	// drop-down's own min-width:100%) that centerSubNav() measured at load, so every ul.sub-menu keeps
+	// a stale inline `left` and hangs off-centre until the next resize. Re-centre on the stuck toggle,
+	// then again once the 0.4s .menu-with-logo transition has settled so the final widths are used.
+	let reCenterTimer = null;
+
+	window.reCenterSubNav = function () {
+		// Undefined on mobile — script-desktop.js self-gates on window.bpIsMobile and returns early.
+		if (typeof centerSubNav !== 'function') { return; }
+
+		requestAnimationFrame(centerSubNav);
+		clearTimeout(reCenterTimer);
+		reCenterTimer = setTimeout(centerSubNav, 450);
+	};
+
+
 	window.lockMenu = function () {
 		lockDiv('#desktop-navigation');
 	};
@@ -291,6 +308,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					divData.elementObj.classList.add("stuck");
 					divData.elementObj.style.top = lockedH + "px";
 					lockAlign();
+					reCenterSubNav();
 				}
 			} else {
 				if (isStuck) {
@@ -299,6 +317,7 @@ document.addEventListener("DOMContentLoaded", function () {
 						divData.elementObj.style.top = "unset";
 					}
 					lockAlign();
+					reCenterSubNav();
 				}
 			}
 			lockedH += elementH;

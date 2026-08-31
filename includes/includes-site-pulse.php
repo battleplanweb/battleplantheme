@@ -2,18 +2,22 @@
 require_once get_template_directory() . '/prompts/prompts-site-pulse.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-modules.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-reviews.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-brightlocal.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-agency-reviews.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-fleet.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-reports-ai.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-surveys.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-import.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-card-import.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-messages.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-sms-nudge.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-push.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-customer-connect.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-directory.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-emails.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-customer-messages.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-booking.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
 
@@ -39,7 +43,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-customer-
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.60' );
+define( 'SITE_PULSE_DB_VERSION', '1.64' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -78,6 +82,13 @@ function site_pulse_god_can_override(): bool {
 function site_pulse_log( string $action, string $description, array $meta = [], int $for_user_id = 0 ): void {
 	global $wpdb;
 	$actor_id = get_current_user_id();
+	// The protected super-admin (battleplanweb — Battle Plan's own operator) is never written to a
+	// company's audit trail; only the company's own employees are. Note this is the SUPER-admin, not
+	// "any god": a god who is a company employee (e.g. Victor) still logs normally.
+	if ( $actor_id && site_pulse_is_superadmin( $actor_id ) ) return;
+	// A rich, hand-written log fired this request → the generic auto-logger (below) will stand down so we
+	// don't double-record the same action.
+	$GLOBALS['sp_activity_logged'] = true;
 	$actor    = get_userdata( $actor_id );
 	$wpdb->insert(
 		site_pulse_table('activity_log'),
@@ -85,13 +96,198 @@ function site_pulse_log( string $action, string $description, array $meta = [], 
 			'actor_id'    => $actor_id,
 			'actor_name'  => $actor ? $actor->display_name : 'System',
 			'for_user_id' => $for_user_id,
-			'action'      => $action,
+			'action'      => substr( $action, 0, 50 ),
 			'description' => $description,
 			'meta'        => $meta ? wp_json_encode( $meta ) : null,
 			'created_at'  => current_time( 'mysql' ),
 		],
 		[ '%d', '%s', '%d', '%s', '%s', '%s', '%s' ]
 	);
+}
+
+/*--------------------------------------------------------------
+# Audit trail — auto-log every WRITE (create/edit/delete)
+--------------------------------------------------------------*/
+
+// Is this AJAX action a WRITE (creates/edits/deletes stored data)? Reads/loads are skipped so the log
+// stays a record of changes, not page views. Scoped to the app's own actions.
+function site_pulse_action_is_write( string $action ): bool {
+	if ( '' === $action ) return false;
+	$prefixes = apply_filters( 'site_pulse_activity_prefixes', [ 'site_pulse_', 'schedules_', 'sp_' ] );
+	$matched  = false;
+	foreach ( $prefixes as $p ) { if ( 0 === strpos( $action, (string) $p ) ) { $matched = true; break; } }
+	if ( ! $matched ) return false;
+	// Read-only verbs anywhere in the name → not a write.
+	if ( preg_match( '/(^|_)(get|load|list|search|fetch|count|poll|preview|export|render|unread|check|refresh|lookup|suggest|calc|estimate)(_|$)/', $action ) ) return false;
+	// A few explicit skips: nonce refresh + AI drafting helpers that don't change stored company data.
+	$skip = apply_filters( 'site_pulse_activity_skip_actions', [
+		'site_pulse_refresh_nonce', 'site_pulse_generate_review_reply', 'site_pulse_ai_chat', 'site_pulse_ai_assistant', 'site_pulse_get_unread_count',
+	] );
+	return ! in_array( $action, $skip, true );
+}
+
+// On any WRITE AJAX request, arm a shutdown logger. It records the action even where the handler doesn't
+// log itself — so coverage is complete — but stands down if a richer manual log already fired (dedup) or
+// the actor is the protected super-admin.
+add_action( 'admin_init', 'site_pulse_activity_autolog_arm' );
+function site_pulse_activity_autolog_arm(): void {
+	if ( ! wp_doing_ajax() ) return;
+	$action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : '';
+	if ( ! site_pulse_action_is_write( $action ) ) return;
+	register_shutdown_function( 'site_pulse_activity_autolog_write', $action );
+}
+
+function site_pulse_activity_autolog_write( string $action ): void {
+	if ( ! empty( $GLOBALS['sp_activity_logged'] ) ) return; // a manual log already covered this request
+	$actor_id = get_current_user_id();
+	if ( ! $actor_id || site_pulse_is_superadmin( $actor_id ) ) return;
+
+	// A small snapshot of identifying fields only — never the whole payload (can be large / sensitive).
+	$snap = [];
+	foreach ( [ 'id', 'entry_id', 'report_id', 'template_id', 'field_id', 'review_id', 'user_id', 'section', 'category', 'store_number', 'location_id' ] as $k ) {
+		if ( isset( $_REQUEST[ $k ] ) && ! is_array( $_REQUEST[ $k ] ) && '' !== (string) $_REQUEST[ $k ] ) {
+			$snap[ $k ] = substr( sanitize_text_field( wp_unslash( (string) $_REQUEST[ $k ] ) ), 0, 100 );
+		}
+	}
+	// Prettify the action into a readable description: "site_pulse_save_expense" → "Save expense".
+	$verb = preg_replace( '/^(site_pulse_|schedules_|sp_)/', '', $action );
+	$verb = ucfirst( trim( str_replace( '_', ' ', (string) $verb ) ) );
+
+	global $wpdb;
+	$actor = get_userdata( $actor_id );
+	$wpdb->insert( site_pulse_table('activity_log'), [
+		'actor_id'    => $actor_id,
+		'actor_name'  => $actor ? $actor->display_name : 'System',
+		'for_user_id' => isset( $snap['user_id'] ) ? (int) $snap['user_id'] : 0,
+		'action'      => substr( $action, 0, 50 ),
+		'description' => $verb,
+		'meta'        => $snap ? wp_json_encode( $snap ) : null,
+		'created_at'  => current_time( 'mysql' ),
+	], [ '%d', '%s', '%d', '%s', '%s', '%s', '%s' ] );
+}
+
+// One-time: give the new "View the activity log" cap a sensible default so the trail is reachable out of
+// the box — grant it to every role that can already manage roles or site defaults (system admins /
+// owners / admins). God always has it (full catalog). System Admins can then grant/restrict it to anyone
+// else via the Grant Permissions bar on the Activity Log page. Idempotent, option-guarded.
+function site_pulse_migrate_activity_log_cap(): void {
+	if ( get_option( 'sp_activity_log_cap_seeded' ) ) return;
+	global $wpdb;
+	$tbl   = site_pulse_table( 'roles' );
+	$roles = $wpdb->get_results( "SELECT id, capabilities FROM $tbl", ARRAY_A ) ?: [];
+	foreach ( $roles as $r ) {
+		$caps = json_decode( (string) $r['capabilities'], true );
+		if ( ! is_array( $caps ) ) continue;
+		if ( ( in_array( 'manage_roles', $caps, true ) || in_array( 'manage_settings', $caps, true ) ) && ! in_array( 'view_activity_log', $caps, true ) ) {
+			$caps[] = 'view_activity_log';
+			$wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( array_values( $caps ) ) ], [ 'id' => (int) $r['id'] ] );
+		}
+	}
+	update_option( 'sp_activity_log_cap_seeded', '1' );
+}
+
+// One-time: purge historical activity_log rows written by the protected super-admin (battleplanweb) —
+// these were recorded before the super-admin logging exclusion existed. Future entries are already
+// suppressed in site_pulse_log() + the auto-logger, so this only cleans up the back-catalogue. Deletes by
+// actor_id (rows where the super-admin was the ACTOR); entries where others acted on the super-admin's
+// account (for_user_id) are left as legitimate records. Option-guarded → runs once.
+function site_pulse_migrate_purge_superadmin_log(): void {
+	if ( get_option( 'sp_activity_log_superadmin_purged' ) ) return;
+	global $wpdb;
+	$super = get_user_by( 'login', 'battleplanweb' );
+	if ( $super ) {
+		$wpdb->delete( site_pulse_table('activity_log'), [ 'actor_id' => (int) $super->ID ], [ '%d' ] );
+	}
+	update_option( 'sp_activity_log_superadmin_purged', '1' );
+}
+
+// One-time: give admins/owners the "manage all routed emails" cap so the Routed Emails section is usable
+// out of the box (they can see everything + set it up). Individual recipients get "view_routed_emails"
+// granted to their role/user by an admin — that's what scopes them to the emails addressed to them. God
+// always has both (full catalog). Idempotent, option-guarded.
+function site_pulse_migrate_routed_email_caps(): void {
+	if ( get_option( 'sp_routed_email_caps_seeded' ) ) return;
+	global $wpdb;
+	$tbl   = site_pulse_table( 'roles' );
+	$roles = $wpdb->get_results( "SELECT id, capabilities FROM $tbl", ARRAY_A ) ?: [];
+	foreach ( $roles as $r ) {
+		$caps = json_decode( (string) $r['capabilities'], true );
+		if ( ! is_array( $caps ) ) continue;
+		if ( in_array( 'manage_settings', $caps, true ) && ! in_array( 'manage_routed_emails', $caps, true ) ) {
+			$caps[] = 'manage_routed_emails';
+			$wpdb->update( $tbl, [ 'capabilities' => wp_json_encode( array_values( $caps ) ) ], [ 'id' => (int) $r['id'] ] );
+		}
+	}
+	update_option( 'sp_routed_email_caps_seeded', '1' );
+}
+
+// Retention: keep the audit trail from growing forever. Prunes daily; window is filterable (default ~2y).
+add_action( 'site_pulse_prune_activity_log', 'site_pulse_do_prune_activity_log' );
+function site_pulse_do_prune_activity_log(): void {
+	global $wpdb;
+	$days = (int) apply_filters( 'site_pulse_activity_log_retention_days', 730 );
+	if ( $days < 1 ) return;
+	$cutoff = date( 'Y-m-d H:i:s', current_time( 'timestamp' ) - $days * DAY_IN_SECONDS );
+	$wpdb->query( $wpdb->prepare( "DELETE FROM " . site_pulse_table('activity_log') . " WHERE created_at < %s", $cutoff ) );
+}
+add_action( 'init', function () {
+	if ( ! wp_next_scheduled( 'site_pulse_prune_activity_log' ) ) {
+		wp_schedule_event( time() + DAY_IN_SECONDS, 'daily', 'site_pulse_prune_activity_log' );
+	}
+} );
+
+// The Activity Log viewer (Settings → Activity Log). Filter by user, action, free text, and date range;
+// paginated newest-first. Gated on manage_settings.
+add_action( 'wp_ajax_site_pulse_admin_get_activity_log', 'site_pulse_ajax_admin_get_activity_log' );
+function site_pulse_ajax_admin_get_activity_log(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'view_activity_log' ) ) return;
+
+	global $wpdb;
+	$tbl       = site_pulse_table('activity_log');
+	$page      = max( 1, (int) ( $_POST['page'] ?? 1 ) );
+	$per       = 50;
+	$action_f  = sanitize_text_field( wp_unslash( $_POST['action_filter'] ?? '' ) );
+	$actor_f   = (int) ( $_POST['actor_filter'] ?? 0 );
+	$search    = sanitize_text_field( wp_unslash( $_POST['search'] ?? '' ) );
+	$date_from = sanitize_text_field( wp_unslash( $_POST['date_from'] ?? '' ) );
+	$date_to   = sanitize_text_field( wp_unslash( $_POST['date_to'] ?? '' ) );
+
+	$where = []; $args = [];
+	if ( $action_f ) { $where[] = 'action = %s';  $args[] = $action_f; }
+	if ( $actor_f )  { $where[] = 'actor_id = %d'; $args[] = $actor_f; }
+	if ( $search ) {
+		$like    = '%' . $wpdb->esc_like( $search ) . '%';
+		$where[] = '(actor_name LIKE %s OR description LIKE %s OR meta LIKE %s)';
+		$args[]  = $like; $args[] = $like; $args[] = $like;
+	}
+	if ( $date_from && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date_from ) ) { $where[] = 'DATE(created_at) >= %s'; $args[] = $date_from; }
+	if ( $date_to   && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date_to ) )   { $where[] = 'DATE(created_at) <= %s'; $args[] = $date_to; }
+
+	$where_sql = $where ? 'WHERE ' . implode( ' AND ', $where ) : '';
+	$count_sql = "SELECT COUNT(*) FROM {$tbl} {$where_sql}";
+	$total     = (int) ( $args ? $wpdb->get_var( $wpdb->prepare( $count_sql, $args ) ) : $wpdb->get_var( $count_sql ) );
+
+	$offset   = ( $page - 1 ) * $per;
+	$data_sql = "SELECT id, actor_id, actor_name, for_user_id, action, description, meta, created_at FROM {$tbl} {$where_sql} ORDER BY created_at DESC, id DESC LIMIT %d OFFSET %d";
+	$rows     = $wpdb->get_results( $wpdb->prepare( $data_sql, array_merge( $args, [ $per, $offset ] ) ), ARRAY_A ) ?: [];
+	foreach ( $rows as &$r ) {
+		$r['for_user_name'] = ! empty( $r['for_user_id'] ) ? site_pulse_display_name( (int) $r['for_user_id'] ) : '';
+	}
+	unset( $r );
+
+	// Distinct actions + actors present, to populate the filter dropdowns.
+	$actions = $wpdb->get_col( "SELECT DISTINCT action FROM {$tbl} ORDER BY action" ) ?: [];
+	$actors  = $wpdb->get_results( "SELECT DISTINCT actor_id, actor_name FROM {$tbl} WHERE actor_id > 0 ORDER BY actor_name", ARRAY_A ) ?: [];
+
+	wp_send_json_success( [
+		'rows'    => $rows,
+		'total'   => $total,
+		'page'    => $page,
+		'per'     => $per,
+		'actions' => $actions,
+		'actors'  => $actors,
+	] );
 }
 
 
@@ -223,13 +419,18 @@ function site_pulse_install_db(): void {
 		handled_by int(11) NOT NULL DEFAULT 0,
 		handled_at datetime DEFAULT NULL,
 		source_ip varchar(64) DEFAULT NULL,
+		stream varchar(50) DEFAULT NULL,
+		to_email varchar(190) DEFAULT NULL,
+		subject varchar(255) DEFAULT NULL,
 		meta text DEFAULT NULL,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		KEY status (status),
 		KEY brand (brand),
 		KEY location (location),
-		KEY category (category)
+		KEY category (category),
+		KEY stream (stream),
+		KEY to_email (to_email)
 	) $charset;";
 
 	$sql .= "CREATE TABLE " . site_pulse_table('report_templates') . " (
@@ -242,6 +443,11 @@ function site_pulse_install_db(): void {
 		send_reminders tinyint(1) NOT NULL DEFAULT 0,
 		email_on_submit varchar(255) DEFAULT NULL,
 		required_role_slug varchar(50) NOT NULL DEFAULT 'manager',
+		submit_role_slugs text DEFAULT NULL,
+		submit_user_ids text DEFAULT NULL,
+		view_role_slugs text DEFAULT NULL,
+		view_user_ids text DEFAULT NULL,
+		show_header tinyint(1) NOT NULL DEFAULT 1,
 		is_active tinyint(1) NOT NULL DEFAULT 1,
 		display_order tinyint(3) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
@@ -257,6 +463,7 @@ function site_pulse_install_db(): void {
 		label varchar(255) NOT NULL,
 		field_type varchar(50) NOT NULL DEFAULT 'textarea',
 		options text DEFAULT NULL,
+		option_source varchar(50) DEFAULT NULL,
 		placeholder varchar(255) DEFAULT NULL,
 		is_required tinyint(1) NOT NULL DEFAULT 0,
 		display_order tinyint(3) NOT NULL DEFAULT 0,
@@ -381,10 +588,24 @@ function site_pulse_install_db(): void {
 		seen_message_id int(11) NOT NULL DEFAULT 0,
 		seen_at datetime DEFAULT NULL,
 		hidden_at datetime DEFAULT NULL,
+		sms_nudged_message_id int(11) NOT NULL DEFAULT 0,
+		sms_nudged_at datetime DEFAULT NULL,
 		joined_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY convo_user (conversation_id, user_id),
 		KEY user_convos (user_id)
+	) $charset;";
+
+	$sql .= "CREATE TABLE " . site_pulse_table('sms_queue') . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id int(11) NOT NULL,
+		event varchar(64) NOT NULL DEFAULT '',
+		message text DEFAULT NULL,
+		link varchar(255) DEFAULT NULL,
+		created_at datetime NOT NULL,
+		sent_at datetime DEFAULT NULL,
+		PRIMARY KEY  (id),
+		KEY user_pending (user_id, sent_at)
 	) $charset;";
 
 	$sql .= "CREATE TABLE " . site_pulse_table('push_subscriptions') . " (
@@ -415,6 +636,9 @@ function site_pulse_install_db(): void {
 		reply_comment text DEFAULT NULL,
 		reply_time datetime DEFAULT NULL,
 		reply_by bigint(20) DEFAULT NULL,
+		notes text DEFAULT NULL,
+		closed_at datetime DEFAULT NULL,
+		closed_by bigint(20) DEFAULT NULL,
 		tags text DEFAULT NULL,
 		tagged_at datetime DEFAULT NULL,
 		location varchar(255) DEFAULT NULL,
@@ -789,6 +1013,49 @@ add_action( 'init', function() {
 			) );
 			if ( $has ) $wpdb->query( "ALTER TABLE $tbl DROP COLUMN alcohol_flag" );
 		}
+
+		// "Who Submits / Who Views" assignment columns on report_templates. dbDelta can be unreliable
+		// adding TEXT columns, and a missing column makes the report INSERT fail silently — so add them
+		// explicitly here (report_templates is tiny, so the ALTERs are instant and lock-safe). The flag
+		// is only latched once all four are confirmed present.
+		if ( ! get_option( 'site_pulse_report_assign_cols' ) ) {
+			global $wpdb;
+			$tbl = site_pulse_table( 'report_templates' );
+			$missing = 0;
+			foreach ( [ 'submit_role_slugs', 'submit_user_ids', 'view_role_slugs', 'view_user_ids' ] as $col ) {
+				$has = $wpdb->get_var( $wpdb->prepare(
+					"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+					$tbl, $col
+				) );
+				if ( ! $has ) { $wpdb->query( "ALTER TABLE $tbl ADD COLUMN $col TEXT DEFAULT NULL" ); $missing++; }
+			}
+			if ( 0 === $missing ) update_option( 'site_pulse_report_assign_cols', '1' );
+		}
+
+		// report_fields.option_source — where a Drop Down field pulls its options from (a live site list
+		// like 'stores', or empty for a custom list stored in `options`). Explicit add for dbDelta safety.
+		if ( ! get_option( 'site_pulse_field_option_source_col' ) ) {
+			global $wpdb;
+			$tbl = site_pulse_table( 'report_fields' );
+			$has = $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'option_source'",
+				$tbl
+			) );
+			if ( ! $has ) $wpdb->query( "ALTER TABLE $tbl ADD COLUMN option_source VARCHAR(50) DEFAULT NULL" );
+			else update_option( 'site_pulse_field_option_source_col', '1' );
+		}
+
+		// report_templates.show_header — per-report toggle for the Period/Week/Date/Location header strip.
+		if ( ! get_option( 'site_pulse_report_show_header_col' ) ) {
+			global $wpdb;
+			$tbl = site_pulse_table( 'report_templates' );
+			$has = $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'show_header'",
+				$tbl
+			) );
+			if ( ! $has ) $wpdb->query( "ALTER TABLE $tbl ADD COLUMN show_header TINYINT(1) NOT NULL DEFAULT 1" );
+			else update_option( 'site_pulse_report_show_header_col', '1' );
+		}
 	}
 
 	// One-time: stand up the Supervisor report (independent copy of the GM report) and bring
@@ -813,6 +1080,9 @@ add_action( 'init', function() {
 	site_pulse_migrate_report_caps_unified(); // reports → per-report caps (additive; keeps legacy working)
 	site_pulse_migrate_survey_caps();
 	site_pulse_migrate_split_settings_caps();
+	site_pulse_migrate_activity_log_cap();
+	site_pulse_migrate_purge_superadmin_log();
+	site_pulse_migrate_routed_email_caps();
 
 	// One-time: grant the new directory caps to the tiers that should see it out of the box
 	// (owner/admin manage; supervisor view), and import the legacy Employees/Former Employees
@@ -908,6 +1178,11 @@ add_action( 'init', function() {
 	// Hourly cron to AI-condense submitted reports into search/trend digests (self-gates on count + key).
 	if ( ! wp_next_scheduled( 'site_pulse_digest_reports' ) ) {
 		wp_schedule_event( time() + 600, 'hourly', 'site_pulse_digest_reports' );
+	}
+
+	// Every-5-min sweep for unread-chat SMS nudges (self-gates on the org toggle + Twilio + opt-in).
+	if ( ! wp_next_scheduled( 'site_pulse_sms_nudge_sweep' ) ) {
+		wp_schedule_event( time() + 120, 'site_pulse_5min', 'site_pulse_sms_nudge_sweep' );
 	}
 } );
 
@@ -1740,6 +2015,8 @@ function site_pulse_enqueue_assets(): void {
 		'userId'             => $eff_user_id,
 		'userRole'           => $role_data ? $role_data['slug'] : '',
 		'userCaps'           => site_pulse_effective_caps( $eff_user_id ),
+		// Sticky default for the expense/mileage "Charge To" — this user's last-used store/account.
+		'lastChargeTo'       => (string) get_user_meta( $eff_user_id, '_sp_last_charge_to', true ),
 		'locationId'         => $profile ? (int) $profile['location_id'] : 0,
 		'locationName'       => $location_name,
 		'appName'            => site_pulse_get_setting( 'app_name', 'Site Pulse' ),
@@ -1776,7 +2053,27 @@ function site_pulse_enqueue_assets(): void {
 			fn( $i ) => is_array( $i ) ? (string) ( $i[0] ?? '' ) : (string) $i,
 			apply_filters( 'battleplan_icon_map', [] )
 		),
+		// Review platforms (sp_review_sources) — label + logo slug + whether replies are possible.
+		// The review card reads this instead of branching on "is it Facebook", so a new platform
+		// needs no JS change at all. `icon` is already filesystem-checked server-side, so an empty
+		// value means "no logo file" and the card draws its monogram fallback.
+		'reviewSources'      => sp_review_sources(),
+		// Where those logos live. Adding a platform's icon = dropping {slug}.webp in here.
+		'logoBase'           => get_template_directory_uri() . '/common/logos',
+		// Sign-off appended to every review reply (Settings → Reviews). The server does the appending;
+		// the reply form only shows it, so the replier isn't surprised by text they didn't type.
+		'replySignature'     => function_exists( 'sp_reviews_reply_signature' ) ? sp_reviews_reply_signature() : '',
 	] );
+}
+
+// Hand a logged-in user a FRESH nonce so a long-idle tab can keep saving. WordPress nonces expire after
+// ~24h, so a page left open overnight sends a dead nonce and every save fails — losing whatever the user
+// typed. There's deliberately NO nonce check here (the whole point is the old one may be expired); being
+// logged in is the gate. A logged-OUT visitor never reaches this handler — admin-ajax echoes '0', which
+// the client reads as "your login itself expired".
+add_action( 'wp_ajax_site_pulse_refresh_nonce', 'site_pulse_ajax_refresh_nonce' );
+function site_pulse_ajax_refresh_nonce(): void {
+	wp_send_json_success( [ 'nonce' => wp_create_nonce( 'site_pulse_nonce' ) ] );
 }
 
 
@@ -1918,12 +2215,17 @@ function site_pulse_capability_catalog_all(): array {
 		'view_reviews'      => 'View reviews',
 		'view_surveys'      => 'View comment cards',
 		'view_directory'    => 'View company directory',
+		'view_fleet'        => 'View the site fleet',
 		'view_emails'       => 'View customer emails',
+		'view_routed_emails' => 'View routed emails addressed to me',
 		'view_customer_messages' => 'View customer messages (FB/IG)',
 		'view_customers'         => 'View customers',
 		'send_customer_push'     => 'Send customer notifications',
 		'view_schedule_requests' => 'View scheduling requests',
+		'view_bookings'          => 'View all bookings',
+		'view_own_bookings'      => 'View own bookings only',
 		'see_superadmin'    => 'See protected admin in lists',
+		'view_activity_log' => 'View the activity log',
 		'submit_mileage'    => 'Submit mileage',
 		'view_tolls'                 => 'Tolls (reconcile)',
 		'view_vehicle_expenses'      => 'Vehicle Expenses',
@@ -1949,10 +2251,16 @@ function site_pulse_capability_catalog_all(): array {
 		'delete_surveys'       => 'Delete comment cards',
 		'manage_reviews'       => 'Manage reviews &amp; replies',
 		'manage_directory'     => 'Manage company directory',
+		'manage_fleet'         => 'Manage the site fleet',
 		'manage_emails'        => 'Manage customer emails',
+		'manage_routed_emails' => 'Manage all routed emails (see everyone\'s)',
 		'manage_customer_messages' => 'Reply to customer messages (FB/IG)',
 		'manage_customers'         => 'Manage customers',
 		'manage_schedule_requests' => 'Manage scheduling requests',
+		'manage_bookings'          => 'Book, reschedule &amp; cancel for customers',
+		'manage_booking_services'  => 'Manage services, resources &amp; availability',
+		'manage_booking_payments'  => 'Manage passes, memberships &amp; refunds',
+		'manage_booking_settings'  => 'Manage booking settings',
 	] );
 }
 
@@ -2220,12 +2528,61 @@ function site_pulse_get_template_by_slug( string $slug ): ?array {
 	return $row ?: null;
 }
 
-function site_pulse_get_template_fields( int $template_id ): array {
+// Drop Down field option sources — live site lists a Drop Down can pull its choices from, so a report
+// can reuse (e.g.) the current restaurant list instead of a hand-typed one. key => label for the
+// editor; site_pulse_resolve_option_source() returns the current string values (resolved at render).
+function site_pulse_field_option_sources(): array {
+	return [
+		'stores'    => 'Restaurants / Stores',
+		'locations' => 'All Locations',
+		'people'    => 'People',
+		'roles'     => 'Roles',
+	];
+}
+
+function site_pulse_resolve_option_source( string $key ): array {
+	static $cache = [];
+	if ( isset( $cache[ $key ] ) ) return $cache[ $key ];
+	$vals = [];
+	switch ( $key ) {
+		case 'stores':
+			foreach ( site_pulse_get_all_locations( true, true )  as $l ) $vals[] = (string) $l['name'];
+			break;
+		case 'locations':
+			foreach ( site_pulse_get_all_locations( true, false ) as $l ) $vals[] = (string) $l['name'];
+			break;
+		case 'people':
+			foreach ( site_pulse_get_all_users( true ) as $u ) $vals[] = (string) ( $u['display_name'] ?: $u['user_login'] );
+			break;
+		case 'roles':
+			foreach ( site_pulse_get_all_roles() as $r ) $vals[] = (string) $r['label'];
+			break;
+	}
+	$vals = array_values( array_filter( array_map( 'trim', $vals ), 'strlen' ) );
+	return $cache[ $key ] = $vals;
+}
+
+function site_pulse_get_template_fields( int $template_id, bool $include_archived = true ): array {
 	global $wpdb;
-	return $wpdb->get_results( $wpdb->prepare(
-		"SELECT * FROM " . site_pulse_table('report_fields') . " WHERE template_id = %d ORDER BY display_order",
+	// Archived fields (display_order >= 999) are retired questions kept ONLY so past reports that
+	// already have answers for them still render. Exclude them from blank new-report forms and the
+	// template editor (pass false); include them when rendering/saving/emailing an existing report.
+	$arch = $include_archived ? '' : ' AND display_order < 999';
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM " . site_pulse_table('report_fields') . " WHERE template_id = %d" . $arch . " ORDER BY display_order",
 		$template_id
 	), ARRAY_A ) ?: [];
+	// A Drop Down bound to a live site list gets its options filled in here, so the submission form (which
+	// just JSON-parses `options`) always sees the CURRENT list without any client-side changes.
+	$sources = site_pulse_field_option_sources();
+	foreach ( $rows as &$f ) {
+		$src = (string) ( $f['option_source'] ?? '' );
+		if ( 'select' === (string) ( $f['field_type'] ?? '' ) && '' !== $src && isset( $sources[ $src ] ) ) {
+			$f['options'] = wp_json_encode( site_pulse_resolve_option_source( $src ) );
+		}
+	}
+	unset( $f );
+	return $rows;
 }
 
 /**
@@ -2256,23 +2613,52 @@ function site_pulse_report_legacy_view_cap( array $tpl ): string {
 	return '';
 }
 
-// Can $user_id SUBMIT this report? New per-report cap OR (legacy) submit_reports for their role's report.
+// Parse a stored CSV of user IDs (submit_user_ids / view_user_ids) into an int array.
+function site_pulse_parse_user_id_csv( $csv ): array {
+	if ( is_array( $csv ) ) $parts = $csv;
+	else $parts = array_filter( array_map( 'trim', explode( ',', (string) $csv ) ), 'strlen' );
+	return array_values( array_unique( array_map( 'intval', $parts ) ) );
+}
+
+// Parse a stored CSV of role slugs (submit_role_slugs / view_role_slugs) into a sanitized slug array.
+function site_pulse_parse_slug_csv( $csv ): array {
+	if ( is_array( $csv ) ) $parts = $csv;
+	else $parts = explode( ',', (string) $csv );
+	$parts = array_filter( array_map( 'sanitize_key', array_map( 'trim', $parts ) ), 'strlen' );
+	return array_values( array_unique( $parts ) );
+}
+
+// Is $user_id's role slug in $slug_csv? (Shared by the "Who Submits / Who Views" role checks below.)
+function site_pulse_user_role_in_csv( int $user_id, $slug_csv ): bool {
+	$slugs = site_pulse_parse_slug_csv( $slug_csv );
+	if ( ! $slugs ) return false;
+	$prof = site_pulse_get_user_profile( $user_id );
+	$role = $prof ? site_pulse_get_role( (int) $prof['role_id'] ) : null;
+	return $role && in_array( (string) ( $role['slug'] ?? '' ), $slugs, true );
+}
+
+// Can $user_id SUBMIT this report? Per-report cap, OR the "Who Submits" assignment (any of its roles /
+// any of its people), OR the legacy required_role_slug match. All additive — configuring the pickers
+// only GRANTS access; it never removes what the caps system already allows.
 function site_pulse_can_submit_report( int $user_id, array $tpl ): bool {
 	if ( site_pulse_is_god( $user_id ) ) return true;
 	if ( site_pulse_user_can( $user_id, site_pulse_report_submit_cap( (string) $tpl['slug'] ) ) ) return true;
+	if ( in_array( $user_id, site_pulse_parse_user_id_csv( $tpl['submit_user_ids'] ?? '' ), true ) ) return true;
+	if ( site_pulse_user_role_in_csv( $user_id, $tpl['submit_role_slugs'] ?? '' ) ) return true;
+	// Legacy: role matches required_role_slug and holds the blanket submit_reports cap.
 	$role_slug = (string) ( $tpl['required_role_slug'] ?? '' );
-	if ( '' !== $role_slug && site_pulse_user_can( $user_id, 'submit_reports' ) ) {
-		$prof = site_pulse_get_user_profile( $user_id );
-		$role = $prof ? site_pulse_get_role( (int) $prof['role_id'] ) : null;
-		if ( $role && ( $role['slug'] ?? '' ) === $role_slug ) return true;
-	}
+	if ( '' !== $role_slug && 'user' !== $role_slug && site_pulse_user_can( $user_id, 'submit_reports' )
+	     && site_pulse_user_role_in_csv( $user_id, $role_slug ) ) return true;
 	return false;
 }
 
-// Can $user_id VIEW ALL submissions of this report (not just their own)? New per-report cap OR legacy.
+// Can $user_id VIEW ALL submissions of this report (not just their own)? Per-report cap or legacy, OR
+// the "Who Views" assignment (any of its roles / any of its people). Additive, same as above.
 function site_pulse_can_view_all_report( int $user_id, array $tpl ): bool {
 	if ( site_pulse_is_god( $user_id ) ) return true;
 	if ( site_pulse_user_can( $user_id, site_pulse_report_view_cap( (string) $tpl['slug'] ) ) ) return true;
+	if ( in_array( $user_id, site_pulse_parse_user_id_csv( $tpl['view_user_ids'] ?? '' ), true ) ) return true;
+	if ( site_pulse_user_role_in_csv( $user_id, $tpl['view_role_slugs'] ?? '' ) ) return true;
 	$legacy = site_pulse_report_legacy_view_cap( $tpl );
 	return '' !== $legacy && site_pulse_user_can( $user_id, $legacy );
 }
@@ -3500,15 +3886,22 @@ function site_pulse_ajax_admin_get_templates(): void {
 	) ?: [];
 
 	foreach ( $templates as &$t ) {
-		$t['fields'] = site_pulse_get_template_fields( (int) $t['id'] );
+		$t['fields'] = site_pulse_get_template_fields( (int) $t['id'], false ); // editor: hide archived (retired) questions
 	}
 	unset( $t );
 
-	// Roles (excluding God) so the template form's "Required Role" picker shows real labels.
+	// Roles (excluding God) so the form's "Who Submits/Views" role pickers show real labels, plus the
+	// people list for the "specific people" pickers ({user_id, name}).
+	$users = array_map(
+		static fn( $u ) => [ 'user_id' => (int) $u['user_id'], 'name' => (string) ( $u['display_name'] ?: $u['user_login'] ) ],
+		site_pulse_get_all_users( true )
+	);
 	wp_send_json_success( [
-		'templates' => $templates,
-		'roles'     => site_pulse_get_all_roles(),
-		'schedule'  => [
+		'templates'      => $templates,
+		'roles'          => site_pulse_get_all_roles(),
+		'users'          => $users,
+		'option_sources' => site_pulse_field_option_sources(),
+		'schedule'       => [
 			'gm_frequency'         => site_pulse_get_setting( 'gm_report_frequency', '' ),
 			'gm_anchor'            => site_pulse_get_setting( 'gm_report_anchor', '' ),
 			'supervisor_frequency' => site_pulse_get_setting( 'supervisor_report_frequency', '' ),
@@ -3567,6 +3960,16 @@ function site_pulse_ajax_admin_save_template(): void {
 	if ( '' === $name ) wp_send_json_error( [ 'message' => 'Report name is required.' ] );
 
 	$anchor = (string) ( $_POST['report_anchor'] ?? '' );
+
+	// "Who Submits" / "Who Views": each is a set of roles + a set of people (like the report screen's
+	// Grant bar). Stored as CSVs and consumed additively by site_pulse_can_submit_report() /
+	// site_pulse_can_view_all_report(). required_role_slug keeps the FIRST submit role as its legacy
+	// anchor (type filter / due reminders for the built-in GM & Supervisor reports).
+	$submit_roles = site_pulse_parse_slug_csv( $_POST['submit_role_slugs'] ?? '' );
+	$submit_users = site_pulse_parse_user_id_csv( $_POST['submit_user_ids'] ?? '' );
+	$view_roles   = site_pulse_parse_slug_csv( $_POST['view_role_slugs'] ?? '' );
+	$view_users   = site_pulse_parse_user_id_csv( $_POST['view_user_ids'] ?? '' );
+
 	$data = [
 		'name'               => $name,
 		'description'        => sanitize_text_field( wp_unslash( $_POST['description'] ?? '' ) ),
@@ -3574,14 +3977,20 @@ function site_pulse_ajax_admin_save_template(): void {
 		'report_anchor'      => preg_match( '/^\d{4}-\d{2}-\d{2}$/', $anchor ) ? $anchor : null,
 		'send_reminders'     => ! empty( $_POST['send_reminders'] ) ? 1 : 0,
 		'email_on_submit'    => ( sanitize_text_field( wp_unslash( $_POST['email_on_submit'] ?? '' ) ) ?: null ),
-		'required_role_slug' => sanitize_text_field( $_POST['required_role_slug'] ?? 'manager' ),
+		'required_role_slug' => ( $submit_roles[0] ?? '' ),
+		'submit_role_slugs'  => ( $submit_roles ? implode( ',', $submit_roles ) : null ),
+		'submit_user_ids'    => ( $submit_users ? implode( ',', $submit_users ) : null ),
+		'view_role_slugs'    => ( $view_roles ? implode( ',', $view_roles ) : null ),
+		'view_user_ids'      => ( $view_users ? implode( ',', $view_users ) : null ),
+		'show_header'        => ! empty( $_POST['show_header'] ) ? 1 : 0,
 		'is_active'          => isset( $_POST['is_active'] ) ? (int) $_POST['is_active'] : 1,
 		'updated_at'         => $now,
 	];
 
 	if ( $id ) {
 		// Rename/edit in place — the slug is NOT changed (the per-report caps key on it, so it must stay stable).
-		$wpdb->update( site_pulse_table('report_templates'), $data, [ 'id' => $id ] );
+		$ok = $wpdb->update( site_pulse_table('report_templates'), $data, [ 'id' => $id ] );
+		if ( false === $ok ) wp_send_json_error( [ 'message' => 'Could not save the report: ' . ( $wpdb->last_error ?: 'database error' ) ] );
 	} else {
 		// New report: derive a unique slug from the name (the immutable cap key).
 		$base = sanitize_title( $name ); if ( '' === $base ) $base = 'report';
@@ -3590,7 +3999,8 @@ function site_pulse_ajax_admin_save_template(): void {
 		$data['slug']          = $slug;
 		$data['display_order']  = (int) $wpdb->get_var( "SELECT COALESCE(MAX(display_order), -1) + 1 FROM " . site_pulse_table('report_templates') );
 		$data['created_at']     = $now;
-		$wpdb->insert( site_pulse_table('report_templates'), $data );
+		$ok = $wpdb->insert( site_pulse_table('report_templates'), $data );
+		if ( false === $ok || ! $wpdb->insert_id ) wp_send_json_error( [ 'message' => 'Could not create the report: ' . ( $wpdb->last_error ?: 'database error' ) ] );
 		$id = (int) $wpdb->insert_id;
 	}
 
@@ -3636,24 +4046,61 @@ function site_pulse_ajax_admin_save_field(): void {
 		wp_send_json_error( [ 'message' => 'Template ID is required.' ] );
 	}
 
+	$field_type    = sanitize_text_field( $_POST['field_type'] ?? 'textarea' );
+
+	// Options handling depends on the type:
+	//   math   → `options` holds the equation (posted directly).
+	//   select → either a live source (option_source, options left null and resolved at render) OR a
+	//            custom list typed one-per-line (built into a JSON array here).
+	//   other  → no options.
+	$options       = null;
+	$option_source = null;
+	if ( 'math' === $field_type ) {
+		$options = ! empty( $_POST['options'] ) ? sanitize_text_field( $_POST['options'] ) : null;
+	} elseif ( 'select' === $field_type ) {
+		$src = sanitize_key( $_POST['option_source'] ?? '' );
+		if ( '' !== $src && isset( site_pulse_field_option_sources()[ $src ] ) ) {
+			$option_source = $src; // live list — resolved when the form is rendered
+		} else {
+			$raw   = wp_unslash( $_POST['select_options'] ?? '' );
+			$items = is_array( $raw ) ? $raw : preg_split( '/\r\n|\r|\n/', (string) $raw );
+			$items = array_values( array_filter( array_map( fn( $s ) => sanitize_text_field( trim( (string) $s ) ), $items ), 'strlen' ) );
+			$options = $items ? wp_json_encode( $items ) : null;
+		}
+	} elseif ( 'rating' === $field_type ) {
+		// A preset numeric scale (1..5 / 1..10) or a custom set of labels (e.g. good/better/best).
+		$preset = sanitize_text_field( $_POST['rating_preset'] ?? '10' );
+		if ( '5' === $preset || '10' === $preset ) {
+			$options = wp_json_encode( array_map( 'strval', range( 1, (int) $preset ) ) );
+		} else {
+			$raw   = wp_unslash( $_POST['rating_options'] ?? '' );
+			$items = is_array( $raw ) ? $raw : preg_split( '/\r\n|\r|\n/', (string) $raw );
+			$items = array_values( array_filter( array_map( fn( $s ) => sanitize_text_field( trim( (string) $s ) ), $items ), 'strlen' ) );
+			$options = $items ? wp_json_encode( $items ) : null;
+		}
+	}
+
 	$data = [
 		'template_id'   => $template_id,
 		'field_key'     => sanitize_key( $_POST['field_key'] ?? '' ),
 		'label'         => sanitize_text_field( $_POST['label'] ?? '' ),
-		'field_type'    => sanitize_text_field( $_POST['field_type'] ?? 'textarea' ),
-		'options'       => ! empty( $_POST['options'] ) ? sanitize_text_field( $_POST['options'] ) : null,
+		'field_type'    => $field_type,
+		'options'       => $options,
+		'option_source' => $option_source,
 		'placeholder'   => sanitize_text_field( $_POST['placeholder'] ?? '' ),
 		'is_required'   => (int) ( $_POST['is_required'] ?? 0 ),
 		'section'       => sanitize_text_field( $_POST['section'] ?? '' ),
 		'help_text'     => sanitize_text_field( $_POST['help_text'] ?? '' ),
 	];
 
-	if ( empty( $data['label'] ) ) {
+	// A Rating field may have a blank label (the section title stands in for it). Every other type needs one.
+	if ( empty( $data['label'] ) && 'rating' !== $field_type ) {
 		wp_send_json_error( [ 'message' => 'Field label is required.' ] );
 	}
 
 	if ( empty( $data['field_key'] ) ) {
-		$data['field_key'] = sanitize_key( str_replace( ' ', '_', strtolower( $data['label'] ) ) );
+		$key_src = $data['label'] ?: ( $data['section'] ?: 'rating' ); // blank rating label → key off the section
+		$data['field_key'] = sanitize_key( str_replace( ' ', '_', strtolower( $key_src ) ) );
 	}
 
 	if ( $id ) {
@@ -3686,11 +4133,14 @@ function site_pulse_ajax_admin_delete_field(): void {
 	) );
 
 	if ( $has_answers ) {
+		// Can't hard-delete without orphaning answers on already-submitted reports, so retire it:
+		// display_order 999 removes it from the editor and from new report forms, but it still renders
+		// on the past reports that used it.
 		$wpdb->update( site_pulse_table('report_fields'), [ 'is_required' => 0, 'display_order' => 999 ], [ 'id' => $id ] );
-		wp_send_json_success( [ 'message' => 'Field archived (has existing answers).' ] );
+		wp_send_json_success( [ 'message' => 'Question removed. (It stays on past reports that already used it.)' ] );
 	} else {
 		$wpdb->delete( site_pulse_table('report_fields'), [ 'id' => $id ] );
-		wp_send_json_success( [ 'message' => 'Field deleted.' ] );
+		wp_send_json_success( [ 'message' => 'Question deleted.' ] );
 	}
 }
 
@@ -3716,6 +4166,31 @@ function site_pulse_ajax_admin_reorder_fields(): void {
 	wp_send_json_success( [ 'message' => 'Fields reordered.' ] );
 }
 
+// Reorder the report templates themselves. This display_order drives BOTH the Settings list and the
+// Reports menu (site_pulse_get_all_report_templates orders by display_order), so a drag here changes
+// the nav order too.
+add_action( 'wp_ajax_site_pulse_admin_reorder_templates', 'site_pulse_ajax_admin_reorder_templates' );
+function site_pulse_ajax_admin_reorder_templates(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_templates' ) ) return;
+
+	global $wpdb;
+	$order = $_POST['order'] ?? [];
+	if ( ! is_array( $order ) ) {
+		wp_send_json_error( [ 'message' => 'Invalid order data.' ] );
+	}
+
+	foreach ( $order as $position => $template_id ) {
+		$wpdb->update(
+			site_pulse_table('report_templates'),
+			[ 'display_order' => (int) $position ],
+			[ 'id' => (int) $template_id ]
+		);
+	}
+
+	wp_send_json_success( [ 'message' => 'Reports reordered.' ] );
+}
+
 add_action( 'wp_ajax_site_pulse_get_template_fields', 'site_pulse_ajax_get_template_fields' );
 function site_pulse_ajax_get_template_fields(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -3729,7 +4204,7 @@ function site_pulse_ajax_get_template_fields(): void {
 	$profile     = site_pulse_get_user_profile( $user_id );
 	$location_id = $profile ? (int) $profile['location_id'] : 0;
 
-	$fields          = site_pulse_get_template_fields( $template_id );
+	$fields          = site_pulse_get_template_fields( $template_id, false ); // blank new form: no archived questions
 	$previous_report = site_pulse_get_previous_report( $template_id, $location_id );
 
 	wp_send_json_success( [ 'fields' => $fields, 'previous_report' => $previous_report ] );
@@ -3896,7 +4371,9 @@ function site_pulse_page_access_map(): array {
 		'surveys'             => [ 'view_surveys', 'manage_surveys' ],
 		'import-cards'        => 'import_data',
 		'emails'              => [ 'view_emails', 'manage_emails' ],
+		'emails-routed'       => [ 'view_routed_emails', 'manage_routed_emails' ],
 		'directory'           => [ 'view_directory', 'manage_directory' ],
+		'fleet'               => [ 'view_fleet', 'manage_fleet' ],
 		'forms'               => [ 'view_forms', 'upload_forms' ],
 		'forms-all'           => [ 'view_forms', 'upload_forms' ],
 		'analytics'           => 'view_analytics',
@@ -3913,6 +4390,7 @@ function site_pulse_page_access_map(): array {
 		'admin-settings'      => 'manage_settings',
 		'admin-notifications' => 'manage_notifications',
 		'admin-apikeys'       => 'manage_api_keys',
+		'admin-activity'      => 'view_activity_log',
 	] );
 }
 
@@ -4288,6 +4766,7 @@ function site_pulse_notification_columns(): array {
 		'email'      => 'Email',
 		'push'       => 'Push',
 		'bell'       => 'Bell',
+		'sms'        => 'Text',   // queued + coalesced into a per-user digest by includes-site-pulse-sms-nudge.php
 		'gm'         => 'User',
 		'supervisor' => "User's Supervisor",
 	];
@@ -4363,6 +4842,7 @@ function site_pulse_dispatch_notification( string $event, int $subject_user_id, 
 	$on_bell      = ! empty( $cols['bell'] );
 	$do_push      = ! empty( $cols['push'] );
 	$on_email     = ! empty( $cols['email'] ) && site_pulse_get_setting( 'notifications_email_enabled', '0' ) === '1';
+	$do_sms       = ! empty( $cols['sms'] ) && function_exists( 'sp_sms_enqueue_event' ); // queued + coalesced into a digest
 
 	$recipients = [];
 	if ( ! empty( $cols['gm'] ) && $subject_user_id ) {
@@ -4387,6 +4867,7 @@ function site_pulse_dispatch_notification( string $event, int $subject_user_id, 
 		if ( $make_row )                                          site_pulse_notify( $rid, $event, $message, $related_id, $related_type, $on_dashboard );
 		if ( $do_push && function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $rid );
 		if ( $on_email )                                          site_pulse_notify_email( $rid, $message );
+		if ( $do_sms )                                            sp_sms_enqueue_event( $rid, $event, $message, $related_id, $related_type );
 	}
 }
 
@@ -4394,7 +4875,7 @@ function site_pulse_dispatch_notification( string $event, int $subject_user_id, 
 function site_pulse_notify_email( int $user_id, string $message ): void {
 	$u = get_userdata( $user_id );
 	if ( ! $u || ! is_email( $u->user_email ) ) return;
-	$site = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+	$site = bp_business_name();
 	wp_mail( $u->user_email, $site . ' — notification', $message . "\n\n" . home_url( '/' ) );
 }
 
@@ -4438,6 +4919,7 @@ function site_pulse_ajax_get_notification_settings(): void {
 		'routing'       => site_pulse_get_notification_routing(),
 		'email_enabled' => site_pulse_get_setting( 'notifications_email_enabled', '0' ),
 		'push_enabled'  => site_pulse_get_setting( 'push_enabled', '0' ),
+		'sms_enabled'   => ( site_pulse_get_setting( 'sms_nudge_enabled', '0' ) === '1' && function_exists( 'sp_sms_nudge_twilio_ready' ) && sp_sms_nudge_twilio_ready() ) ? '1' : '0',
 	] );
 }
 
@@ -5255,13 +5737,12 @@ function site_pulse_get_action_items( array $args = [] ): array {
 	return $rows;
 }
 
-add_action( 'wp_ajax_site_pulse_get_action_items', 'site_pulse_ajax_get_action_items' );
-function site_pulse_ajax_get_action_items(): void {
-	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-
-	$user_id = site_pulse_effective_user_id();
-	$args = [];
-
+// Whose action items a request is scoped to — the "My Action Items" default, one other person the viewer
+// is allowed to see, or everyone they oversee (optionally narrowed to a location). Read from the same
+// POST fields the panel's filters send, and shared by the list and the Summarize button so a summary
+// always covers exactly what the list beside it is showing.
+function site_pulse_action_item_scope_args( int $user_id ): array {
+	$args    = [];
 	$visible = site_pulse_visible_action_item_user_ids( $user_id );
 	if ( ! empty( $_POST['mine'] ) ) {
 		// Default to-do view: just my own items.
@@ -5272,6 +5753,15 @@ function site_pulse_ajax_get_action_items(): void {
 		$args['user_ids'] = $visible;
 		if ( ! empty( $_POST['location_id'] ) ) $args['location_id'] = (int) $_POST['location_id'];
 	}
+	return $args;
+}
+
+add_action( 'wp_ajax_site_pulse_get_action_items', 'site_pulse_ajax_get_action_items' );
+function site_pulse_ajax_get_action_items(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+
+	$user_id = site_pulse_effective_user_id();
+	$args    = site_pulse_action_item_scope_args( $user_id );
 
 	// Pull the full in-scope set (all non-pending statuses) once, so the label list reflects EVERY label
 	// the user has — open or completed — regardless of the current status/label filter.
@@ -5306,6 +5796,196 @@ function site_pulse_ajax_get_action_items(): void {
 		'pending'    => $flag_mine( $pending ),
 		'categories' => $categories,
 	] );
+}
+
+/**
+ * "Summarize" on the Action Items panel. Hands the OPEN items in the current scope — each with the notes
+ * that have accumulated on it — to Claude, and returns a short briefing bucketed by the kind of next move
+ * each item needs (calls, meetings, blocked on someone, ready to go), not by the labels they carry.
+ *
+ * Scoped through site_pulse_action_item_scope_args() so the summary always covers exactly what the list
+ * beside it is showing. Completed items are deliberately excluded: this answers "what's on my plate".
+ */
+add_action( 'wp_ajax_site_pulse_summarize_action_items', 'site_pulse_ajax_summarize_action_items' );
+function site_pulse_ajax_summarize_action_items(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+
+	$user_id = site_pulse_effective_user_id();
+	if ( ! $user_id || ! site_pulse_user_can( $user_id, 'view_action_items' ) ) {
+		wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+	}
+	if ( ! site_pulse_get_api_key() ) {
+		wp_send_json_error( [ 'message' => 'AI isn’t set up for this site yet — add a Claude API key under Settings.' ] );
+	}
+
+	$args           = site_pulse_action_item_scope_args( $user_id );
+	$args['status'] = 'open';
+	$items          = site_pulse_get_action_items( $args );
+
+	// Respect the label filter too, so summarizing a filtered list summarizes what's on screen.
+	$category = isset( $_POST['category'] ) ? sanitize_text_field( wp_unslash( $_POST['category'] ) ) : '';
+	if ( '' !== $category ) {
+		$items = array_values( array_filter( $items, fn( $r ) => (string) $r['category'] === $category ) );
+	}
+	if ( ! $items ) {
+		wp_send_json_error( [ 'message' => 'There are no open action items to summarize.' ] );
+	}
+
+	// Fingerprint the WHOLE scoped set before trimming — the staleness check compares against everything
+	// in scope, so signing only the slice would leave a long list permanently reading as out of date.
+	$signature = site_pulse_action_items_signature( $items );
+
+	// Bound the payload: the first 150 items in the list's own order (custom order, then priority, then
+	// due date), and the last 6 notes on each. A to-do list this long is already unusual, and the tail
+	// adds tokens without changing the brief.
+	$items = array_slice( $items, 0, 150 );
+
+	$today   = current_time( 'Y-m-d' );
+	$mine    = ! empty( $args['user_id'] ) && (int) $args['user_id'] === $user_id;
+	$ids     = [];
+	$lines   = [];
+	foreach ( $items as $it ) {
+		$id    = (int) $it['id'];
+		$ids[] = $id;
+
+		$due  = trim( (string) ( $it['due_date'] ?? '' ) );
+		$when = $due ? ( $due < $today ? "due {$due} (OVERDUE)" : "due {$due}" ) : 'no due date';
+
+		$line  = "[#{$id}] " . trim( (string) $it['description'] );
+		$line .= "\n  priority: " . ( $it['priority'] ?: 'medium' ) . " · " . $when;
+		if ( ! empty( $it['category'] ) )      $line .= " · label: " . $it['category'];
+		if ( ! empty( $it['location_name'] ) ) $line .= " · " . $it['location_name'];
+		// Whose item it is only matters when the scope covers more than the viewer.
+		if ( ! $mine && (int) $it['user_id'] !== $user_id && ! empty( $it['user_name'] ) ) {
+			$line .= " · assigned to " . $it['user_name'];
+		}
+
+		$meta  = ! empty( $it['meta'] ) ? json_decode( (string) $it['meta'], true ) : [];
+		$notes = ( is_array( $meta ) && ! empty( $meta['notes'] ) && is_array( $meta['notes'] ) ) ? $meta['notes'] : [];
+		// notes[0] is a copy of the original description (seeded when the first note was added) — skip it.
+		$notes = array_slice( array_slice( $notes, 1 ), -6 );
+		foreach ( $notes as $n ) {
+			$n = trim( wp_strip_all_tags( (string) $n ) );
+			if ( '' !== $n ) $line .= "\n  note: " . $n;
+		}
+		$lines[] = $line;
+	}
+
+	$prompt  = "Today's date: {$today}.\n";
+	$prompt .= $mine
+		? "These are YOUR open action items. Write the brief to me in the second person.\n\n"
+		: "These are the open action items across the people you oversee. Say whose an item is when it matters.\n\n";
+	$prompt .= implode( "\n\n", $lines );
+
+	$debug = null;
+	$raw   = site_pulse_call_claude( $prompt, site_pulse_prompt_summarize_action_items(), [ 'max_tokens' => 2000 ], $debug );
+	if ( ! $raw ) {
+		site_pulse_log( 'ai_error', 'Action item summary failed: ' . (string) $debug );
+		wp_send_json_error( [ 'message' => 'The summary couldn’t be generated. Please try again in a moment.' ] );
+	}
+
+	$raw = trim( $raw );
+	if ( strpos( $raw, '```' ) !== false ) {
+		$raw = preg_replace( '/```(?:json)?\s*/', '', $raw );
+		$raw = trim( preg_replace( '/```\s*$/', '', $raw ) );
+	}
+	$parsed = json_decode( $raw, true );
+	if ( ! is_array( $parsed ) || empty( $parsed['groups'] ) || ! is_array( $parsed['groups'] ) ) {
+		wp_send_json_error( [ 'message' => 'The summary came back in an unexpected format. Please try again.' ] );
+	}
+
+	// Rebuild the structure ourselves rather than passing the model's output through — text is stripped to
+	// plain, and every id is checked against the items we actually sent so a hallucinated one can't link
+	// to someone else's action item.
+	$valid  = array_flip( $ids );
+	$groups = [];
+	foreach ( $parsed['groups'] as $g ) {
+		if ( ! is_array( $g ) || empty( $g['items'] ) || ! is_array( $g['items'] ) ) continue;
+		$rows = [];
+		foreach ( $g['items'] as $row ) {
+			$text = trim( wp_strip_all_tags( (string) ( $row['text'] ?? '' ) ) );
+			if ( '' === $text ) continue;
+			$row_ids = [];
+			foreach ( (array) ( $row['ids'] ?? [] ) as $rid ) {
+				$rid = (int) $rid;
+				if ( isset( $valid[ $rid ] ) ) $row_ids[] = $rid;
+			}
+			$rows[] = [ 'text' => $text, 'ids' => array_values( array_unique( $row_ids ) ) ];
+		}
+		if ( ! $rows ) continue;
+		$title = trim( wp_strip_all_tags( (string) ( $g['title'] ?? '' ) ) );
+		$groups[] = [ 'title' => ( '' !== $title ? $title : 'Other' ), 'items' => $rows ];
+	}
+	if ( ! $groups ) {
+		wp_send_json_error( [ 'message' => 'The summary came back empty. Please try again.' ] );
+	}
+
+	// Keep the brief so closing it doesn't throw it away: it stays readable (and re-openable) until the
+	// next Summarize replaces it. One slot per person — this is "my latest summary", not a history.
+	$payload = [
+		'overview'     => trim( wp_strip_all_tags( (string) ( $parsed['overview'] ?? '' ) ) ),
+		'groups'       => $groups,
+		'count'        => count( $items ),
+		'scope'        => $mine ? 'mine' : 'team',
+		'signature'    => $signature,
+		'generated_at' => current_time( 'mysql' ),
+		// Unix epoch alongside it: current_time('mysql') is the SITE's local clock, and the browser reading
+		// it may be in another timezone (it parses a bare timestamp as its own local time — which is how a
+		// brief written seconds ago showed as "1h ago"). Epoch is absolute, so the age comes out right.
+		'generated_ts' => time(),
+	];
+	// wp_slash first: update_user_meta() runs the value through wp_unslash(), which would eat the
+	// backslashes in the encoded JSON — turning "—" into a literal "u2014" and, worse, breaking any
+	// escaped quote badly enough that the whole saved summary would fail to decode on the way back.
+	update_user_meta( $user_id, '_sp_action_summary', wp_slash( wp_json_encode( $payload ) ) );
+
+	$payload['stale'] = false; // just written from these exact items
+	wp_send_json_success( $payload );
+}
+
+// Fingerprint of a set of action items — id + last-updated each. Adding, completing, editing or noting an
+// item all move it, which is how a saved summary knows to say "your list has changed since this".
+function site_pulse_action_items_signature( array $items ): string {
+	$parts = [];
+	foreach ( $items as $it ) $parts[] = (int) $it['id'] . ':' . (string) ( $it['updated_at'] ?? '' );
+	sort( $parts );
+	return md5( implode( '|', $parts ) );
+}
+
+// The saved summary, if there is one, plus whether the list has moved since it was written. Cheap — no
+// AI call — so opening the panel's Summarize button can show the last brief instantly.
+add_action( 'wp_ajax_site_pulse_get_action_summary', 'site_pulse_ajax_get_action_summary' );
+function site_pulse_ajax_get_action_summary(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+
+	$user_id = site_pulse_effective_user_id();
+	if ( ! $user_id || ! site_pulse_user_can( $user_id, 'view_action_items' ) ) {
+		wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+	}
+
+	$saved = get_user_meta( $user_id, '_sp_action_summary', true );
+	$saved = $saved ? json_decode( (string) $saved, true ) : null;
+	// No saved copy, or one written before the wp_slash fix — those were stored with their JSON escapes
+	// stripped, so an em dash reads as a literal "u2014". Treat them as absent and let a fresh one be
+	// generated rather than show mangled text. (generated_ts only exists on correctly-saved payloads.)
+	if ( ! is_array( $saved ) || empty( $saved['groups'] ) || empty( $saved['generated_ts'] ) ) {
+		wp_send_json_success( [ 'summary' => null ] );
+	}
+
+	// Compare against the items in scope RIGHT NOW, so a brief written before three things were ticked
+	// off announces itself as out of date instead of quietly misleading.
+	$args           = site_pulse_action_item_scope_args( $user_id );
+	$args['status'] = 'open';
+	$items          = site_pulse_get_action_items( $args );
+	$category = isset( $_POST['category'] ) ? sanitize_text_field( wp_unslash( $_POST['category'] ) ) : '';
+	if ( '' !== $category ) {
+		$items = array_values( array_filter( $items, fn( $r ) => (string) $r['category'] === $category ) );
+	}
+
+	$saved['stale']     = ( (string) ( $saved['signature'] ?? '' ) !== site_pulse_action_items_signature( $items ) );
+	$saved['open_now']  = count( $items );
+
+	wp_send_json_success( [ 'summary' => $saved ] );
 }
 
 add_action( 'wp_ajax_site_pulse_resolve_action_item', 'site_pulse_ajax_resolve_action_item' );
@@ -5978,7 +6658,14 @@ function site_pulse_ajax_admin_save_setting(): void {
 
 	// This one endpoint saves several Settings tabs, each governed by its own permission. Pick the
 	// required capability from the key being written (API keys / notifications / everything else).
-	$api_key_keys   = [ 'claude_api_key', 'maps_js_api_key', 'google_api_key', 'tollguru_api_key' ];
+	// Booking's payment secrets are ENCRYPTED at rest rather than obfuscated (see
+	// sp_book_set_secret) — read access to this database must not be read access to
+	// the client's money. They still route through manage_api_keys like every other key.
+	$booking_secret_keys = [ 'booking_stripe_secret_key', 'booking_stripe_webhook_secret' ];
+	$api_key_keys   = array_merge(
+		[ 'claude_api_key', 'maps_js_api_key', 'google_api_key', 'tollguru_api_key', 'brightlocal_api_key', 'booking_stripe_publishable_key' ],
+		$booking_secret_keys
+	);
 	$notif_keys     = [ 'push_enabled', 'messages_email_enabled', 'notifications_email_enabled', 'push_contact_email' ];
 	$required_cap   = in_array( $key, $api_key_keys, true ) ? 'manage_api_keys'
 		: ( in_array( $key, $notif_keys, true ) ? 'manage_notifications' : 'manage_settings' );
@@ -5986,6 +6673,8 @@ function site_pulse_ajax_admin_save_setting(): void {
 
 	if ( $key === 'claude_api_key' ) {
 		site_pulse_set_api_key( $value );
+	} elseif ( in_array( $key, $booking_secret_keys, true ) && function_exists( 'sp_book_set_secret' ) ) {
+		sp_book_set_secret( substr( $key, 8 ), sanitize_text_field( $value ) );   // strip the 'booking_' namespace prefix
 	} else {
 		site_pulse_set_setting( $key, sanitize_text_field( $value ) );
 	}
@@ -6012,15 +6701,22 @@ function site_pulse_ajax_admin_get_settings(): void {
 	$toll_key    = (string) site_pulse_get_setting( 'tollguru_api_key', '' );
 	$toll_masked = $toll_key ? substr( $toll_key, 0, 6 ) . '...' . substr( $toll_key, -4 ) : '';
 
+	// The CLIENT's own BrightLocal account key (their plan, their credits). Empty is the off switch —
+	// no key, no directory review sync, and the Reviews panel keeps showing only Google + Facebook.
+	$bl_key    = (string) site_pulse_get_setting( 'brightlocal_api_key', '' );
+	$bl_masked = $bl_key ? substr( $bl_key, 0, 6 ) . '...' . substr( $bl_key, -4 ) : '';
+
 	wp_send_json_success( [
-		'claude_api_key_masked'    => $masked,
-		'claude_api_key_set'       => ! empty( $api_key ),
-		'google_api_key_masked'    => $google_masked,
-		'google_api_key_set'       => ! empty( $google_key ),
-		'maps_js_api_key_masked'   => $maps_masked,
-		'maps_js_api_key_set'      => ! empty( $maps_key ),
-		'tollguru_api_key_masked'  => $toll_masked,
-		'tollguru_api_key_set'     => ! empty( $toll_key ),
+		'claude_api_key_masked'      => $masked,
+		'claude_api_key_set'         => ! empty( $api_key ),
+		'google_api_key_masked'      => $google_masked,
+		'google_api_key_set'         => ! empty( $google_key ),
+		'maps_js_api_key_masked'     => $maps_masked,
+		'maps_js_api_key_set'        => ! empty( $maps_key ),
+		'tollguru_api_key_masked'    => $toll_masked,
+		'tollguru_api_key_set'       => ! empty( $toll_key ),
+		'brightlocal_api_key_masked' => $bl_masked,
+		'brightlocal_api_key_set'    => ! empty( $bl_key ),
 	] );
 }
 
@@ -6875,8 +7571,12 @@ function site_pulse_ajax_admin_save_color_overrides(): void {
  * A <style> block overriding the :root CSS variables from the saved scheme. Emitted near the
  * top of the dashboard/login markup; later source order beats the external stylesheet. Returns
  * '' when no custom scheme is set, so the stylesheet defaults stand.
+ *
+ * $id lets a second, earlier copy be emitted without colliding on the element id — a page-loader
+ * painting before the dashboard markup needs the palette defined ahead of it, or it comes up in the
+ * stylesheet's default colors and recolors once this block is parsed.
  */
-function site_pulse_color_scheme_css(): string {
+function site_pulse_color_scheme_css( string $id = 'sp-color-scheme' ): string {
 	$vars = site_pulse_color_active_vars();
 	if ( ! $vars ) return '';
 
@@ -6888,7 +7588,7 @@ function site_pulse_color_scheme_css(): string {
 		$css .= $k . ':' . $val . ';';
 	}
 	$css .= '}';
-	return '<style id="sp-color-scheme">' . $css . '</style>';
+	return '<style id="' . esc_attr( $id ) . '">' . $css . '</style>';
 }
 
 add_action( 'wp_ajax_site_pulse_admin_get_color_scheme', 'site_pulse_ajax_admin_get_color_scheme' );
@@ -7869,9 +8569,30 @@ function site_pulse_maps_browser_key(): string {
 	return (string) site_pulse_get_setting( 'maps_js_api_key', '' );
 }
 
+/**
+ * Why the last geocode returned null.
+ *
+ * The function below has three quite different failure modes — no key configured, the HTTP call
+ * failing, and Google answering but refusing or finding nothing — and all three collapse into a
+ * bare null. Callers that show the result to a human need to tell them apart, because "check the
+ * ZIP is real" is unhelpful and wrong when the actual problem is an unconfigured API key.
+ *
+ * Pass a value to set, omit to read. Returns '' when the last call succeeded.
+ */
+function site_pulse_geocode_last_status( ?string $set = null ): string {
+	static $status = '';
+	if ( $set !== null ) $status = $set;
+	return $status;
+}
+
 function site_pulse_mileage_geocode( string $address ): ?array {
+	site_pulse_geocode_last_status( '' );
+
 	$key = site_pulse_mileage_google_key();
-	if ( ! $key || ! $address ) return null;
+	if ( ! $key || ! $address ) {
+		site_pulse_geocode_last_status( $key ? 'NO_ADDRESS' : 'NO_KEY' );
+		return null;
+	}
 
 	$url = add_query_arg( [
 		'address' => $address,
@@ -7880,12 +8601,22 @@ function site_pulse_mileage_geocode( string $address ): ?array {
 
 	$response = wp_remote_get( $url, [ 'timeout' => 15 ] );
 	if ( is_wp_error( $response ) ) {
+		site_pulse_geocode_last_status( 'HTTP_ERROR' );
 		site_pulse_log( 'mileage_error', 'Geocode failed: ' . $response->get_error_message() );
 		return null;
 	}
 	$data = json_decode( wp_remote_retrieve_body( $response ), true );
 	if ( empty( $data['results'][0]['geometry']['location'] ) ) {
-		site_pulse_log( 'mileage_error', 'Geocode no results', [ 'address' => $address, 'status' => $data['status'] ?? '' ] );
+		// Google's own error_message is the single most diagnostic thing here — it is what
+		// distinguishes "Geocoding API not enabled on this key" from "billing disabled" from
+		// "that ZIP does not exist" — so it is logged and carried out with the status.
+		$status = (string) ( $data['status'] ?? 'UNKNOWN' );
+		site_pulse_geocode_last_status( $status . ( ! empty( $data['error_message'] ) ? ': ' . $data['error_message'] : '' ) );
+		site_pulse_log( 'mileage_error', 'Geocode no results', [
+			'address' => $address,
+			'status'  => $status,
+			'error'   => $data['error_message'] ?? '',
+		] );
 		return null;
 	}
 	return [
@@ -10733,6 +11464,9 @@ function site_pulse_ajax_save_expense(): void {
 		$id = (int) $wpdb->insert_id;
 	}
 
+	// Remember this user's Charge To as the sticky default for their next expense/mileage form.
+	if ( '' !== (string) $data['store_number'] ) update_user_meta( $user_id, '_sp_last_charge_to', (string) $data['store_number'] );
+
 	wp_send_json_success( [ 'id' => $id, 'receipt_url' => site_pulse_receipt_url( $data['receipt_path'] ?? $old_receipt ) ] );
 }
 
@@ -11674,6 +12408,12 @@ function site_pulse_ajax_save_mileage_entry(): void {
 	}
 
 	site_pulse_mileage_recalc_entry( $entry_id );
+
+	// Remember this driver's last Charge To (drive-home, else the last stop) as the sticky default.
+	$last_charge = $end_charge;
+	if ( '' === $last_charge ) { foreach ( array_reverse( $stop_charge ) as $c ) { if ( '' !== (string) $c ) { $last_charge = (string) $c; break; } } }
+	if ( '' !== $last_charge ) update_user_meta( $user_id, '_sp_last_charge_to', $last_charge );
+
 	wp_send_json_success( [ 'entry_id' => $entry_id ] );
 }
 

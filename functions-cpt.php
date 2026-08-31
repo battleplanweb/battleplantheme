@@ -455,7 +455,7 @@ function bp_reviews_send_daily_digest() {
 	]);
 	if ( empty($reviews) ) return; // nothing new — no empty digests
 
-	$site_name = get_bloginfo('name');
+	$site_name = bp_business_name();
 	$domain    = parse_url( home_url(), PHP_URL_HOST );
 	$logos     = get_template_directory_uri() . '/common/logos/';
 	$count     = count($reviews);

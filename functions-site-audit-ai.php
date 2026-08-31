@@ -784,7 +784,7 @@ function bp_audit_stage( string $stage ): void {
 function bp_audit_ai_prompt( array $pages, array $facts, int $shot_count = 0 ): array {
 	$ci       = function_exists( 'customer_info' ) ? customer_info() : [];
 	$business = [
-		'name'     => get_bloginfo( 'name' ),
+		'name'     => bp_business_name(),
 		'url'      => home_url( '/' ),
 		'tagline'  => get_bloginfo( 'description' ),
 		'type'     => is_array( $ci ) ? ( $ci['site-type'] ?? '' ) : '',

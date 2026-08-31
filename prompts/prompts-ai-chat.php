@@ -77,7 +77,7 @@ function bp_chat_industry_block( $vertical ) {
  * @return string
  */
 function bp_chat_system_prompt( $opt, $customer ) {
-	$name   = $customer['name']       ?? get_bloginfo( 'name' );
+	$name   = bp_decode_text( $customer['name'] ?? get_bloginfo( 'name' ) );
 	$city   = $customer['city']       ?? '';
 	$state  = $customer['state-abbr'] ?? ( $customer['state-full'] ?? '' );
 	$phone  = trim( ( $customer['area'] ?? '' ) . ' ' . ( $customer['phone'] ?? '' ) );

@@ -43,7 +43,7 @@ function battleplan_restrictContent( $atts, $content = null ) {
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'', 'preload'=>'' ), $atts );
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name !== '' ? ' id="'.$name.'"' : '';
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
@@ -75,6 +75,21 @@ function battleplan_buildSection( $atts, $content = null ) {
 	}
 
 	$buildLayout = esc_attr($a['grid']) !== '' ? '<div class="flex grid-'.esc_attr($a['grid']).$valign.$break.$class.'">'.do_shortcode($content).'</div>' : do_shortcode($content);
+
+	// LCP: when a [section] carries a background IMAGE, register it as the page's high-priority hero
+	// preload — the SAME head <link rel="preload" as="image" fetchpriority="high"> that [parallax]
+	// injects (via bp_inject_hero_preload). So a hand-built hero — [section background="…"] — is
+	// discovered and fetched first, WITHOUT parallax's scroll drift or auto box-resizing (the section
+	// keeps whatever height/overlay behaviour its own CSS gives it). Only the FIRST backgrounded
+	// section per page claims the slot (the real LCP is above the fold); opt a decorative/lower one out
+	// with preload="false". A CSS background can't use srcset, so it's a plain-URL preload of the one
+	// image — keep that image reasonably sized since it serves every device.
+	if ( $background !== '' && $a['preload'] !== 'false' && function_exists( 'bp_register_hero_preload' ) ) {
+		$bg_raw = trim( $a['background'] );
+		if ( preg_match( '/\.(webp|jpe?g|png|avif|gif)(\?.*)?$/i', $bg_raw ) ) {
+			bp_register_hero_preload( $bg_raw );
+		}
+	}
 
 	$buildSection = '<section'.$name.' '.$data_attrs.' class="section'.$style.$width.$class.'" '.$hash.$tracking;
 	if ( $background !== '' || $css !== '' ) {
@@ -319,6 +334,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 	$autoplay = esc_attr($a['autoplay']);
 	$loop = esc_attr($a['loop']);
 	$muted = esc_attr($a['muted']);
+	if ( $autoplay === 'true' ) $muted = 'true';		// browsers block autoplay unless the video is muted
 	$begin = esc_attr($a['begin']);
 	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	if ( $tracking !== '' ) $class .= " tracking";
@@ -763,7 +779,7 @@ add_filter( 'wp_get_attachment_image_attributes', function ( $attr ) {
 		$ci   = function_exists( 'customer_info' ) ? customer_info() : [];
 		$name = is_array( $ci ) ? trim( (string) ( $ci['name'] ?? '' ) ) : '';
 		if ( '' === $name ) $name = get_bloginfo( 'name' );
-		if ( '' !== $name ) $attr['alt'] = $name;
+		if ( '' !== $name ) $attr['alt'] = bp_decode_text( $name );   // WP esc_attr's attributes on output
 	}
 
 	return $attr;
@@ -916,7 +932,9 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact, review"; endif;
 	if ( $type == "form" && $title == "hide" ) : $title = 'Service Request'; endif;
-	if ( $type == "form" && $content == null ) : $content = '[bp-quote-form]'; endif;
+	// Widget form column: the site's primary form when one is declared (bp_set_primary_form),
+	// else the standard quote form this column has always defaulted to.
+	if ( $type == "form" && $content == null ) : $content = bp_primary_form_or('[bp-quote-form]'); endif;
 
 	if ( $type == "brand-logo" ) : $lock = 'top'; $priority = '4'; endif;
 	if ( $type == "brand-logo" && $content == null ) : $content = '[get-brand-logo]'; endif;

@@ -173,7 +173,7 @@ function bp_chat_enqueue_assets(): void {
 		);
 	}
 
-	$company = $customer['name'] ?? get_bloginfo( 'name' );
+	$company = bp_decode_text( $customer['name'] ?? get_bloginfo( 'name' ) );
 	$default_greeting = "Hi! Have a question or need service? Ask me anything and I'll help.";
 
 	$default_text_consent = "{$company} can text you about your request. By tapping Yes, you consent to receive "
@@ -324,8 +324,18 @@ function bp_chat_handle_consent( WP_REST_Request $req ) {
 
 	$ok      = bp_chat_begin_text_thread( $conv, $customer, (string) $pending['phone'], (string) ( $pending['name'] ?? '' ) );
 	$company = $customer['name'] ?? 'us';
+
+	// Show the sending number and tell them to look for it — first texts from an
+	// unsaved number often land in a phone's filtered/spam list with no alert.
+	$from   = bp_chat_twilio( 'number' );
+	$digits = preg_replace( '/\D/', '', $from );
+	if ( strlen( $digits ) === 11 && $digits[0] === '1' ) $digits = substr( $digits, 1 );
+	$pretty = strlen( $digits ) === 10
+		? '(' . substr( $digits, 0, 3 ) . ') ' . substr( $digits, 3, 3 ) . '-' . substr( $digits, 6 )
+		: $from;
+
 	$reply   = $ok
-		? "Great — I just texted you from {$company}. Reply there anytime and we'll keep helping."
+		? "Great — I just texted you from {$pretty}. If you don't see it, check your phone's filtered or spam messages and save that number so you don't miss us. Reply there anytime and we'll keep helping."
 		: "Thanks! We'll be in touch. If our text doesn't come through, just give us a call.";
 	bp_chat_msg_add( (int) $conv['id'], 'assistant', $reply, 'web' );
 
@@ -625,7 +635,7 @@ function bp_chat_deliver_lead( array $lead, string $cid, array $customer, array 
 	$sent_key = $cid ? ( 'bp_chat_sent_' . $cid ) : '';
 	if ( $sent_key && get_transient( $sent_key ) ) return true;
 
-	$company = $customer['name'] ?? get_bloginfo( 'name' );
+	$company = bp_decode_text( $customer['name'] ?? get_bloginfo( 'name' ) );
 
 	$lines   = [];
 	$lines[] = "New lead from your {$company} website:";
@@ -635,6 +645,19 @@ function bp_chat_deliver_lead( array $lead, string $cid, array $customer, array 
 	if ( ! empty( $lead['urgency'] ) )         $lines[] = 'Urgency: ' . $lead['urgency'];
 	if ( ! empty( $lead['service_area'] ) )    $lines[] = 'Area: ' . $lead['service_area'];
 	$lines[] = 'Call them back.';
+
+	// Include the recent conversation so you have context even on a call-back
+	// lead that never opted into text.
+	if ( $cid !== '' ) {
+		$lead_conv  = bp_chat_conv_get_or_create_by_cid( $cid );
+		$transcript = bp_chat_transcript_text( (int) $lead_conv['id'], 20, 1100 );
+		if ( $transcript !== '' ) {
+			$lines[] = '';
+			$lines[] = 'Chat so far:';
+			$lines[] = $transcript;
+		}
+	}
+
 	$message = implode( "\n", $lines );
 
 	$ok = bp_chat_broadcast_to_contractors( $message, $o );
@@ -651,15 +674,31 @@ function bp_chat_deliver_lead( array $lead, string $cid, array $customer, array 
 function bp_chat_send_sms( string $to, string $message ): bool {
 	$sid   = bp_chat_twilio( 'sid' );
 	$token = bp_chat_twilio( 'token' );
-	$from  = bp_chat_twilio( 'number' );
-	if ( ! $sid || ! $token || ! $from || ! $to ) return false;
+	if ( ! $sid || ! $token || ! $to ) return false;
+
+	$body = [ 'To' => $to, 'Body' => $message ];
+
+	// Prefer sending through the Messaging Service (`twilio_messaging_sid`,
+	// MG…) — it attributes traffic to the registered A2P campaign, which is
+	// Twilio's recommended path and generally improves deliverability. Fall
+	// back to a bare From number when no Messaging Service is configured, so
+	// existing sites keep working untouched.
+	$msg_sid = bp_chat_twilio( 'messaging_sid' );
+	$from    = bp_chat_twilio( 'number' );
+	if ( $msg_sid !== '' ) {
+		$body['MessagingServiceSid'] = $msg_sid;
+	} elseif ( $from !== '' ) {
+		$body['From'] = $from;
+	} else {
+		return false;
+	}
 
 	$response = wp_remote_post(
 		'https://api.twilio.com/2010-04-01/Accounts/' . rawurlencode( $sid ) . '/Messages.json',
 		[
 			'timeout' => 20,
 			'headers' => [ 'Authorization' => 'Basic ' . base64_encode( "$sid:$token" ) ],
-			'body'    => [ 'From' => $from, 'To' => $to, 'Body' => $message ],
+			'body'    => $body,
 		]
 	);
 

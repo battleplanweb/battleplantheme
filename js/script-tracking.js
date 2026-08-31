@@ -130,8 +130,6 @@ document.addEventListener("DOMContentLoaded", function () {
 				thresholds.forEach(threshold => {
 					if (maxViewed >= threshold.value && !window[threshold.flag]) {
 						if (typeof gtag === 'function') gtag("event", "unlock_achievement", { achievement_id: `${pageID}-${threshold.value}` });
-						console.log("🎯 Threshold hit:", threshold.value + "%", "| gtag event would fire:", `${pageID}-${threshold.value}`);
-
 						window[threshold.flag] = true;
 					}
 				});

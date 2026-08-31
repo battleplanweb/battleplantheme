@@ -107,6 +107,34 @@ Return ONLY valid JSON — no markdown, no preamble — in this exact format:
 {\"item\": \"rewritten action item\", \"due_date\": \"YYYY-MM-DD\"}";
 }
 
+// Briefs a person on their open to-do list: what's actually on their plate right now, bucketed by the
+// KIND of next move each item needs (a call to place, a meeting to attend, someone to chase, work that's
+// ready to start) rather than by the labels the items already carry.
+function site_pulse_prompt_summarize_action_items(): string {
+	return "You are a sharp executive assistant briefing a busy operations manager on their open to-do list. You will receive today's date and their open action items — each with an id, priority, due date, optional label and location, and any notes added as the situation progressed. The LAST note on an item is the most recent state; trust it over the item's original wording.
+
+Write a brief that tells them what is actually on their plate and what to do next. Group items by the KIND OF NEXT MOVE each one needs — not by the labels they already carry. Prefer these groups, in this order, and INCLUDE ONLY THE ONES THAT HAVE ITEMS:
+
+- \"Overdue\" — past its due date. Only when something genuinely is.
+- \"Calls & appointments\" — needs a phone call placed or a visit/service call scheduled or attended.
+- \"Meetings\" — needs a meeting held, attended, or set up.
+- \"Waiting on someone\" — blocked on another person or company; the next move is to chase or wait, not to do the work.
+- \"Ready to go\" — nothing is blocking it; they can just do it.
+- \"Coming up\" — real work that isn't due yet and needs nothing today.
+
+You may add ONE extra group of your own if a real cluster doesn't fit the list above. Never invent an empty group.
+
+Rules:
+- Every item goes in EXACTLY ONE group. Overdue wins over everything else.
+- Merge closely related items into a single line when it reads better (e.g. three calls to the same vendor), and list every merged item's id.
+- Each line is ONE short imperative sentence — the next move, not a restatement of the item. Name names, dates, and places when the item gives them. No filler, no hedging, no pleasantries.
+- The overview is 1-3 sentences on the shape of the day: how much is on the plate, what's most urgent, anything at risk. Lead with the thing that would hurt most if missed. Do not simply count the items.
+- Write to the person as \"you\". If items belong to several different people, name whose an item is instead.
+
+Return ONLY valid JSON — no markdown, no preamble — in this exact format:
+{\"overview\": \"1-3 sentences\", \"groups\": [{\"title\": \"Group name\", \"items\": [{\"text\": \"The next move.\", \"ids\": [12, 15]}]}]}";
+}
+
 // Tags a batch of Google reviews with the topics each one discusses and the sentiment of each topic.
 function site_pulse_prompt_review_tags( array $categories = array() ): string {
 	// Configured mode: classify into a FIXED set of super-categories (each with guiding sub-topics).
@@ -198,29 +226,30 @@ function site_pulse_prompt_review_reply( string $brand, string $voice ): string 
 	// Only include a brand-voice section when the site actually supplied one — otherwise it adds nothing.
 	$voice_block = ( '' !== $voice ) ? "\n\nBrand voice for {$brand}:\n{$voice}" : '';
 
-	$prompt = "You write the OWNER'S short public reply to a Google review for {$brand}. You are given the location, the reviewer's first name, the star rating, and the review text.{$voice_block}
+	$prompt = "You are an experienced customer service representative trained in public relations. Your job is to respond to Google reviews on behalf of the OWNER of {$brand}. You are given the location, the reviewer's first name, the star rating, and the review text.{$voice_block}
 
 Rules:
-- Keep the reply NO LONGER than the review itself — match its length. A short review gets a short reply (a sentence or two); only a long, detailed review warrants a longer response. Never out-write the reviewer.
-- Use the reviewer's first name naturally when it is known.
-- Reply should be professional, genuine, and friendly. Never generic or corporate.
-- If the reviewer gave specific examples, reference ONE of them or summarize briefly so that it is clear we read their comments.
-- Avoid clichés, and do not patronize the customer by simply repeating their words back to them.
-- Avoid phrases like 'means the world to us' & 'what we strive for'.
-- Avoid boasting and praising ourselves. Let the review stand for itself.  We are merely thankful.";
+- Be very careful not to sound patronizing of the customer, or boastful of the company.  The replies should be humble, grateful and sincere.
+- The reply should always be shorter than the review.  We are not here to write an essay, just a simple reply to show the customer we are thankful for thier business and the time they took to write the review.
+- Use the reviewer's first name naturally in the reply, if it is known.
+- Do not repeat back to them things that they've written in their review. You can reference things they have mentioned, but do not sound like a parrot.  And do not gloat or boast about how good we are at the things they mentioned.
+- Do not repeat their comments and then say something like 'is what we strive for'.  This comes across patronizing.  Avoid clichés. and phrases like 'means the world to us'.
+- We are THANKING the customer for their business, for their trust, for their loyalty, and for their review.  Nothing we say should sound like we are 'tooting our own horn'.";
 
 if ( $rand1 === 1 ) {
-	$prompt .= "- Use our company name within the review.";
+	$prompt .= "- Use our company name within the response.";
 }
 
 if ( $rand2 === 1 ) {
-	$prompt .= "- Use a phrase like 'we're happy that we could make you a satisfied customer'.";
+	$prompt .= "- Tell them we are proud to have them as a loyal customer.";
 } elseif ( $rand2 === 2 ) {
-	$prompt .= "- Use a phrase like 'customers like you are why we love our job'.";
+	$prompt .= "- Tell them that customers like them is what makes us love our job.";
 } elseif ( $rand2 === 3 ) {
-	$prompt .= "- Use a phrase like 'we appreciate the time you took to leave a review'.";
+	$prompt .= "- Tell them how much we appreciate the time they took to leave a review.";
 } elseif ( $rand2 === 4 ) {
-	$prompt .= "- Use a phrase like 'the best part of our day is reading reviews like this'.";
+	$prompt .= "- Tell them that we hope to continue providing them the service they deserve in the future.";
+} elseif ( $rand2 === 5 ) {
+	$prompt .= "- Tell them that we will share their comments with the team.";
 }
 
 $prompt .= "

@@ -1022,22 +1022,54 @@ Spam submissions still receive a "thanks" response (so bots don't learn what tri
 
 Wrap a form body in `[bp-form-steps]…[/bp-form-steps]` and structure the body with `<div class="bp-step">` and `<div class="bp-step-included">` markers, plus `[bp-next]` / `[bp-prev]` buttons. The progress bar wires up automatically.
 
-### Per-site primary form CTA
+### The site's primary form (the "default" contact form)
 
-The mobile menu bar contact button and the "request quote" modal default to the **contact form** — universal across business types. HVAC and other quote-driven sites should opt in to the quote form:
+Several places pick a form **without being told which one**:
+
+| Where | Falls back to |
+|---|---|
+| Mobile menu bar email button + the modal it opens | `[bp-contact-form]` |
+| 404 page | `[bp-contact-form]` |
+| `[col type="form"]` widget column | `[bp-quote-form]` |
+
+Quote-driven sites (HVAC etc.) opt the modal + button over to the quote form:
 
 ```php
 add_filter('bp_primary_form', fn() => 'quote');    // or 'contact' (default), or 'none' to hide
 ```
 
-To use a **custom form** (e.g. a site-specific shortcode like `[paradise-tattoo-form]`) override the modal title and shortcode independently — these win over whatever `bp_primary_form` resolved to:
+**When the site has its own form, declare it the primary one** — otherwise the mobile email icon keeps opening the generic framework form while the contact page shows the custom one. Register the form with `bp_register_form()` instead of `add_shortcode()` and pass `'primary' => true`:
+
+```php
+bp_register_form('babes-contact-form', function() {
+    return do_shortcode('[bp-form id="babes-contact"] … [/bp-form]');
+}, [
+    'primary' => true,               // this form IS the site's contact form
+    'title'   => 'Send A Message',   // modal heading (optional)
+    'type'    => 'contact',          // 'contact' (default) | 'quote' — mobile-bar button variant
+]);
+```
+
+Already registered with plain `add_shortcode()`? One line next to it does the same:
+
+```php
+bp_set_primary_form('[babes-contact-form]', ['title' => 'Send A Message', 'type' => 'contact']);
+```
+
+Both live in [functions-global.php](functions-global.php) (not `functions-forms.php`) because `functions-site.php` is required **before** `functions-forms.php` — declaring at load time from the child theme would otherwise hit an undefined function.
+
+Once declared, that form is what all three rows in the table above render, and `bp_primary_form_config()` is the single resolver everything calls.
+
+Precedence, lowest to highest: framework default → `bp_set_primary_form()` registration → the filters. So the old escape hatches still win and existing sites are untouched:
 
 ```php
 add_filter('bp_primary_form_title',     fn() => 'Book An Appointment');
 add_filter('bp_primary_form_shortcode', fn() => '[paradise-tattoo-form]');
 ```
 
-The `bp_primary_form` value still controls the mobile menu bar button's class (`mm-bar-quote` vs `mm-bar-contact`) and whether the button shows at all (`'none'` hides it) — so set it too if you need a specific visual variant.
+The filters only reach the mobile-bar modal — the 404 page and the widget form column follow the *registration*, so prefer `bp_set_primary_form()` when the custom form should stand in everywhere.
+
+`bp_primary_form` still controls the mobile bar button's class (`mm-bar-quote` vs `mm-bar-contact`) and whether it shows at all (`'none'` hides button + modal). With a primary form registered it only selects that variant — the registered shortcode stays the form.
 
 ### When to add to functions-site.php vs the framework
 

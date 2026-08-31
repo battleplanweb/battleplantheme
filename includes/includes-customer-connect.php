@@ -73,7 +73,7 @@ function cc_app_name(): string {
 
 /** The contractor's business name shown under the app name. */
 function cc_company_name(): string {
-	return (string) cc_get( 'company_name', get_bloginfo( 'name' ) );
+	return bp_decode_text( (string) cc_get( 'company_name', get_bloginfo( 'name' ) ) );
 }
 
 /**

@@ -25,7 +25,7 @@ define('BP_EMAIL_BCC',       'gguttenfelder@gmail.com');
 function bp_run_customer_checkins() {
 
     $customer_info = customer_info();
-    $name          = $customer_info['name'] ?? get_bloginfo('name') ?? 'Your Website';
+    $name          = bp_decode_text( $customer_info['name'] ?? get_bloginfo('name') ?? 'Your Website' );
     $email         = BP_EMAIL_RECIPIENT;
 
     // Throttle ... only run email logic once per day max

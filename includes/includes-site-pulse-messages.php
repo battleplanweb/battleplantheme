@@ -274,9 +274,23 @@ function site_pulse_ajax_messages_thread(): void {
 	global $wpdb;
 	$m = site_pulse_table( 'messages' );
 
+	// Windowed load. The thread opens on the newest page; each "Load earlier messages" tap re-asks for a
+	// larger window, and the client keeps sending that grown limit (including on the 10s poll) so the
+	// older messages it already pulled in stay on screen. The window is always taken newest-first and
+	// flipped back to chronological — an ascending LIMIT froze any conversation past the cap on its
+	// OLDEST page, so everything sent after that silently vanished on the next load.
+	$per   = sp_msg_page_size();
+	$limit = (int) ( $_POST['limit'] ?? 0 );
+	$limit = $limit > 0 ? min( 5000, max( $per, $limit ) ) : $per;
+
+	$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $m WHERE conversation_id = %d", $cid ) );
+
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT id, sender_id, body, edited, attach_url, attach_name, attach_mime, action_created, reply_to_id, created_at FROM $m WHERE conversation_id = %d ORDER BY created_at ASC, id ASC LIMIT 500",
-		$cid
+		"SELECT * FROM (
+			SELECT id, sender_id, body, edited, attach_url, attach_name, attach_mime, action_created, reply_to_id, created_at
+			FROM $m WHERE conversation_id = %d ORDER BY created_at DESC, id DESC LIMIT %d
+		) t ORDER BY t.created_at ASC, t.id ASC",
+		$cid, $limit
 	), ARRAY_A ) ?: [];
 
 	// Map id → row so a message that replies to another can show a quoted preview of it.
@@ -333,7 +347,69 @@ function site_pulse_ajax_messages_thread(): void {
 	}
 
 	$meta = sp_msg_conversation_meta( $cid, $me );
-	wp_send_json_success( [ 'conversation' => $meta, 'messages' => $messages, 'seen' => $seen, 'me' => $me, 'last_read_id' => $prev_last_read ] );
+	wp_send_json_success( [
+		'conversation' => $meta,
+		'messages'     => $messages,
+		'seen'         => $seen,
+		'me'           => $me,
+		'last_read_id' => $prev_last_read,
+		'per_page'     => $per,                        // how much further back each "load earlier" step goes
+		'total'        => $total,
+		'has_more'     => $total > count( $messages ), // older messages exist beyond the loaded window
+	] );
+}
+
+// How many messages a thread loads at a time — the initial open, and each "Load earlier messages" step.
+function sp_msg_page_size(): int {
+	return max( 20, (int) apply_filters( 'site_pulse_messages_page_size', 100 ) );
+}
+
+// Search the WHOLE conversation, not just the window the reader has open. Each hit carries its "depth" —
+// how many messages sit at or after it, newest-first — because the thread window is literally "the newest
+// N", so a hit is revealed by asking for a window at least `depth` big. That's what lets the find bar
+// jump into history the reader never paged in.
+add_action( 'wp_ajax_site_pulse_messages_search', 'site_pulse_ajax_messages_search' );
+function site_pulse_ajax_messages_search(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me  = site_pulse_effective_user_id();
+	$cid = (int) ( $_POST['conversation_id'] ?? 0 );
+	$q   = trim( (string) wp_unslash( $_POST['q'] ?? '' ) );
+	if ( ! $me || ! $cid || ! sp_msg_is_participant( $cid, $me ) ) wp_send_json_error( [ 'message' => 'Conversation not found.' ] );
+	if ( mb_strlen( $q ) < 2 ) wp_send_json_success( [ 'query' => $q, 'hits' => [], 'capped' => false ] );
+
+	global $wpdb;
+	$m    = site_pulse_table( 'messages' );
+	$like = '%' . $wpdb->esc_like( $q ) . '%';
+	$max  = 300; // plenty to page through; keeps the payload bounded on a "search for e" style query
+
+	// Body OR attachment filename, so "invoice.pdf" finds the file someone sent. LIKE is case-insensitive
+	// under the table's _ci collation, matching how the client highlights.
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT id FROM $m
+		 WHERE conversation_id = %d AND ( body LIKE %s OR attach_name LIKE %s )
+		 ORDER BY created_at ASC, id ASC LIMIT %d",
+		$cid, $like, $like, $max + 1
+	), ARRAY_A ) ?: [];
+
+	$capped = count( $rows ) > $max;
+	if ( $capped ) array_pop( $rows );
+	if ( ! $rows ) wp_send_json_success( [ 'query' => $q, 'hits' => [], 'capped' => false ] );
+
+	// Depth map: one id-only pass in the thread's own order, so depth costs a single query rather than a
+	// COUNT per hit. (Window functions would do this in SQL, but not on every MySQL the fleet runs.)
+	$order = $wpdb->get_col( $wpdb->prepare(
+		"SELECT id FROM $m WHERE conversation_id = %d ORDER BY created_at DESC, id DESC", $cid
+	) ) ?: [];
+	$depth = [];
+	foreach ( $order as $i => $id ) $depth[ (int) $id ] = $i + 1;
+
+	$hits = [];
+	foreach ( $rows as $r ) {
+		$id = (int) $r['id'];
+		$hits[] = [ 'id' => $id, 'depth' => $depth[ $id ] ?? 1 ];
+	}
+
+	wp_send_json_success( [ 'query' => $q, 'hits' => $hits, 'capped' => $capped ] );
 }
 
 // Mark the conversation "seen" for the current user up to its latest message. Called by the client

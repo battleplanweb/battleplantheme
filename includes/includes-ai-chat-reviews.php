@@ -90,7 +90,7 @@ function bp_chat_send_review_request( $post_id ): void {
 	if ( $link === '' ) { error_log( 'BP CHAT review: no review link configured (set ai_chat[review_link] or customer pid).' ); return; }
 
 	$customer = function_exists( 'customer_info' ) ? customer_info() : [];
-	$company  = $customer['name'] ?? get_bloginfo( 'name' );
+	$company  = bp_decode_text( $customer['name'] ?? get_bloginfo( 'name' ) );
 	$name     = trim( (string) get_the_title( $post_id ) );
 	$first    = $name !== '' ? explode( ' ', $name )[0] : '';
 	$hi       = $first !== '' ? "Hi {$first}, " : 'Hi, ';

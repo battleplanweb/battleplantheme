@@ -475,7 +475,7 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
 	];
 
 	$url  = get_bloginfo('url');
-	$name = $ci['name'] ?? get_bloginfo('name');
+	$name = bp_decode_text( $ci['name'] ?? get_bloginfo('name') );
 	$bt   = $ci['business-type'] ?? '';
 	$type = is_array($bt) ? ($bt[0] ?? '') : $bt;
 	$type = bp_schema_normalize_type($type);

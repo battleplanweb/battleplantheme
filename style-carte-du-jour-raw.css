@@ -1,0 +1,36 @@
+@charset "utf-8";
+
+/*--------------------------------------------------------------
+>>> TABLE OF CONTENTS:
+----------------------------------------------------------------
+# Page Styling
+# Navigation
+	- Mobile Menu
+
+/*--------------------------------------------------------------
+# Page Styling
+--------------------------------------------- */
+
+/* Showing correct items based on location */
+.location-unknown .hide-unknown {
+	display:                                                   none;
+}
+
+.location-unknown #section-gallery[class*="show-"],
+.location-dallas #section-gallery .location-unknown,
+.location-dallas #section-gallery[class*="show-"],
+.location-frisco #section-gallery .location-unknown,
+.location-frisco #section-gallery[class*="show-"] {
+	display:                                                   none;
+}
+
+
+/*--------------------------------------------------------------
+# Navigation
+--------------------------------------------- */
+
+/* Mobile Menu */
+
+.location-unknown.screen-1 #mobile-menu-bar {
+  	grid-template-columns:                                   38px 1fr 38px 38px;;
+}

@@ -82,6 +82,22 @@ battleplantheme-site/
 4. Set body classes for the desired layout
 5. Customize `style-site.css` with brand colors/fonts via CSS variables
 
+### `page-content.txt` goes in the client's `Stuff/` folder — never in `battleplantheme-site/`
+
+The paste-in page markup you hand over (`page-content.txt`, and any other
+deliverable-notes file like it) lives beside the client's other source material:
+
+```
+{Client}/
+├── battleplantheme-site/   # ONLY the files that deploy to WP Engine
+├── Graphics/               # logo, mockups, source art
+└── Stuff/                  # interview.txt, page-content.txt, notes
+```
+
+`battleplantheme-site/` is a deploy target — everything in it ships to the server, so a
+notes file there is dead weight in the theme. Write `page-content.txt` straight to
+`{Client}/Stuff/` and reference it from the site CLAUDE.md as `../Stuff/page-content.txt`.
+
 ### Never delete commented-out code in the child-theme files
 
 When editing `functions-site.php`, `style-site.css`, or `script-site.js`, you may freely change the active code — but **leave every commented-out block exactly as it is. Do not delete it.** Those comments are intentional: loader/animation options, feature toggles, alternate layouts, and reference snippets Glendon keeps on hand to flip on later. Likewise, if you stop using a piece of *active* code, **comment it out — don't remove it.** When in doubt, preserve; never silently strip a file down.
@@ -384,6 +400,10 @@ Why this shape, not a single `<a class="service-link" style="background-image:ur
 ```
 [vid size="100" mobile="100" link="" thumb="" preload="false" related="false" controls="true" autoplay="false" loop="false" muted="false" begin="" start="" end="" track=""]
 ```
+
+**`autoplay="true"` forces `muted` on** — every browser blocks sound-on autoplay, so the two are never useful apart. You don't need to write `muted="true"` alongside it (doing so is harmless). A video that "won't autoplay" on an older site is almost always missing the `muted` attribute in the rendered tag.
+
+**Local files: link the `.webm` and ship a matching `-ios.mp4`.** When the `link=` extension is `webm`, the shortcode adds a second `<source>` at `<same-basename>-ios.mp4` as the Safari/iOS fallback — so `composite-vid.webm` needs `composite-vid-ios.mp4` beside it. Encode the pair as **AV1/WebM + H.264/MP4** (AV1 runs ~3x smaller than H.264 at the same quality); see the auto-memory `reference_web_video_encoding` for the ffmpeg recipes. Never HEVC — Chrome and Firefox refuse it.
 
 ### [expire] — Date-gated content
 ```
@@ -829,7 +849,7 @@ All field shortcodes go inside `[bp-form id="..."]…[/bp-form]`. Wrap each fiel
 
 | Shortcode | Required attrs | Optional attrs |
 |---|---|---|
-| `[bp-text]` | `name` | `placeholder`, `autocomplete`, `value`, `required`, `minlength`, `maxlength`, `pattern`, `class` |
+| `[bp-text]` | `name` | `placeholder`, `autocomplete`, `value`, `required`, `minlength`, `maxlength`, `pattern` (**named only — see below**), `class` |
 | `[bp-email]` | (defaults `name="user-email"`) | same as above |
 | `[bp-tel]` | (defaults `name="user-phone"`) | same as above |
 | `[bp-textarea]` | (defaults `name="user-message"`) | `rows`, `cols`, `placeholder`, `value`, `required`, `maxlength` |
@@ -843,6 +863,49 @@ All field shortcodes go inside `[bp-form id="..."]…[/bp-form]`. Wrap each fiel
 | `[bp-recipient-select]` | `name`, `options` (Label::email pairs) | `first` (placeholder), `required` — see below |
 | `[bp-hidden]` | `name`, `value` | — |
 | `[bp-submit]Label[/bp-submit]` | (label as content) | `class` |
+
+### ⚠️ NEVER write a raw regex in `pattern="…"` — use a named pattern
+
+**A shortcode attribute cannot hold a regex.** Two separate WordPress behaviours mangle it, and *both fail silently* — nothing errors, nothing logs, the field just stops working:
+
+| What you write | What actually happens | Why |
+|---|---|---|
+| `pattern="\d{5}"` | becomes `pattern="d{5}"` → **rejects every valid entry** ("Please match the requested format" on correct input) | `shortcode_parse_atts()` runs `stripcslashes()` on every value, which drops the backslash of any escape it doesn't recognise — `\d`→`d`, `\w`→`w`, `\s`→`s`, `\.`→`.` |
+| `pattern="[0-9]{5}"` | tag **truncates** at the `]`; the rest of the regex **prints on the page** as literal text | `get_shortcode_regex()` matches the attribute section as `[^\]\/]*` — the shortcode tag ends at the first `]` |
+
+That rules out `\d`, `\w`, `\s`, `[0-9]`, `[A-Za-z]`, `[[:digit:]]` — i.e. **every normal way to write "a digit."** (Same `]` rule bites any attribute, not just `pattern` — never put a `]` in a shortcode attribute value.)
+
+**So name the pattern; the framework resolves the real regex in PHP where those characters are safe:**
+
+```
+[bp-text name="user-zip" required="true" autocomplete="postal-code" maxlength="10" pattern="zip"]
+```
+
+Built-in names (`bp_field_patterns()` in [functions-forms.php](functions-forms.php)):
+
+| Name | Matches |
+|---|---|
+| `zip` | `75001` or `75001-1234` |
+| `zip5` | 5-digit ZIP only |
+| `phone` | digits + the usual separators, 10–20 chars |
+| `digits` | digits only |
+| `letters` | letters + spaces |
+| `name` | letters, spaces, `.` `'` `-` (2+ chars) |
+| `state` | 2-letter state abbreviation |
+| `year` | `19xx` / `20xx` |
+
+Need one that isn't listed? **Add it to the map via the filter — never inline a regex in the shortcode:**
+
+```php
+add_filter('bp_field_patterns', function($p) {
+    $p['po-number'] = 'PO-[0-9]{6}';
+    return $p;
+});
+```
+
+An unrecognised value passes through untouched, so a legacy literal regex still renders — but only by luck, if it happens to contain neither a backslash nor a `]`. Don't rely on it.
+
+*(HTML5 `pattern` is implicitly anchored — `^(?:…)$` — so don't add `^` or `$` yourself.)*
 
 **`options` attribute syntax:**
 - Simple: `options="Yes|No|Maybe"` → value === label for each
@@ -1195,22 +1258,54 @@ Spam submissions still receive a "thanks" response (so bots don't learn what tri
 
 Wrap a form body in `[bp-form-steps]…[/bp-form-steps]` and structure the body with `<div class="bp-step">` and `<div class="bp-step-included">` markers, plus `[bp-next]` / `[bp-prev]` buttons. The progress bar wires up automatically.
 
-### Per-site primary form CTA
+### The site's primary form (the "default" contact form)
 
-The mobile menu bar contact button and the "request quote" modal default to the **contact form** — universal across business types. HVAC and other quote-driven sites should opt in to the quote form:
+Several places pick a form **without being told which one**:
+
+| Where | Falls back to |
+|---|---|
+| Mobile menu bar email button + the modal it opens | `[bp-contact-form]` |
+| 404 page | `[bp-contact-form]` |
+| `[col type="form"]` widget column | `[bp-quote-form]` |
+
+Quote-driven sites (HVAC etc.) opt the modal + button over to the quote form:
 
 ```php
 add_filter('bp_primary_form', fn() => 'quote');    // or 'contact' (default), or 'none' to hide
 ```
 
-To use a **custom form** (e.g. a site-specific shortcode like `[paradise-tattoo-form]`) override the modal title and shortcode independently — these win over whatever `bp_primary_form` resolved to:
+**When the site has its own form, declare it the primary one** — otherwise the mobile email icon keeps opening the generic framework form while the contact page shows the custom one. Register the form with `bp_register_form()` instead of `add_shortcode()` and pass `'primary' => true`:
+
+```php
+bp_register_form('babes-contact-form', function() {
+    return do_shortcode('[bp-form id="babes-contact"] … [/bp-form]');
+}, [
+    'primary' => true,               // this form IS the site's contact form
+    'title'   => 'Send A Message',   // modal heading (optional)
+    'type'    => 'contact',          // 'contact' (default) | 'quote' — mobile-bar button variant
+]);
+```
+
+Already registered with plain `add_shortcode()`? One line next to it does the same:
+
+```php
+bp_set_primary_form('[babes-contact-form]', ['title' => 'Send A Message', 'type' => 'contact']);
+```
+
+Both live in [functions-global.php](functions-global.php) (not `functions-forms.php`) because `functions-site.php` is required **before** `functions-forms.php` — declaring at load time from the child theme would otherwise hit an undefined function.
+
+Once declared, that form is what all three rows in the table above render, and `bp_primary_form_config()` is the single resolver everything calls.
+
+Precedence, lowest to highest: framework default → `bp_set_primary_form()` registration → the filters. So the old escape hatches still win and existing sites are untouched:
 
 ```php
 add_filter('bp_primary_form_title',     fn() => 'Book An Appointment');
 add_filter('bp_primary_form_shortcode', fn() => '[paradise-tattoo-form]');
 ```
 
-The `bp_primary_form` value still controls the mobile menu bar button's class (`mm-bar-quote` vs `mm-bar-contact`) and whether the button shows at all (`'none'` hides it) — so set it too if you need a specific visual variant.
+The filters only reach the mobile-bar modal — the 404 page and the widget form column follow the *registration*, so prefer `bp_set_primary_form()` when the custom form should stand in everywhere.
+
+`bp_primary_form` still controls the mobile bar button's class (`mm-bar-quote` vs `mm-bar-contact`) and whether it shows at all (`'none'` hides button + modal). With a primary form registered it only selects that variant — the registered shortcode stays the form.
 
 ### When to add to functions-site.php vs the framework
 
@@ -1691,6 +1786,8 @@ Practical consequences:
 - A component class on a `[col]` (`.service-card`, etc.) is a descendant of `.col-inner`, so `#services .service-card` works; `#services > .service-card` does not.
 - Loose siblings (e.g. `[get-icon]` + a `<span>` label) are **separate** children — wrap each icon+label pair in its own `<div>` before laying a row out in a grid, or the grid splits icons from text.
 
+**Trap — `[get-icon type="X"]` puts `X` on the element as a class**, so a component class that happens to share an icon type's name silently matches the icon too. A testimonial card with `[get-icon type="quote"]` next to `<p class="quote">` is the live case: `.review-card .quote { grid-column: 2 }` grabs the *icon* as well and drags it out of its column. Qualify the selector with the tag (`p.quote`, `span.icon`) whenever a component class collides with an icon slug — the icon list is in [functions-icons.php](functions-icons.php).
+
 ---
 
 ## JavaScript Architecture
@@ -1757,6 +1854,27 @@ fs.writeFileSync('path/to/script.min.js', result.code);
 
 ---
 
+## Business Name & HTML Entities (`functions-global.php`)
+WordPress stores `blogname`/`blogdescription` **already esc_html'd** (`sanitize_option`), so
+`get_bloginfo('name')` hands back `R &amp; S`, not `R & S`. Escape that again for an attribute,
+or hand it to an AI prompt, and the page prints a literal `&amp;`.
+
+**Decode as early as possible, escape as late as possible.**
+
+| Helper | Use for |
+|---|---|
+| `bp_business_name()` | The company name as plain text — AI prompts, emails, `alt`/`content` attributes, JSON-LD |
+| `bp_decode_text($v)` | Any plain-text value headed for `esc_attr`/`esc_html`/JSON (loops, so double-encoded values heal) |
+| `bp_fix_entities($html)` | Content that must stay HTML — collapses only `&amp;amp;` → `&amp;`, leaves tags and correct entities alone |
+
+- Never `esc_attr(get_bloginfo('name'))` — that is the double-escape. Use `esc_attr(bp_business_name())`.
+- `<title>` is the exception: core echoes `wp_get_document_title()` unescaped, so the pre-encoded
+  name is already correct there. Decode for og:/twitter:/JSON-LD consumers instead (SEO module does).
+- Anything AI-generated gets `bp_fix_entities()` on save AND on render, so posts written before a
+  fix still display right without a DB rewrite.
+
+---
+
 ## Custom Post Types (built into framework)
 - `testimonials`
 - `galleries`
@@ -1817,6 +1935,21 @@ update_option('jobsite_geo', array(
 > ⚠️ **`default_service` is required, not optional.** It is the safety-net fallback in `bp_geo_run_ai_rewrite()`: the service-type tag **and** the `/service/` landing page are only created when the resolved service category is non-empty. If the AI returns no `service_category` **and** `default_service` is blank, the post is orphaned with only its deterministic service-area tag — no service-type, no page, no archive intro. Set it to the client's primary service (e.g. `'Gutter Installation'`) on every new site. Also confirm `BP_ANTHROPIC_API_KEY` is defined in that site's `wp-config.php` — without it the whole AI classification step short-circuits and you get the same orphaned result.
 
 > ✅ **New-site smoke test (do this once per install):** submit one test job **with a photo**, then confirm the full chain end-to-end: (1) a service-type term + `/service/{service--city-st}/` page were created, (2) the archive intro rendered, (3) the photo **shows on the front end** (not just under "Attachments"), (4) the photo got AI alt text. This single test exercises every silent failure mode (`default_service`, intro trigger, photo→ACF bridge, alt cron). A standing **"Jobsite GEO health"** admin notice (on the jobsite list + dashboard) also flags these three drifts automatically — but run the smoke test on setup so a new site is right from day one.
+
+### Duplicate Guard (GEO app submissions)
+A jobsite is the worst network a phone ever sees, and the write can land while the response
+never makes it back — the tech sees "Submission failed", taps Submit again, and the site gets
+`debbie-rollins` **and** `debbie-rollins-2`.
+
+`bp_geo_submit()` checks for an existing `jobsite_geo` whose **normalized title**
+(`bp_match_key_from_title()`) matches, created **within 48 hours**, in any status. If one exists:
+- the new post is **left as a draft** (never published, so no duplicate `/service/` page)
+- `bp_geo_duplicate_of` post meta records the earlier post's ID
+- `emailMe()` sends a side-by-side comparison of both entries with edit links
+
+Publishing the held draft by hand runs the normal first-publish AI rewrite + taxonomy assignment,
+so a genuine repeat visit costs one button press. Only the app endpoint is guarded — the
+Company Cam / HCP / Workiz importers dedupe on their own external job IDs.
 
 ### Custom Post Type: `jobsite_geo`
 - Public archive at `/jobsites/`
@@ -2004,6 +2137,7 @@ update_option( 'ai_chat', array(
     // 'contractor_sms_reply'        => '+1XXXXXXXXXX',               // the SINGLE line that two-way texts the customer (takeover relay); only this number's inbound texts relay
     'twilio_sid'     => 'AC…',          // Account SID — SAME across all clients under the one ISV account
     'twilio_number'  => '+1XXXXXXXXXX', // the client's own local number (differs per client)
+    // 'twilio_messaging_sid' => 'MG…', // OPTIONAL per client: send via the Messaging Service instead of the bare number — attributes traffic to the approved A2P campaign (better deliverability, Twilio's recommended path). Get it at Messaging > Services > [service]. Omit = send From the number (legacy).
     'privacy_url'    => '/privacy-policy/',
     // 'terms_url', 'text_consent' (consent-card override) optional
 ) );

@@ -936,6 +936,7 @@
           box-shadow:                                       none !important;
           cursor:                                           default;
           letter-spacing:                                   10px;
+          color:                                            var(--text-color);
      }
 
      .navigation.single .nav-links {

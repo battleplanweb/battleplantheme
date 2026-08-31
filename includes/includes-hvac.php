@@ -605,7 +605,7 @@ add_action('bp_form_after_send', function($email, $ctx, $sent) {
 	$pdf_full = (strpos($pdf_path, ABSPATH) === 0) ? $pdf_path : ABSPATH . ltrim($pdf_path, '/');
 	$attachments = file_exists($pdf_full) ? [$pdf_full] : [];
 
-	$business_name = $ctx['customer']['name'] ?? get_bloginfo('name');
+	$business_name = bp_decode_text( $ctx['customer']['name'] ?? get_bloginfo('name') );
 	$from_email    = 'email@admin.' . preg_replace('#https?://#', '', get_bloginfo('url'));
 	$headers = [
 		'Content-Type: text/html; charset=UTF-8',
@@ -622,7 +622,7 @@ add_action('bp_form_after_send', function($email, $ctx, $sent) {
 }, 10, 3);
 
 function bp_employment_default_autoreply($ctx) {
-	$business_name = $ctx['customer']['name']   ?? get_bloginfo('name');
+	$business_name = bp_decode_text( $ctx['customer']['name'] ?? get_bloginfo('name') );
 	$applicant     = $ctx['fields']['user-name'] ?? '';
 
 	$body  = '<p>' . esc_html($applicant) . ', thank you for your interest in employment with ' . esc_html($business_name) . '.</p>';

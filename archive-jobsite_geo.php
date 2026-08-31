@@ -49,7 +49,7 @@ get_header(); ?>
 				$imgs = array_filter($imgs);
 				$imgNum = count($imgs);
 				$alt = array_filter($alt);
-				$jobDesc = wp_kses_post( get_the_content() );
+				$jobDesc = wp_kses_post( bp_fix_entities( get_the_content() ) );
 				$review = esc_attr(get_field( "review"));
 				$geocode = get_post_meta(get_the_ID(), 'geocode');
 				if ( $geocode ) $lat_lng[] = $geocode[0]['lat'].', '.$geocode[0]['lng'];
@@ -82,7 +82,7 @@ get_header(); ?>
 				// Same pattern as the intro content below — built here, do_shortcode'd
 				// once more when the whole $buildUpdate renders at the bottom of the file.
 				$buildUpdate .= bp_wpautop( $jobDesc ).'</div>';
-				$cleanedJobDesc = trim( wp_strip_all_tags( $jobDesc ) );
+				$cleanedJobDesc = trim( bp_decode_text( wp_strip_all_tags( $jobDesc ) ) );
 				$customer_info = customer_info();
 				$img = $imgs ? wp_get_attachment_image_src( reset($imgs), 'full' ) : array('');
 
@@ -92,7 +92,7 @@ get_header(); ?>
 				// expected Date). So we resolve each value first and only emit a
 				// property below when it's actually present and the right type.
 				$zip        = trim( (string) get_field( 'zip' ) );
-				$fullAddr   = trim( $address.', '.$city.', '.$state.' '.$zip );
+				$fullAddr   = bp_decode_text( trim( $address.', '.$city.', '.$state.' '.$zip ) );
 				$rawDate    = get_field( 'job_date' );                       // ACF date: Ymd or Y-m-d
 				$jobIsoDate = $rawDate ? date( 'Y-m-d', strtotime( $rawDate ) ) : '';
 				$lat = ( isset($geocode[0]['lat']) && is_numeric($geocode[0]['lat']) ) ? (float) $geocode[0]['lat'] : null;
@@ -104,7 +104,7 @@ get_header(); ?>
 				$checkin = array(
 					'@context'    => 'https://schema.org',
 					'@type'       => 'UserCheckins',
-					'name'        => $customer_info['name'],
+					'name'        => bp_decode_text( $customer_info['name'] ?? '' ),
 					'description' => $cleanedJobDesc,
 					'location'    => array(
 						'@type'   => 'Place',
@@ -164,7 +164,7 @@ get_header(); ?>
 
 					$testimonialName = get_the_title($review);
 					$testimonialPlatform = strtolower(esc_attr(get_post_field( 'testimonial_platform', $review )));
-					$testimonialContent = wp_kses_post( get_post_field('post_content', $review));
+					$testimonialContent = wp_kses_post( bp_fix_entities( get_post_field('post_content', $review) ) );
 					$testimonialRate = esc_attr(get_post_field( 'testimonial_rating', $review ));
 					$testimonialStars = '';
 					for ($i = 1; $i <= 5; $i++) {
@@ -409,7 +409,7 @@ get_header(); ?>
 				$staticSrc = bp_jobsite_static_map_url($lat_lng);
 				if ( $staticSrc ) {
 					$mapInner = '<img src="'.esc_url($staticSrc).'" width="550" height="550" alt="'
-					          . esc_attr(sprintf(__('Map of recent %s job locations', 'battleplan'), get_bloginfo('name')))
+					          . esc_attr(sprintf(__('Map of recent %s job locations', 'battleplan'), bp_business_name()))
 					          . '" loading="eager" decoding="async">';
 				}
 			}

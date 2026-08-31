@@ -1456,10 +1456,10 @@ function battleplan_enqueue_footer_scripts() {
 	wp_localize_script('battleplan-script-tracking', 'site_options', $saveOptions);
 
 	bp_enqueue_script( 'battleplan-script-site', 'script-site',	[], ['scope' => 'site']);
-	wp_localize_script( 'battleplan-script-site', 'BP_AJAX', [ 'url' => admin_url('admin-ajax.php') ] );
+
 }
 
-// Keep our inline localize scripts (site_dir, BP_AJAX, site_options) out of Rocket
+// Keep our inline localize scripts (site_dir, site_options) out of Rocket
 // Loader too, so the data globals are defined before the deferred scripts that read them.
 add_filter('wp_inline_script_attributes', function ($attributes, $javascript) {
     if ( isset($attributes['id']) && strpos($attributes['id'], 'battleplan-') === 0 ) {
@@ -3251,12 +3251,14 @@ function battleplan_mobile_menu_bar_phone() {
 // Display Mobile Menu Bar Item - Contact
 add_action('bp_mobile_menu_bar_contact', 'battleplan_mobile_menu_bar_contact', 20);
 function battleplan_mobile_menu_bar_contact() {
-	$primary = apply_filters('bp_primary_form', 'contact');
-	if ($primary === 'none') {
+	// Which form this opens is resolved centrally (bp_primary_form_config, functions-global.php),
+	// so a site that declared its own form as the primary one gets THAT form here.
+	$cfg = bp_primary_form_config();
+	if ($cfg['type'] === 'none') {
 		echo '<div class="mm-bar-btn mm-bar-empty"></div>';
 		return;
 	}
-	$type = ($primary === 'contact') ? 'contact' : 'quote';
+	$type = ($cfg['type'] === 'quote') ? 'quote' : 'contact';
 	$email = '<div class="mm-bar-btn mm-bar-'.$type.' modal-btn"><div class="email-btn" aria-hidden="true">[get-icon type="email"]</div><div class="email2-btn" aria-hidden="true">[get-icon type="paper-plane"]</div><span class="sr-only">Contact Us</span></div>';
 	echo do_shortcode($email);
 }
@@ -3264,21 +3266,13 @@ function battleplan_mobile_menu_bar_contact() {
 // Display Request Quote Modal
 add_action('bp_before_page', 'battleplan_request_quote_modal', 20);
 function battleplan_request_quote_modal() {
-	$primary = apply_filters('bp_primary_form', 'contact');
-	if ($primary === 'none') return;
+	// The form behind the mobile bar's email button and every .modal-btn on the
+	// site. See bp_primary_form_config() in functions-global.php for how a site
+	// declares its own form as the replacement.
+	$cfg = bp_primary_form_config();
+	if ($cfg['type'] === 'none' || $cfg['shortcode'] === '') return;
 
-	if ($primary === 'contact') {
-		$title    = 'Send A Message';
-		$shortcode = '[bp-contact-form]';
-	} else {
-		$title    = 'Request A Quote';
-		$shortcode = '[bp-quote-form]';
-	}
-
-	$title     = apply_filters('bp_primary_form_title', $title, $primary);
-	$shortcode = apply_filters('bp_primary_form_shortcode', $shortcode, $primary);
-
-	echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$title.'</h3>'.$shortcode.'[/layout][/lock]');
+	echo do_shortcode('[lock name="request-quote-modal" style="lock" position="modal" show="always" btn-activated="yes"][layout]<h3>'.$cfg['title'].'</h3>'.$cfg['shortcode'].'[/layout][/lock]');
 }
 
 // Display Mobile Menu Bar Item - Activate

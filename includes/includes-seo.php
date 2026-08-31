@@ -129,6 +129,9 @@ function bp_seo_resolve_vars( string $template, array $ctx = [] ): string {
 
 	$map = [
 		'%%title%%'          => $title,
+		// Left ENCODED on purpose: this feeds <title>, which core echoes unescaped.
+		// Consumers that escape for their own context (og:, JSON-LD) decode instead —
+		// see bp_seo_head_meta() / bp_seo_schema_graph().
 		'%%sitename%%'       => get_bloginfo('name'),
 		'%%sitedesc%%'       => get_bloginfo('description'),
 		'%%sep%%'            => $sep,
@@ -328,6 +331,63 @@ function bp_seo_wp_robots( array $robots ) {
 	return $robots;
 }
 
+/*--------------------------------------------------------------
+# §3b. Default meta for framework universal / utility pages
+--------------------------------------------------------------*/
+/**
+ * Sensible SEO title + description defaults for the framework's shared universal pages
+ * (FAQ, symptom-checker, maintenance-tips …). These pages are rendered from framework templates and
+ * usually have NO editable SEO field, so without this they ship with a blank meta description and
+ * Google auto-generates a poor snippet with no phone/city. Values are shortcode-driven ([get-biz],
+ * %%sep%%) so they stay accurate per site, and a per-page BP_SEO_TITLE/BP_SEO_DESC override ALWAYS
+ * wins. Keyed by the page's WP slug; filter bp_seo_universal_meta to add/adjust slugs per site.
+ */
+function bp_seo_universal_meta(): array {
+	return apply_filters( 'bp_seo_universal_meta', array(
+		'faq' => array(
+			'title' => 'HVAC FAQ %%sep%% [get-biz info="name"] %%sep%% [get-biz info="city"], [get-biz info="state-abbr"]',
+			'desc'  => 'Common HVAC questions answered for [get-biz info="city"], [get-biz info="state-abbr"] homeowners — repairs, replacements, maintenance & costs. Call [get-biz info="name"] at [get-biz info="area-phone"].',
+		),
+		'symptom-checker' => array(
+			'title' => 'HVAC Symptom Checker %%sep%% [get-biz info="name"] %%sep%% [get-biz info="city"], [get-biz info="state-abbr"]',
+			'desc'  => 'Heating or cooling acting up? Use the [get-biz info="name"] symptom checker to spot the issue, then call our [get-biz info="city"], [get-biz info="state-abbr"] team at [get-biz info="area-phone"].',
+		),
+		'maintenance-tips' => array(
+			'title' => 'HVAC Maintenance Tips %%sep%% [get-biz info="name"]',
+			'desc'  => 'HVAC maintenance tips from [get-biz info="name"] to keep your [get-biz info="city"], [get-biz info="state-abbr"] home comfortable and efficient year-round. Call [get-biz info="area-phone"].',
+		),
+	) );
+}
+
+/** Description fallback for a universal page — only when the page has no manual override. */
+add_filter( 'bp_seo_pre_description', function ( $pre ) {
+	if ( $pre !== '' || bp_seo_defer() || ! is_singular() ) return $pre;
+	$id = get_queried_object_id();
+	if ( get_post_meta( $id, BP_SEO_DESC, true ) !== '' ) return $pre;   // manual override wins
+	$map  = bp_seo_universal_meta();
+	$slug = get_post_field( 'post_name', $id );
+	return isset( $map[ $slug ]['desc'] ) ? bp_seo_render_value( $map[ $slug ]['desc'] ) : $pre;
+} );
+
+/** Title fallback for a universal page — runs after bp_seo_document_title (20); override still wins. */
+add_filter( 'pre_get_document_title', function ( $title ) {
+	if ( bp_seo_defer() || ! is_singular() ) return $title;
+	$id = get_queried_object_id();
+	if ( get_post_meta( $id, BP_SEO_TITLE, true ) !== '' ) return $title; // override already applied at 20
+	$map  = bp_seo_universal_meta();
+	$slug = get_post_field( 'post_name', $id );
+	return isset( $map[ $slug ]['title'] ) ? bp_seo_render_value( $map[ $slug ]['title'] ) : $title;
+}, 25 );
+
+/** Keep form thank-you / utility pages out of the index (no snippet needed — they shouldn't rank). */
+add_filter( 'bp_seo_noindex', function ( $noindex, $obj ) {
+	if ( is_singular() ) {
+		$slug = get_post_field( 'post_name', get_queried_object_id() );
+		if ( in_array( $slug, array( 'email-received', 'message-received', 'thank-you', 'thanks' ), true ) ) return true;
+	}
+	return $noindex;
+}, 10, 2 );
+
 /** Canonical URL for the current view (honoring per-page override). Core only does singular; we do all. */
 function bp_seo_canonical(): string {
 	if ( is_singular() ) {
@@ -379,8 +439,13 @@ add_action('wp_head', 'bp_seo_head_meta', 1);
 function bp_seo_head_meta() {
 	if ( bp_seo_defer() ) return;
 
-	$title = wp_get_document_title();
-	$desc  = bp_seo_description();
+	// Values here all land inside attributes (esc_attr) or JSON, so they need to
+	// arrive DECODED. get_bloginfo('name') is stored esc_html'd by WordPress, so a
+	// company like "R & S" would otherwise reach the tag as "R &amp;amp; S" and
+	// show up as "R &amp; S" in link previews. <title> is untouched on purpose —
+	// core echoes it unescaped, so the pre-encoded name is already right there.
+	$title = bp_decode_text( wp_get_document_title() );
+	$desc  = bp_decode_text( bp_seo_description() );
 	$canon = bp_seo_canonical();
 	$img   = bp_seo_og_image();
 	$ci    = customer_info();
@@ -390,8 +455,8 @@ function bp_seo_head_meta() {
 	$ogDesc  = $desc;
 	if ( is_singular() ) {
 		$id = get_queried_object_id();
-		if ( ( $v = get_post_meta($id, BP_SEO_OG_TITLE, true) ) !== '' ) $ogTitle = bp_seo_render_value($v);
-		if ( ( $v = get_post_meta($id, BP_SEO_OG_DESC,  true) ) !== '' ) $ogDesc  = bp_seo_render_value($v);
+		if ( ( $v = get_post_meta($id, BP_SEO_OG_TITLE, true) ) !== '' ) $ogTitle = bp_decode_text( bp_seo_render_value($v) );
+		if ( ( $v = get_post_meta($id, BP_SEO_OG_DESC,  true) ) !== '' ) $ogDesc  = bp_decode_text( bp_seo_render_value($v) );
 	}
 
 	echo "\n<!-- Battle Plan SEO -->\n";
@@ -409,7 +474,7 @@ function bp_seo_head_meta() {
 	echo '<meta property="og:title" content="' . esc_attr($ogTitle) . '">' . "\n";
 	if ( $ogDesc !== '' ) echo '<meta property="og:description" content="' . esc_attr($ogDesc) . '">' . "\n";
 	if ( $canon !== '' )  echo '<meta property="og:url" content="' . esc_url($canon) . '">' . "\n";
-	echo '<meta property="og:site_name" content="' . esc_attr( get_bloginfo('name') ) . '">' . "\n";
+	echo '<meta property="og:site_name" content="' . esc_attr( bp_business_name() ) . '">' . "\n";
 	if ( $img !== '' )    echo '<meta property="og:image" content="' . esc_url($img) . '">' . "\n";
 
 	// Twitter
@@ -487,6 +552,9 @@ function bp_seo_schema_graph() {
 		if ( isset($org['@type']) && function_exists('bp_schema_normalize_type') ) {
 			$org['@type'] = bp_schema_normalize_type($org['@type']);
 		}
+		// Same reasoning as @type above: an install whose stored blob was built from the
+		// esc_html'd blogname carries "R &amp; S" as its name. Decode on the way out.
+		if ( isset($org['name']) ) $org['name'] = bp_decode_text( $org['name'] );
 		$org['@id'] = home_url('#organization');
 		$org = bp_seo_narrow_area_service($org);
 		$org = bp_seo_narrow_area_jobsite($org);
@@ -496,7 +564,7 @@ function bp_seo_schema_graph() {
 		'@type' => 'WebSite',
 		'@id'   => home_url('#website'),
 		'url'   => home_url('/'),
-		'name'  => get_bloginfo('name'),
+		'name'  => bp_business_name(),
 		'publisher'      => [ '@id' => home_url('#organization') ],
 		'potentialAction'=> [[
 			'@type'       => 'SearchAction',
@@ -510,11 +578,11 @@ function bp_seo_schema_graph() {
 		'@type'    => is_singular('post') ? 'Article' : 'WebPage',
 		'@id'      => ( $canon ?: home_url('/') ) . '#webpage',
 		'url'      => $canon ?: home_url('/'),
-		'name'     => wp_get_document_title(),
+		'name'     => bp_decode_text( wp_get_document_title() ),
 		'isPartOf' => [ '@id' => home_url('#website') ],
 		'about'    => [ '@id' => home_url('#organization') ],
 	];
-	if ( ( $d = bp_seo_description() ) !== '' ) $page['description'] = $d;
+	if ( ( $d = bp_decode_text( bp_seo_description() ) ) !== '' ) $page['description'] = $d;
 
 	$graph = array_values( array_filter([ $org ?: null, $site, $page ]) );
 	$graph = apply_filters('bp_seo_schema_graph', $graph, $ci);
@@ -636,7 +704,18 @@ add_filter('robots_txt', function($output, $public) {
 	$lines  = "User-agent: *\n";
 	$lines .= "Disallow: /wp-admin/\n";
 	$lines .= "Allow: /wp-admin/admin-ajax.php\n";
+	// Core root-level entry points. None of these render a page, but Google probes them on every
+	// WP site and files the results in Search Console as 404/4xx errors. Listed one-by-one rather
+	// than as "Disallow: /wp-*.php" because robots.txt wildcards cross slashes — that pattern
+	// would also swallow /wp-content/**/*.php and undo the render-blocking note below.
 	$lines .= "Disallow: /wp-login.php\n";
+	$lines .= "Disallow: /wp-signup.php\n";
+	$lines .= "Disallow: /wp-activate.php\n";
+	$lines .= "Disallow: /wp-trackback.php\n";
+	$lines .= "Disallow: /wp-comments-post.php\n";
+	$lines .= "Disallow: /wp-links-opml.php\n";
+	$lines .= "Disallow: /wp-mail.php\n";
+	$lines .= "Disallow: /wp-cron.php\n";
 	$lines .= "Disallow: /xmlrpc.php\n";
 	$lines .= "Disallow: /wp-json/\n";
 	$lines .= "Disallow: /*?s=\n";

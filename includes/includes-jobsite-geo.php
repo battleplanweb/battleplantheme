@@ -424,7 +424,7 @@ function bp_jobsite_setup($post_id, $user) {
                $response  = wp_remote_get($googleAPI, ['timeout' => 10]);
 
                if (is_wp_error($response)) {
-                    $email_label = $customer_info['name'] ?? get_bloginfo('name');
+                    $email_label = bp_decode_text( $customer_info['name'] ?? get_bloginfo('name') );
                     emailMe('Geocoding HTTP Error - ' . $email_label, $response->get_error_message());
                     set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
                } else {
@@ -434,7 +434,7 @@ function bp_jobsite_setup($post_id, $user) {
 
                     if ($http_code !== 200 || !is_array($data)) {
                          $html = 'HTTP ' . $http_code . '<br><br>Raw body:<br><pre>' . esc_html($body) . '</pre>';
-                         $email_label = $customer_info['name'] ?? get_bloginfo('name');
+                         $email_label = bp_decode_text( $customer_info['name'] ?? get_bloginfo('name') );
                          emailMe('Geocoding Bad Response - ' . $email_label, $html);
                          set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
                     } elseif (($data['status'] ?? '') === 'OK') {
@@ -444,7 +444,7 @@ function bp_jobsite_setup($post_id, $user) {
                     } else {
                          $err  = ($data['error_message'] ?? 'No error_message returned.');
                          $html = $new_address . '<br><br>Status: ' . esc_html($data['status']) . '<br>Error: ' . esc_html($err);
-                         $email_label = $customer_info['name'] ?? get_bloginfo('name');
+                         $email_label = bp_decode_text( $customer_info['name'] ?? get_bloginfo('name') );
                          emailMe('Geocoding API Error - ' . $email_label, $html);
                          set_transient($fail_key, true, HOUR_IN_SECONDS * 6);
                     }
@@ -1337,7 +1337,7 @@ function battleplan_jobsite_template($template) {
 
 			$_meta_caption = $jobsite_term ? get_term_meta( $jobsite_term->term_id, 'bp_geo_map_caption', true ) : '';
 			if ( $_meta_caption ) {
-				$GLOBALS['jobsite_geo-map-caption'] = esc_html( $_meta_caption );
+				$GLOBALS['jobsite_geo-map-caption'] = esc_html( bp_decode_text( $_meta_caption ) );
 			} elseif (in_array($GLOBALS['jobsite_geo-service'], $service_full)) {
 				$index = array_search($GLOBALS['jobsite_geo-service'], $service_full);
 				$GLOBALS['jobsite_geo-map-caption'] = $service_short[$index];
@@ -1351,8 +1351,8 @@ function battleplan_jobsite_template($template) {
 
 			$term_desc = get_term_meta( $jobsite_term->term_id, 'bp_geo_service_intro', true );
 			if ( $term_desc ) {
-				$GLOBALS['jobsite_geo-content']   = do_shortcode( wp_kses_post( $term_desc ) );
-				$GLOBALS['jobsite_geo-page_desc'] = wp_trim_words( strip_tags( $term_desc ), 30, '...' );
+				$GLOBALS['jobsite_geo-content']   = do_shortcode( wp_kses_post( bp_fix_entities( $term_desc ) ) );
+				$GLOBALS['jobsite_geo-page_desc'] = wp_trim_words( bp_decode_text( strip_tags( $term_desc ) ), 30, '...' );
 				$GLOBALS['mapGrid']               = '3-2';
 			} else {
 				$GLOBALS['jobsite_geo-content'] = '';
@@ -2451,7 +2451,7 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 	}
 
 	// Gather context (private — sent to API but never stored in output)
-	$company_name = get_bloginfo( 'name' );
+	$company_name = bp_business_name();
 	$street       = get_post_meta( $post_id, BP_GEO_FIELD_ADDRESS,  true );
 	$city         = get_post_meta( $post_id, BP_GEO_FIELD_CITY,     true );
 	$state        = get_post_meta( $post_id, BP_GEO_FIELD_STATE,    true );
@@ -2508,7 +2508,7 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 
 	wp_update_post([
 		'ID'           => $post_id,
-		'post_content' => wp_kses_post( $rewritten ),
+		'post_content' => wp_kses_post( bp_fix_entities( $rewritten ) ),
 	]);
 
 	add_action( 'save_post', 'bp_geo_ai_on_first_publish', 99, 3 );
@@ -2625,7 +2625,7 @@ function bp_geo_send_daily_digest() {
 	]);
 	if ( empty($jobs) ) return; // nothing new today — no empty digests
 
-	$site_name = get_bloginfo('name');
+	$site_name = bp_business_name();
 	$domain    = parse_url( home_url(), PHP_URL_HOST );
 	$count     = count($jobs);
 
@@ -2656,7 +2656,7 @@ function bp_geo_send_daily_digest() {
 		$cards .= '<div style="border:1px solid #e2e2e2;border-radius:8px;padding:16px 18px;margin:0 0 16px;">';
 		$cards .= '<p style="margin:0 0 4px;font-size:15px;font-weight:bold;">' . esc_html( $addr ?: get_the_title($job) ) . '</p>';
 		$cards .= '<p style="margin:0 0 10px;color:#666;font-size:13px;">' . ( $photos > 0 ? $photos . ' ' . _n('photo','photos',$photos) : 'No photos' ) . '</p>';
-		$cards .= '<p style="margin:0 0 14px;line-height:1.5;">' . esc_html($desc) . '</p>';
+		$cards .= '<p style="margin:0 0 14px;line-height:1.5;">' . esc_html( bp_decode_text($desc) ) . '</p>';
 		$cards .= '<a href="' . esc_url($service_url) . '" style="display:inline-block;background:#1a7f37;color:#fff;text-decoration:none;padding:9px 16px;border-radius:6px;font-weight:bold;">View the live page &rarr;</a>';
 		$cards .= '</div>';
 	}
@@ -2716,7 +2716,7 @@ function bp_geo_call_anthropic( $data ) {
 	}
 
 	// Strip legal suffixes from company name — they never read naturally in prose
-	$company_clean = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', $data['company_name'] );
+	$company_clean = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', bp_decode_text( $data['company_name'] ) );
 	$company_clean = trim( $company_clean );
 
 	// Decide per-post whether to use the company name (50% of the time)
@@ -2864,7 +2864,7 @@ function bp_geo_generate_term_intro( int $term_id ) {
 		return new WP_Error( 'missing_data', "Could not determine service/location for term #{$term_id} ({$term->slug})." );
 	}
 
-	$company = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', get_bloginfo( 'name' ) );
+	$company = preg_replace( '/\s*,?\s*(LLC|Inc\.?|Corp\.?|Ltd\.?|Co\.?)\.?\s*$/i', '', bp_business_name() );
 	$company = trim( $company );
 
 	$wiki = bp_geo_fetch_wiki_summary( $city, $state );
@@ -3029,21 +3029,21 @@ Respond ONLY with valid JSON: {\"intro\": \"...html content...\", \"map_caption\
 	}
 
 	// Store in term meta (bypasses WordPress kses stripping on term description)
-	update_term_meta( $term_id, 'bp_geo_service_intro', $parsed['intro'] );
+	update_term_meta( $term_id, 'bp_geo_service_intro', bp_fix_entities( $parsed['intro'] ) );
 	if ( ! empty( $parsed['map_caption'] ) ) {
-		update_term_meta( $term_id, 'bp_geo_map_caption', sanitize_text_field( $parsed['map_caption'] ) );
+		update_term_meta( $term_id, 'bp_geo_map_caption', sanitize_text_field( bp_decode_text( $parsed['map_caption'] ) ) );
 	}
 
 	// Email notification
 	if ( function_exists( 'emailMe' ) ) {
-		$caption  = sanitize_text_field( $parsed['map_caption'] ?? '' );
+		$caption  = sanitize_text_field( bp_decode_text( $parsed['map_caption'] ?? '' ) );
 		$edit_url = get_edit_term_link( $term_id, 'jobsite_geo-services' );
 		$list_url = admin_url( 'edit-tags.php?taxonomy=jobsite_geo-services' );
-		$subject  = get_bloginfo( 'name' ) . ': New Service Intro — ' . $service . ' in ' . $city . ', ' . $state;
+		$subject  = bp_business_name() . ': New Service Intro — ' . $service . ' in ' . $city . ', ' . $state;
 		$body     = '
 <div style="font-family:sans-serif;max-width:680px;">
 <h2 style="margin:0 0 4px;">' . esc_html( $service ) . ' in ' . esc_html( $city ) . ', ' . esc_html( $state ) . '</h2>
-<p style="margin:0 0 20px;color:#666;font-size:13px;"><strong>Company:</strong> ' . esc_html( get_bloginfo( 'name' ) ) . ' &nbsp;|&nbsp; <strong>Term:</strong> ' . esc_html( $term->slug ) . '</p>
+<p style="margin:0 0 20px;color:#666;font-size:13px;"><strong>Company:</strong> ' . esc_html( bp_business_name() ) . ' &nbsp;|&nbsp; <strong>Term:</strong> ' . esc_html( $term->slug ) . '</p>
 
 <h3 style="margin:0 0 6px;font-size:14px;color:#333;">Map Caption</h3>
 <p style="margin:0 0 24px;padding:10px 14px;background:#f5f5f5;border-left:3px solid #ccc;font-size:14px;">' . esc_html( $caption ) . '</p>
@@ -3308,7 +3308,7 @@ function bp_geo_login(WP_REST_Request $request) {
 	return rest_ensure_response([
 		'token'        => bp_geo_generate_token($user->ID),
 		'display_name' => $user->display_name,
-		'site_name'    => get_bloginfo('name'),
+		'site_name'    => bp_business_name(),
 		'site_url'     => get_site_url(),
 	]);
 }
@@ -3546,6 +3546,23 @@ function bp_geo_submit(WP_REST_Request $request) {
 
 	unset($GLOBALS['bp_jobsite_setup_running']);
 
+	// ── Duplicate guard ───────────────────────────────────────
+	// Hold it back instead of publishing a second page for the same customer.
+	$dupe_of = bp_geo_find_recent_duplicate($title, $post_id);
+	if ($dupe_of) {
+		update_post_meta($post_id, 'bp_geo_duplicate_of', $dupe_of);
+		bp_geo_email_possible_duplicate($post_id, $dupe_of);
+		error_log("bp_geo_submit: post {$post_id} held as a draft — looks like a repeat of {$dupe_of}.");
+
+		// No 'link' on purpose: a draft permalink 404s for the tech who taps it.
+		// The app only checks res.ok, so this still lands on its success screen.
+		return rest_ensure_response([
+			'id'      => $post_id,
+			'status'  => 'draft',
+			'message' => 'Jobsite saved and held for review — it looks like a repeat of a recent entry.',
+		]);
+	}
+
 	// Publish the post now that all fields are saved.
 	// (Created as draft above so the required-field validation hook doesn't
 	// fire before ACF fields exist. Publish here after everything is in place.)
@@ -3557,6 +3574,105 @@ function bp_geo_submit(WP_REST_Request $request) {
 		'status'  => 'publish',
 		'message' => 'Jobsite submitted successfully.',
 	]);
+}
+
+// ── DUPLICATE GUARD ───────────────────────────────────────────
+// A jobsite is the worst network a phone ever sees, and the write can land while
+// the response never makes it back — the tech sees "Submission failed", taps
+// Submit again, and the site ends up with debbie-rollins AND debbie-rollins-2.
+//
+// Same customer name inside 48 hours is far more likely to be that than two real
+// visits, so the second one is held as a draft and Glendon gets an email to judge
+// it, rather than a duplicate page going live. A genuine repeat visit just needs
+// the Publish button — the AI rewrite and taxonomy still fire on first publish.
+//
+// Returns the ID of the earlier post it looks like a repeat of, or 0.
+function bp_geo_find_recent_duplicate(string $title, int $exclude_id = 0, int $hours = 48): int {
+	$key = bp_match_key_from_title($title);
+	if ($key === '') return 0;
+
+	// Bounded by the date window, so there's no posts_per_page cap that could
+	// silently scroll a duplicate out of view on a busy day.
+	$recent = get_posts([
+		'post_type'      => BP_GEO_CPT,
+		'post_status'    => ['publish', 'draft', 'pending', 'future', 'private'],
+		'posts_per_page' => -1,
+		'orderby'        => 'date',
+		'order'          => 'DESC',
+		'date_query'     => [[ 'after' => $hours . ' hours ago' ]],
+		'post__not_in'   => $exclude_id ? [$exclude_id] : [],
+		'no_found_rows'  => true,
+	]);
+
+	foreach ($recent as $p) {
+		if (bp_match_key_from_title($p->post_title) === $key) return (int) $p->ID;
+	}
+
+	return 0;
+}
+
+// One card per entry so the two can be compared without opening both.
+function bp_geo_dupe_card($post, string $heading): string {
+	$addr = trim(implode(', ', array_filter([
+		(string) get_post_meta($post->ID, BP_GEO_FIELD_ADDRESS, true),
+		(string) get_post_meta($post->ID, BP_GEO_FIELD_CITY,    true),
+		(string) get_post_meta($post->ID, BP_GEO_FIELD_STATE,   true),
+	])), ', ');
+
+	$desc = trim(bp_decode_text(wp_strip_all_tags($post->post_content)));
+	if (mb_strlen($desc) > 400) $desc = mb_substr($desc, 0, 400) . '…';
+
+	$who    = get_the_author_meta('display_name', (int) $post->post_author);
+	$photos = 0;
+	foreach (['jobsite_photo_1','jobsite_photo_2','jobsite_photo_3','jobsite_photo_4'] as $f) {
+		if ((int) get_post_meta($post->ID, $f, true)) $photos++;
+	}
+
+	// admin_url(), not get_edit_post_link() — that one is permission-scoped to
+	// whichever tech happened to be logged in when this ran.
+	$edit = admin_url('post.php?post=' . (int) $post->ID . '&action=edit');
+
+	$html  = '<div style="border:1px solid #e2e2e2;border-radius:8px;padding:14px 16px;margin:0 0 14px;">';
+	$html .= '<p style="margin:0 0 6px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:.05em;">' . esc_html($heading) . '</p>';
+	$html .= '<p style="margin:0 0 4px;font-size:15px;font-weight:bold;">' . esc_html(bp_decode_text($post->post_title)) . '</p>';
+	if ($addr) $html .= '<p style="margin:0 0 4px;color:#555;">' . esc_html(bp_decode_text($addr)) . '</p>';
+	$html .= '<p style="margin:0 0 10px;color:#666;font-size:13px;">'
+	       . esc_html(mysql2date('M j, Y g:i a', $post->post_date))
+	       . ' &middot; ' . esc_html($post->post_status)
+	       . ' &middot; ' . ($photos ? $photos . ' ' . _n('photo', 'photos', $photos) : 'no photos')
+	       . ($who ? ' &middot; ' . esc_html($who) : '') . '</p>';
+	if ($desc) $html .= '<p style="margin:0 0 12px;line-height:1.5;">' . esc_html($desc) . '</p>';
+	$html .= '<a href="' . esc_url($edit) . '" style="display:inline-block;background:#2271b1;color:#fff;text-decoration:none;padding:8px 15px;border-radius:6px;font-size:13px;font-weight:bold;">Open in editor</a>';
+	$html .= '</div>';
+
+	return $html;
+}
+
+function bp_geo_email_possible_duplicate(int $post_id, int $original_id): void {
+	if (!function_exists('emailMe')) return;
+
+	$new  = get_post($post_id);
+	$orig = get_post($original_id);
+	if (!$new || !$orig) return;
+
+	$secs = abs(strtotime($new->post_date_gmt) - strtotime($orig->post_date_gmt));
+	if ($secs < 3600) {
+		$mins = max(1, (int) round($secs / 60));
+		$gap  = $mins . ' ' . _n('minute', 'minutes', $mins);
+	} else {
+		$gap = round($secs / 3600, 1) . ' hours';
+	}
+
+	$site = bp_business_name();
+
+	$body  = '<div style="max-width:640px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#222;">';
+	$body .= '<p style="font-size:16px;margin:0 0 6px;">The GEO app posted a jobsite on <strong>' . esc_html($site) . '</strong> for a customer who already had one ' . esc_html($gap) . ' earlier.</p>';
+	$body .= '<p style="margin:0 0 18px;color:#555;">The new entry is <strong>held as a draft</strong> so it cannot publish a second page. If the visit was real, publish it and the usual AI rewrite runs. If the app double-submitted, trash it.</p>';
+	$body .= bp_geo_dupe_card($new,  'New — held as a draft');
+	$body .= bp_geo_dupe_card($orig, 'Already on the site');
+	$body .= '</div>';
+
+	emailMe($site . ': Possible duplicate jobsite — ' . bp_decode_text($new->post_title), $body);
 }
 
 // ============================================================

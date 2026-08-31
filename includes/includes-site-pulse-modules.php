@@ -86,10 +86,22 @@ function site_pulse_modules(): array {
 			'caps'    => [ 'view_emails', 'manage_emails' ],
 			'default' => true,
 		],
+		'fleet' => [
+			'label'   => 'Site Fleet',
+			'desc'    => 'Agency-only. Every Battle Plan site\'s nightly stats — traffic, last audit, keyword position, reviews, and whether each site\'s own nightly jobs are still running — on one screen. Only does anything on the hub install (bp-webdev.com); a client site can turn this on and still see nothing.',
+			'caps'    => [ 'view_fleet', 'manage_fleet' ],
+			'default' => false,
+		],
 		'customer_connect' => [
 			'label'   => 'Customer Connect',
 			'desc'    => 'The client\'s customers install a branded companion app (PWA) to get notifications, request scheduling, troubleshoot, and track their equipment. This panel is the staff side — the customer roster, push composer, and scheduling requests.',
 			'caps'    => [ 'view_customers', 'send_customer_push', 'view_schedule_requests', 'manage_customers', 'manage_schedule_requests' ],
+			'default' => false,
+		],
+		'booking' => [
+			'label'   => 'Booking',
+			'desc'    => 'Online booking — appointments, classes, and rentals on one calendar. Customers book and pay from the public site or the Customer Connect app; staff get the calendar, manual booking, availability rules, passes and memberships.',
+			'caps'    => [ 'view_bookings', 'view_own_bookings', 'manage_bookings', 'manage_booking_services', 'manage_booking_payments', 'manage_booking_settings' ],
 			'default' => false,
 		],
 	];

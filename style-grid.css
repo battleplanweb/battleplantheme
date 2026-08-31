@@ -595,9 +595,12 @@ section.section .flex.nested .flex,
 #page,
 .wp-gr.wp-google-badge,
 .stuck {
-	box-shadow:                                                0 0 10px 0 var(--black-high);
 	max-width:                                                 1920px;
 	margin:                                                    0 auto;
+}
+
+.wp-gr.wp-google-badge{
+	box-shadow:                                                0 0 10px 0 var(--black-high);
 }
 
 /*--------------------------------------------------------------
@@ -1301,6 +1304,7 @@ figure.col-inner {
 
 	.sidebar-inner {
 		display:                                                  block;
+		transform:                                                none !important;
 	}
 
 	.col.empty {
@@ -1419,7 +1423,7 @@ figure.col-inner {
 	}
 
 	#secondary img {
-		margin:                                                   0;
+		margin:                                                   0 auto;
 	}
 
 	#secondary .sidebar-inner {

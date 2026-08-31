@@ -5,6 +5,7 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Set Constants
+# Primary Form
 # Customer Info Globals
 # Google Ad Locations
 # Icon Globals
@@ -13,7 +14,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v45.2' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v45.3' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 /**
@@ -32,6 +33,160 @@ function bp_module_on( $opt, string $key = 'install' ): bool {
 		return ! in_array( $v, [ '', '0', 'false', 'no', 'off' ], true );
 	}
 	return ! empty( $v );
+}
+
+/*--------------------------------------------------------------
+# Primary Form (the site's "default" contact form)
+#
+# One form per site stands in for "the contact form" everywhere the framework
+# needs one without being told which: the mobile menu bar's email button and the
+# modal behind it, the 404 page, and [col type="form"].
+#
+# Out of the box that's the framework's own [bp-contact-form] (or [bp-quote-form]
+# on quote-driven sites - see the bp_primary_form filter). A site that builds its
+# OWN form declares it the replacement where the form is registered, so the rest
+# of the framework picks it up with nothing else wired up:
+#
+#   bp_register_form('babes-contact-form', function() { ... }, [
+#       'primary' => true,               // <- this form IS the site's contact form
+#       'title'   => 'Send A Message',   // modal heading (optional)
+#       'type'    => 'contact',          // 'contact' (default) | 'quote' - button variant
+#   ]);
+#
+# For a form already registered with plain add_shortcode(), the same declaration
+# as a one-liner next to it:
+#
+#   bp_set_primary_form('[babes-contact-form]', ['title' => 'Send A Message']);
+#
+# These live here, not in functions-forms.php, because functions-site.php is
+# required BEFORE functions-forms.php - a site declaring its form at load time
+# would hit an undefined function. Everything that CONSUMES the registration
+# calls bp_primary_form_config() at render time. See functions-forms.php.
+--------------------------------------------------------------*/
+
+// Register a site form's shortcode and its metadata in one call. A drop-in
+// replacement for add_shortcode() that also accepts the primary declaration.
+function bp_register_form( $tag, $callback, array $args = [] ) {
+	$tag = trim( (string) $tag, '[]' );
+	if ( $tag === '' || ! is_callable( $callback ) ) return;
+	add_shortcode( $tag, $callback );
+	if ( ! empty( $args['primary'] ) ) bp_set_primary_form( '[' . $tag . ']', $args );
+}
+
+// Declare which shortcode is this site's default/primary form. Last call wins.
+function bp_set_primary_form( $shortcode, array $args = [] ) {
+	$shortcode = trim( (string) $shortcode );
+	if ( $shortcode === '' ) return;
+	// Bare tag name is accepted too: bp_set_primary_form('babes-contact-form').
+	if ( $shortcode[0] !== '[' ) $shortcode = '[' . trim( $shortcode, '[]' ) . ']';
+
+	$GLOBALS['bp_primary_form'] = [
+		'shortcode' => $shortcode,
+		'title'     => trim( (string) ( $args['title'] ?? '' ) ),
+		'type'      => ( ( $args['type'] ?? '' ) === 'quote' ) ? 'quote' : 'contact',
+	];
+}
+
+// The registration, or null when the site never declared one (the 99% case).
+function bp_primary_form_registered() {
+	$reg = $GLOBALS['bp_primary_form'] ?? null;
+	return ( is_array( $reg ) && ! empty( $reg['shortcode'] ) ) ? $reg : null;
+}
+
+/**
+ * Resolve the site's primary form: ['type', 'title', 'shortcode'].
+ *
+ * Precedence, lowest to highest:
+ *   1. Framework default - contact form, "Send A Message"
+ *   2. bp_set_primary_form() / bp_register_form(['primary'=>true]) registration
+ *   3. bp_primary_form / _title / _shortcode filters (the original escape hatches)
+ *
+ * type 'none' hides the mobile-bar button and the modal entirely.
+ */
+function bp_primary_form_config(): array {
+	$reg  = bp_primary_form_registered();
+	$type = apply_filters( 'bp_primary_form', $reg['type'] ?? 'contact' );
+
+	if ( $type === 'none' ) return [ 'type' => 'none', 'title' => '', 'shortcode' => '' ];
+
+	if ( $reg ) {
+		// A registered form stays the form even if bp_primary_form was filtered to
+		// 'quote' - that filter only picks the button/heading variant from there.
+		$shortcode = $reg['shortcode'];
+		$title     = $reg['title'];
+	} else {
+		$shortcode = ( $type === 'quote' ) ? '[bp-quote-form]' : '[bp-contact-form]';
+		$title     = '';
+	}
+
+	if ( $title === '' ) $title = ( $type === 'quote' ) ? 'Request A Quote' : 'Send A Message';
+
+	return [
+		'type'      => $type,
+		'title'     => apply_filters( 'bp_primary_form_title', $title, $type ),
+		'shortcode' => apply_filters( 'bp_primary_form_shortcode', $shortcode, $type ),
+	];
+}
+
+// Just the shortcode - for the spots that only need "the form that stands in for
+// the contact form". $fallback is returned when the site never declared one, so
+// these spots keep their historical default on the 99% of sites that don't.
+// (Named _or so it can't be mistaken for the bp_primary_form_shortcode FILTER.)
+function bp_primary_form_or( $fallback = '[bp-contact-form]' ) {
+	if ( ! bp_primary_form_registered() ) return $fallback;
+	$cfg = bp_primary_form_config();
+	return $cfg['shortcode'] !== '' ? $cfg['shortcode'] : $fallback;
+}
+
+/**
+ * HTML-entity helpers.
+ *
+ * WordPress runs blogname/blogdescription through esc_html() on save
+ * (sanitize_option), so a business name with an ampersand comes back out of
+ * get_bloginfo('name') ALREADY encoded: "R &amp; S". Feed that to an AI prompt,
+ * an og: tag, a JSON-LD node, or anything else that escapes for its own context
+ * and the entity rides through to the page as a literal "&amp;".
+ *
+ * Rule of thumb: decode as early as possible, escape as late as possible.
+ *
+ *   bp_business_name()          // plain-text company name  -> "R & S"
+ *   bp_decode_text($v)          // plain-text value, fully decoded
+ *   bp_fix_entities($html)      // HTML kept as HTML, double-encoding collapsed
+ */
+function bp_business_name(): string {
+	return trim( bp_decode_text( get_bloginfo( 'name' ) ) );
+}
+
+/**
+ * Fully decode a PLAIN-TEXT value (no markup expected) so the output layer can do
+ * the escaping. Loops because stored values can be double-encoded ("&amp;amp;")
+ * from content written before this was in place.
+ */
+function bp_decode_text( $text ): string {
+	$text = (string) $text;
+	$prev = '';
+	$pass = 0;
+	while ( $text !== $prev && $pass++ < 3 ) {
+		$prev = $text;
+		$text = html_entity_decode( $text, ENT_QUOTES, 'UTF-8' );
+	}
+	return $text;
+}
+
+/**
+ * Same idea for markup we must keep as markup: collapse only DOUBLE-encoded
+ * entities ("&amp;amp;" -> "&amp;") so the tags survive untouched and a name
+ * stored as "R &amp;amp; S" stops printing "R &amp; S" and renders "R & S".
+ */
+function bp_fix_entities( $html ): string {
+	$html = (string) $html;
+	$prev = '';
+	$pass = 0;
+	while ( $html !== $prev && $pass++ < 3 ) {
+		$prev = $html;
+		$html = preg_replace( '/&amp;(?=(?:amp|lt|gt|quot|apos|nbsp|ndash|mdash|#0*3[49]|#x0*2[27]);)/i', '&', $html );
+	}
+	return $html;
 }
 
 /*--------------------------------------------------------------

@@ -39,7 +39,6 @@
 	--font-primary:                                            "Open Sans", sans-serif;
 	--font-text:                                               "Open Sans", sans-serif;
 
-
 	--font-size-text:                                          14px;
 	--font-size-xs:                                            calc(var(--font-size-text) * 0.72);
 	--font-size-sm:                                            calc(var(--font-size-text) * 0.857);
@@ -94,6 +93,8 @@
 	--sp-text-secondary:                                       var(--sp-secondary-darkest);
 	--sp-text-light:                                           var(--sp-secondary-lightest);
 
+	--font-size-h4:                                            calc(var(--font-size-h3) - 12rem);
+
 	--sp-sidebar-width:                                        300px;
 
 	--sp-button-shadow:                                        1px 1px 3px transparent;
@@ -101,7 +102,6 @@
 
 	--sp-shadow-sm:                                            0 1px 2px rgba(0,0,0,0.05);
 	--sp-shadow-lg:                                            0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
-
 
 	--sp-transition:                                           0.2s ease;
 
@@ -135,8 +135,8 @@
 	--button-transform-hover:                                  none;
 	--button-box-shadow-hover:                                 1px 1px 3px rgba(0, 0, 0, 0.20);
 
-	--card-border-radius:                                      24px;
-	--card-padding:                                            2em;
+	--sp-card-border-radius:                                   24px;
+	--sp-card-padding:                                         20px;
 
 }
 
@@ -166,8 +166,7 @@ body.sp-has-god-bar .sp-god-bar { display: grid; }
 }
 
 .sp-login-box {
-	width:                                                     100%;
-	max-width:                                                 400px;
+	width:                                                     min(100%, 400px);
 	background:                                                var(--sp-bg-white);
 	border-radius:                                             var(--sp-radius-lg);
 	box-shadow:                                                0 25px 50px -12px rgba(0,0,0,0.4);
@@ -184,7 +183,7 @@ body.sp-has-god-bar .sp-god-bar { display: grid; }
 .sp-login-icon svg { color: var(--sp-accent-color); }
 
 .sp-login-logo {
-	max-width:                                                 160px;
+	width:                                                     min(100%, 160px);
 	height:                                                    auto;
 	margin-bottom:                                             16px;
 }
@@ -301,21 +300,27 @@ body.has-site-pulse *::after {
 	box-sizing:                                                border-box;
 }
 
+/* Checkboxes/radios flow INLINE — never position:absolute. Their vertical alignment with the label is
+   handled by flexbox on .checkbox-label / .radio-label (added to EVERY checkbox/radio label by
+   spTagCheckboxLabels in the JS). This is the single global alignment fix: no per-instance translateY,
+   padding-left reserve, or "top:0" guesswork — the browser centers the box against the text everywhere.
+   The old approach absolutely-positioned the box at the top-left of its nearest positioned ancestor, so
+   its vertical spot depended on that ancestor's padding/height/line-height — which is why it never lined
+   up and every place needed a different translateY. */
 input[type="checkbox"],
 input[type="radio"] {
-	position:                                                  absolute;
-	left:                                                      0;
-	top:                                                       0;
-	transform:                                                 translateY(7px);
+	position:                                                  static;
 	vertical-align:                                            middle;
+	flex:                                                      0 0 auto;
 	width:                                                     var(--sp-checkbox-size) !important;
 	height:                                                    var(--sp-checkbox-size) !important;
 	margin:                                                    0 !important;
 	padding:                                                   0 !important;
+	transform:                                                 translateY(0);
 }
 
-input[type="radio"] {
-	transform:                                                 translateY(3px);
+input + span {
+	margin-left:                                               0;
 }
 
 #masthead,
@@ -406,6 +411,15 @@ input[type="radio"] {
 	display:                                                   grid;
 	grid-template-columns:                                     1fr auto;
 	align-items:                                               center;
+}
+
+/* Two or more buttons in a panel header. They share the grid's single "auto" column, so they need their
+   own row box. flex, not grid: the buttons are different widths and should each size to their label. */
+.sp-panel-header-actions {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	justify-content:                                           flex-end;
+	gap:                                                       8px;
 }
 
 .sp-meta-bar {
@@ -539,10 +553,8 @@ input[type="radio"] {
 /* Optional logo image (header_logo_url) — replaces the icon + title */
 .sp-sidebar-logo {
 	display:                                                   block;
-	max-width:                                                 100%;
-	max-height:                                                80px;
-	width:                                                     auto;
-	height:                                                    auto;
+	width:                                                     min(auto, 100%);
+	height:                                                    min(auto, 80px);
 }
 
 /* "POWERED BY BP SITE PULSE" attribution under the brand */
@@ -675,6 +687,104 @@ input[type="radio"] {
 	visibility:                                                visible;
 	transition-delay:                                          0s;
 }
+
+
+/* Not-installed modules — GOD ONLY (see the menu split in page-site-pulse-dashboard.php).
+   A god's caps are never module-filtered, so every module shows in the sidebar whether or not this
+   install runs it. These sit below Settings in a shelf that starts collapsed, so the visible menu
+   still reads as "what this site actually runs" while the rest stays one click away. Same
+   0fr↔1fr grid animation as the submenus above. */
+.sp-nav-inactive-wrap {
+	margin-top:                                                8px;
+	padding-top:                                               8px;
+	/* Translucent hairline rather than a color var, for the same reason the sidebar gradient is an
+	   inset shadow: it reads correctly on ANY sidebar background the color engine picks. */
+	border-top:                                                1px solid rgba(255, 255, 255, 0.14);
+}
+
+.sp-nav-inactive-toggle {
+	display:                                                   grid;
+	grid-template-columns:                                     1fr auto auto;
+	align-items:                                               center;
+	gap:                                                       8px;
+	width:                                                     100%;
+	padding:                                                   8px 12px;
+	border:                                                    none;
+	background:                                                none;
+	color:                                                     var(--sp-sidebar-text, var(--sp-primary-contrast));
+	font-family:                                               var(--font-text);
+	font-size:                                                 var(--font-size-text);
+	font-weight:                                               500;
+	text-align:                                                left;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	cursor:                                                    pointer;
+	border-radius:                                             var(--sp-radius-sm);
+	opacity:                                                   0.6;
+	transition:                                                all var(--sp-transition);
+}
+
+.sp-nav-inactive-toggle:hover,
+.sp-nav-inactive-toggle.active,
+.sp-nav-inactive-toggle.tab-focus {
+	background:                                                var(--sp-nav-hover-bg, var(--sp-primary-dark));
+	color:                                                     var(--sp-nav-hover-text, var(--sp-primary-contrast));
+	opacity:                                                   1;
+}
+
+/* Reuses .sp-nav-badge for the pill shape — only the colors differ (a count of dormant modules is
+   information, not the danger-red of unread notifications). Qualified with .sp-nav-badge on purpose:
+   that class is re-declared LATER in this file (and again in the mobile block), so an equal-specificity
+   rule here would lose the cascade and the pill would keep its notification red. */
+.sp-nav-badge.sp-nav-inactive-count {
+	background:                                                var(--sp-sidebar-active-bg, var(--sp-accent-color));
+	color:                                                     var(--sp-sidebar-active-text, var(--sp-accent-contrast));
+}
+
+.sp-nav-inactive-wrap.expanded .sp-nav-inactive-toggle .sp-nav-arrow {
+	transform:                                                 rotate(180deg);
+}
+
+.sp-nav-inactive-items {
+	display:                                                   grid;
+	grid-template-rows:                                        0fr;
+	overflow:                                                  hidden;
+	transition:                                                grid-template-rows 0.2s ease;
+}
+
+.sp-nav-inactive-wrap.expanded .sp-nav-inactive-items {
+	grid-template-rows:                                        1fr;
+}
+
+.sp-nav-inactive-inner {
+	/* Same rhythm as .sp-sidebar-nav so the shelf's items sit like the menu above it. */
+	display:                                                   grid;
+	grid-auto-rows:                                            min-content;
+	gap:                                                       14px;
+	padding-top:                                               8px;
+	overflow:                                                  hidden;
+	min-height:                                                0;
+	/* Same sub-pixel guard as .sp-nav-children-inner: a 0fr track can settle at a 1px sliver. */
+	visibility:                                                hidden;
+	transition:                                                visibility 0s linear 0.2s;
+}
+
+.sp-nav-inactive-wrap.expanded .sp-nav-inactive-inner {
+	visibility:                                                visible;
+	transition-delay:                                          0s;
+}
+
+/* Dimmed so "not installed" reads at a glance without labelling every row. Still fully usable. */
+.sp-nav-inactive-inner .sp-nav-item {
+	opacity:                                                   0.55;
+}
+
+.sp-nav-inactive-inner .sp-nav-item:hover,
+.sp-nav-inactive-inner .sp-nav-item.active,
+.sp-nav-inactive-inner .sp-nav-item.tab-focus {
+	opacity:                                                   1;
+}
+
 
 .sp-nav-child {
 	display:                                                   grid;
@@ -874,10 +984,8 @@ input[type="radio"] {
 
 .sp-mobile-logo {
 	display:                                                   block;
-	max-width:                                                 100%;
-	max-height:                                                45px;
-	width:                                                     auto;
-	height:                                                    auto;
+	width:                                                     min(auto, 100%);
+	height:                                                    min(auto, 45px);
 	border-radius:                                             var(--sp-radius-sm);
 }
 
@@ -1141,7 +1249,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
   Cards, tiles & panels
 ==============================================================================*/
 .sp-modal.sp-dir-detail {
-	max-width:                                                 500px;
+	width:                                                     min(100%, 500px);
 }
 
 .sp-panel {
@@ -1157,7 +1265,6 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 }
 
 .sp-panel-header h2 {
-	font-size:                                                 42px;
 	font-weight:                                               800;
 	text-align:                                                left;
 	color:                                                     var(--sp-primary-darkest);
@@ -1168,14 +1275,51 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	padding-top:                                               8px;
 }
 
+/*--------------------------------------------------------------
+# THE CARD SYSTEM — one box, one header, one set of tokens
+#
+# Every panel, settings screen and modal in Site Pulse is built from this. There is
+# deliberately ONE card:
+#
+#   <div class="sp-card [sp-settings-card|sp-table-card|…]">   the box
+#     <div class="sp-card-header"><h3>Title</h3></div>          header  — OR —
+#     <h3>Title</h3>                                            header, bare form
+#     <div class="sp-card-body">…</div>                         content
+#   </div>
+#
+# The two header forms are equivalent: a bare <h3> that is a DIRECT CHILD of any card gets
+# the same tinted, full-bleed band as a wrapped one. Write whichever suits.
+#
+# The one place to be careful: a heading placed INSIDE .sp-card-body is neither, so it
+# renders as plain text jammed against the content. If a card has a title, that title is
+# its header — put it in .sp-card-header or make it a direct child, never inside the body.
+#
+# Modifier classes (sp-settings-card, sp-table-card, sp-email-card, sp-dir-card …) are
+# SEMANTIC MARKERS. They may adjust their own contents. They must NOT redeclare the box —
+# background, border, radius or padding. That is what a second card system looks like, and
+# it is why settings screens had drifted into looking like a different product.
+#
+# To restyle every card in the dashboard, change these and nothing else:
+#   --sp-card-padding · --sp-card-border-radius · --sp-card-border
+#   --sp-card-band · --sp-card-band-text · --sp-card-text
+#
+# Never set spacing on a heading inline (style="margin:…"). An inline style cannot be
+# restyled from here, which defeats the whole arrangement.
+--------------------------------------------------------------*/
+
 .sp-card {
 	background:                                                var(--white);
-	border-radius:                                             var(--card-border-radius);
-	padding:                                                   var(--card-padding);
+	border-radius:                                             var(--sp-card-border-radius);
+	padding:                                                   var(--sp-card-padding);
 	box-shadow:                                                1px 1px 3px var(--sp-button-shadow);
 	border:                                                    1px solid var(--sp-card-border, var(--sp-secondary-color));
 	color:                                                     var(--sp-card-text, var(--sp-text));
 	overflow:                                                  hidden;
+	margin: calc(2 * var(--sp-card-padding)) 0; /* added 8/27 because cards on settings pages were jammed together */
+}
+
+.sp-card.sp-card-item {
+	border:                                                    1px solid var(--sp-card-border, var(--sp-secondary-color));
 }
 
 .sp-card-sm {
@@ -1186,32 +1330,67 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	box-shadow:                                                var(--sp-shadow-sm);
 }
 
+/* The card header band. `.sp-card > h3` is in this list deliberately: a bare <h3> dropped
+   straight into ANY card IS that card's header, so it gets the same tinted, full-bleed band as
+   one wrapped in .sp-card-header. That is what makes the two ways of writing a card render
+   identically, instead of one looking finished and the other crammed in. */
 .sp-card-header,
+.sp-card > h3,
 .sp-card.sp-table-card thead,
 .sp-card-footer,
 .sp-review-reply {
 	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
-	gap:                                                       calc(var(--card-padding) * 0.5);
-	padding:                                                   calc(var(--card-padding) * 0.5) var(--card-padding);
+	gap:                                                       calc(var(--sp-card-padding) * 0.5);
+	padding:                                                   var(--sp-card-padding) calc(10px + var(--sp-card-padding));
 	border-bottom:                                             1px solid var(--sp-card-border, var(--sp-secondary-color));
-	width:                                                     calc(100% + (var(--card-padding) * 2));
-	margin:                                                    calc(-1 * var(--card-padding)) 0 var(--card-padding) calc(-1 * var(--card-padding));
+	box-sizing:                                                border-box;
+	width:                                                     calc(100% + (var(--sp-card-padding) * 2));
+	margin:                                                    calc(-1 * var(--sp-card-padding)) 0 var(--sp-card-padding) calc(-1 * var(--sp-card-padding));
+	/*
+	width:                                                     calc(100% + (var(--sp-card-padding) * 2) + 10px);
+	margin:                                                    calc(-1 * var(--sp-card-padding)) 0 var(--sp-card-padding) calc(-1 * var(--sp-card-padding) - 5px);
+	*/
 }
+
+/* Horizontal bleed is no longer restated here — .sp-modal sets --sp-card-padding, so the base
+   band rule already resolves to the modal's own padding. Only the extra vertical pull-up, which
+   is a deliberate tightening of the space above a modal's header, remains. */
+.sp-modal .sp-card-header,
+.sp-modal .sp-card > h3,
+.sp-modal .sp-card.sp-table-card thead,
+.sp-modal .sp-card-footer,
+.sp-modal .sp-review-reply {
+	margin-top:                                                calc(-1 * var(--sp-card-padding));
+}
+
 
 .sp-card-footer,
 .sp-review-reply {
-	margin:                                                    var(--card-padding) 0 calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding));
+	margin:                                                    var(--sp-card-padding) 0 calc(-1 * var(--sp-card-padding)) calc(-1 * var(--sp-card-padding));
 	border-bottom:                                             none;
 }
 
 .sp-card-header h3,
+.sp-card > h3,
 .sp-card.sp-table-card thead {
-	font-size:                                                 22px;
+	font-size:                                                 var(--font-size-h4);
 	font-weight:                                               bold;
 	color:                                                     var(--sp-card-band-text, var(--sp-secondary-darkest));
 	letter-spacing:                                            1px;
 	text-transform:                                            uppercase;
+	text-align:                                                left;
+}
+
+/* The offset of the heading inside its band. These have to be separate declarations: the
+   WRAPPED heading is a child of the band and nudges itself with margin, while the BARE
+   heading IS the band — its margin is already carrying the negative bleed, so the same
+   nudge has to come from text-indent or the band stops reaching the card edge. */
+.sp-card-header h3 {
 	margin:                                                    2px 0 0 10px;
+}
+
+.sp-card > h3 {
+	text-indent:                                               10px;
 }
 
 .sp-card.sp-table-card thead th {
@@ -1253,11 +1432,11 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 }
 .sp-card.sp-table-card th:first-child,
 .sp-card.sp-table-card td:first-child {
-	padding-left:                                              var(--card-padding);
+	padding-left:                                              var(--sp-card-padding);
 }
 .sp-card.sp-table-card th:last-child,
 .sp-card.sp-table-card td:last-child {
-	padding-right:                                             var(--card-padding);
+	padding-right:                                             var(--sp-card-padding);
 }
 
 .sp-card-drag {
@@ -1269,30 +1448,26 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	line-height:                                               1;
 }
 
-
 .sp-card-item {
 	/* mileage and other expenses do not need padding
-	padding:                                                   calc(var(--card-padding) * 0.5);
+	padding:                                                   calc(var(--sp-card-padding) * 0.5);
 	*/
-	margin:                                                    calc(var(--card-padding) * 0.5) 0;
+	margin:                                                    calc(var(--sp-card-padding) * 0.5) 0;
 	border:                                                    1px solid transparent;
 }
 
-
-.sp-card-body .sp-button {
-	cursor:                                                    pointer;
-	border-radius:                                             var(--sp-radius-sm);
-	transition:                                                all var(--sp-transition);
+.sp-card-body .sp-card-body .sp-form-group.sp-card-item {
+	margin: 0; /* speed of service report */
 }
 
-.sp-card-body .sp-button:hover,
-.sp-card-body .sp-button:focus,
-.sp-card-body .sp-button.active,
-.sp-card-body .sp-button.tab-focus {
-	border:                                                    1px solid var(--sp-secondary-color);
-	border-radius:                                             var(--sp-radius-sm);
-	box-shadow:                                                var(--sp-button-shadow-hover);
-	transform:                                                 none;
+.sp-card-body .sp-button {
+	--button-border-radius:                                    var(--sp-radius-sm);
+	--button-transition:                                       all var(--sp-transition);
+
+	--button-border-hover:                                     1px solid var(--sp-secondary-color);
+	--button-border-radius-hover:                              var(--sp-radius-sm);
+	--button-box-shadow-hover:                                 var(--sp-button-shadow-hover);
+	--button-transform-hover:                                  none;
 }
 
 .sp-card-label {
@@ -1300,7 +1475,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	font-weight:                                               bold;
 	text-transform:                                            uppercase;
 	letter-spacing:                                            1px;
-	color:                                                     var(--secondary-darkest);
+	color:                                                     var(--sp-text);
 }
 
 .sp-card-value {
@@ -1320,8 +1495,8 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 .sp-tile {
 	background:                                                var(--sp-tile-bg, var(--sp-secondary-lightest));
 	border-radius:                                             var(--sp-radius-sm);
-	padding:                                                   calc(var(--card-padding) * 0.5);
-	margin:                                                    var(--card-padding) 0;
+	padding:                                                   calc(var(--sp-card-padding) * 0.5);
+	/*margin:                                                    var(--sp-card-padding) 0;  puts too much space between the tiles on the review page */
 	box-shadow:                                                var(--sp-shadow-sm);
 	border:                                                    1px solid var(--sp-tile-border, var(--sp-secondary-dark));
 	text-align:                                                left;
@@ -1381,12 +1556,10 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 
 .sp-modal {
 	position:                                                  relative;
-	width:                                                     90%;
-	height:                                                    90%;
-	max-width:                                                 1000px;
-	max-height:                                                90vh;
+	width:                                                     min(90%, 1000px);
+	height:                                                    min(90%, 90vh);
 	overflow-y:                                                auto;
-	padding:                                                   30px;
+	padding:                                                   var(--sp-card-padding);
 	background:                                                var(--white);
 	border:                                                    1px solid var(--sp-primary-color);
 	border-radius:                                             24px;
@@ -1396,7 +1569,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 }
 
 .sp-modal h3 {
-	font-size:                                                 20px;
+	font-size:                                                 var(--font-size-h4);
 	font-weight:                                               bold;
 	color:                                                     var(--sp-text);
 	text-transform:                                            none;
@@ -1410,6 +1583,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	line-height:                                               1.5;
 }
 
+.sp-form-group, /* customer connect settings */
 .sp-modal .sp-form-group {
 	margin-bottom:                                             14px;
 }
@@ -1463,8 +1637,8 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 
 .sp-field-list {
 	display:                                                   grid;
-	gap:                                                       calc(var(--card-padding) * 0.5);
-	margin:                                                    calc(var(--card-padding) * 0.5) 0;
+	gap:                                                       calc(var(--sp-card-padding) * 0.5);
+	margin:                                                    calc(var(--sp-card-padding) * 0.5) 0;
 }
 
 .sp-field-item {
@@ -1543,18 +1717,21 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	flex:                                                      2 1 0;
 }
 
+/* Checkbox / radio + its label on ONE centered row. This is where the control lines up with the text —
+   align-items:center does it perfectly for the single-line labels these always are, at every font-size,
+   with zero manual nudging. (Was: a position:relative column with padding-left reserving space for an
+   absolutely-positioned box — the source of the endless translateY fights.) */
 .checkbox-label,
 .radio-label {
 	display:                                                   flex;
-	flex-direction:                                            column;
-	align-items:                                               flex-start;
-	gap:                                                       0;
+	flex-direction:                                            row;
+	align-items:                                               center;
+	gap:                                                       10px;
 	width:                                                     90%;
 	padding:                                                   0;
-	padding-left:                                              calc(var(--sp-checkbox-size) + (8px * 2));
 	border-radius:                                             var(--sp-radius-sm);
 	cursor:                                                    pointer;
-	position:                                                  relative;
+	position:                                                  static;
 }
 
 .sp-input,
@@ -1635,6 +1812,178 @@ textarea:focus,
 	margin:                                                    0 0 16px;
 	padding-bottom:                                            8px;
 	border-bottom:                                             2px solid var(--sp-accent-lightest);
+}
+
+/*==============================================================================
+  Report form — section cards + star ratings
+==============================================================================*/
+
+/* Each template Section renders as a card: a titled header + a body holding its fields. */
+.sp-report-section-card {
+	padding:                                                   0;
+	margin-bottom:                                             18px;
+	overflow:                                                  hidden;
+}
+
+.sp-report-section-card-title {
+	font-size:                                                 var(--font-size-lg);
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+	padding:                                                   calc(var(--sp-card-padding) * 0.5);
+	background:                                                var(--sp-tile-bg, var(--sp-secondary-lightest));
+	border-bottom:                                             1px solid var(--sp-border);
+	text-transform:                                            uppercase;
+}
+
+/*
+border-radius:                                              var(--sp-radius-sm);
+margin:                                                     var(--sp-card-padding) 0;
+box-shadow:                                                 var(--sp-shadow-sm);
+border:                                                     1px solid var(--sp-tile-border, var(--sp-secondary-dark));
+text-align:                                                 left;
+*/
+
+
+.sp-report-section-card > .sp-card-body {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       14px;
+	padding:                                                   16px 18px;
+}
+
+/* Activity Log (Settings → Activity Log): filter bar + audit table. */
+.sp-activity-filters {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	align-items:                                               center;
+	margin-bottom:                                             12px;
+}
+.sp-activity-filters .sp-activity-search {
+	flex:                                                      1 1 220px;
+	min-width:                                                 180px;
+}
+.sp-activity-count {
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+	margin-bottom:                                             8px;
+}
+.sp-activity-when {
+	white-space:                                               nowrap;
+	color:                                                     var(--sp-text-secondary);
+}
+.sp-activity-target {
+	color:                                                     var(--sp-text-secondary);
+	font-style:                                                italic;
+}
+.sp-activity-meta {
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 var(--font-size-sm);
+}
+.sp-activity-pager {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	gap:                                                       12px;
+	margin-top:                                                14px;
+}
+.sp-activity-page {
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+}
+
+/* "Unsaved changes were found — Restore?" banner at the top of a report form (local draft recovery). */
+.sp-draft-banner {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       10px;
+	padding:                                                   10px 14px;
+	margin-bottom:                                             16px;
+	background:                                                var(--sp-accent-lightest);
+	border:                                                    1px solid var(--sp-accent-color);
+	border-radius:                                             var(--sp-radius-sm);
+}
+.sp-draft-banner-text {
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+}
+.sp-draft-banner-btns {
+	display:                                                   flex;
+	gap:                                                       8px;
+	flex:                                                      0 0 auto;
+}
+
+/* Action Items search box — sit inline in the filter row, not full-width. */
+.sp-report-filters .sp-action-search {
+	flex:                                                      0 1 240px;
+	min-width:                                                 150px;
+	width:                                                     auto;
+}
+
+/* Stopwatch field: the stamp button + the stamped "time (elapsed)" value sit on one row. */
+.sp-stopwatch {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+}
+.sp-stopwatch-val {
+	font-weight:                                               700;
+	font-size:                                                 var(--font-size-md);
+	color:                                                     var(--sp-text);
+}
+
+/* Rating field: stars sit UNDER the label (same as the mobile layout) — no wide dead space to the
+   right of the label on desktop. */
+.sp-card-item.sp-field-rating {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               flex-start;
+	gap:                                                       8px;
+}
+
+/* Star rating widget. */
+.sp-stars {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       2px;
+}
+
+button.sp-button.sp-star {
+	--button-background:                                       var(--white);
+	--button-border:                                           1px solid var(--black-lowest);
+	--button-font-size:                                        22px;
+	--button-line-height:                                      0.8;
+	--button-color:                                            var(--black-lowest);
+	--button-box-shadow:                                       none;
+	--button-transition:                                       color 0.12s ease;
+
+	--button-color-hover:                                      var(--sp-btn2-text-hover, var(--sp-accent-darkest));
+	--button-background-hover:                                 var(--sp-btn2-bg-hover, var(--sp-accent-lightest));
+	--button-border-hover:                                     1px solid var(--sp-btn2-border-hover, var(--sp-accent-light));
+
+	width:                                                     60px;
+	height:                                                    30px;
+	margin:                                                    0 5px 0 0;
+	padding:                                                   0 0 4px 0;
+}
+
+button.sp-button.sp-star.on {
+	--button-color:                                            var(--sp-btn2-text-hover, var(--sp-accent-darkest));
+	--button-background:                                       var(--sp-btn2-bg-hover, var(--sp-accent-lightest));
+	--button-border:                                           1px solid var(--sp-btn2-border-hover, var(--sp-accent-light));
+}
+
+button.sp-button.sp-star.locked {
+	--button-color:                                            var(--sp-btn-text, var(--white));
+	--button-background:                                       var(--sp-btn-bg, var(--sp-primary-color));
+	--button-border:                                           1px solid var(--sp-btn-border, var(--sp-primary-color));
+}
+
+button.sp-button.sp-star:hover {
+	--button-box-shadow:                                       var(--sp-button-shadow-hover);
 }
 
 .sp-form-header-actions button {
@@ -1896,9 +2245,10 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	gap:                                                       16px;
 }
 
+/* This looks bad on the Quality & Standards report
 .sp-form-group {
-	margin:                                                    var(--card-padding);
-}
+	margin:                                                    var(--sp-card-padding);
+}*/
 
 .sp-report-form-wrap label,
 .sp-form-group label {
@@ -2019,6 +2369,10 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 .sp-rep-field-value {
 	color:                                                     var(--sp-text);
 	font-size:                                                 var(--font-size-md);
+}
+
+.sp-rep-section-title {
+	font-size:                                                 var(--font-size-h4);
 }
 
 .sp-rep-content .sp-rep-section-title {
@@ -2163,7 +2517,7 @@ body.has-site-pulse .sp-table td.sp-charge-col {
 	position:                                                  sticky;
 	top:                                                       0;
 	z-index:                                                   2;
-	max-width:                                                 8em;
+	width:                                                     min(100%, 8em);
 	white-space:                                               normal;
 	overflow-wrap:                                             break-word;
 	vertical-align:                                            bottom;
@@ -2180,7 +2534,7 @@ body.has-site-pulse .sp-table td.sp-charge-col {
 	position:                                                  sticky;
 	left:                                                      0;
 	z-index:                                                   1;
-	max-width:                                                 14em;
+	width:                                                     min(100%, 14em);
 	overflow:                                                  hidden;
 	text-overflow:                                             ellipsis;
 	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
@@ -2194,8 +2548,8 @@ body.has-site-pulse .sp-table td.sp-charge-col {
 .sp-matrix-table .sp-matrix-corner {
 	left:                                                      0;
 	z-index:                                                   3;
-	min-width:                                                 14em;
-	max-width:                                                 14em;
+	width:                                                     min(100%, 14em);
+	width:                                                     min(100%, 14em);
 }
 
 .sp-matrix-table td {
@@ -2325,12 +2679,30 @@ body.has-site-pulse .sp-table td.sp-charge-col {
 	align-items:                                               start;
 }
 
+/* Expense entry forms (Sections B–F all share these inner classes). They were plain blocks, so the
+   inputs sat flush against each other — lay them out as grids with a gap, like the site's other forms
+   (spacing via gap, not margins). */
+.sp-vexp-fields {
+	display:                                                   grid;
+	gap:                                                       16px;
+}
+.sp-vexp-form-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(180px, 1fr));
+	gap:                                                       16px;
+}
+.sp-vexp-form-actions {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       10px;
+}
+
 .sp-mileage-stops {
 	display:                                                   grid;
 	gap:                                                       14px;
 	border:                                                    1px solid var(--sp-secondary-light);
 	border-radius:                                             var(--sp-radius-sm);
-	padding:                                                   var(--card-padding);
+	padding:                                                   var(--sp-card-padding);
 }
 
 .sp-mileage-stop {
@@ -2386,7 +2758,6 @@ body.has-site-pulse .sp-table td.sp-charge-col {
 
 .checkbox-label.sp-mileage-trailer-toggle {
 	padding:                                                   8px;
-	padding-left:                                              calc(var(--sp-checkbox-size) * 1.5);
 }
 
 .sp-mileage-day-total td.sp-mileage-day-total-label,
@@ -2746,9 +3117,9 @@ input[type="file"].sp-input::file-selector-button:hover {
 	margin:                                                    6px 0 4px;
 }
 .sp-radio-row .sp-radio-inline {
-	position:                                                  relative;
-	display:                                                   block;
-	padding-left:                                              calc(var(--sp-checkbox-size) + 12px);
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
 	margin:                                                    0;
 	min-height:                                                var(--sp-checkbox-size);
 	line-height:                                               var(--sp-checkbox-size);
@@ -2782,9 +3153,12 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 .sp-exp-acct-row .sp-exp-acct-num-in,
 .sp-exp-add-row .sp-exp-acct-num-in {
-	max-width:                                                 150px;
+	width:                                                     min(100%, 150px);
 }
-.sp-exp-acct-cat-in    { flex: 0 1 200px; max-width: 240px; }
+.sp-exp-acct-cat-in    {
+	flex:                                                      0 1 200px;
+	width:                                                     min(100%, 240px);
+}
 .sp-exp-acct-desc-edit,
 .sp-exp-acct-desc-in   { flex: 1 1 240px; min-width: 0; }
 .sp-exp-cat-label      { flex: 1 1 200px; }
@@ -2801,7 +3175,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	display:                                                   grid;
 	grid-template-columns:                                     repeat(auto-fit, minmax(200px, 1fr));
 	gap:                                                       12px;
-	max-width:                                                 760px;
+	width:                                                     min(100%, 760px);
 }
 .sp-exp-mileage-acct {
 	display:                                                   flex;
@@ -2875,7 +3249,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	display:                                                   flex;
 	align-items:                                               center;
 	gap:                                                       8px;
-	max-width:                                                 440px;
+	width:                                                     min(100%, 440px);
 }
 .sp-mileage-purpose-add .sp-input { flex: 1 1 auto; }
 
@@ -2894,8 +3268,8 @@ input[type="file"].sp-input::file-selector-button:hover {
 	background:                                                var(--sp-bg-white);
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   14px;
-	max-width:                                                 min(92vw, 720px);
-	max-height:                                                90vh;
+	width:                                                     min(92vw, 720px);
+	height:                                                    90vh;
 	display:                                                   flex;
 	flex-direction:                                            column;
 	gap:                                                       12px;
@@ -2903,8 +3277,8 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-receipt-modal-box img {
-	max-width:                                                 100%;
-	max-height:                                                76vh;
+	width:                                                     min(100%, 800px);
+	height:                                                    min(100%, 76vh);
 	object-fit:                                                contain;
 	border-radius:                                             var(--sp-radius-xs);
 }
@@ -2954,13 +3328,14 @@ input[type="file"].sp-input::file-selector-button:hover {
 	background:                                                var(--sp-bg-white);
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   18px;
-	max-width:                                                 min(94vw, 860px);
-	max-height:                                                90vh;
+	width:                                                     min(94vw, 860px);
+	height:                                                    min(100%, 90vh);
 	display:                                                   flex;
 	flex-direction:                                            column;
 	gap:                                                       12px;
 	box-shadow:                                                0 20px 60px rgba(0, 0, 0, 0.35);
 }
+
 .sp-toll-modal-title { margin: 0 24px 0 0; }
 .sp-toll-modal-scroll { overflow: auto; }
 .sp-toll-modal-close {
@@ -3059,7 +3434,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	align-items:                                               baseline;
 	gap:                                                       8px 8px;
 	width:                                                     100%;
-	max-width:                                                 400px;
+	width:                                                     min(100%, 400px);
 }
 
 .sp-review-tags {
@@ -3138,21 +3513,27 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-arole-head .sp-arole-module { flex: 0 0 auto; width: auto; }
 .sp-arole-head .sp-tier-count { flex: 0 0 auto; color: var(--sp-text-secondary); font-size: var(--font-size-sm); }
 .sp-arole-note { margin: 0; }
-.sp-arole-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.sp-arole-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 14px; }
 .sp-arole-modgroup {
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-sm);
 	padding:                                                   15px 14px 30px;
+	overflow:                                                  hidden;
 }
+
+
 .sp-arole-modhead {
 	display:                                                   flex;
 	align-items:                                               center;
 	justify-content:                                           space-between;
 	gap:                                                       8px;
-	margin-bottom:                                             10px;
-	padding-bottom:                                            8px;
-	border-bottom:                                             1px solid var(--sp-border);
+	padding:                                                   calc(var(--sp-card-padding) * 0.5);
+	border-bottom:                                             1px solid var(--sp-card-border, var(--sp-secondary-color));
+	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
+	width:                                                     calc(100% + (var(--sp-card-padding) * 2) - 10px);
+	margin:                                                    calc(-0.75 * var(--sp-card-padding)) 0 var(--sp-card-padding) calc(-1 * var(--sp-card-padding) + 5px);
 }
+
 .sp-arole-modtitle {
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
@@ -3195,7 +3576,11 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-pa-master-toggle.tab-focus {
 	background:                                                var(--sp-accent-light);
 }
-.sp-pa-caret { transition: transform 0.15s ease; }
+.sp-pa-caret {
+	transition:                                                transform 0.15s ease;
+	margin-left:                                               8px;
+}
+
 .sp-pa-master-toggle.open .sp-pa-caret { transform: rotate(180deg); }
 /* Expanded body: the accent card that used to always show now only appears when opened. */
 .sp-pa-body {
@@ -3215,6 +3600,42 @@ input[type="file"].sp-input::file-selector-button:hover {
 	color:                                                     var(--sp-accent-dark);
 }
 .sp-pa-cap { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--sp-text-secondary); }
+/* Report form "Who Submits / Who Views": a Roles picker + a People picker, side by side (like the
+   report screen's Grant bar). Wrap on narrow widths. */
+.sp-role-user-row {
+	display:                                                   flex;
+	gap:                                                       8px;
+	align-items:                                               flex-start;
+	flex-wrap:                                                 wrap;
+}
+.sp-role-user-row .sp-report-grant {
+	flex:                                                      1 1 auto;
+}
+.sp-role-user-row .sp-report-grant .sp-pa-toggle {
+	width:                                                     100%;
+}
+
+/* Drop Down field options editor: Custom-list vs Import-a-site-list radios (flow inline; the framework
+   otherwise absolute-positions radios and they'd overlap the labels). */
+.sp-opt-mode {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	margin-bottom:                                             8px;
+}
+.sp-opt-mode-choice {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       6px;
+	cursor:                                                    pointer;
+	font-size:                                                 var(--font-size-text);
+}
+.sp-opt-mode-choice input[type="radio"] {
+	position:                                                  static;
+	margin:                                                    0;
+	flex:                                                      0 0 auto;
+}
+
 .sp-pa-picker { position: relative; }
 .sp-pa-toggle {
 	cursor:                                                    pointer;
@@ -3227,8 +3648,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	z-index:                                                   40;
 	top:                                                       calc(100% + 4px);
 	left:                                                      0;
-	width:                                                     260px;
-	max-width:                                                 80vw;
+	width:                                                     min(260px, 80vw);
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-sm);
@@ -3255,11 +3675,16 @@ input[type="file"].sp-input::file-selector-button:hover {
 	color:                                                     var(--sp-text);
 }
 
+/* Star row height is derived from the platform badge (--sp-review-badge, set on .sp-review-rating)
+   so the two always match. The 1.35 multiplier is because a star GLYPH only fills about
+   three-quarters of its em box — matching the font-size to the badge would render visibly short. */
 .sp-review-stars {
 	color:                                                     var(--sp-primary-color);
-	font-size:                                                 20px;
-	letter-spacing:                                            1px;
+	font-size:                                                 25px;
+	letter-spacing:                                            0;
+	transform:                                                 translateY(-3px);
 	white-space:                                               nowrap;
+	line-height:                                               1;
 }
 
 .sp-review-store {
@@ -3326,11 +3751,91 @@ input[type="file"].sp-input::file-selector-button:hover {
 	width:                                                     90%;
 }
 
+/* "Signed automatically: …" — what the server appends when the reply is posted. */
+.sp-review-reply-sig {
+	font-size:                                                 var(--font-size-sm);
+	font-style:                                                italic;
+	color:                                                     var(--sp-text-light);
+	margin:                                                    6px 5% 0;
+}
+
 .sp-review-reply-formbtns {
 	display:                                                   flex;
 	gap:                                                       8px;
 	margin:                                                    8px 0 16px;
 	justify-content:                                           center;
+}
+
+/*--------------------------------------------------------------
+# Poor-review handling: warning outline, handling notes, close
+--------------------------------------------------------------*/
+
+/* Open 1–3★ review: a bold red outline until it's Marked Closed. */
+.sp-review-card.sp-review-warning {
+	border:                                                    2px solid var(--sp-danger, #c0392b);
+}
+
+/* The date now stamped onto the owner reply label. */
+.sp-review-reply-date {
+	text-transform:                                            none;
+	font-weight:                                               400;
+	letter-spacing:                                            normal;
+	color:                                                     var(--sp-secondary-darkest);
+}
+
+/* Handling notes stack under the owner reply as full-width bands (like the reply itself). */
+.sp-review-reply:has(+ .sp-review-notes) {
+	margin-bottom:                                             0;
+}
+.sp-review-notes {
+	background:                                                var(--sp-card-band, var(--sp-secondary-lightest));
+	width:                                                     calc(100% + (var(--sp-card-padding) * 2));
+	margin:                                                    0 0 calc(-1 * var(--sp-card-padding)) calc(-1 * var(--sp-card-padding));
+	padding:                                                   0 var(--sp-card-padding);
+	border-top:                                                1px solid var(--sp-card-border, var(--sp-secondary-color));
+}
+.sp-review-note {
+	padding:                                                   calc(var(--sp-card-padding) * 0.5) 0;
+}
+.sp-review-note + .sp-review-note {
+	border-top:                                                1px solid var(--sp-card-border, var(--sp-secondary-color));
+}
+.sp-review-note-meta {
+	display:                                                   block;
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-light);
+	margin-bottom:                                             2px;
+}
+.sp-review-note-date {
+	font-weight:                                               700;
+	color:                                                     var(--sp-secondary-darkest);
+}
+.sp-review-note p {
+	margin:                                                    0;
+	color:                                                     var(--sp-text);
+}
+
+/* Add-note form (mirrors the reply form). */
+.sp-review-note-form {
+	margin:                                                    12px 0 0;
+}
+.sp-review-note-input {
+	resize:                                                    vertical;
+	margin:                                                    0 5%;
+	width:                                                     90%;
+}
+.sp-review-note-formbtns {
+	display:                                                   flex;
+	gap:                                                       8px;
+	margin:                                                    8px 0 16px;
+	justify-content:                                           center;
+}
+
+/* "✓ Closed" tag shown to non-managers once a poor review is resolved. */
+.sp-review-closed-tag {
+	font-size:                                                 var(--font-size-text);
+	font-weight:                                               600;
+	color:                                                     var(--sp-success);
 }
 
 .sp-reviews-summary {
@@ -3387,7 +3892,11 @@ input[type="file"].sp-input::file-selector-button:hover {
 	margin-top:                                                0;
 }
 
+/* One knob for the whole rating row — the platform logo and the star glyphs both size off it.
+   The JS emits matching width/height attributes as the intrinsic size (so nothing jumps before
+   CSS applies); these rules are what actually govern the rendered size. */
 .sp-review-rating {
+	--sp-review-badge:                                         25px;
 	display:                                                   inline-flex;
 	align-items:                                               center;
 	gap:                                                       6px;
@@ -3396,6 +3905,8 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-review-platform-icon {
 	display:                                                   block;
 	flex-shrink:                                               0;
+	width:                                                     var(--sp-review-badge, 25px);
+	height:                                                    var(--sp-review-badge, 25px);
 }
 
 .sp-reviews-analyze-status {
@@ -3474,7 +3985,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 .sp-survey-loc-row .sp-survey-bars {
-	max-width:                                                 280px;
+	width:                                                     min(100%, 280px);
 }
 
 /* Single stacked satisfaction bar per store: red (1-3) | yellow (4) | green (5), widths = share. */
@@ -4374,13 +4885,25 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	display:                                                   flex;
 	flex-direction:                                            column;
 	gap:                                                       8px;
-	width:                                                     calc(100% + (2 * var(--card-padding)));
+	width:                                                     calc(100% + (2 * var(--sp-card-padding)));
 	margin-top:                                                1px;
-	margin-left:                                               calc(-1 * var(--card-padding));
-	padding:                                                   var(--card-padding);
+	margin-left:                                               calc(-1 * var(--sp-card-padding));
+	padding:                                                   var(--sp-card-padding);
 }
 
-.sp-msg-bubble { max-width: 72%; position: relative; }
+/* Pager above the oldest loaded bubble. A flex child of the column, so it has to opt out of stretching
+   and out of shrinking (it sits in a scroller full of taller bubbles). Look comes from .sp-btn-ghost. */
+.sp-msg-load-older {
+	align-self:                                                center;
+	flex:                                                      0 0 auto;
+	margin-bottom:                                             4px;
+	font-size:                                                 var(--font-size-sm);
+}
+
+.sp-msg-bubble {
+	max-width:                                                 72%;
+	position:                                                  relative;
+}
 
 .sp-msg-bubble.theirs { align-self: flex-start; }
 
@@ -4434,8 +4957,8 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 }
 
 .sp-msg-attach-img img {
-	max-width:                                                 220px;
-	max-height:                                                220px;
+	width:                                                     min(100%, 220px);
+	height:                                                    min(100%, 220px);
 	border-radius:                                             var(--sp-radius);
 	display:                                                   block;
 	image-orientation:                                         from-image; /* honor EXIF for pre-fix uploads */
@@ -4463,7 +4986,12 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-msg-attach-file:hover { text-decoration: underline; }
 
 /* Attachment preview popup (uses spFormModal). */
-.sp-attach-modal { display: flex; flex-direction: column; gap: 14px; max-width: 100%; }
+.sp-attach-modal {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       14px;
+	width:                                                     min(100%, 1000px);
+}
 
 .sp-attach-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 
@@ -4471,7 +4999,13 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-attach-modal-body { display: flex; justify-content: center; }
 
-.sp-attach-modal-img { max-width: 100%; max-height: 70vh; border-radius: var(--sp-radius); display: block; image-orientation: from-image; }
+.sp-attach-modal-img {
+	width:                                                     min(100%, 800px);
+	height:                                                    min(100%, 70vh);
+	border-radius:                                             var(--sp-radius);
+	display:                                                   block;
+	image-orientation:                                         from-image;
+}
 
 .sp-attach-modal-frame { width: 100%; height: 70vh; border: 1px solid var(--sp-border); border-radius: var(--sp-radius); }
 
@@ -4632,7 +5166,6 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .checkbox-label.sp-msg-contact-pick {
 	padding:                                                   8px;
-	padding-left:                                              calc(var(--sp-checkbox-size) + calc(2 * 8px));
 }
 
 .sp-msg-contact-pick:hover {
@@ -5131,6 +5664,82 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	border-radius:                                             24px;
 	box-shadow:                                                1px 1px 3px var(--sp-button-shadow);
 }
+
+/* Jumped to from a line in the AI summary — pulses so the eye lands on the right card. */
+.sp-action-item.sp-action-flash { animation: sp-action-flash 2.6s ease-out; }
+
+@keyframes sp-action-flash {
+	0%, 55% { box-shadow: 0 0 0 3px var(--sp-accent-color); background: var(--sp-accent-lightest); }
+	100%    { box-shadow: 1px 1px 3px var(--sp-button-shadow); background: var(--white); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sp-action-item.sp-action-flash { animation: none; box-shadow: 0 0 0 3px var(--sp-accent-color); }
+}
+
+/* ── AI summary of the open action items ─────────────────────────────────────────────────────────── */
+
+.sp-summary-scope { margin: 0 0 10px; }
+
+/* The saved brief predates the list's current state. */
+.sp-summary-stale {
+	margin:                                                    0 0 12px;
+	padding:                                                   10px 14px;
+	background:                                                var(--sp-warning-light);
+	border-left:                                               3px solid var(--sp-warning);
+	border-radius:                                             var(--sp-radius);
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text);
+}
+
+.sp-summary-overview {
+	margin:                                                    0 0 18px;
+	padding:                                                   12px 16px;
+	background:                                                var(--sp-secondary-lightest);
+	border-radius:                                             var(--sp-radius);
+	color:                                                     var(--sp-text);
+	line-height:                                               1.5;
+}
+
+.sp-summary-group { margin-bottom: 16px; }
+
+.sp-summary-group-title {
+	margin:                                                    0 0 6px;
+	font-size:                                                 var(--font-size-sm);
+	font-weight:                                               700;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-summary-list { margin: 0; padding: 0; list-style: none; }
+
+.sp-summary-list li {
+	padding:                                                   6px 0;
+	border-bottom:                                             1px solid var(--sp-secondary-light);
+}
+
+.sp-summary-list li:last-child { border-bottom: none; }
+
+/* The clickable variant jumps to the source card, so it reads as a link rather than a button. */
+.sp-summary-line,
+.sp-summary-line-plain {
+	display:                                                   block;
+	width:                                                     100%;
+	text-align:                                                left;
+	background:                                                none;
+	border:                                                    0;
+	padding:                                                   0;
+	font:                                                      inherit;
+	color:                                                     var(--sp-text);
+	line-height:                                               1.45;
+}
+
+.sp-summary-line { cursor: pointer; }
+
+.sp-summary-line:hover,
+.sp-summary-line.active,
+.sp-summary-line.tab-focus { color: var(--sp-accent-dark); text-decoration: underline; }
 
 .sp-action-item.sp-priority-high {
 	border-left-color:                                         var(--sp-priority-high);
@@ -5650,9 +6259,19 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-ai-chat { border: 1px solid var(--sp-border); border-radius: var(--sp-radius); padding: 14px; min-height: 240px; max-height: 52vh; overflow-y: auto; background: var(--sp-bg-white, #fff); display: flex; flex-direction: column; gap: 10px; }
 
-.sp-ai-empty { color: var(--sp-text-light); margin: auto; text-align: center; max-width: 440px; }
+.sp-ai-empty {
+	color:                                                     var(--sp-text-light);
+	margin:                                                    auto;
+	text-align:                                                center;
+	width:                                                     min(100%, 440px);
+}
 
-.sp-ai-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; line-height: 1.5; }
+.sp-ai-msg {
+	width:                                                     min(850%, 600px);
+	padding:                                                   10px 14px;
+	border-radius:                                             12px;
+	line-height:                                               1.5;
+}
 
 .sp-ai-user { align-self: flex-end; background: var(--sp-accent-lightest); }
 
@@ -5924,6 +6543,25 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-push-prompt .sp-push-state { font-size: 13px; color: var(--sp-text); }
 
+/* "Text me when I miss a chat message" — opt-in + phone + personal overrides, in the bell panel. */
+.sp-sms-alerts[hidden] { display: none; }
+.sp-sms-alerts {
+	padding:                                                   12px 14px;
+	border-bottom:                                             1px solid var(--sp-border);
+	background:                                                var(--sp-secondary-lightest);
+	font-size:                                                 13px;
+}
+.sp-sms-optin { display: flex; align-items: flex-start; gap: 8px; font-weight: 600; color: var(--sp-text); cursor: pointer; }
+.sp-sms-optin input { margin-top: 2px; }
+.sp-sms-body { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.sp-sms-body[hidden] { display: none; }
+.sp-sms-field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; color: var(--sp-text-soft); }
+.sp-sms-field .sp-input, .sp-sms-field .sp-select { font-weight: 400; }
+.sp-sms-quiet-times { display: flex; gap: 12px; flex-wrap: wrap; }
+.sp-sms-quiet-times[hidden] { display: none; }
+.sp-sms-quiet-times label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sp-text-soft); }
+.sp-sms-actions { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+
 /* Dashboard important-message banners — surfaced from the Notifications matrix' "Dashboard" column.
    Stacked at the top of the dashboard, primary accent, with an X to acknowledge/dismiss. */
 .sp-dash-messages {
@@ -6066,7 +6704,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-widget-header h3 {
 	margin:                                                    0;
-	font-size:                                                 20px;
+	font-size:                                                 var(--font-size-h4);
 	margin:                                                    2px 0 0 10px;
 }
 
@@ -6169,6 +6807,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-widget {
 	overflow:                                                  hidden;
+	margin:                                                    0;
 }
 
 .sp-widget-full {
@@ -6198,13 +6837,17 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 .sp-widget-body {
 	max-height:                                                320px;
 	overflow-y:                                                auto;
-	width:                                                     calc(100% + (2 * var(--card-padding)));
-	margin-left:                                               calc(-1 * var(--card-padding));
+}
+
+#sp-widget-actions .sp-card-body,
+#sp-widget-chat .sp-card-body {
+	width:                                                     calc(100% + (2 * var(--sp-card-padding)));
+	margin-left:                                               calc(-1 * var(--sp-card-padding));
 }
 
 .sp-dashboard-widgets .sp-card-item:not(.sp-card-grid):not(.sp-widget-empty):not(.sp-widgetdir-filters):not(.sp-widgetdir-searchrow) {
 	border-bottom:                                             1px solid var(--sp-secondary-light);
-	margin:                                                    calc(var(--card-padding) * 0.5);
+	margin:                                                    calc(var(--sp-card-padding) * 0.5);
 }
 
 /*==============================================================================
@@ -6231,8 +6874,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-forms-search {
 	flex:                                                      0 0 auto;
-	width:                                                     200px;
-	max-width:                                                 100%;
+	width:                                                     min(100%, 200px);
 }
 
 /* Upload / replace form card */
@@ -6442,6 +7084,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 
 .sp-forms-cat-row {
 	display:                                                   flex;
+	flex-wrap:                                                 wrap;
 	align-items:                                               center;
 	gap:                                                       0.7em;
 }
@@ -6468,9 +7111,15 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	cursor:                                                    grabbing;
 }
 
+/* Explicit flex-basis (not `auto`) so the name input sizes from the flex row, NOT from .sp-input's
+   width:100% — otherwise it demands the whole line and pushes the toggle/trash/sub-folders to wrap. */
+/* Basis 0 + min-width 0 so the name input NEVER crowds the toggle/trash off the line — it just fills
+   the space left after the fixed items (count/toggle/trash), which stay on row 1. Sub-folders (basis
+   100%) is the only thing that wraps to row 2. */
 .sp-forms-cat-label {
-	flex:                                                      1 1 auto;
-	max-width:                                                 24em;
+	flex:                                                      1 1 0;
+	min-width:                                                 0;
+	width:                                                     auto;
 }
 
 .sp-forms-cat-status.sp-forms-cat-err {
@@ -6555,7 +7204,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	display:                                                   flex;
 	align-items:                                               center;
 	gap:                                                       8px;
-	margin:                                                    8px 0 0;
+	margin:                                                    0;
 	padding-left:                                              24px;
 }
 
@@ -6622,7 +7271,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	--input-background:                                        rgba(255,255,255,0.15);
 	--input-color:                                             var(--white);
 	font-family:                                               var(--font-text);
-	max-width:                                                 350px;
+	width:                                                     min(100%, 350px);
 }
 
 /* Inverted dropdown list: white options / black text; the role dividers (optgroup labels) are the
@@ -6704,7 +7353,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 }
 
 .sp-users-search {
-	max-width:                                                 22em;
+	width:                                                     min(100%, 22em);
 }
 
 .sp-users-table th.sp-users-sort::after {
@@ -6736,16 +7385,23 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 }
 
 /* Settings sections — each wrapped in a consistent card. */
-.sp-settings-card {
-	background:                                                var(--sp-bg-white);
-	border:                                                    1px solid var(--sp-border);
-	border-radius:                                             var(--sp-radius);
-	padding:                                                   20px 24px;
-	margin-bottom:                                             20px;
-}
+/* .sp-settings-card is a SEMANTIC MARKER, not a second box. It used to redeclare background,
+   border, radius and padding — a parallel card system — which is why settings screens drifted
+   away from the rest of the dashboard and had to be patched by hand. The box now comes from
+   .sp-card alone, so editing --sp-card-padding / --sp-card-border-radius restyles every card
+   in Site Pulse at once.
+
+   The padding override mattered more than it looked: the header band bleeds to the card edge
+   using negative margins of --sp-card-padding, so a card padded 20px/24px pushed its own band
+   4px in on each side. Anything that changes card padding must change that token, not one card. */
 
 .sp-settings-card:last-child {
 	margin-bottom:                                             0;
+}
+
+.sp-settings-card h3,
+.sp-settings-card h4 {
+	--h-text-align:                                            left;
 }
 
 .sp-admin-table-wrap {
@@ -6783,7 +7439,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius);
 	padding:                                                   20px;
-	margin-bottom:                                             16px;
+	margin:                                                    var(--sp-card-padding);
 }
 
 .sp-module-row {
@@ -6792,13 +7448,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 
 .sp-tile.sp-settings-tile {
 	margin-bottom:                                             16px;
-}
-
-/* Tiers run ACROSS as side-by-side columns; each column's caps stack DOWN. */
-.sp-tier-list {
-	display:                                                   flex;
-	flex-direction:                                            column;
-	gap:                                                       16px;
 }
 
 .sp-tier-card {
@@ -6916,7 +7565,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 
 .sp-roles-user-picker select {
 	display:                                                   block;
-	max-width:                                                 340px;
+	width:                                                     min(100%, 340px);
 }
 
 /* Per-user permission override grid in the Edit User popup: label · role default · this user. */
@@ -7043,6 +7692,65 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	padding-top:                                               12px;
 }
 
+/* Report cards: drag-to-reorder handle + collapse-to-title. -------------------------------------- */
+.sp-template-list {
+	display:                                                   block;
+}
+
+/* Left side of the header: drag handle + title/status; right side: chevron + edit + delete. */
+.sp-template-head-main {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	min-width:                                                 0; /* let the title truncate, not overflow */
+}
+.sp-template-title {
+	min-width:                                                 0;
+}
+.sp-template-head-actions {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+}
+
+.sp-template-drag {
+	cursor:                                                    grab;
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 var(--font-size-md);
+	flex:                                                      0 0 auto;
+	user-select:                                               none;
+}
+
+/* Collapse chevron rotates to point up when the card is open. */
+.sp-template-collapse-btn svg {
+	width:                                                     18px;
+	height:                                                    18px;
+	display:                                                   block;
+	transition:                                                transform 0.2s ease;
+}
+.sp-template-card.sp-open .sp-template-collapse-btn svg {
+	transform:                                                 rotate(180deg);
+}
+
+/* Collapsed: only the header (title + buttons) shows. Open: reveal the body. */
+.sp-template-body {
+	display:                                                   none;
+}
+.sp-template-card.sp-open .sp-template-body {
+	display:                                                   block;
+}
+/* When collapsed, drop the header's bottom gap so the card hugs the title row. */
+.sp-template-card:not(.sp-open) .sp-template-card-header {
+	margin-bottom:                                             0;
+}
+
+.sp-template-card.sp-dragging {
+	opacity:                                                   0.4;
+}
+.sp-template-card.sp-drag-over {
+	border-top:                                                2px solid var(--sp-accent-color);
+}
+
 .sp-settings-card-header h3 {
 	margin:                                                    0;
 }
@@ -7053,12 +7761,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	display:                                                   flex;
 	flex-wrap:                                                 wrap;
 	gap:                                                       8px;
-}
-
-.sp-settings-card-body {
-	border-top:                                                1px solid var(--sp-border);
-	padding-top:                                               16px;
-	margin-top:                                                12px;
 }
 
 .sp-settings-card-body > h4:first-child,
@@ -7109,7 +7811,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 }
 
 .sp-admin-mileage-rate .sp-input {
-	max-width:                                                 170px;
+	width:                                                     min(100%, 170px);
 }
 
 .sp-api-row {
@@ -7295,7 +7997,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	left:                                                      50%;
 	bottom:                                                    24px;
 	z-index:                                                   2000;
-	max-width:                                                 90vw;
+	width:                                                     min(100%, 90vw);
 	padding:                                                   12px 18px;
 	border-radius:                                             var(--sp-radius);
 	background:                                                var(--sp-text);
@@ -7661,6 +8363,10 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 }
 
 @media (max-width: 576px) {
+	/* Three controls plus the heading won't share a row on a phone — stack them under it. */
+	body .sp-summary-modal .sp-report-form-header { grid-template-columns: 1fr; gap: 10px; }
+	body .sp-summary-modal .sp-panel-header-actions { justify-content: flex-start; }
+
 	body .sp-mileage-form-top { grid-template-columns: 1fr; gap: 14px; }
 
 	body .sp-survey-loc-row    { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -7834,12 +8540,13 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 
 	.sp-matrix-table thead th {
 		max-width:                                                6em;
+		width:                                                    min(100%, 6em);
 	}
 
 	.sp-matrix-rowhead,
 	.sp-matrix-table .sp-matrix-corner {
-		max-width:                                                9em;
-		min-width:                                                9em;
+		width:                                                    min(100%, 9em);
+		height:                                                   min(100%, 9em);
 	}
 
 	.sp-mileage-stop {
@@ -8111,7 +8818,9 @@ body.sp-printing-mileage .sp-notification-panel {
 .sp-row-actions { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: flex-end; align-items: center; }
 
 /* Multi-option confirm dialog (spChoiceDialog) — e.g. delete-for-everyone vs just-remove-me. */
-.sp-choice-dialog { max-width: 460px; }
+.sp-choice-dialog {
+	width:                                                     min(100%, 460px);
+}
 .sp-choice-msg { margin: 4px 0 16px; color: var(--sp-text); }
 .sp-choice-actions { display: flex; flex-direction: column; gap: 10px; }
 .sp-choice-actions .sp-btn { width: 100%; }
@@ -8148,6 +8857,14 @@ body.sp-printing-mileage .sp-notification-panel {
 }
 mark.sp-msg-search-hit { background: #ffe066; color: #1a1a1a; border-radius: 2px; padding: 0 1px; }
 mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow: 0 0 0 2px rgba(255,159,28,0.45); }
+
+/* The message the find bar is currently sitting on. Outline (not border/shadow) so nothing reflows, and
+   it's the only cue when the match was on an ATTACHMENT NAME — no body text to highlight. */
+.sp-msg-bubble.sp-msg-current-hit {
+	outline:                                                   2px solid #ff9f1c;
+	outline-offset:                                            3px;
+	border-radius:                                             4px;
+}
 
 /* ---------------------------------------------------------------------------
    Expense report approval workflow — submit bar/pills, queue, archive, locks
@@ -8249,3 +8966,911 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 /* Archive rows — clickable to open, PDF button on the right. */
 .sp-arch-row { cursor: pointer; }
 .sp-arch-row:hover > td { background: var(--sp-primary-lightest); }
+
+/*--------------------------------------------------------------
+# Site Fleet — agency/hub view: one card per Battle Plan site
+#
+# Card collapses to name + chips + a metric strip; clicking the head opens the
+# detail (last audit summary, versions, jump links). Everything is token-driven —
+# no literal colors, so it follows the color engine like every other panel.
+--------------------------------------------------------------*/
+
+.sp-fleet-list {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       10px;
+}
+
+.sp-fleet-card {
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	overflow:                                                  hidden;
+	transition:                                                var(--sp-transition);
+}
+
+.sp-fleet-card:hover { border-color: var(--sp-primary-light); }
+
+/* A site that has never reported is real but unverified — dim it rather than hide it. */
+.sp-fleet-silent { opacity: 0.72; }
+
+.sp-fleet-head {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       16px;
+	padding:                                                   14px 18px;
+	cursor:                                                    pointer;
+}
+
+.sp-fleet-id { min-width: 0; flex: 1 1 220px; }
+
+.sp-fleet-name {
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+	white-space:                                               nowrap;
+}
+
+.sp-fleet-chips {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px;
+	margin-top:                                                6px;
+}
+
+.sp-fleet-chip {
+	display:                                                   inline-block;
+	padding:                                                   2px 9px;
+	border-radius:                                             var(--sp-radius-pill);
+	font-size:                                                 0.72em;
+	font-weight:                                               600;
+	line-height:                                               1.6;
+}
+
+.sp-fleet-chip-bad  { background: var(--sp-danger-light);  color: var(--sp-danger); }
+.sp-fleet-chip-warn { background: var(--sp-warning-light); color: var(--sp-warning); }
+.sp-fleet-chip-info { background: var(--sp-primary-lightest); color: var(--sp-primary-dark); }
+
+.sp-fleet-metrics {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       22px;
+	flex:                                                      0 1 auto;
+}
+
+.sp-fleet-metric { min-width: 0; }
+
+.sp-fleet-metric-label {
+	font-size:                                                 0.68em;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-fleet-metric-value {
+	font-size:                                                 0.92em;
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+	white-space:                                               nowrap;
+}
+
+.sp-fleet-delta { font-weight: 600; font-size: 0.85em; }
+.sp-fleet-delta-pos     { color: var(--sp-trend-pos); }
+.sp-fleet-delta-neg     { color: var(--sp-trend-neg); }
+.sp-fleet-delta-neutral { color: var(--sp-trend-neutral); }
+
+.sp-fleet-metric-spark { color: var(--sp-primary-color); }
+.sp-fleet-spark        { width: 90px; height: 24px; display: block; }
+
+/* Detail — closed by default, opened by .sp-fleet-open on the card. */
+.sp-fleet-detail { display: none; padding: 0 18px 16px; border-top: 1px solid var(--sp-border); }
+.sp-fleet-open .sp-fleet-detail { display: block; }
+
+.sp-fleet-summary {
+	margin:                                                    14px 0 12px;
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 0.92em;
+	line-height:                                               1.55;
+}
+
+.sp-fleet-meta {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       16px;
+	margin-bottom:                                             12px;
+	font-size:                                                 0.8em;
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-fleet-links { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.sp-fleet-shown {
+	align-self:                                                center;
+	font-size:                                                 0.82em;
+	color:                                                     var(--sp-text-light);
+}
+
+@media (max-width: 1024px) {
+	.sp-fleet-head    { flex-wrap: wrap; }
+	.sp-fleet-metrics { width: 100%; gap: 18px; overflow-x: auto; }
+}
+
+@media (max-width: 576px) {
+	.sp-fleet-metric-spark { display: none; }
+}
+
+
+/*--------------------------------------------------------------
+# Booking — Setup screen (Settings → Booking)
+# Every color is a token so the whole screen re-themes with the install's scheme.
+--------------------------------------------------------------*/
+
+/* The old .sp-book-section-head put the heading and its button in one flex row and pushed
+   the LAST child to the end. In a section with no button the heading WAS the last child, so
+   "Availability" and "Preview Availability" shoved themselves to the right margin. The setup
+   screen now follows the settings-card pattern instead: centred h3, help line, then the action
+   on its own row — which has no such failure mode because nothing is positioned by sibling count.
+
+   flex, not grid: a single button that should sit at the end of its own row. */
+.sp-book-card-actions {
+	display:                                                   flex;
+	justify-content:                                           flex-end;
+	margin:                                                    0 0 10px;
+}
+
+/* A save button belongs AFTER the thing it saves, so this variant sits below its content. */
+.sp-book-card-actions-end {
+	margin:                                                    16px 0 0;
+}
+
+.sp-book-subhead {
+	margin:                                                    24px 0 6px;
+}
+
+.sp-book-sub {
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-book-actions {
+	display:                                                   flex;
+	gap:                                                       4px;
+	justify-content:                                           flex-end;
+}
+
+/* Modal forms — a two-up grid of short fields, collapsing on narrow screens. */
+.sp-book-form-grid {
+	display:                                                   grid;
+	/* 170px, not 150: a two-word label has to fit on ONE line, or its unit hint drops to a
+	   third line and that column's input no longer lines up with its neighbours. */
+	grid-template-columns:                                     repeat(auto-fit, minmax(170px, 1fr));
+	gap:                                                       0 12px;
+}
+
+.sp-book-form-msg {
+	color:                                                     var(--sp-danger);
+	font-size:                                                 var(--font-size-xs);
+}
+
+.sp-book-picklist {
+	display:                                                   grid;
+	gap:                                                       2px;
+	max-height:                                                180px;
+	overflow-y:                                                auto;
+	padding:                                                   6px 8px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-check-row {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin:                                                    6px 0;
+	font-size:                                                 var(--font-size-text);
+	color:                                                     var(--sp-text);
+	cursor:                                                    pointer;
+}
+
+/* Weekly hours — one row per weekday: toggle, start, end. */
+.sp-book-hours-grid {
+	display:                                                   grid;
+	gap:                                                       6px;
+	margin-bottom:                                             12px;
+}
+
+.sp-book-hours-row {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(120px, 160px) auto max-content auto;
+	align-items:                                               center;
+	gap:                                                       10px;
+}
+
+.sp-book-hours-row .sp-input {
+	width:                                                     min(100%, 150px);
+}
+
+.sp-book-day-toggle {
+	margin:                                                    0;
+}
+
+/* A day that's off stays visible but reads as inactive — you can see the whole week at once. */
+.sp-book-day-off {
+	opacity:                                                   0.5;
+}
+
+.sp-book-dash {
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 var(--font-size-xs);
+}
+
+/* Preview — the engine's actual output. */
+.sp-book-preview-summary {
+	padding:                                                   10px 14px;
+	margin-bottom:                                             12px;
+	background:                                                var(--sp-secondary-lightest);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-preview-days {
+	display:                                                   grid;
+	gap:                                                       8px;
+}
+
+.sp-book-preview-day {
+	padding:                                                   10px 14px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-book-day-empty {
+	background:                                                var(--sp-bg);
+}
+
+.sp-book-preview-date {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin-bottom:                                             6px;
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+}
+
+.sp-book-slot-count {
+	margin-inline-start:                                       auto;
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               500;
+	color:                                                     var(--sp-text-light);
+}
+
+/* flex, not grid: slot pills are different widths and should wrap packed, not column-aligned. */
+.sp-book-slots {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px;
+}
+
+.sp-book-slot {
+	padding:                                                   4px 10px;
+	background:                                                var(--sp-secondary-lightest);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-pill);
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text);
+	white-space:                                               nowrap;
+}
+
+.sp-book-nowhy {
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-light);
+	font-style:                                                italic;
+}
+
+
+/*--------------------------------------------------------------
+# Booking — Calendar, list and detail
+# Agenda-style rather than a pixel-positioned time grid (see the JS note): chips
+# and rows in time order, which behaves at every width with no layout arithmetic.
+--------------------------------------------------------------*/
+
+/* One more status tint than the shared set carries — a no-show is a negative
+   outcome, distinct from the warning tint that means "not finished yet". */
+.sp-status-danger {
+	background:                                                var(--sp-danger-light);
+	color:                                                     var(--sp-danger);
+}
+
+/* Day view — a time column beside the booking. */
+.sp-book-agenda {
+	display:                                                   grid;
+	gap:                                                       6px;
+}
+
+.sp-book-agenda-row {
+	display:                                                   grid;
+	grid-template-columns:                                     90px 1fr auto;
+	align-items:                                               center;
+	gap:                                                       14px;
+	width:                                                     100%;
+	padding:                                                   12px 14px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	text-align:                                                left;
+	font-family:                                               var(--font-text);
+	cursor:                                                    pointer;
+	transition:                                                all var(--sp-transition);
+}
+
+.sp-book-agenda-row:hover,
+.sp-book-agenda-row.active,
+.sp-book-agenda-row.tab-focus {
+	border-color:                                              var(--sp-primary);
+	box-shadow:                                                var(--sp-shadow-sm);
+}
+
+.sp-book-agenda-time {
+	display:                                                   grid;
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+}
+
+.sp-book-agenda-time small {
+	font-weight:                                               400;
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-book-agenda-main {
+	display:                                                   grid;
+	gap:                                                       2px;
+	min-width:                                                 0;
+	color:                                                     var(--sp-text);
+}
+
+.sp-book-agenda-sub {
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-secondary);
+}
+
+/* Week view — seven equal columns of chips. */
+.sp-book-week {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(7, minmax(0, 1fr));
+	gap:                                                       6px;
+}
+
+.sp-book-col {
+	display:                                                   grid;
+	grid-template-rows:                                        auto 1fr;
+	gap:                                                       6px;
+	min-width:                                                 0;
+}
+
+.sp-book-col-head {
+	display:                                                   grid;
+	justify-items:                                             center;
+	padding:                                                   6px 0;
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg);
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               700;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-col-head span {
+	font-size:                                                 var(--font-size-text);
+	color:                                                     var(--sp-text);
+}
+
+.sp-book-today .sp-book-col-head,
+.sp-book-month-cell.sp-book-today {
+	background:                                                var(--sp-secondary-lightest);
+	box-shadow:                                                inset 0 0 0 1px var(--sp-primary);
+}
+
+.sp-book-col-body {
+	display:                                                   grid;
+	grid-auto-rows:                                            min-content;
+	gap:                                                       4px;
+}
+
+.sp-book-col-empty {
+	text-align:                                                center;
+	color:                                                     var(--sp-text-light);
+	font-size:                                                 var(--font-size-xs);
+}
+
+/* Month view — a 7-across grid, header row included. */
+.sp-book-month {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(7, minmax(0, 1fr));
+	gap:                                                       4px;
+}
+
+.sp-book-month-dow {
+	padding:                                                   4px 0;
+	text-align:                                                center;
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               700;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-month-cell {
+	display:                                                   grid;
+	grid-auto-rows:                                            min-content;
+	gap:                                                       3px;
+	min-height:                                                86px;
+	padding:                                                   5px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-book-month-date {
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               700;
+	color:                                                     var(--sp-text-secondary);
+}
+
+/* Days from the neighbouring months stay visible but recede. */
+.sp-book-outside {
+	opacity:                                                   0.45;
+}
+
+.sp-book-more {
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-light);
+}
+
+/* The chip used in week + month cells. */
+.sp-book-chip {
+	display:                                                   grid;
+	grid-template-columns:                                     auto minmax(0, 1fr);
+	align-items:                                               baseline;
+	gap:                                                       5px;
+	width:                                                     100%;
+	padding:                                                   3px 7px;
+	border:                                                    none;
+	border-radius:                                             var(--sp-radius-sm);
+	font-family:                                               var(--font-text);
+	font-size:                                                 var(--font-size-xs);
+	text-align:                                                left;
+	cursor:                                                    pointer;
+	transition:                                                filter var(--sp-transition);
+}
+
+.sp-book-chip:hover,
+.sp-book-chip.active,
+.sp-book-chip.tab-focus {
+	filter:                                                    brightness(0.94);
+}
+
+.sp-book-chip-time {
+	font-weight:                                               700;
+	white-space:                                               nowrap;
+}
+
+.sp-book-chip-name {
+	overflow:                                                  hidden;
+	text-overflow:                                             ellipsis;
+	white-space:                                               nowrap;
+}
+
+/* List rows open the same detail modal the chips do. */
+.sp-book-row {
+	cursor:                                                    pointer;
+}
+
+.sp-book-row:hover,
+.sp-book-row.active,
+.sp-book-row.tab-focus {
+	background:                                                var(--sp-secondary-lightest);
+}
+
+/* A picked slot in the New Booking / Reschedule pickers. */
+.sp-book-slot-pick {
+	cursor:                                                    pointer;
+	font-family:                                               var(--font-text);
+}
+
+.sp-book-slot-pick small {
+	display:                                                   block;
+	font-size:                                                 10px;
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-book-slot-pick.active {
+	background:                                                var(--sp-primary);
+	border-color:                                              var(--sp-primary);
+	color:                                                     var(--sp-primary-contrast);
+}
+
+.sp-book-slot-pick.active small {
+	color:                                                     var(--sp-primary-contrast);
+}
+
+.sp-book-note {
+	padding:                                                   8px 10px;
+	background:                                                var(--sp-bg);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-text);
+	color:                                                     var(--sp-text);
+}
+
+/* flex, not grid: the action buttons are different widths and should wrap packed. */
+.sp-book-detail-actions {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	margin:                                                    12px 0 6px;
+}
+
+@media (max-width: 860px) {
+
+	/* Seven columns don't fit a phone — the week becomes a scroller, not seven slivers. */
+	.sp-book-week {
+		grid-template-columns:                                    none;
+		grid-auto-flow:                                           column;
+		grid-auto-columns:                                        minmax(140px, 1fr);
+		overflow-x:                                               auto;
+	}
+
+	.sp-book-month-cell {
+		min-height:                                               60px;
+	}
+
+	.sp-book-agenda-row {
+		grid-template-columns:                                    72px 1fr;
+		row-gap:                                                  6px;
+	}
+}
+
+/*--------------------------------------------------------------
+# Booking — Notification settings
+--------------------------------------------------------------*/
+
+.sp-book-tokens {
+	margin:                                                    8px 0 14px;
+}
+
+.sp-book-tokens code {
+	display:                                                   inline-block;
+	margin:                                                    2px 3px 2px 0;
+	padding:                                                   1px 6px;
+	background:                                                var(--sp-bg);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-templates {
+	display:                                                   grid;
+	gap:                                                       12px;
+}
+
+.sp-book-template {
+	display:                                                   grid;
+	gap:                                                       6px;
+	padding:                                                   12px 14px;
+	background:                                                var(--sp-bg-white);
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+/* flex, not grid: the label sizes to its text, the timing note takes the slack,
+   and margin-auto pushes the test button to the far end. */
+.sp-book-template-head {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       10px;
+}
+
+.sp-book-template-head .sp-check-row {
+	margin:                                                    0;
+}
+
+.sp-book-template-when {
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-light);
+}
+
+.sp-book-template-head .sp-bn-test {
+	margin-inline-start:                                       auto;
+}
+
+/* A message body is read as a block of copy, so give it a comfortable measure
+   rather than the full panel width. */
+.sp-book-template .sp-textarea {
+	width:                                                     min(100%, 60ch);
+		font-family:                                              var(--font-text);
+	line-height:                                               1.5;
+}
+
+.sp-book-template .sp-bn-subject {
+	width:                                                     min(100%, 60ch);
+		font-weight:                                              700;
+}
+
+/* Server-rendered "the JavaScript did not run" notice. Removed by the main script on init,
+   so it is only ever visible when that script is stale, blocked, or missing. */
+.sp-js-tripwire {
+	padding:                                                   12px 16px;
+	margin:                                                    0 0 14px;
+	background:                                                var(--sp-warning-light);
+	border-left:                                               4px solid var(--sp-warning);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-text);
+	color:                                                     var(--sp-text);
+	line-height:                                               1.5;
+}
+
+.sp-js-tripwire code {
+	padding:                                                   1px 5px;
+	background:                                                var(--sp-bg-white);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-xs);
+}
+
+/* Field-unit hint — "(in minutes)" on its own line under the label.
+   Kept inside the <label> so clicking it still focuses the field. */
+.sp-field-unit {
+	display:                                                   block;
+	margin-top:                                                0.1em;
+	font-size:                                                 0.78em;
+	font-weight:                                               400;
+	letter-spacing:                                            0.02em;
+	color:                                                     var(--sp-text-light);
+}
+
+/* Reserve two lines of label height across a booking form grid so every input starts
+   at the same y, whether or not its label carries a unit hint. min-height rather than
+   height: a label that wraps still grows instead of being clipped. Scoped to the
+   booking grids so no other Site Pulse form shifts. */
+.sp-book-form-grid .sp-form-group label {
+	display:                                                   block;
+	min-height:                                                2.7em;
+	line-height:                                               1.25;
+}
+
+/* Save + Cancel in the modal header, mirroring the pair in the footer so a short form can be
+   committed from either end without scrolling.
+   flex, not grid: both buttons size to their own labels and sit together at the end of the
+   bar — grid would stretch them into equal tracks. */
+.sp-book-head-actions {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	justify-content:                                           flex-end;
+	gap:                                                       8px;
+}
+
+/* One arrival window being edited: label, start, end, remove. */
+.sp-book-window-row {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(0, 1fr) auto max-content auto auto;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin-bottom:                                             6px;
+}
+
+.sp-book-window-row .sp-input[type="time"] {
+	max-width:                                                 150px;
+}
+
+/* A window slot is a labelled range, so it needs two lines where an exact-time chip needs one. */
+.sp-book-slot-window {
+	display:                                                   grid;
+	justify-items:                                             center;
+	gap:                                                       1px;
+	padding:                                                   6px 14px;
+	line-height:                                               1.3;
+}
+
+.sp-book-slot-window strong {
+	font-size:                                                 var(--font-size-text);
+}
+
+@media (max-width: 860px) {
+
+	/* The five-across editor row doesn't fit a phone: label on its own line, times beneath. */
+	.sp-book-window-row {
+		grid-template-columns:                                     1fr auto max-content auto;
+	}
+
+	.sp-book-window-row .sp-bf-wlabel {
+		grid-column:                                               1 / -1;
+	}
+}
+
+/* A slot that costs extra, or that nobody is near. Shown on the chip so a surcharge is
+   never agreed to without being seen. */
+.sp-book-slot-fee {
+	display:                                                   block;
+	font-weight:                                               700;
+	color:                                                     var(--sp-warning);
+}
+
+.sp-book-slot-far {
+	display:                                                   block;
+	font-size:                                                 10px;
+	color:                                                     var(--sp-text-light);
+}
+
+/*--------------------------------------------------------------
+# Help affordance — spHelp() in the JS
+--------------------------------------------------------------*/
+
+.sp-help {
+	display:                                                   inline-grid;
+	place-items:                                               center;
+	width:                                                     16px;
+	height:                                                    16px;
+	margin-inline-start:                                       5px;
+	padding:                                                   0;
+	border:                                                    none;
+	border-radius:                                             50%;
+	background:                                                var(--sp-text-secondary);
+	color:                                                     var(--sp-bg-white);
+	font-family:                                               var(--font-text);
+	font-size:                                                 11px;
+	font-weight:                                               700;
+	line-height:                                               1;
+	/* The label it sits in is uppercase; the marker should not be. */
+	text-transform:                                            none;
+	letter-spacing:                                            0;
+	cursor:                                                    pointer;
+	vertical-align:                                            middle;
+	user-select:                                               none;
+	transition:                                                background var(--sp-transition);
+}
+
+.sp-help:hover,
+.sp-help.active,
+.sp-help.tab-focus {
+	background:                                                var(--sp-accent-color);
+}
+
+/* Fixed, and appended to <body>, because .sp-card clips with overflow:hidden — an in-flow
+   popover would be cut off by the very card it explains. Above the modal layer (99999) so
+   help still works inside a dialog. */
+.sp-help-pop {
+	position:                                                  fixed;
+	z-index:                                                   100001;
+	/* Border-box so max-width is the width the clamping maths in spHelp() sees; without it the
+	   padding pushes the box wider than declared and the viewport clamp works off a stale number. */
+	box-sizing:                                                border-box;
+	max-width:                                                 min(280px, calc(100vw - 16px));
+	width:                                                     max-content;
+	padding:                                                   10px 12px;
+	background:                                                var(--sp-text);
+	color:                                                     var(--sp-bg-white);
+	border-radius:                                             var(--sp-radius-sm);
+	box-shadow:                                                var(--sp-shadow-lg);
+	font-family:                                               var(--font-text);
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               400;
+	line-height:                                               1.45;
+	text-transform:                                            none;
+	letter-spacing:                                            0;
+	text-align:                                                left;
+}
+
+
+/*--------------------------------------------------------------
+# Booking — Travel Time settings card
+--------------------------------------------------------------*/
+
+/* The "here is what your numbers currently do" readout. The multipliers themselves mean
+   nothing to the person setting them; a distance next to a duration can be checked against
+   their own experience of the drive, which is the only way they can tell it is wrong. */
+.sp-book-travel-now {
+	margin-block:                                              18px;
+}
+
+.sp-book-travel-examples {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	margin:                                                    0 0 6px;
+	padding:                                                   0;
+	list-style:                                                none;
+}
+
+.sp-book-travel-examples li {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       2px;
+	flex:                                                      1 1 110px;
+	padding:                                                   8px 12px;
+	background:                                                var(--sp-secondary-lightest);
+	border-radius:                                             var(--sp-radius-sm);
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-travel-examples span {
+	font-size:                                                 var(--font-size-text);
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+}
+
+.sp-book-cal-row {
+	margin-block-end:                                          14px;
+	padding:                                                   12px 14px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-book-cal-q {
+	margin:                                                    0 0 8px;
+	font-weight:                                               600;
+	color:                                                     var(--sp-text);
+}
+
+.sp-book-cal-fields {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       8px;
+}
+
+/* ZIPs and the duration are short values — sized to their content so the row reads as a
+   sentence rather than as three full-width form fields. */
+.sp-book-cal-fields .sp-input {
+	width:                                                     7em;
+	flex:                                                      0 0 auto;
+}
+
+.sp-book-cal-to {
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-cal-msg {
+	margin-block-start:                                        8px;
+	font-size:                                                 var(--font-size-xs);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-book-cal-msg.is-good {
+	color:                                                     var(--sp-success);
+	font-weight:                                               600;
+}
+
+.sp-book-cal-msg.is-bad {
+	color:                                                     var(--sp-danger);
+}
+
+.sp-book-advanced {
+	margin-block-start:                                        18px;
+	padding-block-start:                                       14px;
+	border-block-start:                                        1px solid var(--sp-border);
+}
+
+.sp-book-advanced > summary {
+	cursor:                                                    pointer;
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               600;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            0.04em;
+	color:                                                     var(--sp-text-secondary);
+}
+
+@media (max-width: 576px) {
+
+	/* Stack the calibration inputs rather than letting them wrap into a ragged sentence. */
+	.sp-book-cal-fields .sp-input {
+		width:                                                     100%;
+	}
+
+	.sp-book-cal-to {
+		display:                                                   none;
+	}
+}

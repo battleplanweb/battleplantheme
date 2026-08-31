@@ -271,9 +271,10 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 	background-color:                                          #d63638;
 }
 
-#menu-tools li.wp-first-item {
-	display:                                                   none;
-}
+/* Tools => "Available Tools" is now removed in PHP (battleplan_customize_admin_menus),
+   NOT hidden here. WordPress tags whichever item renders first with .wp-first-item, so
+   this rule hid a POSITION, not a page — once the Tools submenu was reordered it hid
+   SEO Redirects instead and let Available Tools show. Don't reintroduce it. */
 
 #adminmenu .wp-submenu li a[href="index.php?page=clear-all"],
 #adminmenu .wp-submenu li a[href="nav-menus.php"],

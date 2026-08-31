@@ -1417,6 +1417,7 @@ function battleplan_customize_admin_menus() {
 	remove_submenu_page( 'options-general.php', 'codepress-admin-columns' );   	// Settings => Admin Columns
 	remove_submenu_page( 'tools.php', 'export-personal-data.php' );   			// Tools => Export Personal Data
 	remove_submenu_page( 'tools.php', 'erase-personal-data.php' );   			// Tools => Erase Personal Data
+	remove_submenu_page( 'tools.php', 'tools.php' );   						// Tools => Available Tools (core; category/tag converter only)
 
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_workouts' );   				// Yoast SEO => Workouts
 	remove_submenu_page( 'wpseo_dashboard', 'wpseo_licenses' );   				// Yoast SEO => Premium
@@ -1524,7 +1525,8 @@ function battleplan_customize_admin_menus() {
 	// PHP_INT_MAX admin_menu callback — where every item above (and every plugin's) is already in.
 	// Matched on SLUG, not label, so relabelling an item doesn't quietly drop it back to the bottom.
 	$bp_tools_order = [
-		'bp-seo-redirects',                          // SEO Redirects
+		'bp-seo-redirects',                          // SEO Redirects (framework-native)
+		'wpseo_redirects',                           // URL Redirects (Yoast Premium, on sites not yet migrated)
 		'bp-search-replace',                         // Search & Replace (BP_SR_PAGE)
 		'kw-rankings',                               // Keywords
 		'admin.php?page=microsoft-clarity',          // Clarity

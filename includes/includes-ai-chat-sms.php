@@ -206,7 +206,7 @@ function bp_chat_normalize_phone( string $raw ): string {
 
 /** The opening SMS that moves a web chat onto text. */
 function bp_chat_text_opening( array $customer, string $name ): string {
-	$company = $customer['name'] ?? get_bloginfo( 'name' );
+	$company = bp_decode_text( $customer['name'] ?? get_bloginfo( 'name' ) );
 	$hi      = $name !== '' ? "Hi {$name}, " : 'Hi, ';
 	return $hi . "it's {$company} - continuing our chat by text so we can help even if you step away. "
 		. "Reply anytime. Msg frequency varies; msg & data rates may apply. Reply STOP to unsubscribe, HELP for help.";
@@ -268,7 +268,7 @@ function bp_chat_handle_inbound_sms( WP_REST_Request $req ) {
 		return bp_chat_twiml_response();
 	}
 	if ( $kw === 'HELP' || $kw === 'INFO' ) {
-		$company = $customer['name'] ?? get_bloginfo( 'name' );
+		$company = bp_decode_text( $customer['name'] ?? get_bloginfo( 'name' ) );
 		bp_chat_send_sms( $from, "{$company}: reply with your question and we'll help. Reply STOP to opt out." );
 		return bp_chat_twiml_response();
 	}

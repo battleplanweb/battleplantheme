@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /* Battle Plan Web Design - Site Pulse Dashboard */
 
 if ( ! is_user_logged_in() ) {
@@ -116,6 +116,8 @@ $icons = [
 	'tasks'     => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
 	'palette'   => '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.564C22 6.012 17.5 2 12 2z"/>',
 	'home'      => '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+	'calendar'  => '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+	'card'      => '<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
 ];
 
 // Build nav structure with sub-items
@@ -135,13 +137,28 @@ $nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'tasks
 $sp_report_templates = site_pulse_get_all_report_templates();
 $sp_report_children  = [];
 $sp_can_submit_any   = in_array( 'submit_reports', $caps, true );
+// Nav items pluralize the LAST word of the report's own name: "GM Bi-Weekly Report" → "…Reports",
+// "… Scorecard" → "… Scorecards", "Guest Count" → "Guest Counts". A last word that's already plural
+// (ends in "s") is left alone. Mirror of spPluralReport() in script-site-pulse.js.
+$sp_plural_report = static function ( $name ) {
+	$n = trim( (string) $name );
+	if ( '' === $n ) return $n;
+	$pos  = strrpos( $n, ' ' );
+	$head = false === $pos ? '' : substr( $n, 0, $pos + 1 );
+	$word = false === $pos ? $n : substr( $n, $pos + 1 );
+	if ( preg_match( '/s$/i', $word ) )                       $plural = $word;                              // already plural
+	elseif ( preg_match( '/[^aeiouAEIOU]y$/', $word ) )       $plural = preg_replace( '/y$/i', 'ies', $word ); // consonant + y → ies
+	elseif ( preg_match( '/(x|z|ch|sh)$/i', $word ) )         $plural = $word . 'es';
+	else                                                     $plural = $word . 's';
+	return $head . $plural;
+};
 foreach ( $sp_report_templates as $sp_t ) {
-	$sp_vc = site_pulse_report_view_cap( (string) $sp_t['slug'] );
-	$sp_lv = site_pulse_report_legacy_view_cap( $sp_t );
-	if ( in_array( $sp_vc, $caps, true ) || ( '' !== $sp_lv && in_array( $sp_lv, $caps, true ) ) ) {
-		$sp_report_children[] = [ 'slug' => 'reports-review', 'label' => (string) $sp_t['name'], 'action' => 'review-template', 'template_id' => (int) $sp_t['id'], 'show' => true ];
+	// Use the same helpers that gate the data (they honor per-report caps, legacy caps, AND the new
+	// "Who Submits / Who Views" assignments) so the menu matches what the user can actually open.
+	if ( site_pulse_can_view_all_report( $user_id, $sp_t ) ) {
+		$sp_report_children[] = [ 'slug' => 'reports-review', 'label' => $sp_plural_report( $sp_t['name'] ), 'action' => 'review-template', 'template_id' => (int) $sp_t['id'], 'show' => true ];
 	}
-	if ( ! $sp_can_submit_any && in_array( site_pulse_report_submit_cap( (string) $sp_t['slug'] ), $caps, true ) ) $sp_can_submit_any = true;
+	if ( ! $sp_can_submit_any && site_pulse_can_submit_report( $user_id, $sp_t ) ) $sp_can_submit_any = true;
 }
 $cap_reports_access = $sp_can_submit_any || ! empty( $sp_report_children );
 // Re-derive the "can view someone else's reports" gate from the dynamic per-report view caps (the old
@@ -157,7 +174,8 @@ $sp_report_nav_children = array_merge(
 
 $nav[] = [
 	'slug'  => 'reports',
-	'label' => 'Stores',
+	'modules' => [ 'reports' ],   // owning module(s) — see the god menu split below
+	'label' => 'Reports',
 	'icon'  => 'store',
 	'show'  => $cap_reports_access || $cap_import,
 	'children' => $sp_report_nav_children,
@@ -179,6 +197,7 @@ $cap_x_archive  = in_array( 'view_approved_expense_reports', $caps, true ) || $c
 $cap_expense_any = $cap_x_mileage || $cap_x_tolls || $cap_x_vehicle || $cap_x_meals || $cap_x_shop || $cap_x_other || $cap_x_travel || $cap_x_overview || $cap_x_approve || $cap_x_archive;
 $nav[] = [
 	'slug'  => 'mileage',
+	'modules' => [ 'mileage' ],   // owning module(s) — see the god menu split below
 	'label' => 'Expense Report',
 	'icon'  => 'dollar-sign',
 	'show'  => $cap_expense_any,
@@ -210,6 +229,7 @@ $is_review_hub      = defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN;
 $cap_agency_reviews = $is_review_hub && ( $eff_is_god || in_array( 'manage_reviews', $caps ) );
 $nav[] = [
 	'slug'  => 'reviews',
+	'modules' => [ 'reviews', 'surveys', 'emails' ],   // owning module(s) — see the god menu split below
 	'label' => 'Customer Feedback',
 	'icon'  => 'star',
 	'show'  => $cap_reviews_area || $cap_surveys_area || $cap_agency_reviews || $cap_emails_area || $cap_cm_area || $cap_import_cards,
@@ -223,6 +243,7 @@ $nav[] = [
 		[ 'slug' => 'surveys',        'label' => 'Comment Cards', 'show' => $cap_surveys_area ],
 		[ 'slug' => 'import-cards',   'label' => 'Import Comment Cards', 'show' => $cap_import_cards ],
 		[ 'slug' => 'emails',         'label' => 'Emails',         'show' => $cap_emails_area ],
+		[ 'slug' => 'emails-routed',  'label' => 'Routed Emails',  'show' => in_array( 'view_routed_emails', $caps, true ) || in_array( 'manage_routed_emails', $caps, true ) ],
 	],
 ];
 
@@ -230,7 +251,14 @@ $nav[] = [
 // users; access is gated purely by role + per-user override via the directory caps. God always sees.
 $cap_directory        = in_array( 'view_directory', $caps, true ) || in_array( 'manage_directory', $caps, true );
 $cap_directory_manage = in_array( 'manage_directory', $caps, true );
-$nav[] = [ 'slug' => 'directory', 'label' => 'Directory', 'icon' => 'users', 'show' => $cap_directory ];
+$nav[] = [ 'slug' => 'directory', 'label' => 'Directory', 'icon' => 'users', 'show' => $cap_directory, 'modules' => [ 'directory' ] ];
+
+// Site Fleet — every Battle Plan site's nightly snapshot on one screen. Hub-only (this install
+// receives the fleet's pushes) and agency-only, exactly like Client Reviews above: a client install
+// with the module switched on still sees nothing, because it isn't the hub.
+$cap_fleet = function_exists( 'sp_fleet_is_hub' ) && sp_fleet_is_hub()
+	&& ( $eff_is_god || in_array( 'view_fleet', $caps, true ) || in_array( 'manage_fleet', $caps, true ) );
+$nav[] = [ 'slug' => 'fleet', 'label' => 'Site Fleet', 'icon' => 'chart', 'show' => $cap_fleet, 'modules' => [ 'fleet' ] ];
 
 // Home Base — the customer-app module's staff side: the customer roster, the push composer, and
 // the scheduling-request inbox. Gated by the Home Base module caps (god always sees). The customer
@@ -240,6 +268,7 @@ $cap_cc_send      = in_array( 'send_customer_push', $caps, true );
 $cap_cc_schedule  = in_array( 'view_schedule_requests', $caps, true ) || in_array( 'manage_schedule_requests', $caps, true );
 $nav[] = [
 	'slug'  => 'customer-connect',
+	'modules' => [ 'customer_connect' ],   // owning module(s) — see the god menu split below
 	'label' => 'Customer Connect',
 	'icon'  => 'home',
 	'show'  => $cap_cc_customers || $cap_cc_send || $cap_cc_schedule,
@@ -247,6 +276,29 @@ $nav[] = [
 		[ 'slug' => 'customer-connect-customers', 'label' => 'Customers',  'show' => $cap_cc_customers ],
 		[ 'slug' => 'customer-connect-send',      'label' => 'Send',       'show' => $cap_cc_send ],
 		[ 'slug' => 'customer-connect-schedule',  'label' => 'Scheduling', 'show' => $cap_cc_schedule ],
+	],
+];
+
+// Booking — the staff side of the booking engine. `view_own_bookings` is the scoped
+// version (a trainer or tech sees only the resources they're linked to); everything
+// else here needs the full view or a manage cap. Services & availability live under
+// Settings, not here, so day-to-day staff never see the setup screens.
+$cap_book_view     = in_array( 'view_bookings', $caps, true ) || in_array( 'manage_bookings', $caps, true );
+$cap_book_own      = in_array( 'view_own_bookings', $caps, true );
+$cap_book_manage   = in_array( 'manage_bookings', $caps, true );
+$cap_book_passes   = in_array( 'manage_booking_payments', $caps, true );
+$cap_book_services = in_array( 'manage_booking_services', $caps, true );
+$cap_book_area     = $cap_book_view || $cap_book_own || $cap_book_manage || $cap_book_passes;
+$nav[] = [
+	'slug'  => 'booking',
+	'modules' => [ 'booking' ],   // owning module(s) — see the god menu split below
+	'label' => 'Booking',
+	'icon'  => 'calendar',
+	'show'  => $cap_book_area,
+	'children' => [
+		[ 'slug' => 'booking-calendar', 'label' => 'Calendar', 'show' => $cap_book_view || $cap_book_own ],
+		[ 'slug' => 'booking-list',     'label' => 'Bookings', 'show' => $cap_book_view || $cap_book_own ],
+		[ 'slug' => 'booking-passes',   'label' => 'Passes &amp; Memberships', 'show' => $cap_book_passes ],
 	],
 ];
 
@@ -279,18 +331,19 @@ foreach ( site_pulse_form_category_tree() as $sp_cat_key => $sp_cat ) {
 $forms_children[] = [ 'slug' => 'forms-all', 'label' => 'All', 'show' => $cap_forms_area ];
 $nav[] = [
 	'slug'  => 'forms',
+	'modules' => [ 'forms' ],   // owning module(s) — see the god menu split below
 	'label' => 'Forms',
 	'icon'  => 'forms',
 	'show'  => $cap_forms_area,
 	'children' => $forms_children,
 ];
 
-$nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ) ];
+$nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ), 'modules' => [ 'ai' ] ];
 
 // AI Assistant — company-voiced AI chat. Gated by the use_ai_assistant capability (AI module).
 // Label is the company-set assistant name (default "AI Assistant"; e.g. "bAIbes").
 $sp_ai_name = function_exists( 'site_pulse_ai_assistant_name' ) ? site_pulse_ai_assistant_name() : 'AI Assistant';
-$nav[] = [ 'slug' => 'ai-assistant', 'label' => $sp_ai_name, 'icon' => 'chat', 'show' => in_array( 'use_ai_assistant', $caps ) ];
+$nav[] = [ 'slug' => 'ai-assistant', 'label' => $sp_ai_name, 'icon' => 'chat', 'show' => in_array( 'use_ai_assistant', $caps ), 'modules' => [ 'ai' ] ];
 
 // Import tools now live inside the sections they feed: "Import Reports" under Stores and "Import
 // Comment Cards" under Customer Feedback. Both are gated by the import_data capability (see above).
@@ -299,20 +352,22 @@ $nav[] = [
 	'slug'  => 'admin',
 	'label' => 'Settings',
 	'icon'  => 'settings',
-	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ),
+	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ) || $cap_book_services || in_array( 'manage_booking_settings', $caps ),
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
-		[ 'slug' => 'admin-templates', 'label' => 'Store Reports',  'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
+		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
 		[ 'slug' => 'review-settings', 'label' => 'Reviews',        'icon' => 'star',    'show' => in_array( 'manage_reviews', $caps ) && ! $is_review_hub ],
 		[ 'slug' => 'admin-ai-prompts','label' => 'AI Prompts',     'icon' => 'chat',    'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-mileage',   'label' => 'Expense Reports', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
 		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ) ],
+		[ 'slug' => 'admin-booking',   'label' => 'Booking',        'icon' => 'calendar', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ) ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_notifications', $caps ) ],
 		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_api_keys', $caps ) ],
+		[ 'slug' => 'admin-activity',  'label' => 'Activity Log',     'icon' => 'clipboard',   'show' => in_array( 'view_activity_log', $caps ) ],
 		[ 'slug' => 'admin-modules',   'label' => 'Modules',          'icon' => 'layers',  'show' => $is_superadmin ],
 	],
 ];
@@ -390,49 +445,108 @@ $printPage .=   '</button>';
 $printPage .= '</div>';
 
 // Sidebar Nav
-$printPage .= '<nav class="sp-sidebar-nav">';
-foreach ( $nav as $item ) {
-	if ( empty( $item['show'] ) ) continue;
-	$has_children = ! empty( $item['children'] );
-	$is_first = $item['slug'] === 'dashboard';
+//
+// A god's caps are NEVER module-filtered (see site_pulse_effective_caps), so god's sidebar lists
+// every module whether or not this install runs it — which makes the menu a poor map of what is
+// actually loaded here. For god ONLY, split it: everything live first, then Settings, then the
+// not-installed modules in a section that starts collapsed and stays out of the way.
+//
+// Nobody else's menu moves. A non-god's caps are already module-filtered, so their $nav simply
+// contains no inactive modules to partition — the loop below sees one flat list exactly as before.
+$nav_inactive = [];
+if ( $eff_is_god ) {
+	$nav_live = $nav_settings = [];
+	foreach ( $nav as $sp_nav_item ) {
+		if ( $sp_nav_item['slug'] === 'admin' ) { $nav_settings[] = $sp_nav_item; continue; }
 
-	$printPage .= '<div class="sp-nav-group' . ( $is_first ? ' active' : '' ) . '" data-group="' . esc_attr( $item['slug'] ) . '">';
+		// An item is inactive only if it is owned by module(s) and NONE of them is on. Untagged
+		// items (Dashboard, Chat, Action Items) are core — they belong to no module and always stay put.
+		$sp_mods = $sp_nav_item['modules'] ?? [];
+		$sp_off  = ! empty( $sp_mods );
+		foreach ( $sp_mods as $sp_mod ) {
+			if ( site_pulse_module_on( $sp_mod ) ) { $sp_off = false; break; }
+		}
 
-	$tag = 'button type="button"';
-	$printPage .= '<' . $tag . ' class="unique sp-nav-item' . ( $is_first ? ' active' : '' ) . '" data-nav="' . esc_attr( $item['slug'] ) . '">';
-	$printPage .=   $svg( $icons[ $item['icon'] ] );
-	$printPage .=   '<span class="sp-nav-label">' . esc_html( $item['label'] ) . '</span>';
-	if ( $has_children ) {
-		$printPage .= '<span class="sp-nav-arrow">' . $svg( $icons['chevron'] ) . '</span>';
+		if ( $sp_off ) $nav_inactive[] = $sp_nav_item;
+		else           $nav_live[]     = $sp_nav_item;
 	}
-	$printPage .= '</button>';
+	$nav = array_merge( $nav_live, $nav_settings );
+}
+
+// One item's markup, so the live list and the not-installed list render identically.
+$sp_render_nav_item = function( array $item ) use ( $icons, $svg ): string {
+	if ( empty( $item['show'] ) ) return '';
+
+	$has_children = ! empty( $item['children'] );
+	$is_first     = $item['slug'] === 'dashboard';
+
+	$out  = '<div class="sp-nav-group' . ( $is_first ? ' active' : '' ) . '" data-group="' . esc_attr( $item['slug'] ) . '">';
+	$out .= '<button type="button" class="unique sp-nav-item' . ( $is_first ? ' active' : '' ) . '" data-nav="' . esc_attr( $item['slug'] ) . '">';
+	$out .=   $svg( $icons[ $item['icon'] ] );
+	$out .=   '<span class="sp-nav-label">' . esc_html( $item['label'] ) . '</span>';
+	if ( $has_children ) {
+		$out .= '<span class="sp-nav-arrow">' . $svg( $icons['chevron'] ) . '</span>';
+	}
+	$out .= '</button>';
 
 	if ( $has_children ) {
 		// Inner wrapper so the submenu can animate open/closed via grid-template-rows (0fr↔1fr).
-		$printPage .= '<div class="sp-nav-children"><div class="sp-nav-children-inner">';
+		$out .= '<div class="sp-nav-children"><div class="sp-nav-children-inner">';
 		foreach ( $item['children'] as $child ) {
 			if ( empty( $child['show'] ) ) continue;
 			$child_action = ! empty( $child['action'] ) ? ' data-action="' . esc_attr( $child['action'] ) . '"' : '';
 			if ( ! empty( $child['template_id'] ) ) $child_action .= ' data-template-id="' . (int) $child['template_id'] . '"';
-			$printPage .= '<button type="button" class="unique sp-nav-child" data-nav="' . esc_attr( $child['slug'] ) . '"' . $child_action . '>';
-			$printPage .=   '<span>' . esc_html( $child['label'] ) . '</span>';
-			$printPage .= '</button>';
+			$out .= '<button type="button" class="unique sp-nav-child" data-nav="' . esc_attr( $child['slug'] ) . '"' . $child_action . '>';
+			$out .=   '<span>' . esc_html( $child['label'] ) . '</span>';
+			$out .= '</button>';
 			// Optional third level: sub-folders that deep-link to the parent panel with a filter.
 			if ( ! empty( $child['subchildren'] ) ) {
-				$printPage .= '<div class="sp-nav-subchildren">';
+				$out .= '<div class="sp-nav-subchildren">';
 				foreach ( $child['subchildren'] as $sub ) {
 					if ( empty( $sub['show'] ) ) continue;
-					$printPage .= '<button type="button" class="unique sp-nav-child sp-nav-subchild" data-nav="' . esc_attr( $sub['slug'] ) . '" data-sub="' . esc_attr( $sub['sub'] ) . '">';
-					$printPage .=   '<span>' . esc_html( $sub['label'] ) . '</span>';
-					$printPage .= '</button>';
+					$out .= '<button type="button" class="unique sp-nav-child sp-nav-subchild" data-nav="' . esc_attr( $sub['slug'] ) . '" data-sub="' . esc_attr( $sub['sub'] ) . '">';
+					$out .=   '<span>' . esc_html( $sub['label'] ) . '</span>';
+					$out .= '</button>';
 				}
-				$printPage .= '</div>';
+				$out .= '</div>';
 			}
 		}
-		$printPage .= '</div></div>';
+		$out .= '</div></div>';
 	}
 
-	$printPage .= '</div>';
+	$out .= '</div>';
+	return $out;
+};
+
+$printPage .= '<nav class="sp-sidebar-nav">';
+foreach ( $nav as $item ) {
+	$printPage .= $sp_render_nav_item( $item );
+}
+
+// Not installed on this site (god only). Collapsed by default so it reads as a reference list
+// rather than menu clutter; the items inside stay fully functional if god wants to look.
+if ( $nav_inactive ) {
+	$sp_inactive_shown = 0;
+	$sp_inactive_html  = '';
+	foreach ( $nav_inactive as $item ) {
+		$sp_item_html = $sp_render_nav_item( $item );
+		if ( $sp_item_html === '' ) continue;
+		$sp_inactive_html .= $sp_item_html;
+		$sp_inactive_shown++;
+	}
+
+	if ( $sp_inactive_shown ) {
+		$printPage .= '<div class="sp-nav-inactive-wrap" id="sp-nav-inactive">';
+		$printPage .=   '<button type="button" class="unique sp-nav-inactive-toggle" id="sp-nav-inactive-toggle" aria-expanded="false" aria-controls="sp-nav-inactive-items">';
+		$printPage .=     '<span class="sp-nav-inactive-label">Not Installed</span>';
+		$printPage .=     '<span class="sp-nav-badge sp-nav-inactive-count">' . (int) $sp_inactive_shown . '</span>';
+		$printPage .=     '<span class="sp-nav-arrow">' . $svg( $icons['chevron'] ) . '</span>';
+		$printPage .=   '</button>';
+		$printPage .=   '<div class="sp-nav-inactive-items" id="sp-nav-inactive-items"><div class="sp-nav-inactive-inner">';
+		$printPage .=     $sp_inactive_html;
+		$printPage .=   '</div></div>';
+		$printPage .= '</div>';
+	}
 }
 $printPage .= '</nav>';
 
@@ -484,6 +598,7 @@ $printPage .=   '<div class="sp-notification-header">';
 $printPage .=     '<h3>Notifications</h3>';
 $printPage .=   '</div>';
 $printPage .=   '<div class="sp-push-prompt" id="sp-push-prompt" hidden></div>'; // per-device "turn on push", filled by JS
+$printPage .=   '<div class="sp-sms-alerts" id="sp-sms-alerts" hidden></div>'; // "text me unread chats" opt-in + settings, filled by JS
 $printPage .=   '<div class="sp-notification-actions"><button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mark-all-read">Mark all read</button></div>';
 $printPage .=   '<div class="sp-notification-list" id="sp-notification-list"></div>';
 $printPage .= '</div>';
@@ -682,7 +797,7 @@ if ( in_array( 'view_chat', $caps, true ) ) {
 if ( $sp_can_submit_any ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-my">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Stores', 'My Reports' );
+	$printPage .=     $sp_crumb( 'Reports', 'My Reports' );
 	$printPage .= '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-new-report-btn">+ New Report</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-report-filters">';
@@ -699,7 +814,7 @@ if ( $sp_can_submit_any ) {
 // Review Reports Panel
 if ( $cap_view_other_reports ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-review">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header"><div class="sp-crumb"><div class="sp-crumb-parent">Stores</div><h2 class="sp-crumb-current" id="sp-review-title">GM Reports</h2></div></div>';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><div class="sp-crumb"><div class="sp-crumb-parent">Reports</div><h2 class="sp-crumb-current" id="sp-review-title">GM Reports</h2></div></div>';
 	$printPage .=   '<div class="sp-report-filters">';
 	$printPage .= '<select id="sp-review-filter-location" class="sp-select"><option value="">All Locations</option></select>';
 	$printPage .=     '<div class="sp-date-range"><input type="date" id="sp-review-filter-start" class="sp-input" placeholder="From">';
@@ -714,9 +829,16 @@ if ( $cap_view_other_reports ) {
 if ( in_array( 'view_action_items', $caps, true ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-action-items">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Action Items</h2>';
+	$printPage .=     '<div class="sp-panel-header-actions">';
+	// Summarize needs the Claude key — hide it rather than offer a button that can only fail.
+	if ( site_pulse_get_api_key() ) {
+		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-summarize-actions-btn">Summarize</button>';
+	}
 	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-action-item-btn">+ Add Action Item</button>';
+	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-report-filters">';
+	$printPage .=     '<input type="search" id="sp-action-search" class="sp-input sp-action-search" placeholder="Search items &amp; notes…" autocomplete="off">';
 	if ( $cap_view_other_actions ) {
 		$printPage .= '<select id="sp-action-filter-location" class="sp-select"><option value="mine">My Action Items</option></select>';
 	}
@@ -1076,6 +1198,11 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	if ( in_array( 'manage_reviews', $caps ) || $eff_is_god ) {
 		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-analyze-btn">Analyze reviews</button>';
 	}
+	// God-only CSV of the stored history (every platform, reply, AI topic and internal note) for
+	// offline analysis. Exports whatever the current filters match — All time + no filters = everything.
+	if ( site_pulse_god_can_override() ) {
+		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-export-btn" title="Download the reviews matching your current filters as a CSV">Export CSV</button>';
+	}
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-refresh-btn">Refresh</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
@@ -1108,10 +1235,13 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .=         '<option value="replied">Replied</option>';
 	$printPage .=       '</select>';
 	// Platforms filter — narrow the list to one source (e.g. only Facebook recommendations).
+	// Options come from the platforms actually present in the reviews table (sp_review_sources()),
+	// so an install pulling only Google + Facebook shows exactly those two and nothing appears
+	// until real rows from another platform land.
 	$printPage .=       '<select id="sp-reviews-filter-platform" class="sp-select">';
-	$printPage .=         '<option value="">All platforms</option>';
-	$printPage .=         '<option value="google">Google</option>';
-	$printPage .=         '<option value="facebook">Facebook</option>';
+	// Guarded: if a partial deploy / stale OPcache leaves the reviews include out of sync, fall back to a
+	// single option instead of fataling the whole dashboard.
+	$printPage .=         ( function_exists( 'sp_review_source_options_html' ) ? sp_review_source_options_html() : '<option value="">All platforms</option>' );
 	$printPage .=       '</select>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
@@ -1185,6 +1315,40 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .= '</section>';
 }
 
+// Site Fleet Panel (agency / hub only). Every Battle Plan site's nightly snapshot in one sortable
+// list, problem sites first. Same double gate as the nav item: hub install + agency capability.
+if ( function_exists( 'sp_fleet_is_hub' ) && sp_fleet_is_hub()
+	&& ( $eff_is_god || in_array( 'view_fleet', $caps, true ) || in_array( 'manage_fleet', $caps, true ) ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-fleet">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
+	$printPage .=     '<h2>Site Fleet</h2>';
+	$printPage .=     '<div class="sp-reviews-actions">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-fleet-refresh-btn">Refresh</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stat-grid" id="sp-fleet-stats"></div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-fleet-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-fleet-search" class="sp-input" placeholder="Search site…" autocomplete="off">';
+	$printPage .=       '<select id="sp-fleet-filter" class="sp-select">';
+	$printPage .=         '<option value="">All sites</option>';
+	$printPage .=         '<option value="alerts">Needs attention</option>';
+	$printPage .=         '<option value="silent">Not reporting</option>';
+	$printPage .=         '<option value="audit">Audit due</option>';
+	$printPage .=       '</select>';
+	$printPage .=       '<select id="sp-fleet-sort" class="sp-select">';
+	$printPage .=         '<option value="severity" selected>Problems first</option>';
+	$printPage .=         '<option value="name">Name</option>';
+	$printPage .=         '<option value="traffic">Traffic (30d)</option>';
+	$printPage .=         '<option value="change">Biggest change</option>';
+	$printPage .=         '<option value="audit">Oldest audit</option>';
+	$printPage .=       '</select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-fleet-list" id="sp-fleet-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
 // Customer Surveys Panel — submissions forwarded in from the public restaurant sites.
 // Sibling tab of Reviews; gated on the surveys module's caps (independent of Google reviews).
 if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) {
@@ -1237,6 +1401,24 @@ if ( $cap_emails_area ) {
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-emails-count" id="sp-emails-count"></div>';
 	$printPage .=   '<div class="sp-emails-list" id="sp-emails-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
+// Routed Emails Panel — a generic retention center for forwarded emails addressed to a specific person.
+// A viewer sees only the ones addressed to their account email; a manager (manage_routed_emails) sees all.
+if ( in_array( 'view_routed_emails', $caps, true ) || in_array( 'manage_routed_emails', $caps, true ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-emails-routed">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Routed Emails' ) . '</div>';
+	$printPage .=   '<div class="sp-toolbar sp-emails-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<select id="sp-remails-filter-status" class="sp-select"><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group sp-emails-search-group">';
+	$printPage .=       '<input type="search" id="sp-remails-search" class="sp-input" placeholder="Search subject, sender, or message…">';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-emails-count" id="sp-remails-count"></div>';
+	$printPage .=   '<div class="sp-emails-list" id="sp-remails-list"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 
@@ -1328,6 +1510,173 @@ if ( $cap_cc_schedule ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-customer-connect-schedule">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Scheduling Requests</h2></div>';
 	$printPage .=   '<div id="sp-cc-schedule-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
+
+// JS tripwire for the Booking panels.
+//
+// Every list on these screens is filled in by JavaScript, so when the deployed script is
+// stale the panel just sits there spinning and says nothing -- which is indistinguishable
+// from a bug in the booking code itself. This notice renders VISIBLE and the main script
+// removes it on init, so it only survives when the script did not run. It carries the
+// server file date, which answers "did the upload actually land?" without opening a
+// console. These panels are hidden until navigated to, so nobody sees it flash.
+$sp_book_js_file  = get_template_directory() . '/js/script-site-pulse.min.js';
+$sp_book_js_stamp = file_exists( $sp_book_js_file )
+	? date_i18n( 'M j, Y g:i a', (int) filemtime( $sp_book_js_file ) )
+	: 'file not found on the server';
+$sp_book_tripwire  = '<div class="sp-js-tripwire">';
+$sp_book_tripwire .=   '<strong>The JavaScript for this screen did not run.</strong> ';
+$sp_book_tripwire .=   'Everything below is filled in by <code>script-site-pulse.min.js</code>, which the browser either did not load or loaded from an old cached copy. ';
+$sp_book_tripwire .=   'The copy on this server was last written <strong>' . esc_html( $sp_book_js_stamp ) . '</strong>. If that is older than your last upload, the file did not land. ';
+$sp_book_tripwire .=   'If the date looks right, hard-refresh with Ctrl+Shift+R and purge the CDN cache.';
+$sp_book_tripwire .= '</div>';
+/*--------------------------------------------------------------
+# Booking panels - calendar, booking list, passes, and the setup screen.
+# Structure only; every list is filled by JS (spAjax) once the booking
+# endpoints land. Slugs match the nav children above.
+--------------------------------------------------------------*/
+if ( $cap_book_view || $cap_book_own ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-calendar">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Booking', 'Calendar' );
+	if ( $cap_book_manage ) {
+		$printPage .= '<div class="sp-panel-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-new">New Booking</button></div>';
+	}
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-book-cal-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-cal-prev" aria-label="Previous">&lsaquo;</button>';
+	$printPage .=       '<span class="sp-toolbar-label" id="sp-book-cal-range"></span>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-cal-next" aria-label="Next">&rsaquo;</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-cal-today">Today</button>';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">View</span>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cal-view active" data-view="day">Day</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cal-view" data-view="week">Week</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cal-view" data-view="month">Month</button>';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">Resource</span>';
+	$printPage .=       '<select id="sp-book-cal-resource" class="sp-select"><option value="">All</option></select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div id="sp-book-calendar"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-list">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Booking', 'Bookings' ) . '</div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-book-list-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-book-search" class="sp-input" placeholder="Search name, email, phone, or code&hellip;">';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">Status</span>';
+	$printPage .=       '<select id="sp-book-status" class="sp-select"><option value="upcoming">Upcoming</option>';
+	foreach ( sp_book_statuses() as $sp_bk_status => $sp_bk_label ) {
+		$printPage .=   '<option value="' . esc_attr( $sp_bk_status ) . '">' . esc_html( $sp_bk_label ) . '</option>';
+	}
+	$printPage .=       '<option value="">All</option></select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-table-card" id="sp-book-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+if ( $cap_book_passes ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-passes">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Booking', 'Passes & Memberships' );
+	$printPage .=     '<div class="sp-panel-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-pass-new">Issue Pass</button></div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-table-card" id="sp-book-passes"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+if ( $cap_book_services || in_array( 'manage_booking_settings', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-booking">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Booking' ) . '</div>';
+	$printPage .=   '<div id="sp-book-admin-notice"></div>';
+
+
+	$printPage .=   $sp_book_tripwire;
+
+	// Each setup area is a settings card, matching Settings -> Notifications: centred h3,
+	// a line of help, then the controls. The action button sits in its own right-aligned row
+	// rather than beside the heading, so the heading stays centred like every other card.
+
+	// Services -- what a customer picks and pays for.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-services">';
+	$printPage .=     '<h3>Services</h3>';
+	$printPage .=     '<p class="sp-help-text">What a customer books. Each one carries its own length, spacing, travel buffer and notice period.</p>';
+	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-book-add-service">Add Service</button></div>';
+	$printPage .=     '<div class="sp-table-card" id="sp-book-services-list"><div class="sp-loading"></div></div>';
+	$printPage .=   '</div>';
+
+	// Resources -- whatever can only be in one place at a time.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-resources">';
+	$printPage .=     '<h3>Resources</h3>';
+	$printPage .=     '<p class="sp-help-text">The person, room or unit that gets booked &mdash; whatever can only be in one place at a time. Link one to a Site Pulse user and that person can be given a calendar limited to their own bookings.</p>';
+	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-book-add-resource">Add Resource</button></div>';
+	$printPage .=     '<div class="sp-table-card" id="sp-book-resources-list"><div class="sp-loading"></div></div>';
+	$printPage .=   '</div>';
+
+	// Availability -- the weekly template, plus dated exceptions on top of it.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-availability">';
+	$printPage .=     '<h3>Availability</h3>';
+	$printPage .=     '<p class="sp-help-text">The hours each resource normally works. Exceptions below are layered on top for holidays, time off, or a one-off extra day.</p>';
+	$printPage .=     '<div class="sp-toolbar"><div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">Resource</span>';
+	$printPage .=       '<select id="sp-book-avail-resource" class="sp-select"></select>';
+	$printPage .=     '</div></div>';
+	$printPage .=     '<div id="sp-book-hours"><div class="sp-loading"></div></div>';
+	$printPage .=     '<h4 class="sp-book-subhead">Date Exceptions</h4>';
+	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-add-exception">Add Exception</button></div>';
+	$printPage .=     '<div id="sp-book-exceptions"></div>';
+	$printPage .=   '</div>';
+
+	// Travel time -- the straight-line-to-driving-time conversion. No API; this is the arithmetic
+	// the scheduler runs on, and every metro needs its own numbers.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-travel">';
+	$printPage .=     '<h3>Travel Time</h3>';
+	$printPage .=     '<p class="sp-help-text">How straight-line distance between two ZIP codes is turned into driving minutes. These only ever <strong>raise</strong> a service&rsquo;s buffer, never lower it &mdash; if the minimum you set is already enough, it stands. Defaults are calibrated for Dallas; tune them for your own area.</p>';
+	$printPage .=     '<div id="sp-book-travel-out"><div class="sp-loading"></div></div>';
+	$printPage .=     '<div class="sp-book-card-actions sp-book-card-actions-end"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-travel-save">Save Travel Settings</button></div>';
+	$printPage .=   '</div>';
+
+	// Membership plans -- the products she sells, defined once and reused when issuing.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-plans">';
+	$printPage .=     '<h3>Membership Plans</h3>';
+	$printPage .=     '<p class="sp-help-text">The memberships and session packs you sell. Define each one here once, then issue it to a customer under Booking &rarr; Passes &amp; Memberships &mdash; the terms are filled in for you. Editing a plan does not change anyone already on it.</p>';
+	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-book-add-plan">Add Plan</button></div>';
+	$printPage .=     '<div class="sp-table-card" id="sp-book-plans-list"><div class="sp-loading"></div></div>';
+	$printPage .=   '</div>';
+
+	// Preview -- runs the real availability engine against the rules above.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-preview">';
+	$printPage .=     '<h3>Preview Availability</h3>';
+	$printPage .=     '<p class="sp-help-text">Runs the live booking engine against the settings above and shows exactly what a customer would be offered &mdash; plus the open hours each day was built from, so an empty day explains itself.</p>';
+	$printPage .=     '<div class="sp-toolbar">';
+	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">Service</span>';
+	$printPage .=         '<select id="sp-book-preview-service" class="sp-select"></select></div>';
+	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">Resource</span>';
+	$printPage .=         '<select id="sp-book-preview-resource" class="sp-select"><option value="0">Any</option></select></div>';
+	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">From</span>';
+	$printPage .=         '<input type="date" id="sp-book-preview-from" class="sp-input"></div>';
+	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">To</span>';
+	$printPage .=         '<input type="date" id="sp-book-preview-to" class="sp-input"></div>';
+	$printPage .=       '<div class="sp-toolbar-group">';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-preview-run">Preview</button></div>';
+	$printPage .=     '</div>';
+	$printPage .=     '<div id="sp-book-preview-out"></div>';
+	$printPage .=   '</div>';
+
+	// Notifications -- confirmations, reminders, change notices. Queued, never sent inline.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-notify">';
+	$printPage .=     '<h3>Notifications</h3>';
+	$printPage .=     '<p class="sp-help-text">Confirmations, reminders and change notices sent to the customer. Nothing sends immediately &mdash; messages are queued and delivered by the background sweep, so a reminder still goes out even if the exact minute is missed.</p>';
+	$printPage .=     '<div id="sp-book-notify-out"><div class="sp-loading"></div></div>';
+	$printPage .=     '<div class="sp-book-card-actions sp-book-card-actions-end"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-notify-save">Save Notifications</button></div>';
+	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
 
@@ -1487,7 +1836,7 @@ if ( in_array( 'manage_locations', $caps ) ) {
 }
 if ( in_array( 'manage_templates', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-templates">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Store Reports' ) . '</div>';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Reports' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-templates-content"></div>';
 	$printPage .= '</section>';
 }
@@ -1521,6 +1870,12 @@ if ( in_array( 'manage_api_keys', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-apikeys">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'API Keys' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-apikeys-content"></div>';
+	$printPage .= '</section>';
+}
+if ( in_array( 'view_activity_log', $caps ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-activity">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Activity Log' ) . '</div>';
+	$printPage .=   '<div class="sp-admin-content" id="sp-admin-activity-content"></div>';
 	$printPage .= '</section>';
 }
 if ( $is_superadmin ) {

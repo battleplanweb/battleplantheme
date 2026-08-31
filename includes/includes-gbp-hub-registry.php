@@ -581,7 +581,7 @@ function bpgbp_client_autopair(): void {
 	if ( ! $secret ) { $secret = wp_generate_password( 64, false, false ); update_option( 'bpgbp_site_secret', $secret ); }
 	if ( ! defined( 'BPGBP_HUB_URL' ) && ! get_option( 'bpgbp_hub_url' ) ) update_option( 'bpgbp_hub_url', $hub );
 
-	$body = wp_json_encode( [ 'site_url' => home_url(), 'site_key' => $site_key, 'secret' => $secret, 'label' => get_bloginfo( 'name' ) ] );
+	$body = wp_json_encode( [ 'site_url' => home_url(), 'site_key' => $site_key, 'secret' => $secret, 'label' => bp_business_name() ] );
 	$ts   = (string) time();
 	$sig  = hash_hmac( 'sha256', $ts . '.' . $body, BPGBP_BOOTSTRAP_KEY );
 

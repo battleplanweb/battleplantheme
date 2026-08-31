@@ -25,6 +25,153 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 
 /*--------------------------------------------------------------
+# Source Registry — the one list of review platforms
+--------------------------------------------------------------*/
+
+/*
+Every platform a review can come from, keyed by the slug stored in reviews.source.
+This is the single source of truth for three things that used to be hardcoded
+"google or facebook" in six places: the platform filter, the icon on a review card,
+and whether the Reply / Add-as-testimonial actions are offered.
+
+  label  — how the platform is named in the UI (and the string BrightLocal exports)
+  reply  — can we POST an owner reply? Only Google, via the GBP hub. Everything else
+           is read-only: Meta has no owner-reply API for recommendations, and the
+           directories BrightLocal aggregates are scraped, not written to.
+  feed   — 'native' for the pipelines we run ourselves (the GBP hub), 'brightlocal'
+           for anything aggregated in. The ingest DROPS any brightlocal row whose
+           slug is a native feed, so our own Google/Facebook data stays the only
+           copy no matter what an aggregator returns.
+
+Slugs must stay <= 20 chars — reviews.source is varchar(20).
+
+To add a platform: add a row here and (optionally) drop a matching {slug}.webp into
+common/logos/. Nothing else changes — the icon, the filter option and the reply
+gating all read this list. No file, no problem: the card falls back to a monogram.
+*/
+function sp_review_sources(): array {
+	static $sources = null;
+	if ( $sources !== null ) return $sources;
+
+	/*
+	Slugs are BrightLocal's OWN `directory` values, verified against the live API — they are what
+	the ingest passes as ?directory=, and an unrecognised value is rejected outright. Do not
+	"tidy" them into hyphenated form: yellowpages, insiderpages, judysbook, merchantcircle and
+	yahoo are each a single word there, and hyphenating them silently drops that platform.
+	Bing, Apple Maps and OpenTable are absent on purpose — the API rejects them as directories,
+	because those services display ratings sourced from Yelp/TripAdvisor rather than hosting
+	reviews of their own.
+	*/
+	$sources = [
+		'google'         => [ 'label' => 'Google',          'reply' => true,  'feed' => 'native' ],
+		'facebook'       => [ 'label' => 'Facebook',        'reply' => false, 'feed' => 'native' ],
+		'tripadvisor'    => [ 'label' => 'TripAdvisor',     'reply' => false, 'feed' => 'brightlocal' ],
+		'yelp'           => [ 'label' => 'Yelp',            'reply' => false, 'feed' => 'brightlocal' ],
+		'foursquare'     => [ 'label' => 'Foursquare',      'reply' => false, 'feed' => 'brightlocal' ],
+		'yellowpages'    => [ 'label' => 'Yellow Pages',    'reply' => false, 'feed' => 'brightlocal' ],
+		'yahoo'          => [ 'label' => 'Yahoo! Local',    'reply' => false, 'feed' => 'brightlocal' ],
+		'dexknows'       => [ 'label' => 'DexKnows',        'reply' => false, 'feed' => 'brightlocal' ],
+		'superpages'     => [ 'label' => 'Superpages',      'reply' => false, 'feed' => 'brightlocal' ],
+		'citysearch'     => [ 'label' => 'Citysearch',      'reply' => false, 'feed' => 'brightlocal' ],
+		'insiderpages'   => [ 'label' => 'InsiderPages',    'reply' => false, 'feed' => 'brightlocal' ],
+		'judysbook'      => [ 'label' => "Judy's Book",     'reply' => false, 'feed' => 'brightlocal' ],
+		'merchantcircle' => [ 'label' => 'Merchant Circle', 'reply' => false, 'feed' => 'brightlocal' ],
+		'ezlocal'        => [ 'label' => 'EZlocal',         'reply' => false, 'feed' => 'brightlocal' ],
+	];
+
+	/** Add a platform (or override a label / reply flag / icon) per install. Runs BEFORE the icon
+	 *  resolution below so a platform added here gets its logo looked up too. */
+	$sources = apply_filters( 'sp_review_sources', $sources );
+
+	// A logo is claimed only when the file is really on disk, so the JS never has to guess or
+	// handle a broken <img> — no file means the card renders its monogram fallback instead.
+	// An explicit `icon` from the filter is left alone (that's how you point at a shared file).
+	$dir = get_template_directory() . '/common/logos/';
+	foreach ( $sources as $slug => $meta ) {
+		if ( isset( $meta['icon'] ) ) continue;
+		$sources[ $slug ]['icon'] = file_exists( $dir . $slug . '.webp' ) ? $slug : '';
+	}
+	return $sources;
+}
+
+/**
+ * One platform's metadata, or a synthesized row so an unregistered slug still renders.
+ * Empty resolves to Google — rows written before the source column existed are NULL/'' and
+ * read as Google everywhere else, so this has to agree with them.
+ */
+function sp_review_source( string $slug ): array {
+	$slug = sp_review_source_slug( $slug ) ?: 'google';
+	$all  = sp_review_sources();
+	return $all[ $slug ] ?? [ 'label' => ucwords( str_replace( '-', ' ', $slug ) ), 'reply' => false, 'feed' => 'brightlocal', 'icon' => '' ];
+}
+
+/**
+ * Normalize whatever a feed calls a platform into our stored slug — BrightLocal exports
+ * display names ("Yahoo! Local", "Judy's Book"), not slugs. Matches a registry label
+ * case-insensitively first, then falls back to slugifying, so an unregistered platform
+ * still lands on a stable key instead of being dropped.
+ *
+ * Empty stays empty — the reviews table pre-dates the source column and its old rows are
+ * NULL/''. Those are treated as Google at read time, and blanking them here keeps that
+ * legacy path in one place (sp_reviews_filter_sql) rather than two.
+ */
+function sp_review_source_slug( string $raw ): string {
+	$raw = trim( $raw );
+	if ( '' === $raw ) return '';
+
+	$all = sp_review_sources();
+	if ( isset( $all[ $raw ] ) ) return $raw;                       // already a slug
+
+	foreach ( $all as $slug => $meta ) {
+		if ( 0 === strcasecmp( $meta['label'], $raw ) ) return $slug;
+	}
+	// Last resort for a platform we haven't registered: slugify the display name. Registered
+	// platforms never reach here — they match a key or a label above.
+	return substr( sanitize_title( $raw ), 0, 20 );
+}
+
+/** True when this platform is one we pull ourselves — the aggregator's copy of it is dropped. */
+function sp_review_source_is_native( string $slug ): bool {
+	$meta = sp_review_source( $slug );
+	return ( $meta['feed'] ?? '' ) === 'native';
+}
+
+/**
+ * The platform slugs actually present in the reviews table, in registry order.
+ * The filter dropdown is built from this, so an install with only Google and Facebook
+ * shows exactly the two options it shows today — nothing new appears until real rows
+ * from a new platform arrive.
+ */
+function sp_review_sources_present(): array {
+	global $wpdb;
+	$table = sp_reviews_table();
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) return [];
+
+	$found = $wpdb->get_col( "SELECT DISTINCT source FROM $table" );
+	if ( ! $found ) return [];
+
+	// NULL/'' rows pre-date the source column and read as Google.
+	$have = [];
+	foreach ( $found as $s ) { $have[ ( '' === (string) $s || null === $s ) ? 'google' : (string) $s ] = true; }
+
+	$ordered = [];
+	foreach ( array_keys( sp_review_sources() ) as $slug ) {
+		if ( isset( $have[ $slug ] ) ) { $ordered[] = $slug; unset( $have[ $slug ] ); }
+	}
+	return array_merge( $ordered, array_keys( $have ) ); // unregistered slugs last, never hidden
+}
+
+/** <option> list for the reviews Platforms filter, built from what's really in the table. */
+function sp_review_source_options_html(): string {
+	$html = '<option value="">All platforms</option>';
+	foreach ( sp_review_sources_present() as $slug ) {
+		$html .= '<option value="' . esc_attr( $slug ) . '">' . esc_html( sp_review_source( $slug )['label'] ) . '</option>';
+	}
+	return $html;
+}
+
+
+/*--------------------------------------------------------------
 # Hub client — signed request to the GBP hub
 --------------------------------------------------------------*/
 
@@ -225,10 +372,44 @@ function sp_reviews_migrate_update_time(): void {
 	update_option( 'sp_reviews_update_time_col', '1' );
 }
 
+// One-time: add the poor-review handling columns — internal handling `notes` (JSON) and the
+// `closed_at`/`closed_by` "resolved" stamp (clears the warning outline on 1–3★ reviews).
+add_action( 'init', 'sp_reviews_migrate_handling_cols' );
+function sp_reviews_migrate_handling_cols(): void {
+	if ( get_option( 'sp_reviews_handling_cols' ) ) return;
+	global $wpdb;
+	$t = sp_reviews_table();
+	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) === $t ) {
+		if ( ! $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM `$t` LIKE %s", 'notes' ) ) )     $wpdb->query( "ALTER TABLE `$t` ADD COLUMN notes text DEFAULT NULL" );
+		if ( ! $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM `$t` LIKE %s", 'closed_at' ) ) ) $wpdb->query( "ALTER TABLE `$t` ADD COLUMN closed_at datetime DEFAULT NULL" );
+		if ( ! $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM `$t` LIKE %s", 'closed_by' ) ) ) $wpdb->query( "ALTER TABLE `$t` ADD COLUMN closed_by bigint(20) DEFAULT NULL" );
+	}
+	update_option( 'sp_reviews_handling_cols', '1' );
+}
+
+// Decode a review's stored `notes` JSON into the client shape: newest LAST (chronological), each with
+// an ISO time (browser-formatted) and the author's current display name.
+function sp_reviews_format_notes( $raw ): array {
+	$notes = $raw ? ( json_decode( (string) $raw, true ) ?: [] ) : [];
+	$out   = [];
+	foreach ( (array) $notes as $n ) {
+		if ( ! is_array( $n ) ) continue;
+		$out[] = [
+			'time' => ! empty( $n['time'] ) ? gmdate( 'c', strtotime( (string) $n['time'] ) ) : '',
+			'by'   => ! empty( $n['by'] ) ? site_pulse_display_name( (int) $n['by'] ) : '',
+			'note' => (string) ( $n['note'] ?? '' ),
+		];
+	}
+	return $out;
+}
+
 /** Upsert normalized hub reviews into the table, keyed by reviewId, stamping location/store/brand/source. */
 function sp_reviews_upsert( array $reviews, string $location, string $store, string $brand, string $source = 'google' ): void {
 	global $wpdb;
 	$now  = current_time( 'mysql' );
+	// Normalize here so every feed can hand us whatever it calls the platform — an aggregator
+	// exports display names ("Yahoo! Local"), not slugs, and reviews.source must hold the slug.
+	$source = sp_review_source_slug( $source ) ?: 'google';
 	$locS = sp_reviews_sql_str( $location );
 	$stoS = sp_reviews_sql_str( $store );
 	$braS = sp_reviews_sql_str( $brand );
@@ -293,9 +474,12 @@ function sp_reviews_filter_sql( string $cutoff, string $store, string $brand, st
 	if ( '' !== $store )  { $where .= ' AND store = %s';        $args[] = $store; }
 	if ( '' !== $brand )  { $where .= ' AND brand = %s';        $args[] = $brand; }
 	if ( '' !== $stars )  { $where .= ' AND star_rating = %d';  $args[] = (int) $stars; }
-	// Platform filter: rows synced before the source column existed are NULL/'' → treat them as Google.
-	if ( 'facebook' === $source )    { $where .= " AND source = 'facebook'"; }
-	elseif ( 'google' === $source )  { $where .= " AND ( source = 'google' OR source IS NULL OR source = '' )"; }
+	// Platform filter — matches ANY stored slug, not just the two that used to be hardcoded here.
+	// (The old if/elseif silently matched nothing for a third platform, so asking for e.g. TripAdvisor
+	// returned the unfiltered list.) Google keeps its legacy clause: rows synced before the source
+	// column existed are NULL/'' and still have to read as Google.
+	if ( 'google' === $source )  { $where .= " AND ( source = 'google' OR source IS NULL OR source = '' )"; }
+	elseif ( '' !== $source )    { $where .= ' AND source = %s'; $args[] = $source; }
 	if ( 'replied' === $reply )   { $where .= " AND reply_comment IS NOT NULL AND reply_comment <> ''"; }
 	elseif ( 'unreplied' === $reply ) { $where .= " AND (reply_comment IS NULL OR reply_comment = '')"; }
 	// tags is a JSON array of {label,sentiment}; match the topic by its label substring.
@@ -329,7 +513,9 @@ function sp_reviews_get_rows( string $cutoff = '', string $store = '', string $b
 			'comment'    => $r['comment'],
 			'createTime' => $r['create_time'] ? gmdate( 'c', strtotime( $r['create_time'] ) ) : '',
 			'updateTime' => ! empty( $r['update_time'] ) ? gmdate( 'c', strtotime( $r['update_time'] ) ) : '',
-			'reply'      => $has_reply ? [ 'comment' => $r['reply_comment'], 'updateTime' => $r['reply_time'], 'by' => ( ! empty( $r['reply_by'] ) ? site_pulse_display_name( (int) $r['reply_by'] ) : '' ) ] : null,
+			'reply'      => $has_reply ? [ 'comment' => $r['reply_comment'], 'updateTime' => ( ! empty( $r['reply_time'] ) ? gmdate( 'c', strtotime( $r['reply_time'] ) ) : '' ), 'by' => ( ! empty( $r['reply_by'] ) ? site_pulse_display_name( (int) $r['reply_by'] ) : '' ) ] : null,
+			'notes'      => sp_reviews_format_notes( $r['notes'] ?? null ),
+			'closedAt'   => ! empty( $r['closed_at'] ) ? gmdate( 'c', strtotime( $r['closed_at'] ) ) : null,
 			'tags'       => ( isset( $r['tags'] ) && $r['tags'] ) ? ( json_decode( $r['tags'], true ) ?: [] ) : [],
 			'location'   => isset( $r['location'] ) ? (string) $r['location'] : '',
 			'store'      => isset( $r['store'] ) ? (string) $r['store'] : '',
@@ -581,6 +767,167 @@ function site_pulse_ajax_load_older_reviews(): void {
 
 
 /*--------------------------------------------------------------
+# CSV export — the stored review history as a spreadsheet (god only)
+#
+# The whole back-catalogue already lives in the reviews table, so this just streams
+# it out flat for offline analysis (pivots, keyword searches). It honours the SAME
+# filters the on-screen list is using, so "All time" + no filters is the full dump.
+--------------------------------------------------------------*/
+
+/**
+ * One CSV cell, guarded against spreadsheet formula injection. Review text is written by the public,
+ * so a comment opening with =, +, - or @ would be evaluated as a formula the moment the file opens in
+ * Excel or Sheets; a leading apostrophe forces it back to plain text.
+ */
+function sp_reviews_csv_cell( $v ): string {
+	$s = (string) $v;
+	return ( '' !== $s && false !== strpos( "=+-@\t\r", $s[0] ) ) ? "'" . $s : $s;
+}
+
+/** Stored (UTC) datetime → local 'Y-m-d H:i:s' so the dates read the way the owner's day did. */
+function sp_reviews_csv_date( $utc ): string {
+	$utc = trim( (string) $utc );
+	if ( '' === $utc || 0 === strpos( $utc, '0000-00-00' ) ) return '';
+	return get_date_from_gmt( $utc, 'Y-m-d H:i:s' );
+}
+
+/** The AI chips as one readable cell: "Food (5, positive); Service (2, negative)". */
+function sp_reviews_csv_topics( $raw ): string {
+	$tags = $raw ? ( json_decode( (string) $raw, true ) ?: [] ) : [];
+	$out  = [];
+	foreach ( (array) $tags as $t ) {
+		if ( ! is_array( $t ) || empty( $t['label'] ) ) continue;
+		$score = (int) ( $t['score'] ?? 0 );
+		$sent  = (string) ( $t['sentiment'] ?? '' );
+		$meta  = $score ? ( $score . ( $sent ? ', ' . $sent : '' ) ) : $sent;
+		$out[] = (string) $t['label'] . ( $meta ? " ($meta)" : '' );
+	}
+	return implode( '; ', $out );
+}
+
+/** The internal handling log as one cell: "2026-01-02 14:03 Jane Doe: called the guest | …". */
+function sp_reviews_csv_notes( $raw ): string {
+	$notes = $raw ? ( json_decode( (string) $raw, true ) ?: [] ) : [];
+	$out   = [];
+	foreach ( (array) $notes as $n ) {
+		if ( ! is_array( $n ) || empty( $n['note'] ) ) continue;
+		$when = ! empty( $n['time'] ) ? gmdate( 'Y-m-d H:i:s', strtotime( (string) $n['time'] ) ) : '';
+		$who  = ! empty( $n['by'] ) ? site_pulse_display_name( (int) $n['by'] ) : '';
+		$out[] = trim( sp_reviews_csv_date( $when ) . ' ' . $who ) . ': ' . (string) $n['note'];
+	}
+	return implode( ' | ', $out );
+}
+
+// Streamed as a GET (a real browser navigation, not fetch) so the file lands as an ordinary download.
+add_action( 'wp_ajax_site_pulse_export_reviews', 'site_pulse_ajax_export_reviews' );
+function site_pulse_ajax_export_reviews(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	// God only for now — this hands over every review, reply, internal note and AI score at once.
+	if ( ! site_pulse_god_can_override() ) wp_die( 'Not authorized.', 'Not authorized.', [ 'response' => 403 ] );
+
+	global $wpdb;
+	$cutoff = sp_reviews_range_cutoff( sanitize_text_field( wp_unslash( $_GET['range'] ?? 'all' ) ) );
+	$fStore = sanitize_text_field( wp_unslash( $_GET['store'] ?? '' ) );
+	$fBrand = sanitize_text_field( wp_unslash( $_GET['brand'] ?? '' ) );
+	$fStars = sanitize_text_field( wp_unslash( $_GET['stars'] ?? '' ) );
+	$fReply = sanitize_text_field( wp_unslash( $_GET['reply'] ?? '' ) );
+	$fTopic = sanitize_text_field( wp_unslash( $_GET['topic'] ?? '' ) );
+	$fSrc   = sanitize_text_field( wp_unslash( $_GET['source'] ?? '' ) );
+
+	list( $where, $args ) = sp_reviews_filter_sql( $cutoff, $fStore, $fBrand, $fStars, $fReply, $fTopic, $fSrc, true );
+
+	$company = sanitize_title( (string) site_pulse_get_setting( 'company_name', '' ) );
+	$file    = 'reviews-' . ( $company ? $company . '-' : '' ) . gmdate( 'Y-m-d' ) . '.csv';
+
+	// Nothing may already be in the buffer or it corrupts the download.
+	while ( ob_get_level() ) ob_end_clean();
+	nocache_headers();
+	header( 'Content-Type: text/csv; charset=utf-8' );
+	header( 'Content-Disposition: attachment; filename="' . $file . '"' );
+	if ( function_exists( 'set_time_limit' ) ) @set_time_limit( 300 );
+
+	$out = fopen( 'php://output', 'w' );
+	fwrite( $out, "\xEF\xBB\xBF" ); // BOM — without it Excel mangles accented names and emoji
+	fputcsv( $out, [
+		'Review ID', 'Platform', 'Store', 'Brand', 'Location ID', 'Reviewer', 'Rating',
+		'Review Date', 'Last Updated', 'Review', 'Replied', 'Reply', 'Reply Date', 'Replied By',
+		'Topics', 'Resolved', 'Resolved Date', 'Internal Notes',
+	] );
+
+	// Walked in pages so a 20,000-review all-time export never builds the whole result set in memory.
+	$table = sp_reviews_table();
+	$chunk = 1000;
+	$offset = 0;
+	do {
+		$sql  = "SELECT * FROM $table WHERE $where ORDER BY COALESCE(update_time, create_time) DESC, id DESC LIMIT %d OFFSET %d";
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, array_merge( $args, [ $chunk, $offset ] ) ), ARRAY_A ) ?: [];
+		foreach ( $rows as $r ) {
+			$has_reply = ! empty( $r['reply_comment'] );
+			fputcsv( $out, array_map( 'sp_reviews_csv_cell', [
+				$r['review_id'],
+				sp_review_source( (string) ( $r['source'] ?? '' ) )['label'],
+				$r['store'],
+				$r['brand'],
+				$r['location'],
+				$r['reviewer'],
+				(int) $r['star_rating'],
+				sp_reviews_csv_date( $r['create_time'] ),
+				sp_reviews_csv_date( $r['update_time'] ),
+				$r['comment'],
+				$has_reply ? 'Yes' : 'No',
+				$r['reply_comment'],
+				sp_reviews_csv_date( $r['reply_time'] ),
+				! empty( $r['reply_by'] ) ? site_pulse_display_name( (int) $r['reply_by'] ) : '',
+				sp_reviews_csv_topics( $r['tags'] ?? '' ),
+				! empty( $r['closed_at'] ) ? 'Yes' : 'No',
+				sp_reviews_csv_date( $r['closed_at'] ?? '' ),
+				sp_reviews_csv_notes( $r['notes'] ?? '' ),
+			] ) );
+		}
+		flush();
+		$offset += $chunk;
+	} while ( count( $rows ) === $chunk );
+
+	fclose( $out );
+	site_pulse_log( 'reviews_export', 'Exported the review history to CSV', [ 'range' => sanitize_text_field( wp_unslash( $_GET['range'] ?? 'all' ) ), 'store' => $fStore, 'brand' => $fBrand ] );
+	exit;
+}
+
+
+/*--------------------------------------------------------------
+# Reply signature — a fixed sign-off appended to every reply
+--------------------------------------------------------------*/
+
+/**
+ * The company's reply signature, e.g. "-Melissa, Customer Service Rep". Set in Settings → Reviews;
+ * empty (the default) means replies post exactly as written.
+ */
+function sp_reviews_reply_signature(): string {
+	return trim( (string) site_pulse_get_setting( 'review_reply_signature', '' ) );
+}
+
+/**
+ * Append the signature to a reply — at most once.
+ *
+ * The once matters. "Edit reply" re-posts a comment that ALREADY ends with the signature, and a
+ * replier who's used to typing it will type it anyway; either would otherwise sign the reply twice
+ * (and again on every subsequent edit). An empty comment is the hub's DELETE, so it's left alone.
+ */
+function sp_reviews_apply_reply_signature( string $comment ): string {
+	$sig  = sp_reviews_reply_signature();
+	$body = rtrim( $comment );
+	if ( '' === $sig || '' === trim( $body ) ) return $comment;
+
+	// Case-insensitive so a hand-typed "-melissa…" still counts as already signed.
+	if ( strlen( $body ) >= strlen( $sig ) && 0 === substr_compare( $body, $sig, -strlen( $sig ), strlen( $sig ), true ) ) {
+		return $body;
+	}
+
+	return $body . "\n\n" . $sig;   // blank line before the sign-off; GBP replies are plain text
+}
+
+
+/*--------------------------------------------------------------
 # AJAX — reply to a review (manage_reviews)
 --------------------------------------------------------------*/
 
@@ -596,6 +943,10 @@ function site_pulse_ajax_reply_review(): void {
 	$review_id = sanitize_text_field( wp_unslash( $_POST['review_id'] ?? '' ) );
 	$comment   = sanitize_textarea_field( wp_unslash( $_POST['comment'] ?? '' ) ); // GBP replies are plain text
 	if ( '' === $review_id ) wp_send_json_error( [ 'message' => 'Missing review.' ] );
+
+	// Sign it HERE, before anything else sees it, so the text posted to Google, the row we store, and
+	// the card the panel redraws are all the same string. (No-op when no signature is configured.)
+	$comment = sp_reviews_apply_reply_signature( $comment );
 
 	// Tell the hub which location this review belongs to (it validates against the site's allowlist).
 	global $wpdb;
@@ -662,12 +1013,85 @@ function site_pulse_ajax_review_to_testimonial(): void {
 	if ( is_wp_error( $created ) ) wp_send_json_error( [ 'message' => $created->get_error_message() ] );
 	if ( ! empty( $created['already_imported'] ) ) wp_send_json_error( [ 'message' => 'This review is already imported as a testimonial.' ] );
 
-	site_pulse_log( 'review_to_testimonial', 'Created testimonial from a Google review', [ 'review_id' => $review_id, 'post_id' => $created['post_id'] ] );
+	// Any platform, not just Google — the testimonial is built from our stored copy of the review.
+	site_pulse_log( 'review_to_testimonial', sprintf( 'Created testimonial from a %s review', sp_review_source( (string) ( $row['source'] ?? '' ) )['label'] ), [ 'review_id' => $review_id, 'post_id' => $created['post_id'] ] );
 
 	wp_send_json_success( [
 		'post_id'  => $created['post_id'],
 		'edit_url' => $created['edit_url'],
 	] );
+}
+
+
+/*--------------------------------------------------------------
+# AJAX — poor-review handling: internal notes + close/reopen
+--------------------------------------------------------------*/
+
+// Append an internal handling note (verbatim, timestamped, credited) to a review. Anyone who can VIEW
+// reviews may add one — it's a handling log, not a public reply.
+add_action( 'wp_ajax_site_pulse_add_review_note', 'site_pulse_ajax_add_review_note' );
+function site_pulse_ajax_add_review_note(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	if ( ! ( site_pulse_user_can( $user_id, 'view_reviews' ) || site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$review_id = sanitize_text_field( wp_unslash( $_POST['review_id'] ?? '' ) );
+	$note      = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
+	if ( '' === $review_id ) wp_send_json_error( [ 'message' => 'Missing review.' ] );
+	if ( '' === trim( $note ) ) wp_send_json_error( [ 'message' => 'Write a note first.' ] );
+
+	global $wpdb;
+	$t   = sp_reviews_table();
+	$raw = $wpdb->get_var( $wpdb->prepare( "SELECT notes FROM $t WHERE review_id = %s", $review_id ) );
+	if ( null === $raw && ! $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE review_id = %s", $review_id ) ) ) {
+		wp_send_json_error( [ 'message' => 'Review not found — try refreshing the list.' ] );
+	}
+
+	$notes   = $raw ? ( json_decode( (string) $raw, true ) ?: [] ) : [];
+	$notes[] = [ 'time' => current_time( 'mysql', true ), 'by' => (int) $user_id, 'note' => $note ]; // UTC, credited
+	$wpdb->query( $wpdb->prepare( "UPDATE $t SET notes = %s WHERE review_id = %s", wp_json_encode( $notes ), $review_id ) );
+
+	site_pulse_log( 'review_note', 'Added a handling note to a review', [ 'review_id' => $review_id ] );
+
+	wp_send_json_success( [ 'notes' => sp_reviews_format_notes( wp_json_encode( $notes ) ) ] );
+}
+
+// Mark a review Closed (clears the warning outline) or reopen it. Closing/reopening is a management
+// action, so it needs manage_reviews.
+add_action( 'wp_ajax_site_pulse_close_review', 'site_pulse_ajax_close_review' );
+function site_pulse_ajax_close_review(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_is_god( $user_id ) ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	$review_id = sanitize_text_field( wp_unslash( $_POST['review_id'] ?? '' ) );
+	$close     = ! empty( $_POST['close'] );
+	if ( '' === $review_id ) wp_send_json_error( [ 'message' => 'Missing review.' ] );
+
+	global $wpdb;
+	$t = sp_reviews_table();
+	if ( ! $wpdb->get_var( $wpdb->prepare( "SELECT id FROM $t WHERE review_id = %s", $review_id ) ) ) {
+		wp_send_json_error( [ 'message' => 'Review not found — try refreshing the list.' ] );
+	}
+
+	if ( $close ) {
+		$now = current_time( 'mysql', true );
+		$wpdb->query( $wpdb->prepare( "UPDATE $t SET closed_at = %s, closed_by = %d WHERE review_id = %s", $now, $user_id, $review_id ) );
+		$closed_at = gmdate( 'c', strtotime( $now ) );
+	} else {
+		$wpdb->query( $wpdb->prepare( "UPDATE $t SET closed_at = NULL, closed_by = NULL WHERE review_id = %s", $review_id ) );
+		$closed_at = null;
+	}
+
+	site_pulse_log( 'review_close', ( $close ? 'Marked a review closed' : 'Reopened a review' ), [ 'review_id' => $review_id ] );
+
+	wp_send_json_success( [ 'closedAt' => $closed_at ] );
 }
 
 
@@ -884,7 +1308,27 @@ function site_pulse_ajax_get_review_categories(): void {
 	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override() ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	}
-	wp_send_json_success( [ 'categories' => sp_reviews_categories() ] );
+	// Loads the whole Settings → Reviews panel in one round trip, so the signature rides along.
+	wp_send_json_success( [
+		'categories' => sp_reviews_categories(),
+		'signature'  => sp_reviews_reply_signature(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_save_review_signature', 'site_pulse_ajax_save_review_signature' );
+function site_pulse_ajax_save_review_signature(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$user_id = site_pulse_effective_user_id();
+	if ( ! ( site_pulse_user_can( $user_id, 'manage_reviews' ) || site_pulse_god_can_override() ) ) {
+		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	}
+
+	// Textarea, not text: a signature is commonly two lines (name, then title), and the line breaks
+	// have to survive to the reply. Blank = turn the feature off.
+	$sig = trim( sanitize_textarea_field( wp_unslash( $_POST['signature'] ?? '' ) ) );
+	site_pulse_set_setting( 'review_reply_signature', $sig );
+
+	wp_send_json_success( [ 'signature' => $sig ] );
 }
 
 add_action( 'wp_ajax_site_pulse_save_review_categories', 'site_pulse_ajax_save_review_categories' );

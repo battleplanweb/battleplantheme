@@ -132,12 +132,13 @@ function bp_seo_auto_redirect_on_slug_change( $post_id, $post_after, $post_befor
 }
 
 /*--------------------------------------------------------------
-# Admin page  (Tools → SEO Redirects)
+# Admin page  (Settings → SEO Redirects)
 --------------------------------------------------------------*/
 add_action('admin_menu', function() {
 	// Page stays available even while Yoast is active so you can import/prepare
 	// redirects before cutover; only the front-end ENGINE defers (see above).
-	add_management_page( 'SEO Redirects', 'SEO Redirects', 'manage_options', 'bp-seo-redirects', 'bp_seo_redirects_admin_page' );
+	// Lives under Settings (not Tools) — battleplan_submenu_order() slots it between Permalinks and Site Options.
+	add_options_page( 'SEO Redirects', 'SEO Redirects', 'manage_options', 'bp-seo-redirects', 'bp_seo_redirects_admin_page' );
 });
 
 function bp_seo_redirects_admin_page() {

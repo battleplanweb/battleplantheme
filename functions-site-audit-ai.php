@@ -162,6 +162,19 @@ function bp_audit_analyze_page( string $url ): array {
 	$html = (string) wp_remote_retrieve_body( $res );
 	if ( 200 !== $code || '' === $html ) return [ 'url' => $url, 'error' => 'HTTP ' . $code ];
 
+	// A bot-management challenge answers 200/403 with a tiny "checking your browser" interstitial that
+	// carries NONE of the page's real markup. This crawl originates from the server (a datacenter IP)
+	// hitting its own domain through the CDN, and Cloudflare Bot Fight Mode challenges datacenter-origin
+	// requests far more readily than a real browser — so the crawl can receive a challenge page even when
+	// the live site serves everyone else full HTML. Parsing that stub would fabricate "no schema, no meta,
+	// no H1" on every page (the exact false audit we're hardening against), so treat it as a fetch failure
+	// and skip it. Schema presence is still known via bp_audit_emits_localbusiness_schema(), so a fully
+	// challenged crawl never yields a false "no schema".
+	$cf_mitigated = strtolower( trim( (string) wp_remote_retrieve_header( $res, 'cf-mitigated' ) ) );
+	$challenged   = ( 'challenge' === $cf_mitigated )
+		|| ( strlen( $html ) < 6000 && preg_match( '/just a moment\.\.\.|cf-browser-verification|_cf_chl_opt|Attention Required!|Enable JavaScript and cookies to continue/i', $html ) );
+	if ( $challenged ) return [ 'url' => $url, 'error' => 'blocked by a bot challenge — the crawl never reached the rendered page (check Cloudflare Bot Fight Mode / bot rules for this origin)' ];
+
 	$prev = libxml_use_internal_errors( true );
 	$doc  = new DOMDocument();
 	$doc->loadHTML( '<?xml encoding="utf-8" ?>' . $html );
@@ -696,12 +709,31 @@ function bp_audit_ai_facts(): array {
 }
 
 /**
+ * Does this install actually EMIT a LocalBusiness JSON-LD graph server-side? This is decoupled from
+ * the crawl on purpose: a crawl fetch can miss real schema for reasons that have nothing to do with
+ * whether schema is implemented — a cached edge response, a Cloudflare bot challenge on the crawler
+ * UA, or a domain still parked / not yet pointed at the install (the crawler then fetches a registrar
+ * stub with no <head> at all). A false "no schema" is the audit's single most damaging error, so we
+ * trust this server-side truth over what a single HTTP fetch happened to return.
+ *   • Framework SEO module active (not deferring)  -> bp_seo_schema_graph() emits the @graph (wp_head)
+ *   • Deferring because a Yoast plugin is active    -> Yoast renders its own LocalBusiness/Org graph
+ *   • Killed (bp_seo_enabled=false) AND no Yoast    -> genuinely nothing emits it (a real finding)
+ */
+function bp_audit_emits_localbusiness_schema(): bool {
+	if ( function_exists( 'bp_seo_schema_graph' ) && function_exists( 'bp_seo_defer' ) && ! bp_seo_defer() ) return true;
+	if ( ! function_exists( 'is_plugin_active' ) ) include_once ABSPATH . 'wp-admin/includes/plugin.php';
+	return is_plugin_active( 'wordpress-seo/wp-seo.php' ) || is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' );
+}
+
+/**
  * Pre-digest the page crawl so the model reads conclusions instead of scanning 8 raw page objects.
  * Schema especially must be stated up front — a false "no schema" is the kind of error that makes
- * the whole audit look untrustworthy.
+ * the whole audit look untrustworthy. Schema presence is cross-checked against the server-side truth
+ * (bp_audit_emits_localbusiness_schema) so a blocked/cached/parked-domain fetch can't fake "no schema".
  */
 function bp_audit_pages_digest( array $pages ): array {
 	$n = 0; $with_schema = 0; $types = []; $issues = [];
+	$server_schema = bp_audit_emits_localbusiness_schema();
 	foreach ( $pages as $p ) {
 		if ( ! is_array( $p ) || empty( $p['url'] ) || ! empty( $p['error'] ) ) continue;
 		$n++;
@@ -715,19 +747,32 @@ function bp_audit_pages_digest( array $pages ): array {
 		elseif ( (int) $p['h1_count'] > 1 )               $flags[] = (int) $p['h1_count'] . ' H1s';
 		if ( (int) ( $p['word_count'] ?? 0 ) < 300 )      $flags[] = 'thin copy (' . (int) ( $p['word_count'] ?? 0 ) . ' words)';
 		if ( (int) ( $p['images_missing_alt'] ?? 0 ) > 0 )$flags[] = (int) $p['images_missing_alt'] . ' images missing alt';
-		if ( empty( $p['has_schema'] ) )                  $flags[] = 'no structured data';
+		// Only flag missing structured data when the site truly isn't emitting any — a crawl that
+		// couldn't SEE the schema (cache/challenge/parked) must not produce this flag.
+		if ( empty( $p['has_schema'] ) && ! $server_schema ) $flags[] = 'no structured data';
 		if ( empty( $p['has_viewport'] ) )                $flags[] = 'no mobile viewport tag';
 		if ( $flags ) $issues[ $p['url'] ] = $flags;
 	}
-	$schema_line = $with_schema > 0
-		? "Structured data IS present on {$with_schema} of {$n} crawled pages. Types found: "
+	if ( $with_schema > 0 ) {
+		$schema_line = "Structured data IS present on {$with_schema} of {$n} crawled pages. Types found: "
 			. implode( ', ', array_slice( array_keys( $types ), 0, 12 ) )
-			. '. Do NOT claim the site lacks schema.'
-		: "No structured data (JSON-LD or microdata) was found on any of the {$n} crawled pages.";
+			. '. Do NOT claim the site lacks schema.';
+	} elseif ( $server_schema ) {
+		$schema_line = "This install EMITS a LocalBusiness JSON-LD graph server-side (verified from the active "
+			. "SEO layer), even though the crawl did not capture it on any page — the crawl most likely hit a "
+			. "cached, bot-challenged, or not-yet-pointed (parked) response rather than the real rendered page. "
+			. "Schema IS implemented: do NOT claim the site lacks structured data and do NOT recommend adding "
+			. "LocalBusiness / Organization / RoofingContractor schema. (If the public domain is parked, the real "
+			. "fix is pointing DNS at the install — not implementing schema.)";
+	} else {
+		$schema_line = "No structured data (JSON-LD or microdata) was found on any of the {$n} crawled pages, and "
+			. "the site's SEO layer is not emitting a schema graph server-side either — schema is genuinely absent.";
+	}
 	return [
-		'pages_crawled'   => $n,
-		'schema'          => $schema_line,
-		'per_page_issues' => $issues ?: 'none flagged',
+		'pages_crawled'          => $n,
+		'schema'                 => $schema_line,
+		'schema_server_verified' => $server_schema,
+		'per_page_issues'        => $issues ?: 'none flagged',
 	];
 }
 

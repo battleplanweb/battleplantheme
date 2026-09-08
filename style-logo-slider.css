@@ -32,3 +32,8 @@
 	background:                                                none !important;
 	outline: none
 }
+
+.logo-slider img.logo-img.ruud-logo-img {
+	max-height:                                                150px;
+	width:                                                     auto;
+}

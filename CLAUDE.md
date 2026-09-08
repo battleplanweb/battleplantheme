@@ -500,6 +500,12 @@ Styling is **variable-driven** on `.before-after` — theme per site by setting 
 - `link` → wraps the icon in `<a class="icon-btn">` (pair with `sr` for screen-reader text and `new-tab` to open in a new tab)
 - `grid` → if set with content, splits into a 2-col layout: icon on the left, content (auto-wrapped in `[txt]`) on the right. Empty content falls back to icon-only output.
 
+**⚠️ `[get-icon]` does NOT run `do_shortcode()` on its own content.** `battleplan_getIcon()` drops `$content` into the `.icon-card` verbatim, so a shortcode written inside `[get-icon grid="…"]…[/get-icon]` **prints literally on the page** — `[get-biz info="phone-link"]` renders as those exact characters. Pure HTML inside is fine; a shortcode is not. When the row needs a shortcode (a tracked phone link, `[get-years]`, `[get-biz]`), drop `grid` and write the pair as loose siblings in a plain `<div>` instead — which is the documented shape for an icon + label anyway:
+
+```
+<div class="contact-row">[get-icon type="phone"][get-biz info="phone-link"]</div>
+```
+
 **Use `grid` for icon + stacked-text card patterns** (stat cards, feature pills, contact rows — "icon on the left, one or two lines of text on the right"). `[get-icon type="x" grid="1-3"]<text>[/get-icon]` builds the whole icon+text card in one shortcode. The `grid` value is the icon-col : text-col ratio (`1-2`, `1-3`, …) — tune it to taste.
 
 **To lay a row of them out, give each its own `[col]` in a `[layout grid="Ne"]` — never a wrapping `<div>`.** Let the layout grid form the row; each feature is one `[col]` holding a single `[get-icon grid]`:
@@ -578,6 +584,14 @@ Every page is built from four areas, top to bottom:
 
 On pages with a sidebar, the sidebar content is controlled by an **Elements CPT** post called `widgets`.
 
+### ⚠️ A full-bleed section cannot live in the WordPress editor
+
+`#main-content` is *always* placed inside a width-constrained grid column — it is the column that holds the sidebar, so `content-edge` / `content-full` / `content-stretch` only choose *which* constrained column it gets. A `[section width="edge"]` pasted into the editor therefore reaches the edges of `#main-content`, not the screen.
+
+Page Top and Page Bottom render into `#wrapper-top` / `#wrapper-bottom`, which are plain `grid-template-columns: 1fr` wrappers, so a `[section]` there gets the full track set and can go truly full-bleed.
+
+**So: any home page with edge-to-edge bands (a split hero, a full-width colour band, a wave transition) puts those sections in Page Top / Page Bottom and leaves the editor empty.** Body-copy pages with a sidebar keep using the editor as normal.
+
 ### Elements CPT
 Reusable page sections managed as WordPress posts under the "Elements" post type.
 Key elements used on every site:
@@ -625,6 +639,34 @@ Placed below main content. Typically used for:
 [/section]
 ```
 Note: `logo-top`, `logo-mid`, `logo-bot` are three logo variants that display at different scroll positions.
+
+#### NEVER wrap the logo in an `<a href="/">` — the framework already links it
+
+`linkHome('.logo')` in [js/script-pages.js](js/script-pages.js) runs on every page and turns
+**any element carrying `class="logo"`** into the home link. It sets `tabindex="0"`,
+`role="button"`, `aria-label="Return to Home Page"` and `cursor: pointer`, wires click to `/`,
+maps the Enter key to that click (`keyPress()`), and marks every `<img>` inside
+`aria-hidden="true"` so screen readers announce the wrapper once instead of the image too.
+
+So the `[col class="logo"]` holds a **bare `<img>`**:
+
+```
+[col class="logo"]
+ <img src="/wp-content/uploads/logo.webp" alt="Business Name — City, ST" class="logo-top" width="600" height="194" style="aspect-ratio:600/194" />
+[/col]
+```
+
+Adding your own anchor is not merely redundant — it puts a real `<a>` **inside** an element
+that is already `role="button"`, which is a nested interactive control: two tab stops for one
+target, and an accessibility failure. Delete the anchor, keep the `class="logo"`.
+
+Two things that follow from it:
+- **It is the `.logo` class that does this, not the header.** Put `class="logo"` on anything
+  (a footer lockup, for instance) and it becomes a home link too — which is fine when intended
+  and surprising when it isn't. A footer logo that should NOT be clickable simply doesn't get
+  the class.
+- **It is JavaScript, so the logo isn't a link with JS off** and carries no `href` for crawlers.
+  That's the framework's deliberate trade; don't "fix" it by adding the anchor back.
 
 ### Typical Sidebar (Widgets Element)
 ```
@@ -1455,6 +1497,53 @@ Mental test: *"Do I care that things line up in the other direction too?"* Yes �
 
 If a layout could plausibly go either way, choose grid.
 
+### Units — `px` everywhere, `rem` only for headline font sizes. Never `em`.
+
+**Glendon does not want `em` in site CSS.** Write `px`. The single exception is **headline
+font sizes** (`--font-size-h1`…`h6`, `--h-font-size`, and a heading's sub-head span), which
+stay in `rem` so they keep shrinking on small screens.
+
+Why the split — measured in a live build, not inferred:
+
+| declared | at 1600px | at 900px | at 576px |
+|---|---|---|---|
+| `100px` | 100px | 100px | 100px |
+| `100rem` | 100px | 80px | 76px |
+| `100em` on body-sized text | 1800px | 1700px | 1600px |
+
+- **`px` is fixed** at every width. That is what you want for padding, gaps, borders, radii,
+  icon sizes, max-widths, card metrics — anything whose size shouldn't drift.
+- **`rem` is ~1:1 with px on desktop and auto-shrinks** (~0.80x below 1024, ~0.76x below 576).
+  That free step-down is exactly right for headlines, which is why the `--font-size-h*` tokens
+  are authored in `rem` — `--font-size-h1: 136rem` renders 136px on desktop and ~103px on a
+  phone with no media query. Because `rem` is ~1px here, **read the number as pixels**.
+- **`em` resolves against whatever font-size the element happened to inherit**, so the same
+  `0.9em` means something different in a card, a button and a widget. That unpredictability
+  is the reason it's banned.
+
+**Whole pixels only — no fractional px.** `11.2px` is `11px`, `22.5px` is `23px`. Round half
+away from zero, so `-30.6px` is `-31px` and `0.5px` is `1px`, not `0`. This matters most right
+after an `em` conversion, which produces long decimals by construction (`0.72em` x `17.1px` =
+`12.312px`) — round them as you write them, don't leave the arithmetic showing.
+
+Two traps when you automate it:
+- **Most languages' default rounding is not what you want.** Python's `round()` is banker's
+  rounding: `round(22.5)` is `22` and `round(0.5)` is `0`. Use `floor(abs(x) + 0.5)` with the
+  sign reapplied, or half-up rounding will silently disagree with the rule on every `.5`.
+- **Watch values that round to zero.** A sub-pixel `letter-spacing: 0.4px` becomes `0` and the
+  tracking disappears. That is usually the right call (0.4px was doing nothing), but check the
+  list rather than letting it happen unseen — and if the effect was wanted, it needs a real
+  whole-pixel value, not a fraction.
+
+Two consequences worth knowing before you convert an existing site's `em` values to `px`:
+- **You lose the automatic mobile shrink.** Anything that was in `em` was quietly getting
+  ~24% smaller on phones; in `px` it won't. Budget a pass over the mobile queries afterwards.
+- **Sizes that should track the type still need to.** A value deliberately tied to its
+  heading's size (a mask tile, an optical margin under a headline) belongs in `em` conceptually
+  — express it in `rem` alongside the heading token instead, or set it per breakpoint in `px`.
+
+(Supersedes the older "use `em`, not `rem`" note that came out of the CCSO schedules module.)
+
 ### style-site.css is COMPILED — it is never served directly
 
 `bp_build_site_css()` (in `functions-style-sheets.php`, on `after_setup_theme`) compiles `style-site.css` → `dist/site.css` + `dist/site.min.css`. The browser is served **`dist/site.min.css?ver=_BP_VERSION`** (the `battleplanweb` admin user gets the unminified `dist/site.css`). Editing `style-site.css` alone is not enough to see changes:
@@ -1471,9 +1560,17 @@ Key CSS variable groups (defined in `:root` in `style-site.css`):
 - `--font-primary`, `--font-secondary`, `--font-tertiary`, `--font-text`
 - Color palette: `--main-red`, `--main-blue`, `--black`, `--white`, `--light-grey`, etc.
 
-### NEVER put animated text inside a `background-clip: text` element
+### NEVER put animated OR TRANSFORMED text inside a `background-clip: text` element
 
 A textured headline — `background-image` + `background-clip: text` + `-webkit-text-fill-color: transparent` — clips that texture to **every glyph inside the element, descendants included**. Put `animateCharacters()` (or any transform/opacity animation) on text inside it and the headline renders **twice**: the real characters animating correctly, plus a ghost copy of them piled up at the container's origin, textured, for the whole animation. Chrome promotes an animating element to its own compositor layer, and a promoted descendant is drawn at the wrong coordinates inside the ancestor's text-clip mask.
+
+**Animation is not the trigger — compositor promotion is, and a plain static `transform`
+does it too.** Verified on Heartland (Sept 2026): a headline whose second line carried
+`transform: scale(0.7, 1)` — no animation anywhere — ghosted exactly the same way the moment
+the parent `h1` got `background-clip: text`. Removing the transform made the ghost vanish;
+removing the clip did too. So read this rule as: **nothing inside a text-clipped element may
+carry a `transform`, a `filter`, `will-change`, or an animation.** The fix is the same one
+below — move the texture off the ancestor and onto the individual static line.
 
 **There is no CSS fix on the animated element.** `isolation: isolate`, `will-change: transform`, `transform: translateZ(0)`, and forcing `transform: none` were all tested against a live case — the ghost survives every one. Clearing the animation on `animationend` only hides it *after* the animation, which is the wrong half.
 
@@ -1786,6 +1883,12 @@ Practical consequences:
 - A component class on a `[col]` (`.service-card`, etc.) is a descendant of `.col-inner`, so `#services .service-card` works; `#services > .service-card` does not.
 - Loose siblings (e.g. `[get-icon]` + a `<span>` label) are **separate** children — wrap each icon+label pair in its own `<div>` before laying a row out in a grid, or the grid splits icons from text.
 
+**Trap — `.col-inner .block-button { order: 3 }` sends every `[btn]` to the end of its column.** That is right for a column whose button belongs under the copy, and wrong inside a hand-built row (`<div class="hero-btns">[btn]…[/btn]<div class="phone-number">…</div></div>`), where it silently reverses the source order — the phone button renders before the primary CTA. Reset `order: 0` on the buttons in any such row.
+
+**Trap — `.section[class*="style-"] { overflow: hidden }` clips anything hung outside a styled band.** A decorative `::before` positioned above the section (a wave rising out of the band before it, a badge overhanging the top edge) is invisible the moment the section carries a `style="N"`. Paint the effect over the section's *own* edge instead — e.g. a wave in the NEXT band's colour laid across its own top — or drop the `style-N` and give the section its background by ID.
+
+**Trap — `div.grid-1-1-1-1` collapses to two columns at 1280px and never collapses again.** There is no one-column rule for it at 860 or 576, so a four-up row of cards stays 2×2 on a phone. That is usually right for short cards and wrong for anything wordy; pin the count yourself per breakpoint (`#hero-trust .trust-card { grid-template-columns: 1fr }`) rather than assuming it stacks. An ID-scoped rule outranks the framework's `:not()` chain comfortably.
+
 **Trap — `[get-icon type="X"]` puts `X` on the element as a class**, so a component class that happens to share an icon type's name silently matches the icon too. A testimonial card with `[get-icon type="quote"]` next to `<p class="quote">` is the live case: `.review-card .quote { grid-column: 2 }` grabs the *icon* as well and drags it out of its column. Qualify the selector with the tag (`p.quote`, `span.icon`) whenever a component class collides with an icon slug — the icon list is in [functions-icons.php](functions-icons.php).
 
 ---
@@ -1895,6 +1998,25 @@ The base `functions-site.php` contains multiple commented-out loader animations 
 - Fancy double-bounce
 - Dancing squares
 - And more — pick one, delete the rest
+
+## Password strength nag is off, fleet-wide
+
+WordPress never enforces password strength on the server — the "Very weak" readout, the
+**Confirm use of weak password** checkbox, and the disabled submit button are all client-side
+(`password-strength-meter.js` + `user-profile.js`). `battleplan_allow_weak_passwords()` in
+[functions.php](functions.php) overrides `wp.passwordStrength.meter()` to always return 4
+(Strong), so the checkbox never appears and the button never locks, and hides
+`#pass-strength-result` so there's no badge either. Applies to `profile.php`, `user-new.php`,
+and the `wp-login.php` reset-password screen.
+
+Per-site opt-out (put it back the way core had it):
+
+```php
+add_filter( 'bp_allow_weak_passwords', '__return_false' );
+```
+
+Site Pulse's own password fields are custom markup and never used the core meter — they're
+unaffected either way.
 
 ---
 

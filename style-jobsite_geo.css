@@ -458,3 +458,17 @@ body.wp-admin.post-type-jobsite_geo #poststuff #postbox-container-2 #normal-sort
 		order:                                                    8;
 	}
 }
+
+/* Related /service/ page cross-links — meshes the landing pages so each one has more
+   than a single inbound link. Two column-flowing lists, collapsing to one on mobile. */
+.jobsite_geo-related h2 { margin: 0 0 12px; }
+.jobsite_geo-related h2 + ul { margin: 0 0 28px; }
+.jobsite_geo-related ul {
+	list-style: none;
+	padding: 0;
+	columns: 3;
+	column-gap: 32px;
+}
+.jobsite_geo-related li { margin: 0 0 8px; break-inside: avoid; }
+@media (max-width: 860px) { .jobsite_geo-related ul { columns: 2; } }
+@media (max-width: 576px) { .jobsite_geo-related ul { columns: 1; } }

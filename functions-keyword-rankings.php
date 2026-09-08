@@ -1000,7 +1000,7 @@ function bp_kw_parse_serp_response(?array $response, string $domain, $place_id =
 //
 // Returns counts: ['processed', 'ok', 'fail', 'items_0', 'matched', 'status_codes', 'aborted_on_time']
 function bp_kw_run_serp_batch(array $records, string $endpoint, string $device, string $mode, array &$tracked, array &$history, string $today, float $budget_start, float $budget_seconds): array {
-	$counts = ['processed' => 0, 'ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'status_codes' => [], 'aborted_on_time' => false];
+	$counts = ['processed' => 0, 'ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'status_codes' => [], 'lines' => [], 'aborted_on_time' => false];
 	if (!$records) return $counts;
 
 	$domain   = preg_replace('/^www\./', '', bp_kw_site_domain());
@@ -1009,7 +1009,9 @@ function bp_kw_run_serp_batch(array $records, string $endpoint, string $device, 
 		? '/v3/serp/google/organic/live/advanced'
 		: '/v3/serp/google/organic/live/regular';
 
-	$concurrency = (int) apply_filters('bp_kw_concurrency', 20);
+	// Deliberately low. A 16-wide burst against the Live endpoints came back 8 ok / 8 failed
+	// while the same payload sent on its own succeeded every time. Raise only if fail codes stay clean.
+	$concurrency = max(1, (int) apply_filters('bp_kw_concurrency', 5));
 
 	foreach (array_chunk($records, $concurrency) as $chunk) {
 		if ((microtime(true) - $budget_start) > $budget_seconds) {
@@ -1043,6 +1045,17 @@ function bp_kw_run_serp_batch(array $records, string $endpoint, string $device, 
 				$counts['fail']++;
 				$code = !$envelope_ok ? ($response['status_code'] ?? 0) : $task_status;
 				$counts['status_codes'][$code] = ($counts['status_codes'][$code] ?? 0) + 1;
+
+				// A bare status code is undiagnosable — keep the message DataForSEO sent with it.
+				// A null $response means the HTTP call never returned 200 + JSON (timeout, 429, 402),
+				// which bp_kw_dfs_request_parallel() collapses to null before we ever see a code.
+				if      (!$envelope_ok && !$response) $fail_msg = 'no HTTP 200/JSON — timed out or rejected at the edge';
+				elseif  (!$envelope_ok)               $fail_msg = (string) ($response['status_message'] ?? '');
+				else                                  $fail_msg = (string) ($task['status_message'] ?? '');
+				$counts['lines'][] = sprintf(
+					'FAIL  %-44s (%s, code %s%s)',
+					$r['keyword'] ?? '?', $r['source'] ?? '?', $code, $fail_msg ? ': ' . $fail_msg : ''
+				);
 				if (isset($tracked[$pre_key])) {
 					if ($mode === 'primary') {
 						$tracked[$pre_key]['last_check'] = $today;
@@ -1062,6 +1075,23 @@ function bp_kw_run_serp_batch(array $records, string $endpoint, string $device, 
 
 			$parsed = bp_kw_parse_serp_response($response, $domain, $place_id);
 			if ($parsed['rank'] > 0) $counts['matched']++;
+
+			// Per-keyword result line — the only way to confirm from the admin screen that a
+			// given jobsite keyword was actually queried, and what came back for it.
+			if ($parsed['rank'] > 0) {
+				$counts['lines'][] = sprintf(
+					'#%-4d %-44s (%s)%s%s',
+					$parsed['rank'], $task_kw, $r['source'] ?? '?',
+					$parsed['url'] ? ' ' . $parsed['url'] : '',
+					$parsed['map_rank'] > 0 ? ' · map #' . $parsed['map_rank'] : ''
+				);
+			} else {
+				$counts['lines'][] = sprintf(
+					'--    %-44s (%s, not in top %d%s)',
+					$task_kw, $r['source'] ?? '?', (int) ($r['depth'] ?? 100),
+					$task_items === 0 ? ' — SERP came back empty' : ''
+				);
+			}
 
 			// Re-key on the keyword DataForSEO echoes back (more robust than index alignment)
 			$apply_key = md5(bp_kw_normalize_keyword($task_kw));
@@ -1430,7 +1460,7 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 		['records' => $secondary_regular,  'endpoint' => 'live_regular',  'device' => $secondary, 'mode' => 'secondary'],
 	];
 
-	$all = ['ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'status_codes' => [], 'aborted_on_time' => false];
+	$all = ['ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'status_codes' => [], 'lines' => [], 'aborted_on_time' => false];
 
 	foreach ($batches as $b) {
 		if (!$b['records']) continue;
@@ -1451,6 +1481,7 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 		foreach ($counts['status_codes'] as $code => $n) {
 			$all['status_codes'][$code] = ($all['status_codes'][$code] ?? 0) + $n;
 		}
+		foreach ($counts['lines'] as $line) $all['lines'][] = $line;
 		if ($counts['aborted_on_time']) { $all['aborted_on_time'] = true; break; }
 	}
 
@@ -1468,6 +1499,8 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 		'tasks: %d ok, %d failed · %d had 0 items · %d matched %s%s · %.1fs%s',
 		$all['ok'], $all['fail'], $all['items_0'], $all['matched'], $domain, $codes_str, $elapsed, $abort_str
 	);
+	if ($all['lines']) $diag_msg .= "\n" . implode("\n", $all['lines']);
+
 	error_log('bp_kw_run_serp_chron: ' . $diag_msg . ($bootstrapping ? ' [bootstrap]' : ''));
 	$diag_log = (array) get_option('bp_kw_last_run_diags', []);
 	$diag_log[] = $diag_msg;
@@ -1924,9 +1957,35 @@ function bp_kw_render_admin_page(): void {
 			}
 			$diag_lines = (array) get_option('bp_kw_last_run_diags', []);
 			if ($diag_lines) {
-				$msg .= '<br><strong>Batch diagnostics:</strong><br><code style="font-size:11px;display:block;background:#f0f0f0;padding:6px;margin-top:4px;">' . esc_html(implode("\n", $diag_lines)) . '</code>';
+				$msg .= '<br><strong>Batch diagnostics:</strong><br><code style="font-size:11px;display:block;white-space:pre-wrap;background:#f0f0f0;padding:6px;margin-top:4px;">' . esc_html(implode("\n", $diag_lines)) . '</code>';
 			}
 			$class = $remaining > 0 ? 'notice-warning' : 'notice-success';
+			echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . $msg . '</p></div>';
+		}
+
+		if ($action === 'refresh_jobsite') {
+			// Force-recheck every jobsite-sourced keyword regardless of cadence. "Fetch Due Rankings"
+			// checks nothing once a keyword has been checked today (its next_check is in the future),
+			// which makes it useless for confirming the jobsite GEO pages are actually being tracked.
+			$result    = bp_kw_run_serp_chron(true, function ($kw_key, $entry) {
+				return ($entry['source'] ?? '') === 'jobsite';
+			});
+			$primary   = (int) ($result['primary']   ?? 0);
+			$remaining = (int) ($result['remaining'] ?? 0);
+			$total     = 0;
+			foreach (bp_kw_target_records() as $rec) if (($rec['source'] ?? '') === 'jobsite') $total++;
+			$msg       = "Jobsite re-check complete — <strong>{$primary}</strong> of <strong>{$total}</strong> jobsite keyword(s) queried live.";
+			if ($remaining > 0) {
+				$msg .= " <strong>{$remaining}</strong> still pending — click <em>Recheck Jobsite Keywords</em> again to finish.";
+			}
+			if ($total === 0) {
+				$msg .= ' <em>No jobsite keywords exist in the target list — check that the jobsite_geo module is on and that jobsite_geo-services terms parse as service--city-st.</em>';
+			}
+			$diag_lines = (array) get_option('bp_kw_last_run_diags', []);
+			if ($diag_lines) {
+				$msg .= '<br><strong>Batch diagnostics:</strong><br><code style="font-size:11px;display:block;white-space:pre-wrap;background:#f0f0f0;padding:6px;margin-top:4px;">' . esc_html(implode("\n", $diag_lines)) . '</code>';
+			}
+			$class = ($remaining > 0 || $total === 0) ? 'notice-warning' : 'notice-success';
 			echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . $msg . '</p></div>';
 		}
 
@@ -1946,7 +2005,7 @@ function bp_kw_render_admin_page(): void {
 			}
 			$diag_lines = (array) get_option('bp_kw_last_run_diags', []);
 			if ($diag_lines) {
-				$msg .= '<br><strong>Batch diagnostics:</strong><br><code style="font-size:11px;display:block;background:#f0f0f0;padding:6px;margin-top:4px;">' . esc_html(implode("\n", $diag_lines)) . '</code>';
+				$msg .= '<br><strong>Batch diagnostics:</strong><br><code style="font-size:11px;display:block;white-space:pre-wrap;background:#f0f0f0;padding:6px;margin-top:4px;">' . esc_html(implode("\n", $diag_lines)) . '</code>';
 			}
 			$class = $remaining > 0 ? 'notice-warning' : 'notice-success';
 			echo '<div class="notice ' . esc_attr($class) . ' is-dismissible"><p>' . $msg . '</p></div>';
@@ -2070,6 +2129,12 @@ function bp_kw_render_admin_page(): void {
 		<input type="hidden" name="bp_kw_action" value="fetch_now">
 		<input type="submit" class="button" value="Fetch Due Rankings"
 			title="Runs the normal scheduled fetch now — checks only the keywords that are currently due per their cadence. Does nothing if none are due.">
+	</form>
+	<form method="post" style="display:inline-block;margin-right:8px;">
+		<?php wp_nonce_field('bp_kw_manage'); ?>
+		<input type="hidden" name="bp_kw_action" value="refresh_jobsite">
+		<input type="submit" class="button" value="Recheck Jobsite Keywords"
+			title="Live re-check of every keyword generated from the Jobsite GEO service terms, ignoring the normal schedule. Lists each keyword and where it ranked.">
 	</form>
 	<form method="post" style="display:inline-block;margin-right:8px;" onsubmit="return confirm('Compact history to weekly resolution? Drops intra-week duplicates but keeps the first, weekly anchors, and most recent entry.');">
 		<?php wp_nonce_field('bp_kw_manage'); ?>

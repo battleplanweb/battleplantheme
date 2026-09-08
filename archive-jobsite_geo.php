@@ -447,6 +447,16 @@ get_header(); ?>
 
 		<?php echo do_shortcode($buildUpdate); ?>
 
+		<?php // Cross-links to the sibling /service/ pages — these landing pages are otherwise
+		      // one inbound link deep, which is what keeps them out of the index.
+		// function_exists guard: this template lives in the theme root, but the helper lives in
+		// includes-jobsite-geo.php, which only loads when the jobsite_geo module is on. Without
+		// the guard a module toggle — or a partial deploy — fatals the whole page.
+		if ( is_tax('jobsite_geo-services') && function_exists('bp_geo_related_services_html')
+		     && ( $bp_geo_related = bp_geo_related_services_html() ) ) : ?>
+		<section class="section section-default archive-content archive-jobsite_geo-related"><div class="flex grid-1 valign-start"><div class="col"><div class="col-inner"><?php echo $bp_geo_related; ?></div></div></div></section>
+		<?php endif; ?>
+
 		<?php echo $displayFooter; ?>
 
 		<?php get_footer();

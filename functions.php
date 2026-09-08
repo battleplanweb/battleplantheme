@@ -1636,6 +1636,26 @@ function battleplan_login_enqueue() {
 	wp_enqueue_style( 'battleplan-login', get_template_directory_uri()."/style-login.css", [], _BP_VERSION );
 }
 
+// Stop WordPress nagging about "weak" passwords
+// Core never *enforces* password strength on the server — the entire thing is client-side:
+// password-strength-meter.js scores the password, and user-profile.js reveals the "Confirm use
+// of weak password" checkbox and disables the submit button whenever that score is low. Forcing
+// wp.passwordStrength.meter() to always report 4 (Strong) means the checkbox never appears and
+// the button is never locked, and the readout itself is hidden so there's no strength badge at
+// all. Covers wp-admin (profile.php, user-new.php) and the wp-login.php reset-password screen.
+// Per-site opt-out: add_filter( 'bp_allow_weak_passwords', '__return_false' );
+add_action( 'admin_enqueue_scripts', 'battleplan_allow_weak_passwords', 100 );
+add_action( 'login_enqueue_scripts', 'battleplan_allow_weak_passwords', 100 );
+add_action( 'wp_enqueue_scripts', 'battleplan_allow_weak_passwords', 100 );
+function battleplan_allow_weak_passwords() {
+	if ( ! apply_filters( 'bp_allow_weak_passwords', true ) ) return;
+
+	wp_add_inline_script( 'password-strength-meter', 'if ( window.wp && wp.passwordStrength ) { wp.passwordStrength.meter = function() { return 4; }; }' );
+
+	$handle = ( strpos( $GLOBALS['pagenow'], 'wp-login.php' ) !== false ) ? 'battleplan-login' : ( is_admin() ? 'battleplan-admin-css' : '' );
+	if ( $handle ) wp_add_inline_style( $handle, '#pass-strength-result { display: none !important; }' );
+}
+
 // Load various includes
 if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) require_once get_template_directory().'/includes/includes-woocommerce.php';
 $event_calendar = get_option('event_calendar');
@@ -2511,6 +2531,39 @@ function bp_output_test_schema() {
                         ],
                     ];
                 }, $GLOBALS['bp_reviews'])
+            ],
+            JSON_UNESCAPED_SLASHES
+        ) .
+        '</script>';
+}
+
+// Jobsite GEO slider → Service schema (one node per job shown). Fed by $GLOBALS['bp_jobsite_schema'],
+// which the jobsite_geo archive branch in functions-shortcodes.php populates — a job is a completed
+// service in an area, NOT a review, so it must never land in the bp_reviews graph above.
+add_action('wp_footer', 'bp_output_jobsite_schema', 999);
+function bp_output_jobsite_schema() {
+    if (empty($GLOBALS['bp_jobsite_schema'])) {
+        return;
+    }
+    echo '<script type="application/ld+json">' .
+        wp_json_encode(
+            [
+                '@context' => 'https://schema.org',
+                '@graph' => array_map(function($j) {
+                    $node = [
+                        '@type'       => 'Service',
+                        'name'        => $j['title'] ?: ($j['service'] ?? ''),
+                        'serviceType' => $j['service'] ?? '',
+                        'provider'    => [
+                            '@type' => 'LocalBusiness',
+                            '@id'   => home_url('#organization'),   // same entity the review schema references
+                        ],
+                    ];
+                    if (!empty($j['location'])) $node['areaServed']  = $j['location'];
+                    if (!empty($j['text']))     $node['description'] = $j['text'];
+                    if (!empty($j['url']))      $node['url']         = $j['url'];
+                    return $node;
+                }, $GLOBALS['bp_jobsite_schema'])
             ],
             JSON_UNESCAPED_SLASHES
         ) .

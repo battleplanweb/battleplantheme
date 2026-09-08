@@ -782,6 +782,31 @@ function battleplan_get_service_areas() {
 	}
 
 	  // ----------------------------------------
+	  // 2b. Backfill cities implied by a jobsite_geo-services term
+	  // ----------------------------------------
+	// A /service/{service}--{city-st}/ page only renders below if its city is in $cities,
+	// which is built from the service-areas taxonomy plus customer_info. When a services term
+	// has no matching service-area term, that landing page gets no internal link anywhere on
+	// the site — it exists only in the sitemap. Backfill so nothing can be orphaned that way.
+	if ( function_exists('bp_geo_parse_service_slug') ) {
+		$implied_terms = get_terms(['taxonomy' => 'jobsite_geo-services', 'hide_empty' => false]);
+		foreach ( (is_wp_error($implied_terms) ? [] : (array) $implied_terms) as $implied ) {
+			$parsed = bp_geo_parse_service_slug($implied->slug);
+			if (!$parsed['city'] || !$parsed['state']) continue;
+
+			$impliedSlug = sanitize_title($parsed['city'] . ' ' . $parsed['state']);
+			if (isset($cities[$impliedSlug])) {
+				$cities[$impliedSlug]['has_services'] = true;
+				continue;
+			}
+			$cities[$impliedSlug] = [
+				'display'      => ucwords($parsed['city']) . ', ' . strtoupper($parsed['state']),
+				'has_services' => true,
+			];
+		}
+	}
+
+	  // ----------------------------------------
 	  // 3. Sort alphabetically by display
 	  // ----------------------------------------
 	uasort($cities, function($a, $b) {
@@ -816,10 +841,19 @@ function battleplan_get_service_areas() {
 				// Match ending with this city slug
 				if (!str_ends_with($slug, $citySlug)) continue;
 
-				// Extract service part (everything before the -- location separator)
-				$service_part = explode('--', $slug)[0];
+				// Strip the trailing city slug to leave just the service. Handles the canonical
+				// 'service--city-st' AND the legacy single-dash 'service-city-st' — on the latter
+				// explode('--') never split, so the city got duplicated into the label
+				// ("Roofing Installation Deer Park Tx").
+				$service_part = preg_replace('/-{1,2}' . preg_quote($citySlug, '/') . '$/', '', $slug);
+				if ($service_part === '') $service_part = $slug;
 				$service_label = ucwords(str_replace('-', ' ', $service_part));
-				$url = "/service/$slug";
+
+				// get_term_link() returns the canonical, trailing-slashed permalink. Hand-building
+				// "/service/$slug" dropped the trailing slash, so every one of these links 301'd —
+				// leaving a redirect on the site's only internal crawl path into these pages.
+				$url = get_term_link($service_term);
+				if (is_wp_error($url)) $url = user_trailingslashit(home_url("/service/$slug"));
 
 				$buildLinks .= '<li><a href="' . esc_url($url) . '">' .
 				                esc_html($service_label) .
@@ -1132,14 +1166,14 @@ function battleplan_getBuildArchive($atts, $content = null) {
 	$picSize = esc_attr($a['pic_size']);
 	$textSize = esc_attr($a['text_size']);
 	$link = esc_attr($a['link']);
-	if ( strpos($link, 'cf-') === 0 ) :
-		$linkLoc = esc_url(get_field(str_replace('cf-', '', $link)));
-	elseif ( $type == "testimonials" ) :
-		$linkLoc = "/testimonials/";
-	elseif ( $link == "false" || $link == "no" ) :
-		$link = "false"; $linkLoc = "";
-	elseif ( $link == "" || $link == "post" ) :
-		$linkLoc = esc_url(get_the_permalink($postID));
+	if ( strpos($link, 'cf-') === 0 ) : $linkLoc = esc_url(get_field(str_replace('cf-', '', $link)));
+	elseif ( $type == "testimonials" ) : $linkLoc = "/testimonials/";
+	elseif ( $type == "jobsite_geo" ) :
+		$jobsiteSvcTerms = get_the_terms( $postID, 'jobsite_geo-services' );
+		$jobsiteSvcTerm  = ( $jobsiteSvcTerms && ! is_wp_error($jobsiteSvcTerms) ) ? $jobsiteSvcTerms[0] : null;
+		$linkLoc = $jobsiteSvcTerm ? esc_url( get_term_link($jobsiteSvcTerm) ) : "/areas-we-serve/";
+	elseif ( $link == "false" || $link == "no" ) : $link = "false"; $linkLoc = "";
+	elseif ( $link == "" || $link == "post" ) : $linkLoc = esc_url(get_the_permalink($postID));
 	else:
 		$linkLoc = $link;
 	endif;
@@ -1277,6 +1311,50 @@ function battleplan_getBuildArchive($atts, $content = null) {
 			'date'   => get_the_date('c'),
 			'text'   => wp_strip_all_tags(get_the_content()),
 			'rating' => floatval(get_field('testimonial_rating')),
+		];
+
+	} elseif ( $type === "jobsite_geo" ) {
+
+		// Service + location label for THIS job. WordPress collapses the "--" in the term SLUG down to a
+		// single dash, but the term NAME keeps "service--city-st" — so split the NAME (fall back to the
+		// slug if a name ever lacks it). Service goes in the <h3>, location in a <span> (framework
+		// sub-head pattern), i.e. <h3>Roofing Installation<span>Oglesby, TX</span></h3>.
+		$jobsiteService = $jobsiteLocation = '';
+		if ( ! empty($jobsiteSvcTerm) ) {
+			$raw   = ( strpos((string) $jobsiteSvcTerm->name, '--') !== false ) ? $jobsiteSvcTerm->name : $jobsiteSvcTerm->slug;
+			$parts = explode('--', (string) $raw);
+			$jobsiteService = bp_format_service($parts[0]);
+			if ( isset($parts[1]) ) $jobsiteLocation = bp_format_location($parts[1]);
+		}
+
+		$content = apply_filters('the_content', get_the_content($postID));
+		if ( $truncate != "false" && $truncate != "no" ) :
+			$content = $truncate == "true" || $truncate == "yes" ? truncateText($content) : truncateText($content, $truncate);
+		endif;
+
+		// The subhead is the only TEXT on the card, so it has to carry the link. The thumbnail
+		// above it is output with $picADA (aria-hidden + tabindex="-1") — the correct markup for
+		// an image that DUPLICATES an adjacent text link, which for jobsite_geo never existed.
+		// Result was a card whose only anchor text was the photo's alt ("Left side of home
+		// showing the new 30 year IKO Dynasty shingles...") and which no keyboard or screen
+		// reader user could reach. Linking the h3 fixes the anchor text and the a11y gap at once.
+		$subhead = '';
+		if ( $jobsiteService !== '' ) :
+			$subheadText = esc_html($jobsiteService);
+			if ( $jobsiteLocation !== '' ) $subheadText .= '<span>'.esc_html($jobsiteLocation).'</span>';
+			$subhead = '<h3 class="jobsite-subhead">';
+			$subhead .= $linkLoc !== '' ? '<a href="'.esc_url($linkLoc).'">'.$subheadText.'</a>' : $subheadText;
+			$subhead .= '</h3>';
+		endif;
+		$archiveBody = '[txt class="jobsite_content"]'.$subhead.'[p]'.$content.'[/p][/txt]';
+
+		// --- Inject Service schema for this completed job (NOT a review) ---
+		$GLOBALS['bp_jobsite_schema'][] = [
+			'title'    => trim($jobsiteService.( $jobsiteLocation !== '' ? ' in '.$jobsiteLocation : '' )),
+			'service'  => $jobsiteService,   // "Roofing Installation"
+			'location' => $jobsiteLocation,  // "Oglesby, TX"
+			'url'      => $linkLoc,          // the /service/ landing page
+			'text'     => wp_strip_all_tags(get_the_content()),
 		];
 
 	} else {
@@ -1484,7 +1562,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$order = esc_attr($a['order']);
 	$caption = esc_attr($a['caption']);
 	$contentType = esc_attr($a['content_type']);
-	$contentType = $type === "testimonials" || $caption !== 'no' ? 'text' : $contentType;
+	$contentType = $type === "testimonials" || $type === "jobsite_geo" || $caption !== 'no' ? 'text' : $contentType;
 	$slideType = esc_attr($a['slide_type']) !== "fade" ? esc_attr($a['slide_type']) : "box";
 	$slideEffect = esc_attr($a['slide_effect']);
 	$speed = esc_attr($a['speed']);
@@ -1493,7 +1571,12 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$taxonomy = esc_attr($a['tax']);
 	$term = esc_attr($a['terms']);
 	$size = esc_attr($a['size']);
-	$randStart = esc_attr($a['rand_start']) != '' ? esc_attr($a['rand_start']) : ($indicators == "yes" ? "false" : "true");
+	// jobsite_geo sliders default to a random start even WITH indicators: only the active slide
+	// is visible, so a fixed start means the same handful of /service/ pages surface on every
+	// crawl while the rest stay buried. Randomising spreads that exposure across all of them.
+	// An explicit rand_start="" attribute still wins.
+	$randStartDefault = ( $type === 'jobsite_geo' || $indicators != "yes" ) ? "true" : "false";
+	$randStart = esc_attr($a['rand_start']) != '' ? esc_attr($a['rand_start']) : $randStartDefault;
 	$exclude = array_merge( explode(',', esc_attr($a['exclude'])), $GLOBALS['do_not_repeat'] );
 
 	if ( esc_attr($a['x_current']) == "true" ) :
@@ -1529,7 +1612,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$pause = esc_attr($a['pause']) == "true" ? "hover" : "false";
 
 	if ( $link == "" ) :
-		$linkTo = "/".$type."/";
+		$linkTo = ( $type === "jobsite_geo" ) ? "/areas-we-serve/" : "/".$type."/";
 	elseif ( $link == "none" || $link == "false" || $link == "no" ) :
 		$link = "none";
 	endif;
@@ -1651,7 +1734,7 @@ function battleplan_getPostSlider($atts, $content = null ) {
 
 			foreach ( $all_posts as $post_object ) :
 				if ( $numDisplay < $num ) :
-					if ( esc_attr($a['pics']) == "no" || has_post_thumbnail() || $type == "testimonials" ) :
+					if ( esc_attr($a['pics']) === "no" || has_post_thumbnail() || $type === "testimonials" || $type === "jobsite_geo") :
 
 						global $post;
 						$post = $post_object;
@@ -1791,7 +1874,7 @@ function battleplan_getLogoSlider($atts, $content = null ) {
 
 			list($width, $height) = getimagesize($imagePath);
 
-			$getImage  = '<img class="logo-img hvac-logo-img" loading="'.$lazy.'" src="'.esc_url($imageURL).'" width="'.$width.'" height="'.$height.'" alt="'.esc_attr($alt).'">';
+			$getImage  = '<img class="logo-img hvac-logo-img '.$addLogos[$i].'-logo-img" loading="'.$lazy.'" src="'.esc_url($imageURL).'" width="'.$width.'" height="'.$height.'" alt="'.esc_attr($alt).'">';
 
 			$imageArray[] = '<div>'.$getImage.'</div>';
 

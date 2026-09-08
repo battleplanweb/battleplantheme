@@ -1534,6 +1534,118 @@ function bp_geo_area_redirect_url( $area_slug ) {
 	return get_post_type_archive_link( 'jobsite_geo' ) ?: home_url( '/' );
 }
 
+// Cached list of jobsite_geo-service-areas slugs that look like 'city-…-st', longest first,
+// so a multi-word city ('dripping-springs-tx') is matched before any shorter tail ('springs-tx').
+function bp_geo_area_slugs_by_length() {
+	static $slugs = null;
+	if ( $slugs !== null ) return $slugs;
+
+	$terms = get_terms( [ 'taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, 'fields' => 'slugs' ] );
+	$slugs = [];
+	foreach ( ( is_wp_error( $terms ) ? [] : (array) $terms ) as $slug ) {
+		$slug  = strtolower( trim( (string) $slug ) );
+		$parts = explode( '-', $slug );
+		if ( count( $parts ) < 2 || strlen( end( $parts ) ) !== 2 ) continue;
+		$slugs[] = $slug;
+	}
+	usort( $slugs, function ( $a, $b ) { return strlen( $b ) - strlen( $a ); } );
+	return $slugs;
+}
+
+// Split a jobsite_geo-services term slug into {service, city, state}. Three tiers, because
+// slug format varies by site age and this runs on the FRONT END, where the keyword module
+// (and its equivalent parser) is not loaded:
+//   1. canonical 'service--city-st'  — the '--' is unambiguous
+//   2. legacy 'service-city-st'      — resolved against real service-area slugs, longest first
+//   3. no matching area term         — assume the last segment is a 2-letter state and the one
+//      before it is a single-word city. This is the only tier that can be wrong on a multi-word
+//      city, but tier 2 already caught every multi-word city that has an area term. Without it,
+//      a services term whose area term is missing parses as nothing and its page stays orphaned.
+function bp_geo_parse_service_slug( $slug ) {
+	$blank = [ 'service' => '', 'city' => '', 'state' => '' ];
+	$slug  = strtolower( trim( (string) $slug ) );
+	if ( $slug === '' ) return $blank;
+
+	$build = function ( $service_slug, $city_words, $state ) use ( $blank ) {
+		$service = trim( str_replace( '-', ' ', $service_slug ) );
+		$city    = trim( implode( ' ', $city_words ) );
+		$state   = strtolower( $state );
+		return ( $service && $city && $state ) ? compact( 'service', 'city', 'state' ) : $blank;
+	};
+
+	// 1. Canonical double-dash.
+	if ( strpos( $slug, '--' ) !== false ) {
+		list( $service_slug, $location_slug ) = array_pad( explode( '--', $slug, 2 ), 2, '' );
+		$words = array_values( array_filter( explode( '-', $location_slug ) ) );
+		if ( ! $words ) return $blank;
+		$state = array_pop( $words );
+		return $build( $service_slug, $words, $state );
+	}
+
+	// 2. Legacy single-dash — strip a known 'city-…-st' suffix.
+	foreach ( bp_geo_area_slugs_by_length() as $area ) {
+		$suffix = '-' . $area;
+		if ( substr( $slug, -strlen( $suffix ) ) !== $suffix ) continue;
+		$service_slug = substr( $slug, 0, -strlen( $suffix ) );
+		$loc_words    = explode( '-', $area );
+		$state        = array_pop( $loc_words );
+		$parsed       = $build( $service_slug, $loc_words, $state );
+		if ( $parsed['service'] ) return $parsed;
+	}
+
+	// 3. No area term exists for this city — fall back to 'state is the last segment'.
+	$words = array_values( array_filter( explode( '-', $slug ) ) );
+	if ( count( $words ) < 3 ) return $blank;
+	$state = array_pop( $words );
+	if ( strlen( $state ) !== 2 ) return $blank;
+	$city = array_pop( $words );
+	return $build( implode( '-', $words ), [ $city ], $state );
+}
+
+// Cross-link the /service/ landing pages to each other. Without this each one is reachable
+// only from the [get-service-areas] list — a single inbound link, which is why they sit
+// unindexed. Renders two groups: other services in this town, and this service nearby.
+function bp_geo_related_services_html( $current = null, $limit = 8 ) {
+	if ( ! $current ) $current = get_queried_object();
+	if ( ! $current || empty( $current->term_id ) ) return '';
+
+	$terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => true ] );
+	if ( is_wp_error( $terms ) || count( $terms ) < 2 ) return '';
+
+	$here = bp_geo_parse_service_slug( $current->slug );
+	if ( ! $here['service'] || ! $here['city'] ) return '';
+
+	$same_service = $same_city = [];
+	foreach ( $terms as $t ) {
+		if ( (int) $t->term_id === (int) $current->term_id ) continue;
+		$p = bp_geo_parse_service_slug( $t->slug );
+		if ( ! $p['service'] || ! $p['city'] ) continue;
+
+		$link = get_term_link( $t );
+		if ( is_wp_error( $link ) ) continue;
+
+		$label = ucwords( $p['service'] ) . ' in ' . ucwords( $p['city'] ) . ', ' . strtoupper( $p['state'] );
+		$li    = '<li><a href="' . esc_url( $link ) . '">' . esc_html( $label ) . '</a></li>';
+
+		if ( $p['city'] === $here['city'] && $p['state'] === $here['state'] ) {
+			if ( count( $same_city ) < $limit ) $same_city[] = $li;
+		} elseif ( $p['service'] === $here['service'] ) {
+			if ( count( $same_service ) < $limit ) $same_service[] = $li;
+		}
+	}
+	if ( ! $same_service && ! $same_city ) return '';
+
+	$here_city = ucwords( $here['city'] ) . ', ' . strtoupper( $here['state'] );
+	$out = '<div class="jobsite_geo-related">';
+	if ( $same_city ) {
+		$out .= '<h2>Other services in ' . esc_html( $here_city ) . '</h2><ul>' . implode( '', $same_city ) . '</ul>';
+	}
+	if ( $same_service ) {
+		$out .= '<h2>' . esc_html( ucwords( $here['service'] ) ) . ' in nearby areas</h2><ul>' . implode( '', $same_service ) . '</ul>';
+	}
+	return $out . '</div>';
+}
+
 // Legacy bare-city URLs (/plano-tx/) → straight to the best service page.
 add_action('template_redirect', 'battleplan_jobsite_geo_intercept');
 function battleplan_jobsite_geo_intercept() {

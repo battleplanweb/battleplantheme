@@ -314,7 +314,7 @@ input[type="radio"] {
 	flex:                                                      0 0 auto;
 	width:                                                     var(--sp-checkbox-size) !important;
 	height:                                                    var(--sp-checkbox-size) !important;
-	margin:                                                    0 !important;
+	margin:                                                    0 5px 0 0 !important;
 	padding:                                                   0 !important;
 	transform:                                                 translateY(0);
 }
@@ -7075,6 +7075,18 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	margin:                                                    0 0 1.2em;
 }
 
+/* Action Item "Labels" multi-check: the label checkboxes wrap in a row; each sizes to its content
+   (overriding .checkbox-label's 90% width). */
+.sp-cat-multi {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px 16px;
+	margin-bottom:                                             8px;
+}
+.sp-cat-multi .sp-cat-check {
+	width:                                                     auto;
+}
+
 .sp-forms-cat-rows {
 	display:                                                   flex;
 	flex-direction:                                            column;
@@ -9681,11 +9693,11 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 
 	/* The five-across editor row doesn't fit a phone: label on its own line, times beneath. */
 	.sp-book-window-row {
-		grid-template-columns:                                     1fr auto max-content auto;
+		grid-template-columns:                                    1fr auto max-content auto;
 	}
 
 	.sp-book-window-row .sp-bf-wlabel {
-		grid-column:                                               1 / -1;
+		grid-column:                                              1 / -1;
 	}
 }
 
@@ -9867,10 +9879,10 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 
 	/* Stack the calibration inputs rather than letting them wrap into a ragged sentence. */
 	.sp-book-cal-fields .sp-input {
-		width:                                                     100%;
+		width:                                                    100%;
 	}
 
 	.sp-book-cal-to {
-		display:                                                   none;
+		display:                                                  none;
 	}
 }

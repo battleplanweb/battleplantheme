@@ -6117,37 +6117,62 @@ function spHighlightActionItems(ids) {
 	found[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
-// Shared "Label" control for the Add/Edit modals: a real dropdown of common + existing labels, with a
-// "+ Custom label…" option that reveals a free-text box. Returns the selected (or typed) label.
+// Labels: an item can carry SEVERAL, stored comma-separated in `category`. Parse to an array.
+function spParseLabels(cat) {
+	return String(cat == null ? '' : cat).split(',').map(s => s.trim()).filter(Boolean);
+}
+
+// Shared "Labels" control for the Add/Edit modals: a MULTI-CHECK list of common + existing labels, plus a
+// box to add a brand-new one — so an item can carry more than one (e.g. "New Site" + "Call"). Returns the
+// checked labels joined comma-separated.
 function spLabelOptions(current) {
 	const seed = ['To-Do', 'Follow-up', 'Fix', 'Feature', 'Meeting', 'Call', 'Email', 'Errand'];
 	const seen = {}, list = [];
-	_spActionLabels.concat(seed).forEach(l => { const k = String(l).toLowerCase(); if (l && !seen[k]) { seen[k] = 1; list.push(l); } });
-	if (current && !seen[String(current).toLowerCase()]) list.unshift(current); // keep an existing custom label selectable
+	// Anything already ON this item must appear (and stay checkable), even a one-off custom label.
+	spParseLabels(current).concat(_spActionLabels, seed).forEach(l => {
+		const k = String(l).toLowerCase();
+		if (l && !seen[k]) { seen[k] = 1; list.push(l); }
+	});
 	return list;
 }
 function spLabelFieldHtml(current) {
-	const cur = current || 'To-Do';
-	let opts = spLabelOptions(current).map(l => `<option value="${esc(l)}"${l === cur ? ' selected' : ''}>${esc(l)}</option>`).join('');
-	opts += '<option value="__custom__">+ Custom label…</option>';
-	return `<select class="sp-select sp-cat-sel">${opts}</select>`
-		+ '<input class="sp-input sp-cat-custom" maxlength="50" placeholder="New label" autocomplete="off" style="display:none;margin-top:8px;">';
+	const selected = spParseLabels(current);
+	const isOn = (l) => selected.some(s => s.toLowerCase() === l.toLowerCase());
+	let html = '<div class="sp-cat-multi">';
+	spLabelOptions(current).forEach(l => {
+		html += `<label class="checkbox-label sp-cat-check"><input type="checkbox" class="sp-cat-cb" value="${esc(l)}"${isOn(l) ? ' checked' : ''}><span class="unique">${esc(l)}</span></label>`;
+	});
+	html += '</div>';
+	html += '<input class="sp-input sp-cat-custom" maxlength="50" placeholder="+ Add a new label, then press Enter" autocomplete="off">';
+	return html;
 }
 function spWireLabelField(scope) {
-	const sel = $('.sp-cat-sel', scope), custom = $('.sp-cat-custom', scope);
-	if (!sel || !custom) return;
-	const sync = () => {
-		const isCustom = sel.value === '__custom__';
-		custom.style.display = isCustom ? '' : 'none';
-		if (isCustom) custom.focus();
+	const box = $('.sp-cat-multi', scope), custom = $('.sp-cat-custom', scope);
+	if (!box || !custom) return;
+	// Enter or comma turns the typed text into a new checked label chip.
+	const addTyped = () => {
+		custom.value.split(',').map(s => s.trim()).filter(Boolean).forEach(val => {
+			const existing = [...box.querySelectorAll('.sp-cat-cb')].find(cb => cb.value.toLowerCase() === val.toLowerCase());
+			if (existing) { existing.checked = true; return; }
+			const lbl = document.createElement('label');
+			lbl.className = 'checkbox-label sp-cat-check';
+			lbl.innerHTML = `<input type="checkbox" class="sp-cat-cb" value="${esc(val)}" checked><span class="unique">${esc(val)}</span>`;
+			box.appendChild(lbl);
+			if (typeof markUniqueSpans === 'function') markUniqueSpans(lbl);
+		});
+		custom.value = '';
 	};
-	sel.addEventListener('change', sync);
-	sync();
+	custom.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTyped(); } });
+	custom.addEventListener('blur', addTyped);
 }
 function spLabelFieldValue(scope) {
-	const sel = $('.sp-cat-sel', scope), custom = $('.sp-cat-custom', scope);
-	if (!sel) return '';
-	return (sel.value === '__custom__') ? (custom?.value || '').trim() : sel.value;
+	const labels = [];
+	$$('.sp-cat-cb:checked', scope).forEach(cb => labels.push(cb.value.trim()));
+	const custom = $('.sp-cat-custom', scope);
+	if (custom && custom.value.trim()) custom.value.split(',').map(s => s.trim()).filter(Boolean).forEach(v => labels.push(v));
+	const seen = {}, out = [];
+	labels.forEach(l => { const k = l.toLowerCase(); if (l && !seen[k]) { seen[k] = 1; out.push(l); } });
+	return out.join(', ');
 }
 
 // "+ Add Action Item" — create your own to-do (description, urgency, due date), optionally assigning
@@ -6732,7 +6757,8 @@ function renderActionItemCard(item, mode) {
 	}
 	html += '<div class="sp-action-item-content">';
 
-	html += `<div class="sp-action-item-category"><span class="unique">${esc(item.category)}</span></div>`;
+	const _catLabels = spParseLabels(item.category);
+	if (_catLabels.length) html += `<div class="sp-action-item-category"><span class="unique">${esc(_catLabels.join(' · '))}</span></div>`;
 	html += `<div class="sp-action-item-desc">${esc(item.description)}</div>`;
 
 	// Who it's for ▪ where — only when viewing SOMEONE ELSE'S item. On your own list it's redundant,

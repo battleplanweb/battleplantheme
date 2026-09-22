@@ -23,6 +23,10 @@
 			"'self' " .
 			"'unsafe-inline' " .
 			"https://fonts.googleapis.com " .
+			// Precautionary for [get-translator]: the current element.js injects its
+			// styles inline, but older builds pulled translateelement.css from here.
+			"https://translate.googleapis.com " .
+			"https://www.gstatic.com " .
 			"https://*.cloudflare.com; " .
 
 			// Fonts

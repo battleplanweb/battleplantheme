@@ -5761,6 +5761,16 @@ function site_pulse_action_labels( $cat ): array {
 	return array_values( array_filter( array_map( 'trim', explode( ',', (string) $cat ) ), 'strlen' ) );
 }
 
+// Due-date filter for the Action Items panel. 'due' = dated today or later, 'overdue' = the date has
+// already passed. An item with NO due date belongs to neither bucket — it only shows under "Any due date".
+function site_pulse_action_due_match( $due, string $mode ): bool {
+	if ( '' === $mode ) return true;
+	$due = substr( trim( (string) $due ), 0, 10 );
+	if ( '' === $due || '0000-00-00' === $due ) return false;
+	$today = current_time( 'Y-m-d' );
+	return ( 'overdue' === $mode ) ? ( $due < $today ) : ( $due >= $today );
+}
+
 add_action( 'wp_ajax_site_pulse_get_action_items', 'site_pulse_ajax_get_action_items' );
 function site_pulse_ajax_get_action_items(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
@@ -5784,8 +5794,11 @@ function site_pulse_ajax_get_action_items(): void {
 	// CARRIES that label (case-insensitive) among its comma-separated labels.
 	$status = ! empty( $_POST['status'] ) ? sanitize_text_field( $_POST['status'] ) : '';
 	$cat_l  = strtolower( isset( $_POST['category'] ) ? sanitize_text_field( wp_unslash( $_POST['category'] ) ) : '' );
-	$items = array_values( array_filter( $all, function ( $r ) use ( $status, $cat_l ) {
+	$due_f  = isset( $_POST['due'] ) ? sanitize_text_field( wp_unslash( $_POST['due'] ) ) : '';
+	if ( ! in_array( $due_f, [ 'due', 'overdue' ], true ) ) $due_f = '';
+	$items = array_values( array_filter( $all, function ( $r ) use ( $status, $cat_l, $due_f ) {
 		if ( '' !== $status && (string) $r['status'] !== $status ) return false;
+		if ( ! site_pulse_action_due_match( $r['due_date'] ?? '', $due_f ) ) return false;
 		if ( '' !== $cat_l && ! in_array( $cat_l, array_map( 'strtolower', site_pulse_action_labels( $r['category'] ) ), true ) ) return false;
 		return true;
 	} ) );
@@ -5834,6 +5847,11 @@ function site_pulse_ajax_summarize_action_items(): void {
 	if ( '' !== $category ) {
 		$cat_l = strtolower( $category );
 		$items = array_values( array_filter( $items, fn( $r ) => in_array( $cat_l, array_map( 'strtolower', site_pulse_action_labels( $r['category'] ) ), true ) ) );
+	}
+	// …and the due-date filter, for the same reason.
+	$due_f = isset( $_POST['due'] ) ? sanitize_text_field( wp_unslash( $_POST['due'] ) ) : '';
+	if ( in_array( $due_f, [ 'due', 'overdue' ], true ) ) {
+		$items = array_values( array_filter( $items, fn( $r ) => site_pulse_action_due_match( $r['due_date'] ?? '', $due_f ) ) );
 	}
 	if ( ! $items ) {
 		wp_send_json_error( [ 'message' => 'There are no open action items to summarize.' ] );
@@ -5989,6 +6007,11 @@ function site_pulse_ajax_get_action_summary(): void {
 	if ( '' !== $category ) {
 		$cat_l = strtolower( $category );
 		$items = array_values( array_filter( $items, fn( $r ) => in_array( $cat_l, array_map( 'strtolower', site_pulse_action_labels( $r['category'] ) ), true ) ) );
+	}
+	// …and the due-date filter, for the same reason.
+	$due_f = isset( $_POST['due'] ) ? sanitize_text_field( wp_unslash( $_POST['due'] ) ) : '';
+	if ( in_array( $due_f, [ 'due', 'overdue' ], true ) ) {
+		$items = array_values( array_filter( $items, fn( $r ) => site_pulse_action_due_match( $r['due_date'] ?? '', $due_f ) ) );
 	}
 
 	$saved['stale']     = ( (string) ( $saved['signature'] ?? '' ) !== site_pulse_action_items_signature( $items ) );

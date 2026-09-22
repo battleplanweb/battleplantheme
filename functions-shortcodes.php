@@ -1107,15 +1107,44 @@ function battleplan_translator($atts, $content = null) {
 	bp_enqueue_script( 'battleplan-translator', 'script-translator', ['battleplan-script-helpers'] );
 	bp_inline_minified_css( get_template_directory() . '/style-translator.css' );
 
-	?><script async nonce="<?php echo _BP_NONCE; ?>" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script><?php
-
-	$a = shortcode_atts( array( 'language'=>'spanish', 'text'=>'Haga clic para el sitio en español', 'class'=>'', 'align'=>'center', ), $atts );
-	$language = esc_attr($a['language']);
-	$text = esc_attr($a['text']);
+	// 'text' is legacy (the old single-label button) and is ignored - the control is now
+	// a segmented language switch. Left in the atts so existing shortcodes don't break.
+	$a = shortcode_atts( array( 'language'=>'spanish', 'text'=>'', 'class'=>'', 'align'=>'center', 'from'=>'English', 'to'=>'Español', ), $atts );
 	$class = esc_attr($a['class']);
 	$align = esc_attr($a['align']);
+	$from  = esc_html($a['from']);
+	$to    = esc_html($a['to']);
 
-	return "<div id='hablamos-espanol' class='".$class."' style='text-align:".$align."'>".$text."</span></div>";
+	// Footer credit for Google, shown only once the page is actually translated (the
+	// CSS gates it on Google's .translated-ltr class).
+	if ( ! has_action('bp_after_colophon', 'bp_translator_credit') ) {
+		add_action('bp_after_colophon', 'bp_translator_credit');
+	}
+
+	// Returned, not echoed - the content filter can run before the markup is printed.
+	$script = "<script async nonce='"._BP_NONCE."' src='//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'></script>";
+
+	// .notranslate keeps Google from translating the switch's own labels, and the
+	// mount point is kept in the DOM (screen-reader-hidden) because TranslateElement
+	// needs a real element to build into. .unique opts the halves out of the global
+	// button rules in style-forms.css - those re-apply --button-padding-hover and
+	// --button-border-radius-hover on hover, which resized the pill mid-interaction.
+	$html  = "<div class='bp-translator notranslate ".$class."' translate='no' style='text-align:".$align."'>";
+	$html .=   "<div class='bp-translator-switch' role='group' aria-label='Language'>";
+	$html .=     "<button type='button' class='bp-lang unique' data-lang='en' lang='en' aria-pressed='false'>".$from."</button>";
+	$html .=     "<button type='button' class='bp-lang unique' data-lang='es' lang='es' aria-pressed='false'>".$to."</button>";
+	$html .=   "</div>";
+	$html .= "</div>";
+	$html .= "<div id='hablamos-espanol' class='bp-translator-mount' aria-hidden='true'></div>";
+
+	return $script.$html;
+}
+
+// Google's terms expect an attribution wherever its translation is shown
+function bp_translator_credit() {
+	$text = apply_filters( 'bp_translator_credit_text', 'Traducido por Google' );
+
+	echo "<div class='bp-translate-credit notranslate' translate='no'>".esc_html($text)."</div>";
 }
 
 // Build an archive

@@ -1,5 +1,20 @@
 @charset "utf-8";
 
+/*--------------------------------------------------------------
+# Video
+#
+# Two blocks share this file because they share the facade:
+#
+#   [vid]         one video (YouTube, Vimeo or local) — functions-grid.php
+#   [yt-channel]  a whole channel, three layouts    — includes-video.php
+#
+# Neither renders an iframe until a click. Both ship a thumbnail plus the same
+# play graphic, and script-video.js builds the real embed on demand — a grid of
+# live embeds is ~10MB of YouTube JS and murders LCP.
+#
+# Inlined on demand by the shortcodes (bp_inline_minified_css), not part of core.
+--------------------------------------------------------------*/
+
 .block-video {
 	position:                                                  relative;
 	overflow:                                                  hidden;
@@ -130,12 +145,20 @@
 	filter:                                                    drop-shadow(1px 1px 0 var(--black-med)) drop-shadow(-1px -1px 0 var(--white-med)) drop-shadow(6px 6px 2px var(--black-lowest));
 }
 
+/* [vid] and [yt-channel] share every facade rule from here down. The markup is
+   the same shape in both — an <img> with the play graphic as its next sibling —
+   so the selectors only need the second class adding. Keep them together: the
+   two blocks looked different for exactly as long as they had their own copies. */
+
 .video-player .play,
-.video-player img:hover{
+.yt-play,
+.video-player img:hover,
+.yt-thumb img:hover {
 	filter:                                                    brightness(75%);
 }
 
-.video-player img {
+.video-player img,
+.yt-thumb img {
 	position:                                                  absolute;
 	left:                                                      0;
 	bottom:                                                    0;
@@ -152,7 +175,8 @@
 	transition:                                                all .4s var(--main-trans-easing);
 }
 
-.video-player .play {
+.video-player .play,
+.yt-play {
 	position:                                                  absolute;
 	background:                                                url('/wp-content/themes/battleplantheme/common/logos/video-play-btn.webp') no-repeat;
 	width:                                                     80px;
@@ -165,7 +189,8 @@
 	transition:                                                0.3s;
 }
 
-.video-player img:hover + .play {
+.video-player img:hover + .play,
+.yt-thumb img:hover + .yt-play {
 	filter:                                                    brightness(100%);
 	transition:                                                0.3s;
 }
@@ -197,5 +222,338 @@
 	.block-video.span-1 {
 		width:                                                    75%;
 		padding-top:                                              37.376875%;
+	}
+}
+
+/*--------------------------------------------------------------
+# YouTube channels — [yt-channel]
+#
+# Three layouts off one block:
+#   .yt-grid     thumbnail grid, each tile becomes its own player
+#   .yt-feature  one big stage on top, thumbnail strip below feeds it
+#   .yt-scroll   the grid row, plus .swipe — style-scroller.css turns it
+#                into a horizontal rail at its break point
+#
+# The row itself is a plain [layout] row (.flex.grid-Ne.break-N), so column
+# counts, stacking and the swipe rail all come from style-grid.css and
+# style-scroller.css. Nothing here re-implements the grid.
+#
+# .yt-thumb is a <button> so the tiles are keyboard operable for free. It is
+# also the aspect box — script-video.js swaps it for an .yt-iframe on click,
+# and both are sized by the same rule so the tile never reflows mid-click.
+#
+# The play graphic itself is shared with [vid] further up this file.
+--------------------------------------------------------------*/
+
+.block-yt-channel {
+	--yt-red:                                                  rgb(255, 0, 0);
+	margin:                                                    var(--measure-small) auto var(--measure-base);
+}
+
+
+/* ---------------------------------------------------------------
+   Channel header — avatar, name, counts, Subscribe
+--------------------------------------------------------------- */
+
+.yt-header {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       16px;
+	margin-bottom:                                             20px;
+}
+
+.yt-avatar {
+	width:                                                     72px;
+	height:                                                    72px;
+	border-radius:                                             50%;
+	flex:                                                      0 0 auto;
+	object-fit:                                                cover;
+}
+
+.yt-header-text {
+	flex:                                                      1 1 auto;
+	min-width:                                                 0;
+}
+
+.yt-channel-name {
+	font-family:                                               var(--font-secondary);
+	font-size:                                                 20px;
+	font-weight:                                               700;
+	line-height:                                               1.2;
+	margin:                                                    0;
+}
+
+.yt-channel-stats {
+	font-size:                                                 14px;
+	color:                                                     var(--medium-grey);
+	margin:                                                    2px 0 0;
+}
+
+.yt-subscribe {
+	flex:                                                      0 0 auto;
+	display:                                                   inline-block;
+	background:                                                var(--yt-red);
+	color:                                                     rgb(255, 255, 255);
+	font-family:                                               var(--button-font-family);
+	font-size:                                                 15px;
+	font-weight:                                               700;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            1px;
+	text-decoration:                                           none;
+	padding:                                                   10px 20px;
+	border-radius:                                             20px;
+	transition:                                                var(--button-transition);
+}
+
+.yt-subscribe:hover,
+.yt-subscribe:focus-visible {
+	filter:                                                    brightness(85%);
+	color:                                                     rgb(255, 255, 255);
+}
+
+
+/* ---------------------------------------------------------------
+   Tiles
+--------------------------------------------------------------- */
+
+.yt-row {
+	align-items:                                               start;
+}
+
+.col-yt .col-inner {
+	gap:                                                       0;
+}
+
+.yt-tile {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	width:                                                     100%;
+}
+
+/* The facade and the iframe that replaces it are the same box, so the tile keeps
+   its height the instant the swap happens.
+
+   NO border or radius on the facade — [vid] doesn't have one either. The border
+   belongs on the iframe, which is where .block-video>iframe puts it, so the two
+   blocks look identical before AND after the click. */
+.yt-thumb,
+.yt-iframe {
+	display:                                                   block;
+	position:                                                  relative;
+	width:                                                     100%;
+	aspect-ratio:                                              16 / 9;
+	overflow:                                                  hidden;
+}
+
+/* It is a <button> purely so the tiles are keyboard operable. Stripped of its
+   chrome it is indistinguishable from [vid]'s clickable div.
+
+   TWO things have to be stripped, and missing either one makes the tile render
+   as a site button instead of a video:
+     1. style-forms.css styles `button:not(.unique)` — padding, radius, shadow,
+        background, the lot. The markup carries `.unique` to opt out of it.
+     2. The browser's own default button chrome, which .unique does nothing
+        about. That's what the reset below is for.
+   Belt and braces on purpose: a site that restyles buttons harder shouldn't be
+   able to reach in here. */
+.yt-thumb {
+	padding:                                                   0;
+	margin:                                                    0;
+	border:                                                    none;
+	border-radius:                                             0;
+	box-shadow:                                                none;
+	text-shadow:                                               none;
+	filter:                                                    none;
+	transform:                                                 none;
+	background:                                                var(--black-low);
+	cursor:                                                    pointer;
+	appearance:                                                none;
+	-webkit-appearance:                                        none;
+}
+
+.yt-iframe {
+	border:                                                    1px solid var(--black-highest);
+	background:                                                var(--black-low);
+}
+
+/* Everything else — image fill, hover dimming, play-button brightness — comes
+   from the shared facade rules above. Do not re-declare them here. */
+
+.yt-thumb:focus-visible {
+	outline:                                                   2px solid var(--accent-color);
+	outline-offset:                                            2px;
+}
+
+/* Duration / Live flag */
+.yt-badge {
+	position:                                                  absolute;
+	right:                                                     6px;
+	bottom:                                                    6px;
+	background:                                                var(--black-high);
+	color:                                                     rgb(255, 255, 255);
+	font-size:                                                 12px;
+	font-weight:                                               700;
+	line-height:                                               1;
+	padding:                                                   4px 6px;
+	border-radius:                                             3px;
+	pointer-events:                                            none;
+}
+
+.yt-live {
+	background:                                                var(--yt-red);
+	text-transform:                                            uppercase;
+	letter-spacing:                                            1px;
+}
+
+
+/* ---------------------------------------------------------------
+   Tile text
+--------------------------------------------------------------- */
+
+.yt-meta {
+	padding:                                                   8px 2px 0;
+}
+
+.yt-title {
+	font-family:                                               var(--font-text);
+	font-size:                                                 16px;
+	font-weight:                                               bold;
+	line-height:                                               1.3;
+	margin:                                                    0;
+	display:                                                   -webkit-box;
+	-webkit-line-clamp:                                        2;
+	-webkit-box-orient:                                        vertical;
+	overflow:                                                  hidden;
+}
+
+.yt-stats {
+	font-size:                                                 13px;
+	color:                                                     var(--text-color);
+	margin:                                                    3px 0 0;
+}
+
+.yt-dot {
+	padding:                                                   0 3px;
+}
+
+
+/* ---------------------------------------------------------------
+   Feature layout — big stage, strip underneath
+--------------------------------------------------------------- */
+
+.yt-stage {
+	width:                                                     100%;
+	margin-bottom:                                             12px;
+}
+
+.yt-stage-title {
+	font-family:                                               var(--font-secondary);
+	font-size:                                                 19px;
+	font-weight:                                               700;
+	line-height:                                               1.3;
+	margin:                                                    0 0 20px;
+}
+
+/* The strip is a supporting cast — smaller text than a standalone grid. */
+.yt-feature .yt-title {
+	font-size:                                                 13px;
+}
+
+.yt-feature .yt-stats {
+	font-size:                                                 12px;
+}
+
+/* The tile currently loaded into the stage. An outline, not a border — the
+   facade has no border now, and adding one back would shift the tile. */
+.yt-feature .yt-tile.is-current .yt-thumb {
+	outline:                                                   2px solid var(--accent-color);
+	outline-offset:                                            -2px;
+}
+
+
+/* ---------------------------------------------------------------
+   Load more
+--------------------------------------------------------------- */
+
+.yt-more-wrap {
+	text-align:                                                center;
+	margin-top:                                                24px;
+}
+
+.yt-more[disabled] {
+	opacity:                                                   .6;
+	cursor:                                                    wait;
+}
+
+
+/* ---------------------------------------------------------------
+   Editors only — why the block rendered nothing
+--------------------------------------------------------------- */
+
+.yt-channel-empty {
+	border:                                                    2px dashed var(--yt-red);
+	background:                                                var(--black-lowest);
+	padding:                                                   20px;
+	margin:                                                    var(--measure-small) auto;
+	font-size:                                                 14px;
+	line-height:                                               1.5;
+	text-align:                                                left;
+}
+
+.yt-channel-empty p {
+	margin:                                                    0 0 10px;
+}
+
+.yt-channel-empty p:last-child {
+	margin-bottom:                                             0;
+}
+
+.yt-channel-empty code {
+	background:                                                var(--black-lowest);
+	padding:                                                   2px 5px;
+	border-radius:                                             3px;
+	font-size:                                                 13px;
+	word-break:                                                break-all;
+}
+
+
+/* ---------------------------------------------------------------
+   Small screens
+--------------------------------------------------------------- */
+
+@media (max-width:860px) {
+	.yt-header {
+		flex-wrap:                                                wrap;
+		gap:                                                      12px;
+	}
+
+	.yt-avatar {
+		width:                                                    56px;
+		height:                                                   56px;
+	}
+
+	.yt-channel-name {
+		font-size:                                                18px;
+	}
+
+	.yt-stage-title {
+		font-size:                                                17px;
+	}
+}
+
+@media (max-width:576px) {
+	/* Subscribe drops to its own full-width row rather than squeezing the name. */
+	.yt-subscribe {
+		flex:                                                     1 1 100%;
+		text-align:                                               center;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.video-player img,
+	.yt-thumb img,
+	.video-player .play,
+	.yt-play {
+		transition:                                               none;
 	}
 }

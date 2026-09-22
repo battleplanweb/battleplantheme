@@ -5947,7 +5947,7 @@ function initActionItems() {
 	populateActionItemFilters();
 	loadActionItems();
 
-	$$('#sp-action-filter-status, #sp-action-filter-location, #sp-action-filter-category, #sp-action-sort').forEach(el => {
+	$$('#sp-action-filter-status, #sp-action-filter-location, #sp-action-filter-category, #sp-action-filter-due, #sp-action-sort').forEach(el => {
 		el?.addEventListener('change', () => loadActionItems());
 	});
 
@@ -5983,6 +5983,8 @@ function spActionScopeParams() {
 	else if (locVal) params.location_id = locVal;
 	const catVal = $('#sp-action-filter-category')?.value || '';
 	if (catVal) params.category = catVal;
+	const dueVal = $('#sp-action-filter-due')?.value || '';
+	if (dueVal) params.due = dueVal;
 	return params;
 }
 
@@ -6524,6 +6526,8 @@ async function loadActionItems() {
 	else if (locVal) filters.location_id = locVal;
 	const catVal = $('#sp-action-filter-category')?.value || '';
 	if (catVal) filters.category = catVal;
+	const dueVal = $('#sp-action-filter-due')?.value || '';
+	if (dueVal) filters.due = dueVal;
 
 	try {
 		const res = await spAjax('site_pulse_get_action_items', filters);

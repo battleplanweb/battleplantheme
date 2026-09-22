@@ -306,6 +306,11 @@ function battleplan_buildImg( $atts, $content = null ) {
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
 	bp_inline_minified_css( get_template_directory() . '/style-video.css' );
+	// The facade that swaps these thumbnails for real iframes lives in
+	// script-video.js (shared with [yt-channel] in includes-video.php). It used to
+	// ride along in script-pages.js on every page of every site; it is enqueued on
+	// demand now, so [vid] has to ask for it.
+	bp_enqueue_script( 'battleplan-script-video', 'script-video', ['battleplan-script-pages'] );
 
 	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
@@ -340,6 +345,12 @@ function battleplan_buildVid( $atts, $content = null ) {
 	if ( $tracking !== '' ) $class .= " tracking";
 
 	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
+		// Both branches set $id — it is what data-id carries, and the schema below is
+		// shared. Before this each branch set only its OWN variable, so every YouTube
+		// embed emitted an undefined $id and every Vimeo embed claimed a YouTube
+		// thumbnail URL built from an undefined $vid_id.
+		$id = '';
+		$embed = '';
 		if ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false ) :
 			$link = (strpos($link, '?si=') !== false) ? strstr($link, '?si=', true) : $link;
 			$link = str_replace('www.', '', $link);
@@ -350,6 +361,8 @@ function battleplan_buildVid( $atts, $content = null ) {
 
 			preg_match('/^[^?]+/', $link, $matches);
 			$vid_id = $matches[0];
+			$id = $vid_id;
+			$embed = 'https://www.youtube.com/embed/'.$vid_id;
 
 			$link = 'https://www.youtube.com/embed/'.$vid_id.'?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer';
 
@@ -358,6 +371,7 @@ function battleplan_buildVid( $atts, $content = null ) {
 			if ( $begin !== "" ) : $link .= "&start=".$begin; endif;
 		else:
 			$id = str_replace(['https://player.vimeo.com/video/', 'https://vimeo.com/'], '', $link);
+			$embed = 'https://player.vimeo.com/video/'.$id;
 			$link .= "?autoplay=1&title=0&byline=0&portrait=0";
 			if ( $thumb === '' ) :
 				$data = file_get_contents('https://vimeo.com/api/v2/video/'.$id.'.json');
@@ -366,14 +380,21 @@ function battleplan_buildVid( $atts, $content = null ) {
 			endif;
 		endif;
 
+		// schema.org wants an absolute URL. The auto-generated thumbs are
+		// protocol-relative (//i.ytimg.com/...) and a hand-passed thumb="" is usually
+		// a site-relative upload path — neither is valid as a thumbnailUrl.
+		if ( strpos($thumb, '//') === 0 )     $schemaThumb = 'https:'.$thumb;
+		elseif ( strpos($thumb, '/') === 0 )  $schemaThumb = home_url($thumb);
+		else                                  $schemaThumb = $thumb;
+
 		$schema = [
 			'@context'     => 'https://schema.org',
 			'@type'        => 'VideoObject',
 			'name'         => get_the_title(),
 			'description'  => get_the_excerpt() ?: get_the_title(),
-			'thumbnailUrl' => 'https://img.youtube.com/vi/' . $vid_id . '/maxresdefault.jpg',
+			'thumbnailUrl' => $schemaThumb,
 			'uploadDate' 	=> get_the_date('c'),
-			'embedUrl'     => 'https://www.youtube.com/embed/' . $vid_id,
+			'embedUrl'     => $embed,
 		];
 
 		$schemaBlock = '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';

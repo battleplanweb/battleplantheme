@@ -17,7 +17,6 @@ jobs:
       matrix:
         wpe_env:
           - accessibleheat
-          - acrescue
           - acservice
           - acsolutionswac
           - actionairc
@@ -57,15 +56,11 @@ jobs:
           - cleanairsys
           - commercialair
           - conoverair
-          - consumerair
           - coolcohvac
-          - courterhall
-          - courterhallstg
           - coworkersmin
           - crouchs
           - daloremhvac
           - deerhollowcab
-          - deltapools
           - dobbsac
           - duttonhvac
           - eagletteserv25
@@ -141,8 +136,8 @@ jobs:
           - tempsac
           - texoma
           - thankyouhomeim
-          - trailsidemotel
           - tritechmech
+          - truebluehome
           - unscripfitness
           - urtfc
           - vantaservices

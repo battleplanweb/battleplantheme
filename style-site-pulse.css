@@ -934,10 +934,15 @@ input + span {
 	height:                                                    36px;
 	object-fit:                                                contain;
 	border-radius:                                             var(--sp-radius-xs);
-	margin:                                                    -5px 0 5px;
+	margin:                                                    -10px 0 10px;
 }
 
 /* Once scrolled: drop the logo, show the icon + page title in its place. */
+.sp-mobile-header .sp-mobile-brand,
+.sp-mobile-header .sp-mobile-title-wrap {
+	pointer-events:                                            none;
+}
+
 .sp-mobile-header.sp-scrolled .sp-mobile-brand,
 .sp-mobile-header .sp-mobile-title-wrap {
 	position:                                                  absolute;
@@ -950,8 +955,12 @@ input + span {
 .sp-mobile-header.sp-scrolled .sp-mobile-title-wrap {
 	position:                                                  absolute;
 	width:                                                     100%;
-	top:                                                       -8px;
+	top:                                                       -28px;
 	transition:                                                top 0.35s ease-in;
+}
+
+.sp-mobile-header.sp-scrolled .sp-mobile-title-wrap {
+	top:                                                       -12px;
 }
 
 /* Larger, easier-to-tap mobile header icons. */
@@ -984,8 +993,7 @@ input + span {
 
 .sp-mobile-logo {
 	display:                                                   block;
-	width:                                                     min(auto, 100%);
-	height:                                                    min(auto, 45px);
+	max-height:                                                70px;
 	border-radius:                                             var(--sp-radius-sm);
 }
 
@@ -2305,6 +2313,12 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 
 .sp-report-filters > .sp-select {
 	flex:                                                      0 1 220px;
+}
+
+/* Action Items carries the most filters of any panel (search, scope, status, labels, due, sort) —
+   let that row wrap rather than squeeze six controls onto one line. */
+#sp-panel-action-items .sp-report-filters {
+	flex-wrap:                                                 wrap;
 }
 
 .sp-detail-nav {
@@ -4699,6 +4713,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 .sp-email-card {
 	padding:                                                   16px;
+	margin:                                                    0;
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-lg);
@@ -5376,6 +5391,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	box-shadow:                                                var(--sp-shadow-sm);
 	cursor:                                                    pointer;
 	transition:                                                all var(--sp-transition);
+	margin:                                                    0;
 }
 
 /* The dir card's centered photo+body layout lives on the card-body wrapper. */
@@ -8250,6 +8266,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	.sp-sidebar-close {
 		display:                                                  grid;
 		place-items:                                              center;
+		margin:                                                   0 -10px 0 7px;
 	}
 
 	body .sp-messenger { grid-template-columns: 1fr; height: auto; min-height: 0; }
@@ -8316,7 +8333,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 
 	.sp-card.sp-report-form-wrap .sp-card-body,
 	.sp-card.sp-report-detail-wrap .sp-card-body {
-		padding:                                                  16px;
+		/*padding:                                                  16px; -- too much space in the cards*/
 	}
 
 	.sp-mobile-header-bar {
@@ -8630,7 +8647,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 			"actions actions";
 		align-items:                                              center;
 		gap:                                                      6px 10px;
-		padding-top:                                              20px;
 	}
 	/* Dissolve the grouping boxes so their children join the head grid directly. */
 	body .sp-review-headright,
@@ -8644,7 +8660,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	body .sp-review-rating  {
 		grid-area:                                                rating;
 		justify-self:                                             end;
-		margin:                                                   -10px 0 -13px;
+		margin:                                                   0px 0 -6px;
 	}
 
 	body .sp-review-store   { grid-area: store;  justify-self: end; text-align: right; margin-top: 0; }

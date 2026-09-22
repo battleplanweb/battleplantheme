@@ -95,9 +95,25 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		const isSVG = filename.startsWith('svg#');
 		const svgObj = isSVG ? document.querySelector(filename.replace('svg', '')) : null;
 
+		// The shared composited backdrop below is ONE body-level, viewport-wide layer, so it only fits
+		// a page-wide container. A narrow full-screen container (e.g. JLI's .site-border-l / -r side
+		// graphics, two calls on one page) must keep its own fixed background at imageW x imageH,
+		// clipped to its own box — otherwise every call lands on the same layer and the last one wins.
+		const pageWide = containerObj === document.body || containerObj === document.documentElement
+			|| containerObj.id === 'page' || containerObj.getBoundingClientRect().width >= document.documentElement.clientWidth - 1;
+
 		if (isSVG && svgObj) {
 			// Store SVG-specific config
 			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen, svgObj });
+		} else if (fullScreen && !pageWide) {
+			setStyles(containerObj, {
+				'backgroundImage': `url('${uploadBase}/${filename}')`,
+				'backgroundSize': `${imageW}px ${imageH}px`,
+				'backgroundPosition': `${posX} 50%`,
+				'backgroundRepeat': 'no-repeat',
+				'backgroundAttachment': 'fixed'
+			});
+			window.parallaxConfigs.push({ containerObj, imageH, topY, bottomY, fullScreen });
 		} else if (fullScreen) {
 			// Full-screen backdrop on its own composited layer. Replaces background-attachment:fixed
 			// + per-frame backgroundPositionY (a whole-viewport repaint every scroll frame in Chrome).

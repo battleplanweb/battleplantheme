@@ -1,29 +1,142 @@
 @charset "utf-8";
 
 /*--------------------------------------------------------------
-# Espanol (Google Translate)
+# Language Switch (Google Translate)
 --------------------------------------------------------------*/
 
-.goog-te-gadget {
+/* Google's own UI is never shown. The visible control is ours (.bp-translator);
+   it writes the googtrans cookie and reloads, and Google's element - mounted
+   off-screen - applies the translation on the way back in. */
+
+/* Google reserves 40px at the top of the page for its "Translated to..." banner by
+   setting body { top: 40px } inline. Hiding the banner does NOT give that space
+   back - the offset is on the body - so cancel it or the whole page drops. */
+.translated-ltr body,
+.translated-rtl body {
+	top:                                                       0 !important;
 }
 
-.goog-te-gadget-simple {
-	width:                                                     100%;
-  	background-color:                                        transparent !important;
-  	border:                                                  none !important;
-	transform:                                                 translateY(-15px);
-	margin-top: 								-45px
-}
-
-.goog-te-gadget-simple a > span {
-	opacity:                                                   0;
-}
-
-iframe.skiptranslate {
-  	position:                                                absolute !important;
-}
-
-.goog-te-gadget-icon,
-div.skiptranslate > iframe.skiptranslate {
+/* The banner, its wrapper and the hover tooltip Google injects into the page */
+iframe.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+.skiptranslate > iframe,
+#goog-gt-tt,
+.goog-tooltip,
+.goog-text-highlight {
 	display:                                                   none !important;
+	box-shadow:                                                none !important;
+	background:                                                none !important;
+}
+
+/* The gadget mount stays in the DOM - TranslateElement needs a real element to
+   build into - but is hidden the accessible way rather than display:none. */
+.bp-translator-mount {
+	position:                                                  absolute;
+	width:                                                     1px;
+	height:                                                    1px;
+	margin:                                                    -1px;
+	padding:                                                   0;
+	overflow:                                                  hidden;
+	clip:                                                      rect(0, 0, 0, 0);
+	clip-path:                                                 inset(50%);
+	white-space:                                               nowrap;
+	border:                                                    0;
+}
+
+
+/* The switch
+---------------------------------------------- */
+
+/* Only two knobs of our own - what the SELECTED half looks like. Everything else
+   rides the site's own button tokens. */
+.bp-translator {
+	--translator-active-background:                            var(--button-color);
+	--translator-active-color:                                 var(--button-background);
+	--translator-divider:                                      1px solid var(--translator-active-background);
+}
+
+/* The pill lives HERE and only here: the wrapper carries the background, border and
+   radius, and clips the two halves into that shape. Rounding the halves themselves
+   is what makes them read as two loose chips instead of one control. */
+.bp-translator .bp-translator-switch {
+	display:                                                   inline-flex;
+	align-items:                                               stretch;
+	background:                                                var(--button-background);
+	color:                                                     var(--button-color);
+	border:                                                    var(--button-border);
+	border-radius:                                             var(--button-border-radius);
+	box-shadow:                                                var(--button-box-shadow);
+	overflow:                                                  hidden;
+	vertical-align:                                            middle;
+}
+
+/* The halves carry .unique, which opts them out of the global button rules in
+   style-forms.css (those re-apply every --button-*-hover token on hover, resizing
+   the pill and re-rounding the inner corners). So everything they need is here. */
+.bp-translator .bp-lang {
+	--button-padding:                                          3px 20px;
+
+	display:                                                   block;
+	margin:                                                    0;
+	padding:                                                   var(--button-padding);
+	background:                                                transparent;
+	color:                                                     inherit;
+	border:                                                    none;
+	border-radius:                                             0;
+	box-shadow:                                                none;
+	font-family:                                               var(--button-font-family);
+	font-size:                                                 var(--button-font-size);
+	font-weight:                                               var(--button-font-weight);
+	letter-spacing:                                            var(--button-letter-spacing);
+	text-transform:                                            var(--button-text-transform);
+	line-height:                                               1.2;
+	text-align:                                                center;
+	white-space:                                               nowrap;
+	cursor:                                                    pointer;
+	transition:                                                var(--button-transition);
+}
+
+/* The one internal edge there should be */
+.bp-translator .bp-lang + .bp-lang {
+	border-left:                                               var(--translator-divider);
+}
+
+.bp-translator .bp-lang:hover,
+.bp-translator .bp-lang.tab-focus {
+	background:                                                var(--button-background-hover);
+	color:                                                     var(--button-color-hover);
+	border-radius:                                             0;
+	padding:                                                   var(--button-padding);
+}
+
+.bp-translator .bp-lang.is-active {
+	background:                                                var(--translator-active-background);
+	color:                                                     var(--translator-active-color);
+	cursor:                                                    default;
+	border-radius:                                             0;
+		padding:                                                  var(--button-padding);
+}
+
+/* overflow:hidden on the wrapper clips a child outline, so the keyboard ring goes
+   on the wrapper instead - otherwise tabbing to the switch shows nothing. */
+.bp-translator .bp-translator-switch:focus-within {
+	outline:                                                   2px solid var(--button-background);
+	outline-offset:                                            2px;
+}
+
+
+/* Google attribution - only on show once the page is actually translated
+---------------------------------------------- */
+.bp-translate-credit {
+	display:                                                   none;
+}
+
+.translated-ltr .bp-translate-credit,
+.translated-rtl .bp-translate-credit {
+	display:                                                   block;
+	padding:                                                   10px 20px 20px;
+	color:                                                     var(--text-color);
+	font-size:                                                 12px;
+	text-align:                                                center;
+	opacity:                                                   0.6;
 }

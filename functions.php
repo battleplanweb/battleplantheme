@@ -1709,6 +1709,10 @@ if ( $customer_info['site-type'] === 'hvac' ) require_once get_template_director
 if ( $customer_info['site-type'] === 'pedigree' ) require_once get_template_directory().'/includes/includes-pedigree.php';
 
 require_once get_template_directory().'/functions-shortcodes.php';
+// No module gate: [yt-channel] costs nothing until a page actually uses it, same
+// as every other shortcode file. ([vid] itself stays in functions-grid.php with
+// the other layout blocks — this is the video FEATURE module.)
+require_once get_template_directory().'/includes/includes-video.php';
 require_once get_template_directory().'/functions-icons.php';
 require_once get_template_directory().'/functions-forms.php';
 require_once get_template_directory().'/functions-cpt.php';

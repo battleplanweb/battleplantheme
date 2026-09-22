@@ -403,7 +403,33 @@ Why this shape, not a single `<a class="service-link" style="background-image:ur
 
 **`autoplay="true"` forces `muted` on** — every browser blocks sound-on autoplay, so the two are never useful apart. You don't need to write `muted="true"` alongside it (doing so is harmless). A video that "won't autoplay" on an older site is almost always missing the `muted` attribute in the rendered tag.
 
+**Any `<button>` you render that is not meant to look like a button needs `class="unique"`.** [style-forms.css](style-forms.css) styles `button:not(.unique)` — **every** `<button>` on the site gets the full `--button-*` set (padding, radius, background, shadow, text-transform) and re-applies the whole `--button-*-hover` set on hover. This bites anything using a button for semantics rather than appearance: the `[yt-channel]` video tiles rendered as rounded, shadowed pills until they carried `.unique`, and the language switcher hit the same wall. `.unique` is the framework's opt-out (Site Pulse uses it on every `.sp-btn`). It does **not** suppress the browser's own default button chrome — reset `appearance`/`border`/`padding` yourself as well. Grep `style-forms.css`, not `style.css`, when hunting global element styling.
+
+**The facade lives in `script-video.js`, enqueued on demand — not in script-pages.js.** `[vid]` prints no iframe: it emits a thumbnail + `data-link`, and the click handler swaps in the real embed. That handler and `stopAllVideos()` used to ride along in script-pages.js on every page of every site; they now sit in `script-video.js` alongside `[yt-channel]`, and both shortcodes enqueue it. **Anything calling `stopAllVideos()` must guard with `typeof stopAllVideos === 'function'`** — on a page with no video the file isn't loaded (the section-lock modal handler in script-pages.js does this).
+
 **Local files: link the `.webm` and ship a matching `-ios.mp4`.** When the `link=` extension is `webm`, the shortcode adds a second `<source>` at `<same-basename>-ios.mp4` as the Safari/iOS fallback — so `composite-vid.webm` needs `composite-vid-ios.mp4` beside it. Encode the pair as **AV1/WebM + H.264/MP4** (AV1 runs ~3x smaller than H.264 at the same quality); see the auto-memory `reference_web_video_encoding` for the ffmpeg recipes. Never HEVC — Chrome and Firefox refuse it.
+
+### [yt-channel] — A whole YouTube channel (includes-video.php)
+```
+[yt-channel channel="" playlist="" layout="grid" max="12" columns="3" break="2" sort="newest"
+            shorts="all" search="" header="false" titles="true" date="true" views="false"
+            more="false" schema="true" related="false" begin="" size="100" class="" start="" end="" track=""]
+```
+`[vid]` embeds one video; this embeds a channel — the job people otherwise reach for Smash Balloon / Embed Plus / YotuWP to do. `channel=` takes an `@handle`, a `UC…` id, or any channel URL.
+
+**Three layouts.** `grid` (each tile becomes its own player), `feature` (big stage on top, thumbnail strip below feeds it), `scroll` (the grid plus `.swipe`, so it becomes a horizontal rail at its break point — same machinery as `[layout scroll="true"]`, dots and all).
+
+**It inherits `[vid]`'s facade rule: no iframe until a click.** Tiles are thumbnails off Google's CDN; `script-video.js` builds the real embed at click time and tags it `.video-player` so `stopAllVideos()` still pauses it. A grid of real embeds would be ~10MB of YouTube JS — never render one.
+
+**Nothing is fetched on the render path.** Everything comes out of a 12h transient (`bp_yt_cache_seconds` filters it) that is *stored* for 30 days, so an over-quota or down API keeps serving the last good payload instead of collapsing the block to an empty div. Refreshes happen behind a 2-minute lock, so a busy page can't stampede the API.
+
+**API key: `BP_YOUTUBE_KEY` in wp-config → `_YOUTUBE_API`, falling back to `_PLACES_API`.** One Google Cloud key answers both once YouTube Data API v3 is enabled on the project, so enabling that API lights this up fleet-wide with no per-site config. **With no key it degrades to YouTube's keyless RSS feed** — which works, but is hard-capped at the 15 newest videos with no durations, playlists or channel stats.
+
+**Never call `search.list`.** It costs 100 quota units against a 10,000/day allowance — it would drain the day in 100 page loads. The uploads playlist off `channels.list` returns the same videos for 1 unit, and that is what this uses.
+
+**`shorts="exclude|only"` is a heuristic, not a fact.** The API exposes no Shorts flag, so it goes on duration (≤60s, `bp_yt_shorts_seconds` filters it). Videos of unknown length — anything from the RSS fallback — stay in the main grid.
+
+**`schema="true"` (default) emits an `ItemList` of `VideoObject`s using the real YouTube titles, descriptions, upload dates and durations.** This is the part no feed plugin does: they render client-side, so Google sees an empty div where the channel should be.
 
 ### [expire] — Date-gated content
 ```
@@ -863,6 +889,62 @@ The framework SEO module runs shortcodes on stored SEO title/description values 
 Two gotchas:
 - **`site-brand` values are often lowercase slugs** (`amana`, `goodman`) because they double as logo-file keys. `[get-biz info="site-brand" array="0"]` outputs them verbatim, so it may render lowercase in a title — check the site's `site-brand` values and, if they're slugs, type the brand name directly instead.
 - **Never infer the experience start year — ASK every audit.** `customer_info['year']` is unreliable for this: it may be the *website* launch, the business's founding, or unrelated to the experience being advertised (a brand-new company can legitimately claim the owner's decades in the trade). There's usually a real business start date, but sometimes the number comes from the owner's personal experience. Because you can't tell which from the config, **ask the operator for the correct `start` year on each audit before writing an experience claim.** `[get-years start="…"]` counts to the current year and auto-updates, which is exactly why the anchor year has to be right.
+
+---
+
+### [get-translator] — Language switch (Google Translate)
+
+```
+[get-translator align="center" class="" from="English" to="Español"]
+```
+
+Renders an on-brand **segmented language switch**, not Google's widget. Google's gadget, banner and branding are never shown: the control writes the `googtrans` cookie and reloads, and Google's element — mounted off-screen — applies the translation on the way back in. Languages are `en`/`es` (`language` and the legacy `text` attribute are accepted but ignored).
+
+The shortcode enqueues `script-translator`, inlines `style-translator.css`, emits the nonce'd `element.js` tag, prints the switch plus a screen-reader-hidden `#hablamos-espanol` mount, and registers the footer credit.
+
+**Restyle per site with variables — don't rewrite the rules.** Defaults derive from the site's accent tokens, so it usually matches already:
+
+```css
+.bp-translator {
+	--translator-active-background:                            var(--main-gold);
+	--translator-border-radius:                                0;
+	--translator-font-size:                                    13px;
+}
+```
+Full list at the top of [style-translator.css](style-translator.css): color/background, active + hover pairs, border, radius, font family/size/weight, letter-spacing, text-transform, padding.
+
+**Placing it outside page content** — `header.php` has no `do_shortcode` call, so hook it in `functions-site.php`:
+
+```php
+add_action('bp_after_masthead', function () {
+	echo do_shortcode('[get-translator align="right"]');
+});
+```
+
+**Attribution:** `bp_translator_credit()` prints "Traducido por Google" on `bp_after_colophon`, and the CSS shows it **only when the page is actually translated** (gated on Google's `.translated-ltr`). Change the wording with the `bp_translator_credit_text` filter.
+
+### How it works, and the traps it already avoids
+
+| Piece | Why it's there |
+|---|---|
+| `.notranslate` + `translate="no"` on the switch | otherwise Google translates the switch's own labels and "English" becomes "Inglés" |
+| `.bp-translator-mount` is clipped, **not** `display:none` | `TranslateElement` needs a real element to build into |
+| `.unique` on each half | `button:not(.unique)` in [style-forms.css](style-forms.css) styles **every** `<button>` and re-applies the whole `--button-*-hover` set on hover — the pill grew 180×24.8 → 186×30.8 mid-hover and re-rounded its inner corners. `.unique` is the framework's opt-out; the switch then styles itself entirely |
+| cookie written on host, `www` host **and** `.domain` | Google writes all of them; leave one behind and the stale copy wins the next load |
+| `location.replace(pathname + search)` | drops any `#googtrans(en|es)` hash, which outranks the cookie, and keeps Back off the pre-switch state |
+| `max-age` of a year | Google's own cookie dies with the tab; the visitor's choice should not |
+| **never** branch this server-side on `$_COOKIE` | the HTML is page-cached — same class of bug as [[is_mobile breaks the cache]]. The active pill is set in JS |
+
+**Two layout traps (fixed in `style-translator.css` — don't undo them).** They only bite if Google's own UI is ever re-enabled, but the rules are cheap insurance:
+
+1. **Google drops the whole page 40px.** When translation is active it sets `top: 40px` inline on `<body>` to reserve room for its banner. Hiding the banner does **not** give that space back — the offset is on the body. Cancelled with `.translated-ltr body { top: 0 !important }`.
+2. **The gadget adds ~33px of height.** `.goog-te-gadget` is a block-level element; negative margins on the inner control move it but never reclaim the parent's height (measured live: a strip went 45.8px → 78.4px the moment the widget built). It is now absolutely positioned out of the flow — and hidden entirely.
+
+Other notes:
+- `googleTranslateElementInit` **must stay on `window`** — element.js calls it by name via `?cb=`. The JS polls for the library instead of the old fixed `setTimeout`, which lost the race on slow connections.
+- The `style-src` entries for `translate.googleapis.com` / `www.gstatic.com` in [header.php](header.php) are **precautionary**. The current element.js injects its CSS inline and triggers no CSP violation; older builds fetched `translateelement.css`.
+- Google can leave `#googtrans(en|es)` in the URL, which is **not a valid CSS selector**. `animateScroll()` in [js/script-pages.js](js/script-pages.js) feeds `location.hash` to `querySelector`, so it's wrapped in try/catch — without it every translated page load throws and the deep-link scroll dies.
+- **Migrating an older site:** rules written against `#hablamos-espanol` now target the hidden mount and do nothing. Move that spacing to `.bp-translator`.
 
 ---
 

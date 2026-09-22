@@ -360,7 +360,14 @@ document.addEventListener("DOMContentLoaded", function () {
 		let padding = 0.25;       // was 0.15, but reversed for faq page -- not sure how this will impact Trailside
 
 		if (typeof targetSel === 'string') {
-			targetObj = getObject(targetSel);
+			// A hash isn't necessarily a valid selector - Google Translate leaves
+			// #googtrans(en|es) in the URL - and querySelector throws on those.
+			try {
+				targetObj = getObject(targetSel);
+			} catch (e) {
+				return;
+			}
+
 			padding = targetSel.startsWith('#') ? 0.15 : padding;
 		}
 
@@ -1888,7 +1895,10 @@ document.addEventListener("DOMContentLoaded", function () {
 					video.pause();
 					video.currentTime = 0;
 				});
-				stopAllVideos();
+				// Guarded: stopAllVideos lives in script-video.js now, which is only
+				// enqueued on pages that actually rendered a [vid] or [yt-channel]. A
+				// modal on a page with no video would otherwise throw on close.
+				if (typeof stopAllVideos === 'function') stopAllVideos();
 			});
 		});
 
@@ -2032,47 +2042,10 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 
-	// Handle displaying YouTube or Vimeo thumbnail, and then loading video once clicked
-	function activateYouTubeVimeo(div) {
-		var iframe = document.createElement('iframe');
-		setAttributes(iframe, {
-			'src': div.dataset.link,
-			'modestbranding': '0',
-			'controls': '0',
-			'frameborder': '0',
-			'allowfullscreen': '1',
-			'allow': 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture',
-			'class': 'video-player'
-		});
-		div.parentNode.replaceChild(iframe, div);
-	}
-
-	getObjects('.video-player').forEach(function (playerObj) {
-		const thumbNode = document.createElement('img');
-		const playButton = document.createElement('div');
-		const div = document.createElement('div');
-
-		div.dataset.id = playerObj.dataset.id;
-		div.dataset.link = playerObj.dataset.link;
-		thumbNode.src = playerObj.dataset.thumb;
-		playButton.className = 'play';
-
-		div.appendChild(thumbNode);
-		div.appendChild(playButton);
-		div.onclick = function () { activateYouTubeVimeo(this); };
-
-		playerObj.appendChild(div);
-	});
-
-	window.stopAllVideos = function () {
-		Array.prototype.forEach.call(getObjects('iframe.video-player'), function (videoElem) {
-			videoElem.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-		});
-	};
-
-	getObjects('.block-video.video-player').forEach(function (videoBlock) {
-		videoBlock.addEventListener('click', stopAllVideos);
-	});
+	// The video facades and stopAllVideos() moved to script-video.js, which [vid]
+	// and [yt-channel] enqueue on demand — no reason to ship that to every page on
+	// the site when most carry no video at all. Anything here that calls
+	// stopAllVideos() has to tolerate its absence; see the section-lock handler.
 
 
 	// Add 'alt' class to sections to trigger the alternate input & button styles

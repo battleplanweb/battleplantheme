@@ -848,6 +848,12 @@ if ( in_array( 'view_action_items', $caps, true ) ) {
 	$printPage .=       '<option value="resolved">Completed</option>';
 	$printPage .=     '</select>';
 	$printPage .=     '<select id="sp-action-filter-category" class="sp-select"><option value="">All labels</option></select>';
+	// Due-date filter — "Due" is anything still dated ahead, "Past Due" anything already overdue.
+	$printPage .=     '<select id="sp-action-filter-due" class="sp-select">';
+	$printPage .=       '<option value="">Any due date</option>';
+	$printPage .=       '<option value="due">Due</option>';
+	$printPage .=       '<option value="overdue">Past Due</option>';
+	$printPage .=     '</select>';
 	$printPage .=     '<select id="sp-action-sort" class="sp-select">';
 	$printPage .=       '<option value="importance">Order by Importance</option>';
 	$printPage .=       '<option value="duedate">Order by Due Date</option>';

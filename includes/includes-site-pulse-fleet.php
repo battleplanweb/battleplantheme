@@ -337,19 +337,24 @@ function sp_fleet_chips( array $row ): array {
 	if ( empty( $row['captured_at'] ) ) {
 		return [ [ 'key' => 'never', 'label' => 'Never reported', 'tone' => 'bad' ] ];
 	}
-	$age_hours = ( time() - strtotime( (string) $row['captured_at'] . ' UTC' ) ) / HOUR_IN_SECONDS;
+	$captured  = (int) strtotime( (string) $row['captured_at'] . ' UTC' );
+	$age_hours = ( time() - $captured ) / HOUR_IN_SECONDS;
 	if ( $age_hours > BP_FLEET_STALE_HOURS ) {
 		$chips[] = [ 'key' => 'stale', 'label' => 'Silent ' . (int) round( $age_hours / 24 ) . 'd', 'tone' => 'bad' ];
 	}
 
 	// 2. Its own nightly jobs have stopped — the numbers below may be frozen, not real.
+	//    Measured against CAPTURE time, not now: these timestamps were frozen into the
+	//    payload the night it was sent, so comparing them to time() would turn every stale
+	//    snapshot into a false "all its jobs stalled" — reporting the age of the snapshot
+	//    rather than the health of the site. How long it has been silent is chip 1's job.
 	$cron    = is_array( $payload['health']['chron'] ?? null ) ? $payload['health']['chron'] : [];
 	$stalled = [];
 	foreach ( [ 'a' => 'GBP', 'b' => 'Housekeeping', 'c' => 'Analytics', 'd' => 'Keywords' ] as $slot => $name ) {
 		$ts = (int) ( $cron[ $slot ] ?? 0 );
 		// Chron D is weekly by design, so it gets a wider window before it counts as stalled.
 		$limit = ( 'd' === $slot ? BP_FLEET_CRON_DAYS * 2 : BP_FLEET_CRON_DAYS ) * DAY_IN_SECONDS;
-		if ( $ts > 0 && ( time() - $ts ) > $limit ) $stalled[] = $name;
+		if ( $ts > 0 && ( $captured - $ts ) > $limit ) $stalled[] = $name;
 	}
 	if ( $stalled ) {
 		$chips[] = [ 'key' => 'cron', 'label' => implode( ' + ', $stalled ) . ' stalled', 'tone' => 'bad' ];

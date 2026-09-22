@@ -176,6 +176,44 @@ if ($forceD || $autoTriggerD) {
 }
 
 
+/*--------------------------------------------------------------
+# Chron E — Fleet Pulse
+--------------------------------------------------------------*/
+
+$forceE   = filter_var(get_option('bp_force_chron_e', false), FILTER_VALIDATE_BOOLEAN);
+$lastRunE = (int) get_option('bp_chron_e_time', 0);
+$nextE    = (int) get_option('bp_chron_e_next', 0);
+$neverE   = $lastRunE === 0;
+
+$staleE = !$neverE && (time() - $lastRunE) > (86400 * 1);
+
+if ($nextE <= 0) {
+    $nextE = bp_next_nightly_window();
+    update_option('bp_chron_e_next', $nextE);
+}
+
+$dueE         = time() >= $nextE;
+$autoTriggerE = _IS_BOT && !_IS_SERP_BOT && ($neverE || $staleE || $dueE);
+
+// Deliberately LAST in this file: A-D may have just run in this same request, and the
+// snapshot reads the options they write. Reporting before them would ship yesterday's
+// numbers and — worse — make every chron look a day staler than it is.
+if ($forceE || $autoTriggerE) {
+    delete_option('bp_force_chron_e');
+    update_option('bp_chron_e_time', time());
+    update_option('bp_chron_e_next', bp_next_nightly_window());
+
+    // The hub can't sign a request to itself (bpgbp_client_autopair() skips it), so it
+    // stores its own snapshot in-process instead of HTTP-looping back to localhost.
+    if (function_exists('sp_fleet_is_hub') && sp_fleet_is_hub()) {
+        do_action('bp_fleet_capture_self');
+    } else {
+        require_once get_template_directory() . '/includes/includes-fleet-pulse-client.php';
+        bp_fleet_client_push();
+    }
+}
+
+
 
 /*--------------------------------------------------------------
 # One-Off Tasks

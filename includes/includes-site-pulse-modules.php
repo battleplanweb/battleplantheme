@@ -44,6 +44,12 @@ function site_pulse_modules(): array {
 			'caps'    => [ 'submit_reports', 'view_gm_reports', 'view_supervisor_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_templates' ],
 			'default' => true,
 		],
+		'notes' => [
+			'label'   => 'Notes',
+			'desc'    => 'Ongoing notepads — free-form text plus a dated log — kept personal or shared with anyone. Like Action Items, but nothing to complete.',
+			'caps'    => [ 'view_notes' ],
+			'default' => true,
+		],
 		'ai' => [
 			'label'   => 'AI Insights &amp; Analytics',
 			'desc'    => 'Cross-module analytics dashboards, AI-generated insights, and the company-voiced AI Assistant.',
@@ -53,7 +59,7 @@ function site_pulse_modules(): array {
 		'mileage' => [
 			'label'   => 'Expense Report',
 			'desc'    => 'Mileage logging, reimbursement reports, and NTTA toll reconciliation.',
-			'caps'    => [ 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports', 'manage_mileage' ],
+			'caps'    => [ 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports', 'remember_charge_to', 'manage_mileage' ],
 			'default' => true,
 		],
 		'forms' => [
@@ -102,6 +108,12 @@ function site_pulse_modules(): array {
 			'label'   => 'Booking',
 			'desc'    => 'Online booking — appointments, classes, and rentals on one calendar. Customers book and pay from the public site or the Customer Connect app; staff get the calendar, manual booking, availability rules, passes and memberships.',
 			'caps'    => [ 'view_bookings', 'view_own_bookings', 'manage_bookings', 'manage_booking_services', 'manage_booking_payments', 'manage_booking_settings' ],
+			'default' => false,
+		],
+		'store' => [
+			'label'   => 'Store',
+			'desc'    => 'Sell products online &mdash; catalog, cart, Stripe checkout, orders and inventory. Replaces WooCommerce. Products are edited in WordPress so they keep the SEO module and the media library; orders, fulfillment and stock live in Site Pulse.',
+			'caps'    => [ 'view_orders', 'manage_orders', 'manage_products', 'manage_store_payments', 'manage_store_settings' ],
 			'default' => false,
 		],
 	];

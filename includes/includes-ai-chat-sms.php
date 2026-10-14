@@ -459,12 +459,24 @@ of a browser payload. Reuses the shared system prompt, tool set, and
 tool handler from includes-ai-chat.php.
 --------------------------------------------------------------*/
 
+/**
+ * SMS can't render links: turn any [Page name](url) the model still writes into
+ * "Page name: url", making on-site "/path" URLs absolute so they're tappable.
+ */
+function bp_chat_plain_links( string $text ): string {
+	return preg_replace_callback( '/\[([^\]\n]+)\]\(([^)\s]+)\)/', function ( $m ) {
+		$url = ( $m[2][0] === '/' && ( $m[2][1] ?? '' ) !== '/' ) ? home_url( $m[2] ) : $m[2];
+		return $m[1] . ': ' . $url;
+	}, $text );
+}
+
 function bp_chat_run_sms( array $conv, array $customer, array $o ): string {
 	$o['company_knowledge'] = bp_chat_company_knowledge( $o );
 
 	$system = bp_chat_system_prompt( $o, $customer )
 		. "\n\nYou are now continuing this conversation over SMS text messages. "
-		. "Keep every reply to one or two short sentences — texts must be brief.";
+		. "Keep every reply to one or two short sentences — texts must be brief. "
+		. "Texts can't show links, so give a full URL (https://…) instead of the [Page name](URL) format.";
 
 	$tools            = bp_chat_tools();
 	$messages         = bp_chat_history( (int) $conv['id'] );
@@ -494,7 +506,7 @@ function bp_chat_run_sms( array $conv, array $customer, array $o ): string {
 	foreach ( (array) ( $resp['content'] ?? [] ) as $block ) {
 		if ( ( $block['type'] ?? '' ) === 'text' ) $reply .= $block['text'];
 	}
-	$reply = trim( $reply );
+	$reply = bp_chat_plain_links( trim( $reply ) );
 	if ( $reply !== '' ) bp_chat_msg_add( (int) $conv['id'], 'assistant', $reply, 'sms' );
 	return $reply;
 }

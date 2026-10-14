@@ -222,6 +222,42 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 //Control parallax movement of divs within a container
 	window.parallaxDivs = window.parallaxDivs || [];
 
+	// margin-top and transform are NOT interchangeable, and this drift used to be written as margin-top.
+	// A margin is part of LAYOUT: in a container that centres its rows (align-content:center, the common
+	// case for a [parallax] hero's .flex) the extra margin grew the row and ate the free space the
+	// centring was distributing, so the element only travelled about HALF the computed distance. A
+	// transform is a pure visual offset applied on top of the already-placed element, so it travels the
+	// FULL distance. Every `adjustment` value in the fleet was tuned against the halving, so the switch
+	// to transform silently doubled the move and a centred .parallax now overshoots its section and is
+	// clipped away by .section[class*="style-"] { overflow:hidden }.
+	//
+	// So: keep the composited transform (the CLS win is real — the FIRST call happens at load, with no
+	// user input to excuse the shift), but scale it by what margin-top would actually have produced here.
+	// Measured, not assumed: apply a known margin, read the delta, put it back. 1 = top-aligned/stretch,
+	// ~0.5 = centred, 0 = bottom-aligned (where margin-top genuinely did nothing, so nor should we).
+	// Cached per element and re-measured only when the viewport width changes, because the alignment
+	// that sets the ratio is itself breakpoint-dependent.
+	const flowRatio = elementObj => {
+		const w = getDeviceW();
+		if (elementObj._bpFlowW === w) return elementObj._bpFlowRatio;
+
+		const prev = elementObj.style.marginTop;
+		elementObj.style.marginTop = '0px';
+		const base = elementObj.getBoundingClientRect().top;
+		elementObj.style.marginTop = '100px';
+		const moved = elementObj.getBoundingClientRect().top;
+		elementObj.style.marginTop = prev;
+
+		// Both reads carry whatever transform is already on the element, so it cancels out of the delta.
+		let ratio = (moved - base) / 100;
+		if (!isFinite(ratio)) ratio = 1;                    // unmeasurable (detached/display:none) → legacy 1:1
+		ratio = Math.max(0, Math.min(ratio, 1));
+
+		elementObj._bpFlowRatio = ratio;
+		elementObj._bpFlowW = w;
+		return ratio;
+	};
+
 	window.updateParallaxElements = function() {
 		const scrollPos = window.pageYOffset;
 
@@ -238,12 +274,13 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 					let scrollPct = (adjustedWindowBottom - containerTop) / (containerHeight + getDeviceH());
 
 					scrollPct = Math.max(0, Math.min(scrollPct, 1));
-					const moveElem = (containerHeight - elementObj.offsetHeight + adjustment) * scrollPct;
+					const moveElem = (containerHeight - elementObj.offsetHeight + adjustment) * scrollPct * flowRatio(elementObj);
 
 					if (containerTop < adjustedWindowBottom && containerBottom > scrollPos) {
 						// Use transform (not margin-top) so the parallax drift is a COMPOSITED move,
 						// not a layout change — transforms are excluded from CLS, so the hero-copy's
-						// on-load positioning no longer registers as a layout shift. Same visual result.
+						// on-load positioning no longer registers as a layout shift. flowRatio() above
+						// is what keeps the RESULT identical to the margin-top era.
 						elementObj.style.transform = `translateY(${moveElem}px)`;
 					}
 				}

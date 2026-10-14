@@ -14,7 +14,7 @@
 # Set Constants
 --------------------------------------------------------------*/
 
-if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v45.6' );
+if ( !defined('_BP_VERSION') ) define( '_BP_VERSION', 'v45.7' );
 update_option( 'battleplan_framework', _BP_VERSION, false );
 
 /**

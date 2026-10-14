@@ -22,6 +22,15 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 	// bp_format_field_values() so what they see is exactly what gets emailed.
 	document.querySelectorAll('form.bp-form-el input[type="tel"]').forEach(initPhone);
 
+	// [bp-hidden param="service"] — fill from ?service=… so the email shows which button
+	// sent the visitor here. No param in the URL = keep the shortcode's own value.
+	// Setting .value on a hidden input rewrites its default, so form.reset() keeps it.
+	const urlParams = new URLSearchParams(window.location.search);
+	document.querySelectorAll('form.bp-form-el input[data-bp-param]').forEach(el => {
+		const v = urlParams.get(el.dataset.bpParam);
+		if (v) el.value = v.trim().slice(0, 100);
+	});
+
 	function initPhone(el) {
 		const sync = () => {
 			let d = el.value.replace(/\D/g, '');

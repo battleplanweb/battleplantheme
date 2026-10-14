@@ -1534,6 +1534,31 @@ function bp_geo_area_redirect_url( $area_slug ) {
 	return get_post_type_archive_link( 'jobsite_geo' ) ?: home_url( '/' );
 }
 
+// Busiest /service/{service--city-st}/ page site-wide — the term with the most jobs on it.
+// Used wherever a jobsite_geo element needs a generic "see more work" destination: sending
+// people to /areas-we-serve/ (a list of towns) after they clicked View More under a project
+// photo is not what that button promises, and the deepest service page is both the most
+// populated and the one worth the internal link.
+function bp_geo_top_service_url() {
+	static $url = null;
+	if ( $url !== null ) return $url;
+
+	$url   = '';
+	$terms = get_terms( [
+		'taxonomy'   => 'jobsite_geo-services',
+		'hide_empty' => true,
+		'orderby'    => 'count',
+		'order'      => 'DESC',
+	] );
+	foreach ( ( is_wp_error( $terms ) ? [] : (array) $terms ) as $t ) {
+		$link = get_term_link( $t );
+		if ( is_wp_error( $link ) ) continue;   // skip a term whose page won't resolve, take the next busiest
+		$url = $link;
+		break;
+	}
+	return $url;
+}
+
 // Cached list of jobsite_geo-service-areas slugs that look like 'city-…-st', longest first,
 // so a multi-word city ('dripping-springs-tx') is matched before any shorter tail ('springs-tx').
 function bp_geo_area_slugs_by_length() {

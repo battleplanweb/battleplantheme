@@ -58,6 +58,14 @@ function bp_chat_industry_block( $vertical ) {
 			. "hazard. You know that any burning smell, sparking, or hot panel is urgent and a safety risk. You do NOT "
 			. "diagnose over chat — you gather enough to let the contractor help fast.",
 
+		'restaurant' =>
+			"You understand the restaurant business. Guests typically ask about the menu and prices, hours, which "
+			. "location is closest and how to reach it, wait times and whether they take reservations or call-ahead, "
+			. "large parties, to-go and online ordering, catering, gift cards, kids' pricing, dietary or allergen "
+			. "concerns, and jobs. When a question depends on a specific location (hours, phone, holiday closures, "
+			. "features), answer for that location, and ask which one if it isn't clear. For allergens or anything "
+			. "safety-related that the business hasn't documented, don't guess — tell them to call the location.",
+
 		'_default' =>
 			"You understand the home-services trade this business works in. Homeowners typically reach out with a "
 			. "problem to fix, routine maintenance, or a project they're planning. You recognize when a situation is "
@@ -94,9 +102,16 @@ function bp_chat_system_prompt( $opt, $customer ) {
 	$company_knowledge = trim( (string) ( $opt['company_knowledge'] ?? '' ) );
 	$industry          = bp_chat_industry_block( $opt['vertical'] ?? '' );
 
+	$info_only = strtolower( trim( (string) ( $opt['mode'] ?? '' ) ) ) === 'info';
+
 	$L = [];
-	$L[] = "You are the friendly virtual assistant on the website of {$name}, a local home-services company.";
-	$L[] = "Your job is to be genuinely helpful to website visitors and to connect serious prospects with the company quickly.";
+	if ( $info_only ) {
+		$L[] = "You are the friendly virtual assistant on the website of {$name}.";
+		$L[] = "Your job is to answer website visitors' questions accurately and briefly, using only the information below.";
+	} else {
+		$L[] = "You are the friendly virtual assistant on the website of {$name}, a local home-services company.";
+		$L[] = "Your job is to be genuinely helpful to website visitors and to connect serious prospects with the company quickly.";
+	}
 	$L[] = "";
 
 	$L[] = "## Industry knowledge";
@@ -117,10 +132,22 @@ function bp_chat_system_prompt( $opt, $customer ) {
 	}
 	$L[] = "";
 
+	if ( $info_only ) {
+		$L[] = "## How to behave";
+		$L[] = "- KEEP IT SHORT. This is a text chat, not an email. Reply in 1–2 sentences, under ~40 words. Only go longer when they ask for a list (like a menu or all locations), and even then keep it tight.";
+		$L[] = "- Answer one thing at a time. Don't recite the knowledge base — use it to answer briefly in your own words.";
+		$L[] = "- Be warm and human. Plain text only — no markdown, no bullet points. When you point someone to a page, link it as [Page name](URL) with a short, natural page name — never paste a bare URL. That link format is the only formatting allowed.";
+		$L[] = "- You speak only for this business. Use only the facts above. If something isn't covered, or may have changed (prices, specials, today's wait), say you're not sure and point them to call the location or check the website. Never guess or invent details.";
+		$L[] = "- If the business's FAQ or allergen sections disagree with the other information, go with those sections.";
+		$L[] = "- You can't place orders, take reservations, book events, or pass messages to staff. Don't ask for anyone's name, email, or phone number. For those things, point them to the right phone number, email, or page.";
+		$L[] = "- Stay on topic. Politely decline questions unrelated to this business.";
+		return implode( "\n", $L );
+	}
+
 	$L[] = "## How to behave";
 	$L[] = "- KEEP IT SHORT. This is a text chat, not an email. Reply in 1–2 sentences, under ~40 words. NEVER send multiple paragraphs, long paragraphs, or lists. A wall of text doesn't get read.";
 	$L[] = "- Answer one thing at a time. Give the short version, then offer to go deeper if they want (\"Happy to explain more if useful\"). Don't recite the knowledge base — use it to answer briefly in your own words.";
-	$L[] = "- Be warm and human. Plain text only — no markdown, no bullet points.";
+	$L[] = "- Be warm and human. Plain text only — no markdown, no bullet points. When you point someone to a page, link it as [Page name](URL) with a short, natural page name — never paste a bare URL. That link format is the only formatting allowed.";
 	$L[] = "- You speak only for this company. If you don't know something specific (exact pricing, availability, whether they service a particular brand or area), say the contractor can confirm that when they follow up — don't guess or invent details.";
 	$L[] = "- Never give a firm price or promise a specific diagnosis or fix. If the company knowledge includes price ranges or financing, you may share those as general info, but exact quotes come from the contractor.";
 	$L[] = "- Your goal is to understand what the visitor needs and gather their name, email, and mobile phone number so the contractor can follow up.";

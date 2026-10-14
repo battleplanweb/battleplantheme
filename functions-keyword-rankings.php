@@ -168,13 +168,32 @@ function bp_kw_type_label(string $type): string {
 # Keyword Classification
 --------------------------------------------------------------*/
 
+// Terms for a jobsite_geo taxonomy, safe to call before 'init'. functions-chron.php runs at theme
+// load — before includes-jobsite-geo.php registers its taxonomies on init — so get_terms() returns
+// WP_Error inside the nightly cron. That produced zero jobsite records, and the orphan cleanup
+// then deleted every jobsite keyword (and its history) the admin-side recheck had added.
+function bp_kw_get_terms(string $taxonomy, bool $slugs_only = false): array {
+	if (taxonomy_exists($taxonomy)) {
+		$terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false, 'fields' => $slugs_only ? 'slugs' : 'all']);
+		return is_wp_error($terms) ? [] : (array) $terms;
+	}
+	global $wpdb;
+	$rows = (array) $wpdb->get_results($wpdb->prepare("
+		SELECT t.term_id, t.name, t.slug
+		FROM {$wpdb->terms} t
+		INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = t.term_id
+		WHERE tt.taxonomy = %s
+	", $taxonomy));
+	return $slugs_only ? array_map(fn($r) => (string) $r->slug, $rows) : $rows;
+}
+
 // Extract city (and city+state) patterns from service-area slugs.
 // Slugs may be bare cities ('frisco-tx') or prefixed ('air-conditioner-repair-humble-tx').
 // In all cases the last word is the 2-letter state and the word before it is the city.
 function bp_kw_get_area_patterns(): array {
 	static $patterns = null;
 	if ($patterns !== null) return $patterns;
-	$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, 'fields' => 'slugs']);
+	$terms = bp_kw_get_terms('jobsite_geo-service-areas', true);
 	$patterns = [];
 	foreach (is_wp_error($terms) ? [] : (array) $terms as $slug) {
 		$words = explode(' ', str_replace('-', ' ', $slug));
@@ -210,6 +229,20 @@ function bp_kw_classify_keyword(string $keyword, string $url = ''): string {
 	$segments = array_filter(explode('/', trim($path, '/')));
 	if (count($segments) <= 1) return 'main';
 	return 'geo';
+}
+
+// Display group for a tracked entry, driven by the page that RANKS rather than the template that
+// generated the keyword — 'heating replacement alba tx' is a base template, but when a /service/
+// page is what ranks, it's a Jobsite GEO win. Returns 'jobsite' | 'brand' | 'base' | 'labs'.
+function bp_kw_display_group(array $item): string {
+	$src   = $item['source'] ?? '';
+	$path  = parse_url($item['url'] ?? '', PHP_URL_PATH) ?: '';
+	$first = strtolower(explode('/', trim($path, '/'))[0] ?? '');
+	if (in_array($first, ['service', 'jobsites'], true)) return 'jobsite';
+	if ($src === 'brand') return 'brand';
+	if (!$src)            return 'labs';
+	if ($path === '' && $src === 'jobsite') return 'jobsite';
+	return 'base';
 }
 
 
@@ -492,7 +525,7 @@ function bp_kw_target_areas(): array {
 	$jobsite_geo = get_option('jobsite_geo', []);
 	$has_jobsite = bp_module_on($jobsite_geo);
 	if ($has_jobsite) {
-		$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false]);
+		$terms = bp_kw_get_terms('jobsite_geo-service-areas');
 		foreach (is_wp_error($terms) ? [] : (array) $terms as $term) {
 			$clean = bp_kw_normalize_area($term->name);
 			if ($clean) $areas[] = $clean;
@@ -531,7 +564,7 @@ function bp_kw_apply_synonyms_to_service(string $service, array $synonyms): arra
 function bp_kw_area_location_slugs(): array {
 	static $slugs = null;
 	if ($slugs !== null) return $slugs;
-	$terms = get_terms(['taxonomy' => 'jobsite_geo-service-areas', 'hide_empty' => false, 'fields' => 'slugs']);
+	$terms = bp_kw_get_terms('jobsite_geo-service-areas', true);
 	$slugs = [];
 	foreach (is_wp_error($terms) ? [] : (array) $terms as $slug) {
 		$slug  = strtolower(trim((string) $slug));
@@ -664,7 +697,7 @@ function bp_kw_target_records(): array {
 	$has_jobsite = bp_module_on($jobsite_geo);
 	if ($has_jobsite) {
 		$stats = bp_kw_jobsite_service_term_stats();
-		$terms = get_terms(['taxonomy' => 'jobsite_geo-services', 'hide_empty' => false]);
+		$terms = bp_kw_get_terms('jobsite_geo-services');
 		foreach (is_wp_error($terms) ? [] : (array) $terms as $term) {
 			$parsed = bp_kw_parse_service_term_slug($term->slug);
 			if (!$parsed['service'] || !$parsed['city'] || !$parsed['state']) continue;
@@ -1375,10 +1408,13 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 		]);
 	}
 
-	// B. Orphan cleanup — drop tracked entries no longer in records, preserve legacy (Labs) entries
+	// B. Orphan cleanup — drop tracked entries no longer in records, preserve legacy (Labs) entries.
+	// Zero jobsite records means the term lookup failed, not that every jobsite page vanished — keep them.
+	$has_jobsite_records = (bool) array_filter($records, fn($r) => ($r['source'] ?? '') === 'jobsite');
 	foreach (array_keys($tracked) as $kw_key) {
 		if (isset($valid_keys[$kw_key]))         continue;
 		if (!isset($tracked[$kw_key]['source'])) continue;
+		if (!$has_jobsite_records && $tracked[$kw_key]['source'] === 'jobsite') continue;
 		unset($tracked[$kw_key], $history[$kw_key]);
 	}
 
@@ -1678,12 +1714,7 @@ function bp_kw_render_dashboard_widget(): void {
 			elseif  ($rk <= 20) $buckets['11-20']++;
 			else                $buckets['21+']++;
 		}
-		// Prefer explicit source from the new model; fall back to URL classification for legacy entries
-		$src = $r['item']['source'] ?? '';
-		if (!$src) {
-			$g = bp_kw_classify_keyword($r['item']['keyword'], $r['item']['url']);
-			$src = ($g === 'geo') ? 'base' : (($g === 'blog' || $g === 'main') ? 'labs' : $g);
-		}
+		$src = bp_kw_display_group($r['item']);
 		if (isset($srcs[$src])) $srcs[$src]++;
 		else $srcs['labs']++;
 	}
@@ -1758,9 +1789,7 @@ function bp_kw_render_dashboard_widget(): void {
 			$src          = $row['item']['source'] ?? '';
 			$map_rank     = (int) ($row['item']['last_map_rank'] ?? 0);
 			$is_tentative = !empty($row['item']['tentative_rank']) || !empty($row['item']['tentative_at']);
-			// Source pill — entries without a source field are Labs-discovered
-			$tag = $src ?: 'labs';
-			if ($tag === 'service_area') $tag = 'service';
+			$tag = bp_kw_display_group($row['item']);
 			if ($rk <= 3)       $color = 'color:#28a745';
 			elseif ($rk <= 10)  $color = 'color:#856404';
 			elseif ($rk <= 20)  $color = 'color:#cc7000';
@@ -1771,7 +1800,7 @@ function bp_kw_render_dashboard_widget(): void {
 				$tag_pills = [
 					'base'    => ['tag-geo',     'base'],
 					'service' => ['tag-geo',     'service'],
-					'jobsite' => ['tag-jobsite', 'jobsite'],
+					'jobsite' => ['tag-jobsite', 'jobsite geo'],
 					'brand'   => ['tag-brand',   'brand'],
 					'labs'    => ['tag-blog',    'discovered'],
 				];
@@ -2089,11 +2118,9 @@ function bp_kw_render_admin_page(): void {
 		return strcmp($a['item']['keyword'], $b['item']['keyword']);
 	});
 
-	// Source-based grouping. Entries from target_records have a 'source' field
-	// (base/jobsite/brand). Anything else came from Labs discovery → 'labs'.
+	// Group by the page that ranks — see bp_kw_display_group().
 	foreach ($rows as &$row) {
-		$src = $row['item']['source'] ?? '';
-		if (!$src) $src = 'labs';
+		$src = bp_kw_display_group($row['item']);
 		$row['group']         = $src;
 		$row['item']['group'] = $src;
 	}
@@ -2345,7 +2372,7 @@ function bp_kw_render_admin_page(): void {
 			<button type="button" class="button button-small kw-grp-btn active" data-grp="all">All sources</button>
 			<button type="button" class="button button-small kw-grp-btn" data-grp="base"         style="background:#e8f4fd;">Base (<?php echo (int)$gcounts['base']; ?>)</button>
 			<?php if ($gcounts['service_area']) : ?><button type="button" class="button button-small kw-grp-btn" data-grp="service_area" style="background:#fff8e1;color:#a36a00;">Service Area (<?php echo (int)$gcounts['service_area']; ?>)</button><?php endif; ?>
-			<button type="button" class="button button-small kw-grp-btn" data-grp="jobsite"      style="background:#e8f5e9;">Jobsite (<?php echo (int)$gcounts['jobsite']; ?>)</button>
+			<button type="button" class="button button-small kw-grp-btn" data-grp="jobsite"      style="background:#e8f5e9;">Jobsite GEO (<?php echo (int)$gcounts['jobsite']; ?>)</button>
 			<button type="button" class="button button-small kw-grp-btn" data-grp="brand"        style="background:#f3e8fd;color:#6f42c1;">Brand (<?php echo (int)$gcounts['brand']; ?>)</button>
 			<?php if ($gcounts['labs']) : ?><button type="button" class="button button-small kw-grp-btn" data-grp="labs" style="background:#fef9e7;color:#b06000;">Discovered (<?php echo (int)$gcounts['labs']; ?>)</button><?php endif; ?>
 		</div>
@@ -2359,15 +2386,15 @@ function bp_kw_render_admin_page(): void {
 	<table class="wp-list-table widefat fixed striped" id="kw-table" style="font-size:13px;">
 		<thead>
 			<tr>
-				<th style="width:24%">Keyword</th>
-				<th style="width:6%">Rank</th>
-				<th style="width:6%">Change</th>
-				<th style="width:5%">Vol</th>
-				<th style="width:6%">Type</th>
-				<th style="width:16%">URL</th>
-				<th style="width:8%">First Seen</th>
-				<th style="width:8%">Last Check</th>
-				<th style="width:8%">Next Check</th>
+				<th style="width:24%" class="kw-sort" data-sort="keyword">Keyword</th>
+				<th style="width:6%" class="kw-sort" data-sort="rank" data-num="1">Rank</th>
+				<th style="width:6%" class="kw-sort" data-sort="change" data-num="1">Change</th>
+				<th style="width:5%" class="kw-sort" data-sort="vol" data-num="1">Vol</th>
+				<th style="width:6%" class="kw-sort" data-sort="type">Type</th>
+				<th style="width:16%" class="kw-sort" data-sort="url">URL</th>
+				<th style="width:8%" class="kw-sort" data-sort="first">First Seen</th>
+				<th style="width:8%" class="kw-sort" data-sort="last">Last Check</th>
+				<th style="width:8%" class="kw-sort" data-sort="next">Next Check</th>
 				<th style="width:13%">Actions</th>
 			</tr>
 		</thead>
@@ -2412,6 +2439,14 @@ function bp_kw_render_admin_page(): void {
 			    data-pos="<?php echo esc_attr($pos_bucket); ?>"
 			    data-grp="<?php echo esc_attr($group); ?>"
 			    data-page="<?php echo esc_attr($page_type); ?>"
+			    data-s-rank="<?php echo esc_attr($rank ?: ''); ?>"
+			    data-s-change="<?php echo esc_attr($change ?? ''); ?>"
+			    data-s-vol="<?php echo esc_attr(($item['search_vol'] ?? 0) ?: ''); ?>"
+			    data-s-type="<?php echo esc_attr($group); ?>"
+			    data-s-url="<?php echo esc_attr($path); ?>"
+			    data-s-first="<?php echo esc_attr($item['first_seen'] ?? ''); ?>"
+			    data-s-last="<?php echo esc_attr($item['last_check'] ?? ''); ?>"
+			    data-s-next="<?php echo esc_attr($item['next_check'] ?? ''); ?>"
 			    data-spark-dates="<?php echo esc_attr(json_encode($spark_dates)); ?>"
 			    data-spark-ranks="<?php echo esc_attr(json_encode($spark_ranks)); ?>">
 				<td>
@@ -2450,7 +2485,7 @@ function bp_kw_render_admin_page(): void {
 					// Source pill — uses the unified $group computed above (always populated).
 					// 'labs' covers anything Labs surfaced that wasn't already SERP-tracked.
 					$src_for_pill = $group ?: 'labs';
-					$src_labels   = ['base' => 'base', 'service_area' => 'service', 'jobsite' => 'jobsite', 'brand' => 'brand', 'labs' => 'discovered'];
+					$src_labels   = ['base' => 'base', 'service_area' => 'service', 'jobsite' => 'jobsite geo', 'brand' => 'brand', 'labs' => 'discovered'];
 					$src_styles   = [
 						'base'         => 'background:#e8f4fd;color:#1a73e8;',
 						'service_area' => 'background:#fff8e1;color:#a36a00;',
@@ -2514,6 +2549,10 @@ function bp_kw_render_admin_page(): void {
 	#kw-table tbody tr.kw-tentative td { background: #fffbe6; }
 	#kw-table tbody .kw-spark-row { display: none; }
 	#kw-table tbody .kw-spark-row.open { display: table-row; }
+	#kw-table th.kw-sort { cursor: pointer; user-select: none; white-space: nowrap; }
+	#kw-table th.kw-sort:hover { color: #2271b1; }
+	#kw-table th.kw-sort[data-dir="asc"]::after  { content: " \25B2"; font-size: 9px; }
+	#kw-table th.kw-sort[data-dir="desc"]::after { content: " \25BC"; font-size: 9px; }
 	</style>
 
 	<script>
@@ -2593,6 +2632,39 @@ function bp_kw_render_admin_page(): void {
 
 		// Apply on load so brand terms are pre-filtered from default "All types" view
 		applyFilters();
+
+		// Column sort — click toggles asc/desc; blanks always sink to the bottom.
+		// Each data row moves together with its sparkline row.
+		table.querySelector('thead').addEventListener('click', function(e) {
+			var th = e.target.closest('th.kw-sort');
+			if (!th) return;
+			var dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
+			table.querySelectorAll('th.kw-sort').forEach(function(h){ delete h.dataset.dir; });
+			th.dataset.dir = dir;
+
+			var key   = th.dataset.sort;
+			var isNum = th.dataset.num === '1';
+			var mult  = dir === 'asc' ? 1 : -1;
+			var tbody = table.querySelector('tbody');
+			var pairs = Array.prototype.map.call(tbody.querySelectorAll('tr.kw-data-row'), function(tr) {
+				var spark = tr.nextElementSibling;
+				var raw   = key === 'keyword' ? (tr.dataset.keyword || '') : (tr.dataset['s' + key.charAt(0).toUpperCase() + key.slice(1)] || '');
+				return { tr: tr, spark: (spark && spark.classList.contains('kw-spark-row')) ? spark : null, val: raw };
+			});
+
+			pairs.sort(function(a, b) {
+				if (a.val === '' && b.val === '') return 0;
+				if (a.val === '') return 1;
+				if (b.val === '') return -1;
+				if (isNum) return (parseFloat(a.val) - parseFloat(b.val)) * mult;
+				return a.val.localeCompare(b.val) * mult;
+			});
+
+			pairs.forEach(function(p) {
+				tbody.appendChild(p.tr);
+				if (p.spark) tbody.appendChild(p.spark);
+			});
+		});
 
 		// Sparkline expand/collapse on row click
 		document.querySelectorAll('#kw-table tbody tr.kw-data-row').forEach(function(tr) {

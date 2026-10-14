@@ -112,6 +112,15 @@ function sp_survey_store( array $data, bool $notify = true ): int {
 
 	$avg = $ratings ? round( array_sum( $ratings ) / count( $ratings ), 2 ) : null;
 
+	// Extra answers (questions beyond the fixed columns): [{label, value}], kept in form order.
+	$extra = [];
+	foreach ( (array) ( $data['extra'] ?? [] ) as $row ) {
+		if ( ! is_array( $row ) ) continue;
+		$label = sanitize_text_field( (string) ( $row['label'] ?? '' ) );
+		$value = sanitize_textarea_field( (string) ( $row['value'] ?? '' ) );
+		if ( $label !== '' && $value !== '' ) $extra[] = [ 'label' => $label, 'value' => $value ];
+	}
+
 	$visit = '';
 	if ( ! empty( $data['visit_date'] ) ) {
 		$ts = strtotime( (string) $data['visit_date'] );
@@ -145,10 +154,11 @@ function sp_survey_store( array $data, bool $notify = true ): int {
 			'avg_rating'    => $avg,
 			'overall'       => isset( $ratings['impression'] ) ? $ratings['impression'] : null,
 			'comments'      => sanitize_textarea_field( (string) ( $data['comments'] ?? '' ) ) ?: null,
+			'extra'         => $extra ? wp_json_encode( $extra ) : null,
 			'source_ip'     => sanitize_text_field( (string) ( $data['ip']          ?? '' ) ) ?: null,
 			'created_at'    => $created_at,
 		],
-		[ '%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%f','%d','%s','%s','%s' ]
+		[ '%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%f','%d','%s','%s','%s','%s' ]
 	);
 
 	if ( ! $ok ) return 0;
@@ -289,6 +299,7 @@ function site_pulse_ajax_get_surveys(): void {
 			'avg_rating'  => $r['avg_rating'] !== null ? (float) $r['avg_rating'] : null,
 			'overall'     => $r['overall'] !== null ? (int) $r['overall'] : null,
 			'comments'    => $r['comments'],
+			'extra'       => is_array( $ex = json_decode( (string) ( $r['extra'] ?? '' ), true ) ) ? $ex : [],
 			'created_at'  => $r['created_at'],
 		];
 	}

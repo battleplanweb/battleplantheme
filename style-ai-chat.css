@@ -41,7 +41,9 @@
 	--chatbot-bubble-color:                                    var(--black);
 	--chatbot-user-bubble-bg:                                  var(--light-grey);
 	--chatbot-user-bubble-color:                               var(--black);
+	--chatbot-muted:                                           var(--black);   /* typing-indicator dots */
 	--chatbot-links:                                           var(--button-color);
+	--chatbot-bubble-link:                                     var(--chatbot-bubble-color);   /* links inside assistant replies */
 
 	--chatbot-form-padding:                                    1em;
 	--chatbot-form-border:                                     2px solid var(--dark-grey);
@@ -205,6 +207,14 @@ button.bp-chat-close.tab-focus {
 	color:                                                     var(--chatbot-bubble-color);
 	border-bottom-left-radius:                                 0.25em;
 }
+.bp-chat-bubble a.bp-chat-link {
+	color:                                                     var(--chatbot-bubble-link);
+	font-weight:                                               700;
+	text-decoration:                                           underline;
+	text-underline-offset:                                     2px;
+	word-break:                                                break-word;
+}
+.bp-chat-bubble a.bp-chat-link:hover { text-decoration-thickness: 2px; }
 .bp-chat-user .bp-chat-bubble {
 	background:                                                var(--chatbot-user-bubble-bg);
 	color:                                                     var(--chatbot-user-bubble-color);

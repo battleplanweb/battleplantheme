@@ -5,6 +5,18 @@
 # Grid Set Up
 --------------------------------------------------------------*/
 
+// True when a chunk of rendered HTML has no actual content in it. A shortcode that
+// found nothing to show returns '', but wpautop/the_content can leave empty <p>, <br>
+// or &nbsp; residue behind it — that residue still counts as blank. Anything with a
+// real tag (<img>, <a>, <div>) or visible text does not.
+function bp_is_blank_html( $html ) {
+	if ( $html === null ) return true;
+	$strip = preg_replace( '/<!--.*?-->/s', '', $html );
+	$strip = preg_replace( '/<\/?(p|br)\b[^>]*>/i', '', $strip );
+	$strip = str_replace( array( '&nbsp;', "\xc2\xa0" ), ' ', $strip );
+	return trim( $strip ) === '';
+}
+
 // Expire Content
 add_shortcode( 'expire', 'battleplan_expireContent' );
 function battleplan_expireContent( $atts, $content = null ) {
@@ -622,7 +634,7 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 // Parallax Section
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'50%', 'pos-x-mobile'=>'', 'top-y'=>0, 'bottom-y'=>0, 'image'=>'', 'class'=>'', 'fixed'=>'false', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'50%', 'pos-x-mobile'=>'', 'top-y'=>0, 'bottom-y'=>0, 'image'=>'', 'image-mobile'=>'', 'mobile-breakpoint'=>'1024', 'stack'=>'false', 'class'=>'', 'fixed'=>'false', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
 	$name = strtolower(esc_attr($a['name']));
 	$name = preg_replace("/[\s_]/", "-", $name);
 	$style = esc_attr($a['style']);
@@ -659,6 +671,32 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$attachment_id = $hasImage ? attachment_url_to_postid(site_url().$image) : 0;
 	$alt_text = $attachment_id ? get_post_meta($attachment_id, '_wp_attachment_image_alt', true) : '';
 
+	// Optional art-directed mobile hero. srcset alone can't do this: it picks a different SIZE of the
+	// same photo, never a different crop, so a wide hero whose subject sits off-centre has no way to
+	// become a portrait-friendly frame on a phone. <picture> + <source media> does it in ONE cached
+	// document - the browser decides, not the server - which is the only approach compatible with
+	// EverCache (no Vary: User-Agent; see the is_mobile() notes in functions.php).
+	//
+	// Deliberately keyed to the SAME 1024px boundary where the parallax drift bails
+	// (script-pages.js) and where --hero-x-m takes over (style-grid.css): below it the hero is a
+	// plain static image, which is exactly the point at which swapping the file is safe and useful.
+	$imageM        = esc_attr($a['image-mobile']);
+	$hasImageM     = $hasImage && ! empty($imageM);
+	$mobileBP      = (int) $a['mobile-breakpoint'] ?: 1024;
+	$attachment_mid = $hasImageM ? attachment_url_to_postid(site_url().$imageM) : 0;
+
+	// stack="true": below the breakpoint the hero stops being a backdrop and becomes a plain photo
+	// with the copy UNDER it. Opt-in per hero — every existing hero keeps its overlay untouched.
+	// A media query can't read mobile-breakpoint, so the rules ship as one class per standard
+	// framework breakpoint (576/860/1024/1280) and the attribute snaps to the nearest. Swap and
+	// stack MUST land on the same boundary: split them and there is a band where the phone-shaped
+	// crop is still being cover-fitted as a backdrop behind overlay text, which is the worst of both.
+	$stack = ! in_array( strtolower(trim(esc_attr($a['stack']))), array('', 'false', 'no', '0'), true );
+	$stackBP = 576;
+	foreach ( array(576, 860, 1024, 1280) as $bp ) {
+		if ( abs($mobileBP - $bp) < abs($mobileBP - $stackBP) ) $stackBP = $bp;
+	}
+
 	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
 
 	// ONE markup path for every device. There is deliberately no is_mobile() branch here: EverCache
@@ -679,14 +717,37 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		// preload the original, then JS-fetch a responsive size).
 		$srcset  = $attachment_id ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_id, 'full' ) ) : '';
 
+		$srcsetM = $attachment_mid ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_mid, 'full' ) ) : '';
+
 		// Preload the SAME candidate set the <img> resolves so the LCP image is fetched high-priority
 		// and correctly sized - one download, no downgrade.
-		bp_register_hero_preload( $image, $srcset, '100vw' );
+		//
+		// With two art-directed sources each preload MUST carry the matching media query. A single
+		// unconditional preload of the desktop file would make every phone fetch both: the preloaded
+		// desktop one at high priority, then the mobile one that <source> actually matches. That is
+		// strictly worse than having no mobile image at all, and on the LCP element.
+		if ( $hasImageM ) {
+			bp_register_hero_preload( $imageM, $srcsetM ?: '', '100vw', '(max-width:' . $mobileBP . 'px)' );
+			bp_register_hero_preload( $image,  $srcset,       '100vw', '(min-width:' . ( $mobileBP + 1 ) . 'px)' );
+		} else {
+			bp_register_hero_preload( $image, $srcset, '100vw' );
+		}
 
 		$heroImg = '<img class="hero-bg" src="' . esc_url( $image ) . '"'
 			. ( $srcset ? ' srcset="' . esc_attr( $srcset ) . '" sizes="100vw"' : '' )
 			. ' width="' . esc_attr( $imgW ) . '" height="' . esc_attr( $imgH ) . '"'
 			. ' alt="' . esc_attr( $alt_text ) . '" fetchpriority="high" decoding="async">';
+
+		// The <img> keeps class="hero-bg" and every attribute it had, so the drift JS and the
+		// .hero-bg CSS bind exactly as before; <picture> only intercepts which FILE that <img>
+		// loads. No image-mobile = byte-identical markup to before this attribute existed.
+		if ( $hasImageM ) {
+			$heroImg = '<picture class="hero-picture">'
+				. '<source media="(max-width:' . $mobileBP . 'px)" srcset="'
+				. esc_attr( $srcsetM ?: $imageM ) . '"' . ( $srcsetM ? ' sizes="100vw"' : '' ) . '>'
+				. $heroImg
+				. '</picture>';
+		}
 
 		// No data-parallax="scroll": that triggers the old parallaxBG auto-loop in script-desktop.js
 		// (which reads data-image-src etc.). The <img class="hero-bg"> hero uses the CSS view() drift
@@ -694,7 +755,8 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		$dataAttrs     = ' data-img-height="' . $imgH . '" data-pos-x="' . $posX . '" data-top-y="' . $topY . '" data-bottom-y="' . $botY . '"';
 		// hero-empty reproduces the old mobile branch's "no content, so fall back to the image's own
 		// proportions" height; with content the hero grows instead, same as it always did.
-		$parallaxClass = ' ' . $type . '-parallax' . ( trim($content) === '' ? ' hero-empty' : '' );
+		$parallaxClass = ' ' . $type . '-parallax' . ( trim($content) === '' ? ' hero-empty' : '' )
+			. ( $stack ? ' hero-stack hero-stack-' . $stackBP : '' );
 	} else {
 		$heroImg       = '';
 		$dataAttrs     = '';
@@ -714,9 +776,18 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		if ( ! empty($meta['width']) && ! empty($meta['height']) ) $heroAR = (int) $meta['width'] . '/' . (int) $meta['height'];
 	}
 
+	// A mobile image with different proportions needs its own ratio, or an empty hero on a phone
+	// sizes its box to the DESKTOP image's shape and the swapped-in file is letterboxed or cropped.
+	$heroARM = '';
+	if ( $hasImageM && $attachment_mid ) {
+		$metaM = wp_get_attachment_metadata( $attachment_mid );
+		if ( ! empty($metaM['width']) && ! empty($metaM['height']) ) $heroARM = (int) $metaM['width'] . '/' . (int) $metaM['height'];
+	}
+
 	$heroVars = '--hero-h:' . $height . ';--hero-pad:' . $padding . 'px;--hero-x:' . $posX . ';'
 		. ( $posXM !== '' ? '--hero-x-m:' . $posXM . ';' : '' )
-		. ( $hasImage ? '--hero-ar:' . $heroAR . ';' : '' );
+		. ( $hasImage ? '--hero-ar:' . $heroAR . ';' : '' )
+		. ( $heroARM !== '' ? '--hero-ar-m:' . $heroARM . ';' : '' );
 
 	// min-height (not height) so a hero with tall content grows instead of clipping under
 	// overflow:hidden; the absolutely-positioned .hero-bg still fills whatever height results.
@@ -733,30 +804,63 @@ function battleplan_buildParallax( $atts, $content = null ) {
 // throttled mobile connection it becomes the slow LCP. Fix: the first hero records its URL here, and
 // the framework's existing whole-page `final_output` filter (functions.php) injects a high-priority
 // <link rel=preload> right after <head> — so it lands in the cached HTML, discovered before anything.
-function bp_register_hero_preload( $url, $srcset = '', $sizes = '' ) {
-	if ( empty($GLOBALS['bp_hero_preload']) && ! empty($url) ) {
-		$GLOBALS['bp_hero_preload'] = array( 'url' => $url, 'srcset' => $srcset, 'sizes' => $sizes );
+function bp_register_hero_preload( $url, $srcset = '', $sizes = '', $media = '' ) {
+	if ( empty($url) ) return;
+
+	// First hero on the page still wins. The one exception: an art-directed hero registers TWO
+	// entries (one per media query) that both describe that same first hero, so exactly one
+	// follow-up call is accepted to complete the pair. A later hero, or a stray third call, is
+	// ignored - otherwise a page with two art-directed heroes would preload four images.
+	if ( empty($GLOBALS['bp_hero_preload']) ) {
+		$GLOBALS['bp_hero_preload'] = array( 'items' => array(), 'media_scoped' => ( $media !== '' ) );
+	} else {
+		$store     = $GLOBALS['bp_hero_preload'];
+		$completes = $media !== '' && ! empty($store['media_scoped']) && count( $store['items'] ?? array() ) < 2;
+		if ( ! $completes ) return;
 	}
+
+	$GLOBALS['bp_hero_preload']['items'][] = array(
+		'url' => $url, 'srcset' => $srcset, 'sizes' => $sizes, 'media' => $media,
+	);
 }
 
 add_filter('final_output', 'bp_inject_hero_preload', 5);
 function bp_inject_hero_preload( $html ) {
 	if ( empty($GLOBALS['bp_hero_preload']) || ! is_string($html) || stripos($html, '</head>') === false ) return $html;
 
-	$hero   = $GLOBALS['bp_hero_preload'];
-	$url    = is_array($hero) ? ( $hero['url']    ?? '' ) : $hero;   // plain-string form: legacy callers
-	$srcset = is_array($hero) ? ( $hero['srcset'] ?? '' ) : '';
-	$sizes  = is_array($hero) ? ( $hero['sizes']  ?? '' ) : '';
-	if ( ! $url ) return $html;
+	$hero = $GLOBALS['bp_hero_preload'];
 
-	// Responsive preload when a srcset exists so the preloader fetches the SAME candidate the
-	// <img srcset> resolves; href stays as fallback for browsers ignoring imagesrcset.
-	$attr = $srcset
-		? 'imagesrcset="' . esc_attr($srcset) . '"' . ( $sizes ? ' imagesizes="' . esc_attr($sizes) . '"' : '' ) . ' href="' . esc_url($url) . '"'
-		: 'href="' . esc_url($url) . '"';
+	// Three shapes over time: a plain string (legacy callers), a single assoc array, and the
+	// current {items:[...]} list that an art-directed hero needs. Normalise, don't branch downstream.
+	if ( is_string($hero) ) {
+		$items = array( array( 'url' => $hero, 'srcset' => '', 'sizes' => '', 'media' => '' ) );
+	} elseif ( isset($hero['items']) ) {
+		$items = $hero['items'];
+	} else {
+		$items = array( $hero + array( 'srcset' => '', 'sizes' => '', 'media' => '' ) );
+	}
 
-	$link = '<link rel="preload" as="image" ' . $attr . ' fetchpriority="high">' . "
+	$link = '';
+	foreach ( $items as $item ) {
+		$url = $item['url'] ?? '';
+		if ( ! $url ) continue;
+		$srcset = $item['srcset'] ?? '';
+		$sizes  = $item['sizes']  ?? '';
+		$media  = $item['media']  ?? '';
+
+		// Responsive preload when a srcset exists so the preloader fetches the SAME candidate the
+		// <img srcset> resolves; href stays as fallback for browsers ignoring imagesrcset.
+		$attr = $srcset
+			? 'imagesrcset="' . esc_attr($srcset) . '"' . ( $sizes ? ' imagesizes="' . esc_attr($sizes) . '"' : '' ) . ' href="' . esc_url($url) . '"'
+			: 'href="' . esc_url($url) . '"';
+
+		// media= on a preload link is what stops a phone downloading the desktop hero too.
+		if ( $media !== '' ) $attr .= ' media="' . esc_attr($media) . '"';
+
+		$link .= '<link rel="preload" as="image" ' . $attr . ' fetchpriority="high">' . "
 ";
+	}
+	if ( $link === '' ) return $html;
 
 	// Inject at the END of <head>, after the self-hosted font preloads, so fonts keep priority on the
 	// throttled pipe; the hero preload is still discovered during head parse regardless of position.
@@ -927,7 +1031,7 @@ function battleplan_formField( $atts, $content = null ) {
 // Widgets
 add_shortcode( 'widget', 'battleplan_buildWidget' );
 function battleplan_buildWidget( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'intro'=>''), $atts );
+	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'intro'=>'', 'empty'=>'hide'), $atts );
 	$type = strtolower(preg_replace("/[\s_]/", "-", esc_attr($a['type'])));
 	$title = esc_attr($a['title']);
 	$lock = esc_attr($a['lock']);
@@ -936,6 +1040,7 @@ function battleplan_buildWidget( $atts, $content = null ) {
 	$class = esc_attr($a['class']);
 	$show = esc_attr($a['show']);
 	$intro = esc_attr($a['intro']);
+	$empty = esc_attr($a['empty']);
 	$hide = esc_attr($a['hide']);
 	$start = strtotime(esc_attr($a['start']));
 	$end = strtotime(esc_attr($a['end']));
@@ -1005,7 +1110,13 @@ function battleplan_buildWidget( $atts, $content = null ) {
 
 		if ( $intro !== '' ) $buildWidget .= '<div class="widget-intro">'.$intro.'</div>';
 
-		$buildWidget .= '<div class="widget-content">'.do_shortcode($content).'</div>';
+		$widgetContent = do_shortcode($content);
+
+		// Nothing came back (no upcoming events, no testimonials, etc) - drop the whole
+		// widget rather than leaving an empty box in the sidebar. Opt out with empty="show".
+		if ( $empty != 'show' && $type != 'filler' && bp_is_blank_html($widgetContent) ) return null;
+
+		$buildWidget .= '<div class="widget-content">'.$widgetContent.'</div>';
 		$buildWidget .= '</div>';
 	endif;
 

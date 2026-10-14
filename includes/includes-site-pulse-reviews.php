@@ -1759,6 +1759,14 @@ function sp_reviews_generate_reply( array $row, string $guidance = '' ) {
 	$comment  = trim( (string) ( $row['comment'] ?? '' ) );
 	$guidance = trim( $guidance );   // the user's edited draft / extra instructions, when regenerating
 
+	$parts = preg_split( '/\s+/', trim( $reviewer ) );
+	$first = $parts ? $parts[0] : '';
+
+	$ctx  = 'Location: ' . ( $store ?: '(unspecified)' ) . "\n";
+	$ctx .= 'Reviewer first name: ' . ( $first ?: '(unknown)' ) . "\n";
+	$ctx .= "Star rating: {$rating} of 5\n";
+	$ctx .= 'Review: ' . ( '' !== $comment ? $comment : "(no written comment — a {$rating}-star rating only)" ) . "\n";
+
 	// Admin-defined keyword prompts whose keyphrase appears in THIS review (e.g. "green beans" → a note
 	// about a recipe change). Injected into the prompt below so the reply can address the known issue;
 	// empty when nothing matches. Set in Settings → AI Prompts.
@@ -1774,13 +1782,13 @@ function sp_reviews_generate_reply( array $row, string $guidance = '' ) {
 	// we always run the model so a bad review still gets a real, on-message reply.)
 	if ( '' === $guidance && '' === $kw_context && '' === $critical_context && mb_strlen( $comment ) < 40 ) {
 		$canned = [
-			'Thank you!',
-			'Thank you for the review!',
-			'We appreciate the review!',
-			'Thanks for taking the time to review our business!',
-			'We appreciate your business!',
-			'Thank you for your business!',
-			'Thanks!',
+			'Thank you'.( ', '.$first ?: '' ).'!',
+			'Thank you for the review'.( ', '.$first ?: '' ).'!',
+			'We appreciate the review'.( ', '.$first ?: '' ).'!',
+			( $first.', t' ?: 'T' ).'hanks for taking the time to review our business!',
+			( $first.', w' ?: 'W' ).'e appreciate your business!',
+			'Thank you for your business'.( ', '.$first ?: '' ).'!',
+			'Thanks'.( ', '.$first ?: '' ).'!',
 		];
 		if ( 5 === $rating ) $canned[] = 'Thanks for the 5 stars!'; // only when it's actually 5 stars
 		return $canned[ array_rand( $canned ) ];
@@ -1806,14 +1814,6 @@ function sp_reviews_generate_reply( array $row, string $guidance = '' ) {
 		$nudges = ( is_array( $nudges ) && $nudges ) ? array_values( $nudges ) : [ '' ];
 		$nudge  = $nudges[ array_rand( $nudges ) ];
 	}
-
-	$parts = preg_split( '/\s+/', trim( $reviewer ) );
-	$first = $parts ? $parts[0] : '';
-
-	$ctx  = 'Location: ' . ( $store ?: '(unspecified)' ) . "\n";
-	$ctx .= 'Reviewer first name: ' . ( $first ?: '(unknown)' ) . "\n";
-	$ctx .= "Star rating: {$rating} of 5\n";
-	$ctx .= 'Review: ' . ( '' !== $comment ? $comment : "(no written comment — a {$rating}-star rating only)" ) . "\n";
 
 	// Topic-specific context the business flagged (only present because the review mentions those topics).
 	if ( '' !== $kw_context ) {

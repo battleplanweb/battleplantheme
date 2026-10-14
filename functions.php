@@ -1713,6 +1713,10 @@ require_once get_template_directory().'/functions-shortcodes.php';
 // as every other shortcode file. ([vid] itself stays in functions-grid.php with
 // the other layout blocks — this is the video FEATURE module.)
 require_once get_template_directory().'/includes/includes-video.php';
+// PayPal Pay in 4 / Pay Later button ([paypal]). Loaded everywhere but dormant unless the
+// site's wp-config defines PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET — same self-gating as the
+// GBP and FB hubs, so a site that doesn't take payments pays nothing but the require.
+require_once get_template_directory().'/includes/includes-paypal.php';
 require_once get_template_directory().'/functions-icons.php';
 require_once get_template_directory().'/functions-forms.php';
 require_once get_template_directory().'/functions-cpt.php';
@@ -2340,22 +2344,32 @@ $pid = null;
 if (isset($customer_info['pid'])) {
 	$pid = is_array($customer_info['pid']) ? ($customer_info['pid'][0] ?? null) : $customer_info['pid'];
 }
-$goog_rev = $customer_info['google-review'] ?? '';
+$goog_rev = trim( (string) ( $customer_info['google-review'] ?? '' ) );
+// Accept the bare share code (CeDHCpXouY9yECE) as well as the full g.page/r/.../review URL
+if ( $goog_rev !== '' && $goog_rev !== '---' && stripos( $goog_rev, 'http' ) !== 0 ) $goog_rev = 'https://g.page/r/'.rawurlencode( $goog_rev ).'/review';
+$goog_cid = preg_replace( '/\D/', '', (string) ( $customer_info['cid'] ?? '' ) );
 
-if ( _PAGE_SLUG == "google" && strlen( $pid ) > 10 ) :
-	$pid = is_array($customer_info['pid']) ? $customer_info['pid'][0] : $customer_info['pid'];
-	if ( $pid != '' ) {
-		wp_redirect( "https://search.google.com/local/reviews?placeid=".$pid."&hl=en&gl=US", 301 );
-	} elseif ( $goog_rev != '' ) {
-		wp_redirect( $goog_rev, 301 );
+// Priority: pid → direct review link (g.page/r/.../review) → CID map listing (not a review form, but lands on the right business)
+// search.google.com/local/reviews was retired (404) — writereview is Google's documented review link
+// 302, not 301: a permanent redirect gets pinned in visitors' browsers if the target ever changes again
+if ( _PAGE_SLUG == "google" ) :
+	if ( strlen( (string) $pid ) > 10 ) {
+		wp_redirect( "https://search.google.com/local/writereview?placeid=".rawurlencode( $pid ), 302 );
+		exit;
+	} elseif ( strlen( $goog_rev ) > 10 ) {
+		wp_redirect( $goog_rev, 302 );
+		exit;
+	} elseif ( strlen( $goog_cid ) > 5 ) {
+		wp_redirect( "https://www.google.com/maps?cid=".$goog_cid, 302 );
+		exit;
 	}
-	exit;
 endif;
 if ( _PAGE_SLUG == "facebook" && strlen( $customer_info['facebook'] ) > 10 ) :
 	$facebook = do_shortcode('[get-biz info="facebook"]');
-	if ( substr($facebook, -1) != '/') $facebook .= "/";
+	// No trailing slash on query-string URLs: profile.php?id=123/ is an invalid id, and FB falls back to the visitor's own profile
+	if ( substr($facebook, -1) != '/' && strpos($facebook, '?') === false ) $facebook .= "/";
 	//wp_redirect( $facebook."reviews/", 301 );
-	wp_redirect( $facebook, 301 );
+	wp_redirect( $facebook, 302 );
 	exit;
 endif;
 if ( _PAGE_SLUG == "yelp" && strlen( $customer_info['yelp'] ) > 10 ) :

@@ -1,0 +1,1309 @@
+/* Battle Plan Web Design — Storefront
+--------------------------------------------------------------
+The customer-facing store: product grid, product card, single product,
+variant picker.
+
+Every colour comes from the framework's own tokens, so a client's palette
+carries straight through and there is nothing per-site to restyle. Sizes are
+whole pixels; the only rem is a headline font size.
+
+Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
+
+>>> TABLE OF CONTENTS:
+# Tokens
+# Grid & Card
+# Single Product
+# Options & Buy
+# Mobile
+-------------------------------------------------------------- */
+
+
+/*--------------------------------------------------------------
+# Tokens
+--------------------------------------------------------------*/
+
+:root {
+	--store-gap:                                               24px;
+	--store-radius:                                            8px;
+
+	--store-border:                                            1px solid var(--lightest-grey);
+	--store-border-active:                                     1px solid var(--medium-grey);
+
+	--product-img-border:                                      var(--store-border);
+	--product-img-border-active:                               var(--store-border-active);
+
+	--variation-tile-border:                                   2px solid var(--lightest-grey);
+	--variation-tile-border-active:                            2px solid var(--medium-grey);
+
+	--store-card-bg:                                           var(--white);
+	--store-muted:                                             var(--medium-grey);
+
+	--store-title-color:                                       var(--text-color);
+	--store-price-color:                                       var(--text-color);
+	--store-sale-color:                                        var(--warning);
+	--store-was-color:                                         var(--store-muted);
+
+	--store-soldout-bg:                                        var(--black-high);
+	--store-soldout-color:                                     var(--white);
+
+	--store-btn-bg:                                            var(--button-background);
+	--store-btn-color:                                         var(--button-color);
+	--store-btn-bg-hover:                                      var(--button-background-hover);
+	--store-btn-color-hover:                                   var(--button-color-hover);
+
+	--store-cols:                                              3;
+}
+
+
+/*--------------------------------------------------------------
+# Grid & Card
+--------------------------------------------------------------*/
+
+.store-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(var(--store-cols), minmax(0, 1fr));
+	gap:                                                       var(--store-gap);
+	margin:                                                    3em 0;
+}
+
+.store-card {
+	position:                                                  relative;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	background:                                                var(--store-card-bg);
+	border:                                                    var(--store-border);
+	border-radius:                                             var(--store-radius);
+	overflow:                                                  hidden;
+	box-shadow:                                                0 0 0 var(--black-lowest);
+	transition:                                                all 150ms ease;
+}
+
+.store-card:hover,
+.store-card.active,
+.store-card.tab-focus,
+.store-card:focus-within {
+	transform:                                                 translateY(-3px);
+	box-shadow:                                                0 3px 6px var(--black-lowest);
+}
+
+/* The link is the card's only child, so it has to carry the column through — otherwise
+   .store-card-body has a block parent and its flex:1 does nothing. */
+.store-card-link {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	flex:                                                      1;
+	color:                                                     inherit;
+	text-decoration:                                           none;
+}
+
+.store-card-media {
+	position:                                                  relative;
+	aspect-ratio:                                              1 / 1;
+	background:                                                var(--lightest-grey);
+	overflow:                                                  hidden;
+	border:                                                    var(--store-border);
+	border-top:                                                none;
+	border-left:                                               none;
+	border-right:                                              none;
+}
+
+.store-card-img,
+.store-card-media img {
+	width:                                                     100%;
+	height:                                                    100%;
+	object-fit:                                                cover;
+	display:                                                   block;
+}
+
+.store-card-noimg {
+	width:                                                     100%;
+	height:                                                    100%;
+	min-height:                                                200px;
+	background:                                                var(--lightest-grey);
+}
+
+.store-card-badge {
+	position:                                                  absolute;
+	top:                                                       12px;
+	left:                                                      12px;
+	padding:                                                   4px 10px;
+	border-radius:                                             4px;
+	background:                                                var(--store-soldout-bg);
+	color:                                                     var(--store-soldout-color);
+	font-size:                                                 12px;
+	letter-spacing:                                            1px;
+	text-transform:                                            uppercase;
+}
+
+/* A sold-out card stays readable — dimming the whole card hides the price,
+   which is the thing a customer is most likely to have come back to check. */
+.store-card-soldout .store-card-media { opacity: .55; }
+
+/* The text block under the image. One padding box for the card's copy, rather than
+   side margins repeated on every element inside it. It grows to fill the card, which
+   is what lets the price pin to the bottom edge so a row of cards lines up whether
+   their titles run to one line or three. */
+.store-card-body {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	flex:                                                      1;
+	gap:                                                       0;
+	padding:                                                   8px;
+}
+
+.store-card-title,
+.store-card-price {
+	font-family:                                               var(--font-text);
+	text-align:                                                right;
+	font-weight:                                               bold;
+	margin:                                                    0;
+}
+
+/* auto top margin = pushed to the bottom of .store-card-body */
+.store-card-price {
+	margin-top:                                                auto;
+}
+
+/* Sale pricing: the struck-through regular price, then what you actually pay.
+   <del> is already struck through by the browser; this only tones it down so the
+   price being charged is the one that reads first. */
+.store-price-was {
+	color:                                                     var(--store-was-color);
+	font-weight:                                               normal;
+	font-size:                                                 16px;
+	margin-right:                                              4px;
+}
+
+.store-price-now {
+	color:                                                     var(--store-sale-color);
+}
+
+/* Single product page: same treatment, so a sale reads identically in both places. */
+.store-single-price.is-sale {
+	color:                                                     var(--store-sale-color);
+}
+
+.store-card-title {
+	line-height:                                               1.3;
+	color:                                                     var(--store-title-color);
+	font-size:                                                 20px;
+}
+
+.store-card-price {
+	color:                                                     var(--store-price-color);
+	font-size:                                                 22px;
+}
+
+
+/*--------------------------------------------------------------
+# Single Product
+--------------------------------------------------------------*/
+
+.store-single {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(0, 1fr) minmax(0, 2fr);
+	gap:                                                       40px;
+	align-items:                                               start;
+	margin:                                                    0 0 48px;
+}
+
+.store-single-media img,
+.store-single-img {
+	width:                                                     100%;
+	height:                                                    auto;
+	display:                                                   block;
+	border-radius:                                             var(--store-radius);
+	border:                                                    var(--product-img-border);
+}
+
+/* Gallery. The main image keeps a fixed aspect box so switching between a tall and a
+   wide photo doesn't jump the whole page — the thing that makes a colour swap feel
+   broken even when it worked. */
+/* The track holds EVERY image as a slide. On desktop one is shown at a time with
+   thumbnails below; on a phone the same markup becomes a swipeable carousel. One DOM
+   for both, because the server cannot know which it is — these pages are edge-cached
+   with no Vary on user agent, so anything is_mobile() changed would reach everyone. */
+.store-gallery-track {
+	position:                                                  relative;
+}
+
+/* A fixed square box: switching between a tall and a wide photo otherwise jumps the
+   whole page, which makes a colour swap feel broken even when it worked. */
+.store-slide {
+	display:                                                   none;
+	position:                                                  relative;
+	aspect-ratio:                                              1 / 1;
+	overflow:                                                  hidden;
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--lightest-grey);
+}
+
+.store-slide.is-active {
+	display:                                                   block;
+}
+
+.store-slide img {
+	width:                                                     100%;
+	height:                                                    100%;
+	object-fit:                                                cover;
+	display:                                                   block;
+}
+
+/* The zoom cursor appears only once JS has confirmed the original holds more detail
+   than is already on screen. Without this gate the picture would promise a zoom that
+   turns out to be the same image at the same size. */
+.store-slide.is-zoomable img {
+	cursor:                                                    zoom-in;
+}
+
+/* Last, so it beats .is-active and the carousel rule below — a slide filtered out by
+   the variant picker must stay hidden in every layout. */
+.store-slide[hidden] {
+	display:                                                   none !important;
+}
+
+.store-gallery-thumbs {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       6px;
+	margin:                                                    12px 0 0;
+}
+
+.store-gallery-thumb {
+	width:                                                     72px;
+	height:                                                    72px;
+	padding:                                                   0;
+	border:                                                    var(--variation-tile-border);
+	border-radius:                                             var(--store-radius);
+	background:                                                none;
+	overflow:                                                  hidden;
+	cursor:                                                    pointer;
+	transition:                                                all 150ms ease;
+}
+
+.store-gallery-thumb img {
+	width:                                                     100%;
+	height:                                                    100%;
+	object-fit:                                                cover;
+	display:                                                   block;
+	border:                                                    none;
+}
+
+.store-gallery-thumb:hover,
+.store-gallery-thumb.active,
+.store-gallery-thumb.tab-focus     {
+	border:                                                    var(--variation-tile-border-active);
+}
+
+.store-gallery-thumb.is-active  {
+	border:                                                    var(--variation-tile-border-active);
+}
+
+.store-gallery-thumb[hidden]    { display: none; }
+
+
+/*--------------------------------------------------------------
+# Gallery dots (phone carousel)
+--------------------------------------------------------------*/
+
+/* Hidden on desktop, where the thumbnails do this job. */
+.store-gallery-dots {
+	display:                                                   none;
+	justify-content:                                           center;
+	gap:                                                       6px;
+	margin:                                                    10px 0 0;
+}
+
+.store-dot {
+	width:                                                     7px;
+	height:                                                    7px;
+	border-radius:                                             50%;
+	background:                                                var(--light-grey);
+	transition:                                                background 150ms ease;
+}
+
+.store-dot.is-active {
+	background:                                                var(--accent-color);
+}
+
+
+/*--------------------------------------------------------------
+# Zoom
+--------------------------------------------------------------*/
+
+/* Desktop: a panel beside the image showing the full-size file, with a lens marking
+   the region. pointer-events:none on both so neither can steal the mousemove that
+   drives them. */
+.store-zoom-panel {
+	position:                                                  fixed;
+	/* Above the site's fixed navigation, which sits at 999999999. The framework's own
+	   lightbox claims 9999999995 for the same reason; this stays just under it so a
+	   lightbox opened over a product still wins. */
+	z-index:                                                   9999999990;
+	border:                                                    var(--product-img-border);
+	border-radius:                                             var(--store-radius);
+	background-color:                                          var(--white);
+	background-repeat:                                         no-repeat;
+	box-shadow:                                                0 3px 6px var(--black-low);
+	pointer-events:                                            none;
+}
+
+.store-zoom-lens {
+	position:                                                  absolute;
+	z-index:                                                   2;
+	background:                                                var(--white-low);
+	pointer-events:                                            none;
+}
+
+/* Touch: a full-screen view panned by NATIVE SCROLLING. The browser already handles
+   momentum, bounds and pinch correctly; hand-rolled drag maths fights it and loses. */
+.store-zoom-full {
+	position:                                                  fixed;
+	inset:                                                     0;
+	/* Matches .lightbox-overlay. The mobile menu bar is z-index 999999999, which is why
+	   the close button was being covered by it at 9600. */
+	z-index:                                                   999999998;
+	background:                                                var(--white);
+}
+
+.store-zoom-scroll {
+	width:                                                     100%;
+	height:                                                    100%;
+	overflow:                                                  auto;
+	-webkit-overflow-scrolling:                                touch;
+}
+
+/* The width is set in JS from the file's real pixel width — a fixed percentage here
+   would upscale any image narrower than that multiple of the screen. max-width:none
+   is still needed so the theme's responsive image rule does not shrink it back. */
+.store-zoom-scroll img {
+	max-width:                                                 none;
+	height:                                                    auto;
+	display:                                                   block;
+}
+
+.store-zoom-close {
+	position:                                                  fixed;
+	/* env() keeps it clear of a notch or a rounded corner; the fallback is for
+	   browsers that do not support it. */
+	top:                                                       12px;
+	top:                                                       calc(55px + env(safe-area-inset-top));
+	right:                                                     12px;
+	right:                                                     calc(17px + env(safe-area-inset-right));
+	z-index:                                                   2;
+	width:                                                     44px;
+	height:                                                    44px;
+	padding:                                                   0;
+	border:                                                    0;
+	border-radius:                                             50%;
+	background:                                                var(--black-high);
+	color:                                                     var(--white);
+	font-size:                                                 26px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+}
+
+.store-single-title {
+	margin:                                                    0 0 10px 0;
+	font-size:                                                 var(--font-size-h1);
+	line-height:                                               1.15;
+	text-align:                                                left;
+}
+
+.store-single-price {
+	margin:                                                    0;
+	font-size:                                                 24px;
+	font-weight:                                               700;
+}
+
+.store-single-was {
+	margin:                                                    0;
+	color:                                                     var(--store-muted);
+	text-decoration:                                           line-through;
+}
+
+.store-single-excerpt { margin-top: 24px; }
+
+.store-empty,
+.store-notice {
+	padding:                                                   12px 16px;
+	border:                                                    var(--store-border);
+	border-radius:                                             var(--store-radius);
+	color:                                                     var(--store-muted);
+}
+
+
+/*--------------------------------------------------------------
+# Options & Buy
+--------------------------------------------------------------*/
+
+.store-options { margin: 20px 0; }
+
+.store-option {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	margin:                                                    0 0 12px;
+}
+
+.store-option label {
+	min-width:                                                 90px;
+	font-weight:                                               600;
+}
+
+.store-option-select {
+	flex:                                                      1;
+	max-width:                                                 260px;
+	padding:                                                   8px 10px;
+	border:                                                    var(--store-border);
+	border-radius:                                             4px;
+	background:                                                var(--white);
+}
+
+.store-stock {
+	margin:                                                    0 0 16px;
+	min-height:                                                22px;
+	color:                                                     var(--store-muted);
+}
+
+.store-stock.is-out    { color: var(--warning); font-weight: 600; }
+.store-stock.is-low    { color: var(--warning); }
+
+/* Standard: label stacked over a small quantity box, button alongside.
+   align-items:flex-end keeps the button's baseline level with the input rather than
+   with the label above it. The descendant selectors are deliberate — style-forms.css
+   sizes every bare input and button, and a bare .store-qty loses to it. */
+.store-buy {
+	display:                                                   flex;
+	align-items:                                               flex-end;
+	gap:                                                       12px;
+	flex-wrap:                                                 wrap;
+}
+
+.store-qty-wrap {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       4px;
+}
+
+.store-qty-label {
+	font-weight:                                               600;
+}
+
+.store-buy .store-qty {
+	width:                                                     72px;
+	min-width:                                                 0;
+	margin:                                                    0;
+	padding:                                                   12px 10px;
+	border:                                                    var(--store-border);
+	border-radius:                                             var(--store-radius);
+	text-align:                                                center;
+}
+
+.store-buy .store-add {
+	padding:                                                   14px 28px;
+	border:                                                    0;
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--store-btn-bg);
+	color:                                                     var(--store-btn-color);
+	font-size:                                                 16px;
+	font-weight:                                               600;
+	line-height:                                               1.2;
+	cursor:                                                    pointer;
+	transition:                                                opacity 150ms ease;
+}
+
+.store-buy .store-add:hover,
+.store-buy .store-add.active,
+.store-buy .store-add.tab-focus {
+	background:                                                var(--store-btn-bg-hover);
+	color:                                                     var(--store-btn-color-hover);
+}
+
+.store-buy .store-add[disabled] {
+	opacity:                                                   .45;
+	cursor:                                                    not-allowed;
+}
+
+
+/*--------------------------------------------------------------
+# Joined buy control (quantity fused to the button)
+--------------------------------------------------------------*/
+
+/* One pill with a divider, rather than two controls that happen to touch: the radius
+   lives on the wrapper and overflow clips the children, so the ends stay round
+   however the select is styled by the browser. */
+.store-buy-joined .store-buy-pill {
+	display:                                                   inline-flex;
+	align-items:                                               stretch;
+	border-radius:                                             var(--store-radius);
+	overflow:                                                  hidden;
+	background:                                                var(--store-btn-bg);
+	max-width:                                                 100%;
+}
+
+/* The caret is drawn here, on the wrapper, so its distance from the number and from
+   the divider are both exactly set. A native select arrow sits where the browser
+   decides — typically jammed against the right edge with a gap after the number —
+   and padding cannot move it, so the native one is switched off below. */
+.store-buy-joined .store-qty-pick {
+	position:                                                  relative;
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	border-right:                                              1px solid var(--white-low);
+	color:                                                     var(--store-btn-color);
+}
+
+.store-buy-joined .store-qty-pick::after {
+	content:                                                   "";
+	position:                                                  absolute;
+	right:                                                     12px;
+	width:                                                     0;
+	height:                                                    0;
+	border-left:                                               4px solid transparent;
+	border-right:                                              4px solid transparent;
+	border-top:                                                5px solid currentColor;
+	pointer-events:                                            none;
+}
+
+/* padding-right = caret (8) + its 12px gutter + 6px between number and caret. */
+.store-buy-joined .store-qty {
+	-webkit-appearance:                                        none;
+	appearance:                                                none;
+	width:                                                     auto;
+	min-width:                                                 0;
+	margin:                                                    0;
+	padding:                                                   0 26px 0 16px;
+	border:                                                    0;
+	border-radius:                                             0;
+	background:                                                transparent;
+	color:                                                     var(--store-btn-color);
+	font-size:                                                 16px;
+	font-weight:                                               600;
+	text-align:                                                center;
+	cursor:                                                    pointer;
+}
+
+/* The option list inherits the pill's dark background on some platforms and becomes
+   unreadable, so it is forced back to a plain one. */
+.store-buy-joined .store-qty option {
+	color:                                                     var(--text-color);
+	background:                                                var(--white);
+}
+
+.store-buy-joined .store-add {
+	flex:                                                      1;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	align-items:                                               center;
+	justify-content:                                           center;
+	gap:                                                       2px;
+	padding:                                                   13px 32px;
+	border:                                                    0;
+	border-radius:                                             0;
+	background:                                                transparent;
+	color:                                                     var(--store-btn-color);
+	font-size:                                                 16px;
+	font-weight:                                               700;
+	line-height:                                               1.15;
+	cursor:                                                    pointer;
+}
+
+.store-buy-joined .store-buy-pill:hover { opacity: .9; }
+
+.store-add-note {
+	font-size:                                                 12px;
+	font-weight:                                               400;
+	opacity:                                                   .85;
+}
+
+.store-buy-joined .store-add[disabled] {
+	opacity:                                                   .5;
+	cursor:                                                    not-allowed;
+}
+
+
+/*--------------------------------------------------------------
+# Cart Drawer
+--------------------------------------------------------------*/
+
+.store-cart-link {
+	position:                                                  relative;
+	border:                                                    0;
+	padding:                                                   0;
+	background:                                                none;
+	cursor:                                                    pointer;
+	color:                                                     inherit;
+	line-height:                                               0;
+}
+
+.store-cart-count {
+	position:                                                  absolute;
+	top:                                                       -8px;
+	right:                                                     -10px;
+	min-width:                                                 18px;
+	height:                                                    18px;
+	padding:                                                   0 5px;
+	border-radius:                                             9px;
+	background:                                                var(--accent-color);
+	color:                                                     var(--white);
+	font-size:                                                 11px;
+	font-weight:                                               700;
+	line-height:                                               18px;
+	text-align:                                                center;
+}
+
+.store-cart-count[hidden] { display: none; }
+
+.store-drawer {
+	position:                                                  fixed;
+	inset:                                                     0;
+	/* Same reason as the zoom overlay: the site's fixed navigation is at 999999999, so
+	   anything in four figures is painted underneath it. Sits just below the zoom view
+	   so opening an image from the cart still covers the cart. */
+	z-index:                                                   9999999994;
+}
+
+.store-drawer[hidden] { display: none; }
+
+.store-drawer-scrim {
+	position:                                                  absolute;
+	inset:                                                     0;
+	background:                                                var(--black-med);
+}
+
+.store-drawer-panel {
+	position:                                                  absolute;
+	top:                                                       0;
+	right:                                                     0;
+	bottom:                                                    0;
+	width:                                                     420px;
+	max-width:                                                 100%;
+	display:                                                   flex;
+	flex-direction:                                            column;
+	background:                                                var(--white);
+	box-shadow:                                                -4px 0 24px var(--black-low);
+}
+
+.store-drawer-head {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	gap:                                                       12px;
+	padding:                                                   20px 24px;
+	border-bottom:                                             var(--store-border);
+}
+
+.store-drawer-head h2 { margin: 0; font-size: 20px; }
+
+.store-drawer-close {
+	border:                                                    0;
+	background:                                                none;
+	font-size:                                                 28px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	color:                                                     inherit;
+	padding:                                                   0 4px;
+}
+
+.store-drawer-body {
+	flex:                                                      1;
+	overflow-y:                                                auto;
+	padding:                                                   16px 24px;
+}
+
+.store-drawer-empty,
+.store-drawer-error { padding: 12px 0; color: var(--store-muted); }
+.store-drawer-error { color: var(--warning); font-weight: 600; }
+
+.store-line {
+	display:                                                   grid;
+	grid-template-columns:                                     64px 1fr auto;
+	gap:                                                       14px;
+	padding:                                                   16px 0;
+	border-bottom:                                             var(--store-border);
+}
+
+.store-line-img img,
+.store-line-noimg {
+	display:                                                   block;
+	width:                                                     64px;
+	height:                                                    64px;
+	object-fit:                                                cover;
+	border-radius:                                             4px;
+	background:                                                var(--lightest-grey);
+}
+
+.store-line-detail  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.store-line-title   { font-weight: 600; text-decoration: none; color: inherit; }
+.store-line-variant,
+.store-line-unit    { font-size: 13px; color: var(--store-muted); }
+.store-line-limit   { font-size: 12px; color: var(--warning); }
+.store-line-total   { font-weight: 700; white-space: nowrap; }
+
+/* Minus, quantity, plus, Remove -- one row.
+   Every rule here is a DESCENDANT selector on purpose. style-forms.css sizes every
+   bare input and button in the theme, and a single-class .store-line-qty loses to it:
+   the input went full width and pushed the buttons onto their own lines, which is
+   what made this a four-row stack. flex-wrap stays for a genuinely narrow drawer. */
+.store-line-controls {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       6px;
+	margin-top:                                                8px;
+	flex-wrap:                                                 wrap;
+}
+
+.store-line-controls .store-qty-btn {
+	flex:                                                      0 0 auto;
+	width:                                                     30px;
+	height:                                                    30px;
+	min-width:                                                 0;
+	margin:                                                    0;
+	padding:                                                   0;
+	border:                                                    var(--store-border);
+	border-radius:                                             4px;
+	background:                                                var(--white);
+	color:                                                     inherit;
+	font-size:                                                 16px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+}
+
+.store-line-controls .store-qty-btn[disabled] {
+	opacity:                                                   .4;
+	cursor:                                                    not-allowed;
+}
+
+.store-line-controls .store-line-qty {
+	flex:                                                      0 0 auto;
+	width:                                                     52px;
+	min-width:                                                 0;
+	margin:                                                    0;
+	padding:                                                   6px 4px;
+	border:                                                    var(--store-border);
+	border-radius:                                             4px;
+	text-align:                                                center;
+	/* No native spinner arrows: the - and + buttons ARE the control, and the browser's
+	   own arrows both duplicate them and widen the box. */
+	-moz-appearance:                                           textfield;
+	appearance:                                                textfield;
+}
+
+.store-line-controls .store-line-qty::-webkit-outer-spin-button,
+.store-line-controls .store-line-qty::-webkit-inner-spin-button {
+	-webkit-appearance:                                        none;
+	margin:                                                    0;
+}
+
+/* Pushed to the far end of the row, away from the + so it is not fat-fingered. */
+.store-line-controls .store-line-remove {
+	flex:                                                      0 0 auto;
+	width:                                                     auto;
+	height:                                                    auto;
+	margin:                                                    0 0 0 auto;
+	padding:                                                   0 2px;
+	border:                                                    0;
+	border-radius:                                             0;
+	background:                                                none;
+	color:                                                     var(--store-muted);
+	font-size:                                                 13px;
+	text-decoration:                                           underline;
+	cursor:                                                    pointer;
+}
+
+.store-line-controls .store-line-remove:hover {
+	color:                                                     var(--store-sale-color);
+}
+
+.store-drawer-foot {
+	padding:                                                   20px 24px;
+	border-top:                                                var(--store-border);
+}
+
+.store-drawer-foot[hidden] { display: none; }
+
+.store-drawer-subtotal {
+	display:                                                   flex;
+	justify-content:                                           space-between;
+	margin:                                                    0 0 4px;
+	font-size:                                                 18px;
+}
+
+.store-drawer-note {
+	margin:                                                    0 0 16px;
+	font-size:                                                 13px;
+	color:                                                     var(--store-muted);
+}
+
+.store-drawer-checkout {
+	display:                                                   block;
+	padding:                                                   15px 24px;
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--store-btn-bg);
+	color:                                                     var(--store-btn-color);
+	font-weight:                                               600;
+	text-align:                                                center;
+	text-decoration:                                           none;
+}
+
+.store-drawer-checkout.is-disabled {
+	opacity:                                                   .45;
+	cursor:                                                    not-allowed;
+	pointer-events:                                            none;
+}
+
+/* Stop the page behind the drawer scrolling while it is open. */
+body.store-drawer-open { overflow: hidden; }
+
+
+/*--------------------------------------------------------------
+# Mobile
+--------------------------------------------------------------*/
+
+@media screen and (max-width: 1024px) {
+	.store-grid   { grid-template-columns: repeat(min(var(--store-cols), 3), minmax(0, 1fr)); }
+	.store-single { gap: 32px; }
+}
+
+@media screen and (max-width: 860px) {
+	.store-grid {
+		grid-template-columns:                                    repeat(2, minmax(0, 1fr));
+		gap:                                                      16px;
+	}
+	.store-single {
+		grid-template-columns:                                    minmax(0, 1fr);
+		gap:                                                      24px;
+	}
+
+}
+
+@media screen and (max-width: 576px) {
+	/* Spacing is the wrapper's job now, so the phone override is one padding change
+	   instead of a margin on each element. */
+	.store-card-body  { padding: 12px; }
+	.store-card-title { font-size: 15px; }
+
+	.store-option { flex-wrap: wrap; gap: 6px; }
+	.store-option label { min-width: 0; width: 100%; }
+	.store-option-select { max-width: none; width: 100%; }
+
+	/* Must match the .store-buy .store-add specificity above, or this never applies —
+	   a media query adds no weight of its own. */
+	.store-buy { gap: 8px; }
+	.store-buy .store-add { flex: 1; text-align: center; }
+	.store-buy-joined .store-buy-pill { display: flex; width: 100%; }
+}
+
+.store-notice-error { border-color: var(--warning); color: var(--warning); margin: 0 0 24px; }
+.store-thanks { max-width: 640px; }
+.store-thanks-total { font-size: 18px; }
+
+
+/*--------------------------------------------------------------
+# Option Tiles (the alternative to dropdowns)
+--------------------------------------------------------------*/
+
+.store-option-group {
+	margin:                                                    0 0 20px;
+}
+
+.store-option-label {
+	display:                                                   block;
+	margin:                                                    0 0 8px;
+	font-weight:                                               normal;
+}
+
+.store-tiles {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       10px;
+}
+
+.store-tile {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       10px;
+	min-height:                                                56px;
+	padding:                                                   8px 14px 8px 8px;
+	border:                                                    var(--variation-tile-border);
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--white);
+	color:                                                     inherit;
+	font-size:                                                 14px;
+	line-height:                                               1.25;
+	text-align:                                                left;
+	cursor:                                                    pointer;
+	transition:                                                border-color 150ms ease;
+}
+
+.store-tile:hover {
+	border:                                                    var(--variation-tile-border-active);
+}
+
+/* The selected tile is marked with WEIGHT, not colour — it has to stay obvious on a
+   site whose accent happens to be pale, and it must not rely on colour alone. */
+.store-tile.is-active {
+	border:                                                    var(--variation-tile-border-active);
+}
+
+.store-tile-img img {
+	display:                                                   block;
+	width:                                                     40px;
+	height:                                                    40px;
+	object-fit:                                                cover;
+	border-radius:                                             4px;
+}
+
+.store-tile-label {
+	display:                                                   block;
+}
+
+/* Sold out but real: still pickable, because the page should be able to tell you it
+   is sold out rather than pretending the choice does not exist. */
+.store-tile.is-soldout .store-tile-label {
+	text-decoration:                                           line-through;
+	color:                                                     var(--store-muted);
+}
+
+/* No such combination at all — Large exists, Red exists, Large/Red was never made. */
+.store-tile.is-unavailable {
+	opacity:                                                   .4;
+}
+
+@media screen and (max-width: 576px) {
+	.store-tile {
+		flex:                                                     1 1 calc(50% - 10px);
+		min-width:                                                0;
+	}
+}
+
+/* Heading above the long description, wording set in Settings → Store. */
+.store-single-body-title {
+	margin:                                                    0 0 12px;
+	line-height:                                               1.2;
+	text-align:                                                left;
+}
+
+
+/*--------------------------------------------------------------
+# Gallery on phones — the same slides become a swipeable carousel
+--------------------------------------------------------------*/
+
+@media screen and (max-width: 860px) {
+	.store-gallery-track {
+		display:                                                  flex;
+		gap:                                                      8px;
+		overflow-x:                                               auto;
+		scroll-snap-type:                                         x mandatory;
+		-webkit-overflow-scrolling:                               touch;
+		scrollbar-width:                                          none;
+	}
+
+	.store-gallery-track::-webkit-scrollbar { display: none; }
+
+	.store-slide {
+		display:                                                  block;
+		flex:                                                     0 0 100%;
+		scroll-snap-align:                                        center;
+	}
+
+	/* Repeated inside the query: the display:block above would otherwise bring a
+	   filtered-out slide back on a phone. */
+	.store-slide[hidden] { display: none !important; }
+
+	.store-slide.is-zoomable img { cursor: pointer; }
+
+	/* Dots replace the thumbnails — swiping is the way through the images here. */
+	.store-gallery-thumbs { display: none; }
+	.store-gallery-dots   { display: flex; }
+}
+
+
+/*--------------------------------------------------------------
+# Checkout page
+--------------------------------------------------------------*/
+
+.store-checkout-main {
+	padding:                                                   40px 0 80px;
+}
+
+.store-checkout-title {
+	margin:                                                    0 0 28px;
+}
+
+/* Form on the left, summary on the right. The summary sticks, so the total stays
+   visible while a long address form is being filled in. */
+.store-checkout-grid {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(0, 1.4fr) minmax(0, 1fr);
+	gap:                                                       48px;
+	align-items:                                               start;
+}
+
+.store-checkout-section {
+	margin:                                                    0 0 36px;
+}
+
+.store-checkout-section h2 {
+	margin:                                                    0 0 14px;
+	font-size:                                                 1.1rem;
+}
+
+.store-field {
+	display:                                                   block;
+	margin:                                                    0 0 14px;
+}
+
+.store-field > span {
+	display:                                                   block;
+	margin:                                                    0 0 5px;
+	font-size:                                                 14px;
+	font-weight:                                               600;
+}
+
+.store-field > span em {
+	font-weight:                                               400;
+	font-style:                                                normal;
+	color:                                                     var(--store-muted);
+}
+
+/* Descendant selectors because style-forms.css sizes every bare input in the
+   theme; a single-class rule here loses to it. */
+.store-field input,
+.store-field select {
+	width:                                                     100%;
+	margin:                                                    0;
+	padding:                                                   12px 14px;
+	border:                                                    var(--store-border);
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--white);
+	font-size:                                                 16px;
+}
+
+/* 16px above is deliberate and must not be reduced: iOS Safari zooms the whole
+   page in when a focused field's text is smaller than that. */
+
+.store-field input:focus,
+.store-field select:focus {
+	outline:                                                   2px solid var(--accent-color);
+	outline-offset:                                            1px;
+}
+
+.store-field-row {
+	display:                                                   grid;
+	grid-template-columns:                                     2fr 1.4fr 1fr;
+	gap:                                                       12px;
+}
+
+.store-field-note {
+	margin:                                                    6px 0 0;
+	font-size:                                                 13px;
+	color:                                                     var(--store-muted);
+}
+
+/*--------------------------------------------------------------
+# Delivery options
+--------------------------------------------------------------*/
+
+.store-ship-options {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       10px;
+}
+
+.store-ship-option {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	padding:                                                   14px 16px;
+	border:                                                    2px solid var(--lightest-grey);
+	border-radius:                                             var(--store-radius);
+	cursor:                                                    pointer;
+	transition:                                                border-color 150ms ease;
+}
+
+.store-ship-option:hover {
+	border-color:                                              var(--light-grey);
+}
+
+/* Weight, not colour alone, so the choice is still obvious on a pale palette. */
+.store-ship-option.is-active {
+	border-color:                                              var(--accent-color);
+	box-shadow:                                                inset 0 0 0 1px var(--accent-color);
+}
+
+.store-ship-name {
+	flex:                                                      1 1 auto;
+}
+
+.store-ship-price {
+	font-weight:                                               700;
+}
+
+/*--------------------------------------------------------------
+# Order summary
+--------------------------------------------------------------*/
+
+.store-checkout-summary {
+	position:                                                  sticky;
+	top:                                                       24px;
+	padding:                                                   24px;
+	border:                                                    var(--store-border);
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--store-card-bg);
+}
+
+.store-checkout-summary h2 {
+	margin:                                                    0 0 18px;
+	font-size:                                                 1.1rem;
+}
+
+/* Dimmed while a new quote is in flight, so a changing number reads as "being
+   worked out" rather than as a glitch. */
+.store-checkout-summary.is-busy .store-summary-totals {
+	opacity:                                                   .45;
+}
+
+.store-summary-line {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       12px;
+	padding:                                                   0 0 14px;
+}
+
+.store-summary-img {
+	position:                                                  relative;
+	flex:                                                      0 0 auto;
+}
+
+.store-summary-img img {
+	display:                                                   block;
+	width:                                                     52px;
+	height:                                                    52px;
+	object-fit:                                                cover;
+	border:                                                    var(--store-border);
+	border-radius:                                             6px;
+}
+
+/* The quantity badge, so the summary says "2" rather than repeating a line. */
+.store-summary-img em {
+	position:                                                  absolute;
+	top:                                                       -7px;
+	right:                                                     -7px;
+	min-width:                                                 20px;
+	height:                                                    20px;
+	padding:                                                   0 5px;
+	border-radius:                                             10px;
+	background:                                                var(--store-soldout-bg);
+	color:                                                     var(--store-soldout-color);
+	font-size:                                                 12px;
+	font-style:                                                normal;
+	font-weight:                                               700;
+	line-height:                                               20px;
+	text-align:                                                center;
+}
+
+.store-summary-detail {
+	flex:                                                      1 1 auto;
+	min-width:                                                 0;
+}
+
+.store-summary-variant {
+	font-size:                                                 13px;
+	color:                                                     var(--store-muted);
+}
+
+.store-summary-amount {
+	flex:                                                      0 0 auto;
+	font-weight:                                               600;
+}
+
+.store-summary-totals {
+	margin:                                                    8px 0 0;
+	padding:                                                   16px 0 0;
+	border-top:                                                var(--store-border);
+	transition:                                                opacity 150ms ease;
+}
+
+.store-summary-totals p {
+	display:                                                   flex;
+	justify-content:                                           space-between;
+	gap:                                                       16px;
+	margin:                                                    0 0 10px;
+}
+
+.store-summary-note {
+	font-size:                                                 13px;
+	color:                                                     var(--store-muted);
+}
+
+.store-summary-total {
+	margin:                                                    14px 0 0;
+	padding:                                                   14px 0 0;
+	border-top:                                                var(--store-border);
+	font-size:                                                 20px;
+	font-weight:                                               700;
+}
+
+/*--------------------------------------------------------------
+# Placing the order
+--------------------------------------------------------------*/
+
+.store-place-order {
+	width:                                                     100%;
+	margin:                                                    8px 0 0;
+	padding:                                                   16px 24px;
+	border:                                                    0;
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--store-btn-bg);
+	color:                                                     var(--store-btn-color);
+	font-size:                                                 17px;
+	font-weight:                                               700;
+	cursor:                                                    pointer;
+	transition:                                                opacity 150ms ease;
+}
+
+.store-place-order:hover         { opacity: .9; }
+.store-place-order[disabled]     { opacity: .5; cursor: not-allowed; }
+.store-place-order.is-busy::after { content: " …"; }
+
+.store-checkout-error {
+	margin:                                                    0 0 14px;
+	padding:                                                   12px 14px;
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--store-sale-color);
+	color:                                                     var(--white);
+}
+
+.store-pay-mount:empty {
+	display:                                                   none;
+}
+
+@media screen and (max-width: 860px) {
+	/* Summary FIRST on a phone: what it costs matters more than the form, and a
+	   sticky panel in a single column would just hover over the inputs. */
+	.store-checkout-grid {
+		grid-template-columns:                                    minmax(0, 1fr);
+		gap:                                                      32px;
+	}
+	.store-checkout-summary {
+		position:                                                 static;
+		order:                                                    -1;
+	}
+	.store-field-row {
+		grid-template-columns:                                    minmax(0, 1fr);
+	}
+}
+
+/* Staff-only explanation under a disabled checkout button. Customers never
+   receive the text, so this styling is only ever seen by someone logged in. */
+.store-drawer-staff {
+	margin:                                                    10px 0 0;
+	padding:                                                   10px 12px;
+	border-radius:                                             var(--store-radius);
+	background:                                                var(--lightest-grey);
+	color:                                                     var(--store-muted);
+	font-size:                                                 13px;
+	line-height:                                               1.4;
+}

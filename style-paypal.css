@@ -1,0 +1,236 @@
+@charset "utf-8";
+
+/*--------------------------------------------------------------
+# PayPal (Pay in 4 / Pay Later)
+# States
+# Mobile Styles
+--------------------------------------------------------------*/
+
+/*--------------------------------------------------------------
+# PayPal
+#
+# Deliberately quiet. PayPal's buttons carry their own very loud branding and
+# the surrounding box is not competing with them — its whole job is to make the
+# fields above them read as part of the same thing.
+#
+# Everything is overridable per site: set these variables in style-site.css
+# rather than re-declaring the rules.
+--------------------------------------------------------------*/
+
+:root {
+	--pp-max-width:                                            480px;
+	--pp-gap:                                                  16px;
+	--pp-radius:                                               8px;
+	--pp-border:                                               1px solid var(--light-grey);
+	--pp-background:                                           var(--white);
+	--pp-label-color:                                          var(--medium-grey);
+	--pp-text-color:                                           var(--text-color);
+	--pp-error:                                                var(--warning);
+	--pp-ok:                                                   rgba(20, 140, 70, 1);
+}
+
+.bp-paypal {
+	display:                                                   grid;
+	gap:                                                       var(--pp-gap);
+	width:                                                     100%;
+	max-width:                                                 var(--pp-max-width);
+	margin:                                                    30px auto;
+	padding:                                                   24px;
+	text-align:                                                left;
+	color:                                                     var(--pp-text-color);
+	background:                                                var(--pp-background);
+	border:                                                    var(--pp-border);
+	border-radius:                                             var(--pp-radius);
+}
+
+.bp-paypal .bp-pp-fields {
+	display:                                                   grid;
+	gap:                                                       14px;
+}
+
+.bp-paypal .bp-pp-field {
+	position:                                                  relative;
+	display:                                                   grid;
+	gap:                                                       4px;
+}
+
+.bp-paypal .bp-pp-field > span {
+	font-size:                                                 14px;
+	font-weight:                                               600;
+	line-height:                                               1.3;
+	color:                                                     var(--pp-label-color);
+}
+
+.bp-paypal .bp-pp-field input,
+.bp-paypal .bp-pp-field textarea {
+	width:                                                     100%;
+	padding:                                                   11px 13px;
+	font-family:                                               inherit;
+	font-size:                                                 16px; /* < 16px makes iOS zoom the page on focus */
+	line-height:                                               1.3;
+	color:                                                     var(--pp-text-color);
+	background:                                                var(--white);
+	border:                                                    1px solid var(--light-grey);
+	border-radius:                                             6px;
+	box-shadow:                                                none;
+}
+
+.bp-paypal .bp-pp-field input:focus,
+.bp-paypal .bp-pp-field textarea:focus {
+	border-color:                                              var(--medium-grey);
+	outline:                                                   2px solid var(--black-lowest);
+	outline-offset:                                            1px;
+}
+
+.bp-paypal .bp-pp-field textarea {
+	resize:                                                    vertical;
+	min-height:                                                64px;
+}
+
+/* The open-amount field. The $ is a sibling rather than part of the input so
+   the value stays a clean number for the server to parse. */
+.bp-paypal .bp-pp-amount-field .bp-pp-currency {
+	position:                                                  absolute;
+	left:                                                      13px;
+	bottom:                                                    13px;
+	font-size:                                                 20px;
+	font-weight:                                               700;
+	line-height:                                               1;
+	color:                                                     var(--pp-label-color);
+	pointer-events:                                            none;
+}
+
+.bp-paypal .bp-pp-amount {
+	padding-left:                                              32px !important;
+	font-size:                                                 22px !important;
+	font-weight:                                               700;
+	letter-spacing:                                            0.5px;
+}
+
+/* The fixed-amount header: what they are paying for, and how much. */
+.bp-paypal .bp-pp-total {
+	display:                                                   flex;
+	align-items:                                               baseline;
+	justify-content:                                           space-between;
+	gap:                                                       14px;
+	padding-bottom:                                            14px;
+	border-bottom:                                             var(--pp-border);
+}
+
+.bp-paypal .bp-pp-total span {
+	font-size:                                                 15px;
+	line-height:                                               1.35;
+	color:                                                     var(--pp-label-color);
+}
+
+.bp-paypal .bp-pp-total strong {
+	font-size:                                                 28px;
+	font-weight:                                               700;
+	line-height:                                               1;
+	white-space:                                               nowrap;
+	color:                                                     var(--pp-text-color);
+}
+
+/* PayPal's own "4 interest-free payments of $x" banner. It renders into an
+   iframe it sizes itself, so nothing here may set a height on it. */
+.bp-paypal .bp-pp-message:empty {
+	display:                                                   none;
+}
+
+.bp-paypal .bp-pp-buttons {
+	min-height:                                                52px;
+}
+
+.bp-paypal .bp-pp-status {
+	font-size:                                                 14px;
+	line-height:                                               1.4;
+	text-align:                                                center;
+}
+
+.bp-paypal .bp-pp-status:empty {
+	display:                                                   none;
+}
+
+.bp-paypal .bp-pp-error {
+	font-weight:                                               600;
+	color:                                                     var(--pp-error);
+}
+
+.bp-paypal .bp-pp-ok {
+	font-weight:                                               600;
+	color:                                                     var(--pp-ok);
+}
+
+/* Admin-only notes: the missing wp-config constants, and the reasons Pay in 4
+   can be silently absent from an otherwise working button. Never shown to the
+   public — see bp_paypal_admin_hint(). */
+.bp-pp-notice {
+	max-width:                                                 var(--pp-max-width);
+	margin:                                                    30px auto;
+	padding:                                                   16px 20px;
+	font-size:                                                 15px;
+	line-height:                                               1.45;
+	color:                                                     var(--pp-error);
+	border:                                                    2px dashed var(--pp-error);
+	border-radius:                                             var(--pp-radius);
+}
+
+.bp-paypal .bp-pp-notice {
+	margin:                                                    0;
+}
+
+.bp-pp-notice-info {
+	font-size:                                                 13px;
+	color:                                                     var(--pp-label-color);
+	border-color:                                              var(--light-grey);
+}
+
+
+/*--------------------------------------------------------------
+# States
+--------------------------------------------------------------*/
+
+.bp-paypal .bp-pp-invalid input,
+.bp-paypal .bp-pp-invalid textarea,
+.bp-paypal.bp-pp-amount-invalid .bp-pp-amount {
+	border-color:                                              var(--pp-error);
+}
+
+.bp-paypal .bp-pp-invalid > span {
+	color:                                                     var(--pp-error);
+}
+
+/* While a payment is in flight the fields are frozen, but the PayPal buttons
+   are NOT covered — their own window is what the customer is looking at, and
+   an overlay on top of it would read as a crash. */
+.bp-paypal.bp-pp-working .bp-pp-fields {
+	opacity:                                                   0.55;
+	pointer-events:                                            none;
+}
+
+.bp-paypal.bp-pp-done .bp-pp-fields,
+.bp-paypal.bp-pp-done .bp-pp-buttons,
+.bp-paypal.bp-pp-done .bp-pp-message {
+	display:                                                   none;
+}
+
+
+/*--------------------------------------------------------------
+# Mobile Styles
+--------------------------------------------------------------*/
+
+@media (max-width: 576px) {
+	.bp-paypal {
+		margin:                                                20px auto;
+		padding:                                               18px;
+	}
+
+	.bp-paypal .bp-pp-total {
+		display:                                               grid;
+		gap:                                                   4px;
+	}
+
+	.bp-paypal .bp-pp-total strong {
+		font-size:                                             24px;
+	}
+}

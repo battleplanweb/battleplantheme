@@ -167,6 +167,27 @@ function bp_rovin_survey_rating_map() {
     ];
 }
 
+// Every answer that isn't one of the fixed columns or a rating — so a question added to a survey
+// form reaches MyRovin with no code change. Labels come from bp_label_for_field(), so a site can
+// word them via the bp_field_labels filter (otherwise 'user-order' shows as "Order").
+function bp_rovin_survey_extras($f, $form_id) {
+    $known = array_merge(
+        ['user-location', 'user-name', 'user-email', 'user-phone', 'user-address', 'user-city', 'user-state',
+         'user-zip', 'user-experience', 'user-date', 'user-refer', 'user-comments'],
+        array_keys(bp_rovin_survey_rating_map())
+    );
+    $out = [];
+    foreach ($f as $key => $val) {
+        if (in_array($key, $known, true)) continue;
+        if (is_array($val)) $val = implode(', ', array_filter(array_map('strval', $val)));
+        $val   = trim((string) $val);
+        $label = bp_label_for_field($key, $form_id);
+        if ($val === '' || $label === '') continue;
+        $out[] = ['label' => $label, 'value' => $val];
+    }
+    return $out;
+}
+
 // Forward a survey submission into MyRovin's Site Pulse. Runs in before_send so it can set
 // skip_send. If the survey LANDS in MyRovin → no email at all. If it does NOT land (secret not
 // set yet, or MyRovin unreachable) → during roll-out we still send a failure copy by email, but
@@ -203,7 +224,8 @@ function bp_rovin_forward_survey($email, $ctx) {
             'referral'   => $f['user-refer']          ?? '',
             'ratings'    => $ratings,
             'comments'   => $f['user-comments']       ?? '',
-            'ip'         => $ctx['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
+            'extra'      => bp_rovin_survey_extras($f, (string) ($ctx['form_id'] ?? '')),
+            'ip'       => $ctx['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
             'timestamp'  => time(),
         ];
 

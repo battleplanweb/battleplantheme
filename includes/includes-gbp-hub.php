@@ -1128,11 +1128,28 @@ function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
 	if ( ! $ok_host ) return 'skipped-host';
 	if ( has_post_thumbnail( $post_id ) ) return 'exists';
 
+	// A previous push can die after the sideload but before the attach, leaving the photo in the Media
+	// Library (parented to this testimonial) with no featured image. Reuse it rather than download a copy.
+	$orphan = get_posts( array(
+		'post_type'      => 'attachment',
+		'post_parent'    => $post_id,
+		'post_mime_type' => 'image',
+		'post_status'    => 'inherit',
+		'fields'         => 'ids',
+		'numberposts'    => 1,
+		'orderby'        => 'ID',
+		'order'          => 'DESC',
+	) );
+	if ( $orphan && set_post_thumbnail( $post_id, (int) $orphan[0] ) ) {
+		wp_set_object_terms( (int) $orphan[0], 'Testimonials', 'image-categories', true );
+		return 'set';
+	}
+
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/media.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 
-	$tmp = download_url( $url, 20 );
+	$tmp = download_url( $url, 10 ); // keep well inside the hub's wait (it's blocking on this response)
 	if ( is_wp_error( $tmp ) ) return 'error-download';
 
 	// Skip Google's monogram default (few distinct colors); real photos have many. If we can't analyze
@@ -1176,12 +1193,15 @@ function bpgbp_set_testimonial_photo( int $post_id, string $url ) {
 	);
 	if ( is_wp_error( $att_id ) ) { @unlink( $final_path ); return 'error-sideload'; }
 
+	// Attach it FIRST — the alt/category steps below fire other hooks, and if the request dies in one of
+	// them the photo must already be on the testimonial, not orphaned in the Media Library.
+	set_post_thumbnail( $post_id, (int) $att_id );
+
 	if ( '' !== $reviewer ) update_post_meta( (int) $att_id, '_wp_attachment_image_alt', $reviewer );
 
 	// File it under the "Testimonials" media category (image-categories taxonomy), like Jobsite GEO photos.
 	wp_set_object_terms( (int) $att_id, 'Testimonials', 'image-categories', true );
 
-	set_post_thumbnail( $post_id, (int) $att_id );
 	return 'set';
 }
 
@@ -1253,6 +1273,10 @@ function bpgbp_receive_testimonial( WP_REST_Request $request ) {
 	if ( '' === $review['reviewId'] ) {
 		return new WP_Error( 'bpgbp_no_review', 'Missing review id.', array( 'status' => 400 ) );
 	}
+
+	// If the hub gives up waiting, finish anyway — otherwise the post exists but the photo never lands.
+	ignore_user_abort( true );
+	if ( function_exists( 'set_time_limit' ) ) @set_time_limit( 90 );
 
 	// Pushed testimonials go LIVE on the client site (the agency reviewed them before sending).
 	$created = bpgbp_create_testimonial_from_review( $review, 'publish' );

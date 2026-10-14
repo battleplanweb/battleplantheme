@@ -73,7 +73,10 @@ function bp_fleet_hub_url(): string {
  * days off every window and make every site look like it was losing traffic.
  */
 function bp_fleet_ga4_window( array $daily, int $days, int $offset = 0 ): array {
-	$out = [ 'sessions' => 0, 'users' => 0, 'newUsers' => 0, 'engagedSessions' => 0, 'pageviews' => 0, 'duration' => 0.0 ];
+	// `days` = how many of the window's days actually have data. The hub uses it to refuse a
+	// trend % against a prior window the site's history doesn't fully cover (a 12-month
+	// comparison on a site with 14 months of data would otherwise read as a huge "gain").
+	$out = [ 'sessions' => 0, 'users' => 0, 'newUsers' => 0, 'engagedSessions' => 0, 'pageviews' => 0, 'duration' => 0.0, 'days' => 0 ];
 	if ( ! $daily ) return $out;
 
 	$dates = array_keys( $daily );
@@ -93,12 +96,13 @@ function bp_fleet_ga4_window( array $daily, int $days, int $offset = 0 ): array 
 		$out['engagedSessions'] += (int)   ( $row['engagedSessions'] ?? 0 );
 		$out['pageviews']       += (int)   ( $row['pageviews'] ?? 0 );
 		$out['duration']        += (float) ( $row['engagementDuration'] ?? $row['duration'] ?? 0 );
+		$out['days']++;
 	}
 	$out['duration'] = round( $out['duration'], 1 );
 	return $out;
 }
 
-/** Traffic: two windows plus the matching prior window, so the hub can show a real trend arrow. */
+/** Traffic: each window plus the matching prior window, so the hub can show a real trend arrow. */
 function bp_fleet_collect_traffic(): array {
 	$daily = get_option( 'bp_ga4_daily_clean' );
 	if ( ! is_array( $daily ) || ! $daily ) {
@@ -116,6 +120,12 @@ function bp_fleet_collect_traffic(): array {
 		'd7_prior'  => bp_fleet_ga4_window( $daily, 7, 7 ),
 		'd30'       => bp_fleet_ga4_window( $daily, 30 ),
 		'd30_prior' => bp_fleet_ga4_window( $daily, 30, 30 ),
+		'd90'        => bp_fleet_ga4_window( $daily, 90 ),
+		'd90_prior'  => bp_fleet_ga4_window( $daily, 90, 90 ),
+		'd180'       => bp_fleet_ga4_window( $daily, 180 ),
+		'd180_prior' => bp_fleet_ga4_window( $daily, 180, 180 ),
+		'd365'       => bp_fleet_ga4_window( $daily, 365 ),
+		'd365_prior' => bp_fleet_ga4_window( $daily, 365, 365 ),
 		'channels'  => bp_fleet_collect_channels(),
 	];
 }

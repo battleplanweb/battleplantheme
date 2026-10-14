@@ -39,6 +39,14 @@ function bp_run_chron_analytics(bool $force = false): void {
         error_log('Audit metrics collect failed: ' . $e->getMessage());
     }
 
+    // Index coverage (URL Inspection) — its OWN daily, bounded sampler, deliberately NOT in the 3-day batch
+    // above: it inspects a small chunk per pass instead of one timeout-prone burst. $force = manual Chron C run.
+    try {
+        bp_gsc_collect_index_coverage($force);
+    } catch (\Throwable $e) {
+        error_log('Index coverage collect failed: ' . $e->getMessage());
+    }
+
     $ga4 = bp_ga4_client();
     if (!$ga4) return;
 
@@ -1300,6 +1308,127 @@ function bp_gsc_collect_totals(): void {
     ksort($store);
     if (count($store) > 400) $store = array_slice($store, -400, null, true);
     update_option('bp_gsc_totals_history', $store, false);
+}
+
+/** Search Console URL Inspection — indexed vs not-indexed counts over the site's real indexable pages: core
+ *  content (pages/posts/landing/universal) PLUS the jobsite_geo /service/ landing pages, which are the
+ *  jobsite_geo-services TERM archives — NOT the individual jobsite posts (those 301 to /service/). A site with
+ *  300 jobsites usually has only ~20–30 /service/ pages, so the counts are small and a weekly pass is cheap.
+ *  Each run inspects the least-recently-checked batch, oldest first, sized max(25, ceil(total / 4)) and hard-
+ *  capped at 50 — so small sites (≤25 pages) check EVERYTHING weekly, mid sites cycle in a couple weeks, and the
+ *  ceil/4 rotation only kicks in for a site with a ton of pages (and the cap keeps even those from 502ing one
+ *  request). Per-page status lives in post meta / term meta; the snapshot is recomputed from ALL of it, so the
+ *  dashboard shows the true site total. Runs on each Chron C pass; self-gates to weekly (phase-shifted per site).
+ *  $force (a manual Chron C run) inspects now, rate-limited to once/7d via bp_gsc_coverage_forced_until. Needs the
+ *  service account to be an OWNER/FULL user of the property (a 403 on the first URL = only Restricted).
+ *  Store: bp_gsc_coverage_history[YYYYMMDD] = ['indexed','not_indexed','total','reasons'=>[coverageState=>n]]. */
+function bp_gsc_collect_index_coverage(bool $force = false): void {
+    $now = time();
+    if ($force && $now < (int) get_option('bp_gsc_coverage_forced_until', 0)) $force = false;   // force still cooling down
+    if (!$force) {
+        $next = (int) get_option('bp_gsc_coverage_next', 0);
+        if ($next === 0) {   // first run: phase-shift 0–6 days per site so the fleet spreads across the week
+            update_option('bp_gsc_coverage_next', $now + (int) (crc32(get_bloginfo('url')) % (7 * DAY_IN_SECONDS)), false);
+            return;
+        }
+        if ($now < $next) return;                                                               // weekly gate
+    }
+
+    $token = bp_gsc_token();
+    if (!$token) return;
+    $targets = bp_gsc_coverage_targets();                                                       // oldest-first, already capped
+    if (!$targets) return;
+
+    $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', get_bloginfo('url'));
+    $stamp = static function (array $t, string $key, $val) {
+        $t['kind'] === 'term' ? update_term_meta($t['id'], $key, $val) : update_post_meta($t['id'], $key, $val);
+    };
+    $ok = 0;
+    foreach ($targets as $t) {
+        $resp = wp_remote_post('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', [
+            'timeout' => 8,
+            'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
+            'body'    => wp_json_encode(['inspectionUrl' => $t['url'], 'siteUrl' => $siteUrl]),
+        ]);
+        $code = (int) wp_remote_retrieve_response_code($resp);
+        if (is_wp_error($resp) || $code !== 200) {
+            // 403 on the first URL = the service account isn't an Owner/Full user. Stop; don't advance the gate.
+            if ($code === 403 && $ok === 0) { error_log('bp_gsc_coverage: 403 — service account needs Owner/Full access on ' . $siteUrl); return; }
+            $stamp($t, '_bp_gsc_inspected', $now);                                               // transient fail — advance rotation past it
+            continue;
+        }
+        $ok++;
+        $isr = json_decode(wp_remote_retrieve_body($resp), true)['inspectionResult']['indexStatusResult'] ?? [];
+        $stamp($t, '_bp_gsc_indexed',  (($isr['verdict'] ?? '') === 'PASS') ? '1' : '0');
+        $stamp($t, '_bp_gsc_state',    sanitize_text_field($isr['coverageState'] ?? 'Unknown'));
+        $stamp($t, '_bp_gsc_inspected', $now);
+    }
+    if ($ok === 0) return;                                                                      // nothing succeeded — retry next pass
+
+    // Site-wide aggregate across post meta (core) + term meta (/service/ pages).
+    global $wpdb;
+    $indexed = 0; $not = 0; $reasons = [];
+    $tally = function ($rows) use (&$indexed, &$not) {
+        foreach ($rows as $r) { if ($r->v === '1') $indexed += (int) $r->c; else $not += (int) $r->c; }
+    };
+    $tally($wpdb->get_results("SELECT pm.meta_value v, COUNT(*) c FROM {$wpdb->postmeta} pm
+        JOIN {$wpdb->posts} p ON p.ID = pm.post_id AND p.post_status = 'publish'
+        WHERE pm.meta_key = '_bp_gsc_indexed' GROUP BY pm.meta_value"));
+    $tally($wpdb->get_results("SELECT tm.meta_value v, COUNT(*) c FROM {$wpdb->termmeta} tm
+        JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'jobsite_geo-services'
+        WHERE tm.meta_key = '_bp_gsc_indexed' GROUP BY tm.meta_value"));
+    foreach ($wpdb->get_results("SELECT pm.meta_value v, COUNT(*) c FROM {$wpdb->postmeta} pm
+        JOIN {$wpdb->posts} p  ON p.ID = pm.post_id AND p.post_status = 'publish'
+        JOIN {$wpdb->postmeta} pi ON pi.post_id = pm.post_id AND pi.meta_key = '_bp_gsc_indexed' AND pi.meta_value = '0'
+        WHERE pm.meta_key = '_bp_gsc_state' GROUP BY pm.meta_value") as $r) { $reasons[$r->v] = ($reasons[$r->v] ?? 0) + (int) $r->c; }
+    foreach ($wpdb->get_results("SELECT tm.meta_value v, COUNT(*) c FROM {$wpdb->termmeta} tm
+        JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'jobsite_geo-services'
+        JOIN {$wpdb->termmeta} ti ON ti.term_id = tm.term_id AND ti.meta_key = '_bp_gsc_indexed' AND ti.meta_value = '0'
+        WHERE tm.meta_key = '_bp_gsc_state' GROUP BY tm.meta_value") as $r) { $reasons[$r->v] = ($reasons[$r->v] ?? 0) + (int) $r->c; }
+    arsort($reasons);
+
+    bp_audit_metric_store('bp_gsc_coverage_history', date('Ymd'), [
+        'indexed' => $indexed, 'not_indexed' => $not, 'total' => $indexed + $not, 'reasons' => $reasons,
+    ], 400);
+
+    update_option('bp_gsc_coverage_next', $now + 7 * DAY_IN_SECONDS, false);
+    if ($force) update_option('bp_gsc_coverage_forced_until', $now + 7 * DAY_IN_SECONDS, false);
+}
+
+/** This run's targets, least-recently-inspected first: core content pages (post meta) + jobsite_geo /service/
+ *  landing pages (the jobsite_geo-services TERM archives — never the individual jobsite posts, which 301 to
+ *  them). Weekly batch = max(25, ceil(total / 4)), hard-capped at 50 so even a huge site never times out a
+ *  request. Each item is ['kind'=>'post'|'term', 'id'=>int, 'url'=>string]. Filter bp_gsc_coverage_batch($n,$total). */
+function bp_gsc_coverage_targets(): array {
+    $items = [];
+
+    $args = ['post_type' => ['page', 'post', 'landing', 'universal'], 'post_status' => 'publish',
+             'posts_per_page' => 1000, 'fields' => 'ids', 'no_found_rows' => true];
+    if (defined('BP_SEO_NOINDEX')) {
+        $args['meta_query'] = ['relation' => 'OR',
+            ['key' => BP_SEO_NOINDEX, 'compare' => 'NOT EXISTS'],
+            ['key' => BP_SEO_NOINDEX, 'value' => '1', 'compare' => '!='],
+        ];
+    }
+    foreach (get_posts($args) as $id) {
+        $u = get_permalink($id);
+        if ($u) $items[] = ['kind' => 'post', 'id' => (int) $id, 'url' => $u, 'ts' => (int) get_post_meta($id, '_bp_gsc_inspected', true)];
+    }
+
+    if (taxonomy_exists('jobsite_geo-services')) {
+        $terms = get_terms(['taxonomy' => 'jobsite_geo-services', 'hide_empty' => true]);
+        if (is_array($terms)) foreach ($terms as $term) {
+            $u = get_term_link($term);
+            if (!is_wp_error($u)) $items[] = ['kind' => 'term', 'id' => (int) $term->term_id, 'url' => $u, 'ts' => (int) get_term_meta($term->term_id, '_bp_gsc_inspected', true)];
+        }
+    }
+
+    if (!$items) return [];
+    usort($items, static function ($a, $b) { return $a['ts'] <=> $b['ts']; });                  // oldest (0 = never-checked) first
+    $total = count($items);
+    $batch = (int) min(max(25, (int) ceil($total / 4)), 50);
+    $batch = max(1, (int) apply_filters('bp_gsc_coverage_batch', $batch, $total));
+    return array_slice($items, 0, $batch);
 }
 
 /** Search Console Links — total backlinks (Σ per-domain link counts) + linking-domain count, 3-day snapshot.

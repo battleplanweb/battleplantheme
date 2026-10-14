@@ -2293,10 +2293,25 @@ document.addEventListener("DOMContentLoaded", function () {
 			moveDiv(message, '#wrapper-top .section-parallax', 'after');
 		}
 
-		// Hero background parallax: animate object-position on the responsive <img class="hero-bg">,
-		// reproducing the framework's ORIGINAL background-position math exactly (so existing top-y /
-		// bottom-y values are honored, on any site). rAF-throttled + passive; the img sits on its own
-		// layer (.hero-bg { transform: translateZ(0) }) so the drift repaint stays isolated. Once.
+		// Hero background parallax: animate object-position on the responsive <img class="hero-bg">.
+		// rAF-throttled + passive; the img sits on its own layer (.hero-bg { transform: translateZ(0) })
+		// so the drift repaint stays isolated. Once.
+		//
+		// top-y / bottom-y are measured in SCREEN PIXELS of the pan, not as a fraction of img-h. The
+		// original math divided by img-h because the backdrop was a CSS background painted at
+		// `background-size: {img-w}px {img-h}px` — its natural size — so the pan distance was
+		// `boxH - img-h`, a constant at every viewport width, and a fraction of img-h was a stable
+		// number of pixels. This <img> is object-fit:cover, so it is scaled to the BOX: the pan is
+		// `coverH - boxH` where `coverH = boxW x img-h/img-w`, which grows with the window. Kept as a
+		// fraction of img-h, the same top-y meant ~3x less travel at 1600px than the author tuned, and
+		// NOTHING at all below ~1275px — where the box is taller than the cover-fitted image, cover
+		// switches to height-driven scaling, the pan is exactly 0 and both attributes are no-ops.
+		//
+		// So the fraction is taken against the real pan instead: top-y trims N px off the start of the
+		// travel, bottom-y trims N px off the end, identical at every width. Defaults (0/0) are an
+		// unchanged full 100%->0% sweep. The result is clamped into the box because a background could
+		// tile past its own edge (background-repeat defaulted to repeat) and an <img> cannot — an
+		// overshooting value used to be papered over and would now be a bare transparent gap.
 		if ( !window.__bpHeroDriftInit ) {
 			window.__bpHeroDriftInit = true;
 			const heroLayers = getObjects('.hero-bg');
@@ -2316,22 +2331,46 @@ document.addEventListener("DOMContentLoaded", function () {
 					}
 					const deviceH = window.innerHeight;
 					heroLayers.forEach(img => {
-						const sec = img.parentElement;
+						// closest(), not parentElement: an art-directed hero wraps this <img> in a
+						// <picture>, so parentElement would be that wrapper and every read below
+						// (rect, imgHeight, posX) would come back empty.
+						const sec = img.closest('.hero-box');
 						if (!sec) return;
 						const obj = sec.getBoundingClientRect();
 						if (obj.bottom < 0 || obj.top > deviceH) return;             // off-screen: skip
 						const objTop = obj.top, objHeight = obj.height;
-						const imageH = parseFloat(sec.dataset.imgHeight) || objHeight || 1;
 						const posX   = sec.dataset.posX || '50%';
-						const adjTop = -(parseFloat(sec.dataset.topY) || 0);
-						const adjBot = -(parseFloat(sec.dataset.bottomY) || 0);
+
+						// How far the cover-fitted image can actually move inside its box. naturalWidth/
+						// naturalHeight describe the file the browser really chose (which for an
+						// art-directed <picture> hero is NOT the one img-w/img-h describe), and fall back
+						// to the authored attributes only while the image is still undecoded.
+						const boxW = img.clientWidth, boxH = img.clientHeight;
+						const natW = img.naturalWidth  || parseFloat(img.getAttribute('width'))  || 0;
+						const natH = img.naturalHeight || parseFloat(img.getAttribute('height'))
+						             || parseFloat(sec.dataset.imgHeight) || 0;
+						if (!natW || !natH || !boxW || !boxH) return;
+						const travel = Math.max(0, (boxW * natH / natW) - boxH);
+						// Box is taller than the cover fit: there is no slack to pan. REMOVE the inline value
+						// rather than just bailing — a wider window may have written one, and left behind it
+						// outranks style-grid.css and pins a stale focal point for the rest of the session.
+						if (!travel) { img.style.removeProperty('object-position'); return; }
+
 						const startScroll = objTop - deviceH;
 						const endScroll   = objTop + objHeight;
 						const scrollRange = endScroll - startScroll;
 						let objScroll = Math.max(0, Math.min(endScroll / scrollRange, 1));
 						objScroll = 1 - objScroll;
-						let finalPosY = (imageH + adjTop) - ((imageH + adjTop + adjBot) * objScroll);
-						finalPosY = (finalPosY / imageH) * 100;
+
+						// Shift = how far the image is pushed UP inside the box, in px. It sweeps from the
+						// fully-raised end of the pan (minus top-y) to the fully-lowered one (plus bottom-y).
+						const startShift = travel - (parseFloat(sec.dataset.topY)    || 0);
+						const endShift   =          (parseFloat(sec.dataset.bottomY) || 0);
+						let shift = startShift + ((endShift - startShift) * objScroll);
+						shift = Math.max(0, Math.min(shift, travel));
+
+						// object-position Y% resolves to (boxH - coverH) * Y/100 = -travel * Y/100.
+						const finalPosY = (shift / travel) * 100;
 						img.style.objectPosition = `${posX} ${finalPosY.toFixed(2)}%`;
 					});
 					heroTicking = false;
@@ -2339,6 +2378,10 @@ document.addEventListener("DOMContentLoaded", function () {
 				const onScrollResize = () => { if (!heroTicking) { heroTicking = true; requestAnimationFrame(driftHeroes); } };
 				window.addEventListener('scroll', onScrollResize, { passive: true });
 				window.addEventListener('resize', onScrollResize, { passive: true });
+				// The pan distance is derived from the image's NATURAL size, which is 0 until it decodes —
+				// so a hero that is still loading bails out of driftHeroes() and, with no scroll yet, would
+				// sit at its CSS default until the visitor moved. Re-run as each one lands.
+				heroLayers.forEach(img => { if (!img.complete) img.addEventListener('load', onScrollResize, { once: true }); });
 				driftHeroes();
 			}
 		}

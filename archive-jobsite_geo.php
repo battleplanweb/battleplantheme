@@ -129,7 +129,13 @@ get_header(); ?>
 				// display:contents so each <figure> is a direct grid item of
 				// .jobsite-entry. Caption = the photo's alt text.
 				$buildUpdate .= '<div class="jobsite-photos lightbox">';
-				$thumbSize = $imgNum >= 3 ? 'third-s' : 'half-s';
+				// The tile is a SQUARE (aspect-ratio 1/1, capped at 320px) filled with
+				// object-fit:cover, and it grows another 6% on hover — so the image has to cover
+				// 320x320, not merely be 320 WIDE. 'third-s'/'half-s' are width-constrained and
+				// UNCROPPED (320x99999 / 480x99999), so a 16:9 photo came back 320x180 and the
+				// browser stretched it 1.78x to fill the square. 'thumbnail' is a 320x320 hard
+				// crop, already generated on every attachment, so it fills the tile exactly.
+				$thumbSize = 'thumbnail';
 				foreach ( $imgs as $k => $imgId ) :
 					$thumb = wp_get_attachment_image_src( $imgId, $thumbSize );
 					$full  = wp_get_attachment_image_src( $imgId, 'full' );
@@ -158,9 +164,18 @@ get_header(); ?>
 				if ( $review ) :
 					bp_inline_minified_css( get_template_directory() . '/style-testimonials.css' );
 
-					$meta = wp_get_attachment_metadata( get_post_thumbnail_id( $review ) );
-					$thumbW = $meta['sizes'][$size]['width'];
-					$thumbH = $meta['sizes'][$size]['height'];
+					// Sized off 'thumbnail' because that is what the <img> below actually renders.
+					// This read $meta['sizes'][$size], but $size is never set in this template — so it
+					// was $meta['sizes'][null], always undefined, and every avatar shipped
+					// style="aspect-ratio:/" (invalid, silently dropped by the browser).
+					//
+					// 'thumbnail' is a 320x320 HARD CROP and WP never upscales, so an avatar whose
+					// source is smaller than 320 in either dimension has no 'thumbnail' entry at all
+					// and get_the_post_thumbnail() falls back to the original. Fall back to the full
+					// size's own dimensions here to match it.
+					$meta   = wp_get_attachment_metadata( get_post_thumbnail_id( $review ) );
+					$thumbW = $meta['sizes']['thumbnail']['width']  ?? ( $meta['width']  ?? 0 );
+					$thumbH = $meta['sizes']['thumbnail']['height'] ?? ( $meta['height'] ?? 0 );
 
 					$testimonialName = get_the_title($review);
 					$testimonialPlatform = strtolower(esc_attr(get_post_field( 'testimonial_platform', $review )));
@@ -286,11 +301,46 @@ get_header(); ?>
 				// image (not a map) for an unreachable icon URL, so a site that hasn't had the
 				// PNG uploaded yet must fall back to Google's default markers rather than
 				// render a broken map. Checked on disk, not over HTTP — no request per view.
+				//
+				// Every site ships its pin as jobsite_geo-pin.WEBP — that is what the interactive
+				// map has always used — so requiring a hand-uploaded PNG here silently dropped the
+				// custom pin back to Google's default red markers the moment static maps became the
+				// default. Derive the PNG from the webp once and reuse it. The failure transient
+				// stops a GD build without WebP support from retrying the conversion on every view.
 				$up   = wp_upload_dir();
 				$icon = '';
-				if ( empty($up['error']) && file_exists( trailingslashit($up['basedir']) . 'jobsite_geo-pin.png' ) ) {
-					$icon = 'anchor:' . $pinX . ',' . $pinY
-					      . '|icon:' . trailingslashit($up['baseurl']) . 'jobsite_geo-pin.png|';
+				if ( empty($up['error']) ) {
+					$pinDir  = trailingslashit($up['basedir']);
+					$pinPng  = $pinDir . 'jobsite_geo-pin.png';
+					$pinWebp = $pinDir . 'jobsite_geo-pin.webp';
+
+					if ( ! file_exists($pinPng) && file_exists($pinWebp) && ! get_transient('bp_jobsite_pin_png_failed') ) {
+						$editor = wp_get_image_editor($pinWebp);
+						if ( is_wp_error($editor) ) {
+							set_transient('bp_jobsite_pin_png_failed', 1, DAY_IN_SECONDS);
+						} else {
+							// Static Maps caps a custom icon at 4096px of area (64x64 square) and returns
+							// an ERROR image — not a map — for anything bigger, so shrink to fit. The
+							// anchor is in natural pixels, so remember the factor and shrink it too.
+							$sz    = $editor->get_size();
+							$max   = max( (int) $sz['width'], (int) $sz['height'] );
+							$scale = ( $max > 64 ) ? 64 / $max : 1;
+							if ( $scale < 1 ) $editor->resize( (int) round($sz['width'] * $scale), (int) round($sz['height'] * $scale), false );
+
+							$saved = $editor->save($pinPng, 'image/png');
+							if ( is_wp_error($saved) ) set_transient('bp_jobsite_pin_png_failed', 1, DAY_IN_SECONDS);
+							else update_option('bp_jobsite_pin_png_scale', $scale, false);
+						}
+					}
+
+					if ( file_exists($pinPng) ) {
+						// Absent on a site whose PNG was hand-uploaded rather than derived — anchors
+						// there are already in that PNG's own pixels, so leave them alone.
+						$pinScale = (float) get_option('bp_jobsite_pin_png_scale', 1);
+						if ( $pinScale <= 0 ) $pinScale = 1;
+						$icon = 'anchor:' . (int) round($pinX * $pinScale) . ',' . (int) round($pinY * $pinScale)
+						      . '|icon:' . trailingslashit($up['baseurl']) . 'jobsite_geo-pin.png|';
+					}
 				}
 
 				$args['markers'] = $icon . implode('|', $pins);

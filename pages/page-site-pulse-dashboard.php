@@ -34,11 +34,14 @@ if ( $is_god && ! $impersonating ) {
 	// God sees EVERYTHING, all the time: the full capability catalog (so new caps are covered
 	// automatically) plus god_mode — the UNFILTERED catalog, so a toggled-off module never hides
 	// anything from god. The module filter below is skipped for god to preserve this.
-	$caps = array_keys( site_pulse_capability_catalog_all() );
+	// Preference caps are the exception — UX defaults, not access — so they stay opt-in even for a
+	// god. site_pulse_effective_caps() already resolves them from this god's own role/overrides.
+	$caps = array_values( array_diff( array_keys( site_pulse_capability_catalog_all() ), site_pulse_preference_caps() ) );
+	$caps = array_merge( $caps, array_values( array_intersect( site_pulse_effective_caps( $user_id ), site_pulse_preference_caps() ) ) );
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_notes', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports' ];
 	$role_label = 'Administrator';
 } else {
 	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
@@ -114,6 +117,7 @@ $icons = [
 	'mail'      => '<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/>',
 	'chat'      => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
 	'tasks'     => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+	'notes'     => '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="16 3 16 8 21 8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/>',
 	'palette'   => '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.564C22 6.012 17.5 2 12 2z"/>',
 	'home'      => '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
 	'calendar'  => '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
@@ -131,6 +135,9 @@ $nav[] = [ 'slug' => 'messages', 'label' => 'Chat', 'icon' => 'chat', 'show' => 
 
 // Action Items — its own top-level item. Gated by view_action_items (granted to everyone by default).
 $nav[] = [ 'slug' => 'action-items', 'label' => 'Action Items', 'icon' => 'tasks', 'show' => in_array( 'view_action_items', $caps, true ) ];
+
+// Notes — ongoing notepads (personal or shared). Gated by view_notes (Notes module; granted to everyone by default).
+$nav[] = [ 'slug' => 'notes', 'label' => 'Notes', 'icon' => 'notes', 'show' => in_array( 'view_notes', $caps, true ), 'modules' => [ 'notes' ] ];
 
 // Reports are now data-driven: one "{Report} Reports" viewing tab per report this user can view-all, and
 // "My Reports" when they can submit any. Gated on the per-report caps (legacy caps honored too).
@@ -302,6 +309,28 @@ $nav[] = [
 	],
 ];
 
+// Store — the staff side of the store. Products are edited in WordPress (the bp_product post
+// type) so they keep the SEO module, the media library and the block editor; what lives here is
+// what WordPress is bad at — orders, fulfillment, and a stock number that has to be right.
+// Store settings (Stripe, tax, shipping rates) live under Settings, not here.
+$cap_store_orders   = in_array( 'view_orders', $caps, true ) || in_array( 'manage_orders', $caps, true );
+$cap_store_manage   = in_array( 'manage_orders', $caps, true );
+$cap_store_products = in_array( 'manage_products', $caps, true );
+$cap_store_payments = in_array( 'manage_store_payments', $caps, true );
+$cap_store_settings = in_array( 'manage_store_settings', $caps, true );
+$cap_store_area     = $cap_store_orders || $cap_store_manage || $cap_store_products || $cap_store_payments;
+$nav[] = [
+	'slug'  => 'store',
+	'modules' => [ 'store' ],   // owning module(s) — see the god menu split below
+	'label' => 'Store',
+	'icon'  => 'store',
+	'show'  => $cap_store_area,
+	'children' => [
+		[ 'slug' => 'store-orders',    'label' => 'Orders',    'show' => $cap_store_orders ],
+		[ 'slug' => 'store-inventory', 'label' => 'Inventory', 'show' => $cap_store_products ],
+	],
+];
+
 // Forms is gated on the 'view_forms' capability — and ALWAYS visible in Odin (god) mode,
 // independent of the module toggle / capability catalog, so god never loses it. 'upload_forms'
 // is a separate capability that reveals the per-repository upload controls (and, on its own,
@@ -345,6 +374,11 @@ $nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'sh
 $sp_ai_name = function_exists( 'site_pulse_ai_assistant_name' ) ? site_pulse_ai_assistant_name() : 'AI Assistant';
 $nav[] = [ 'slug' => 'ai-assistant', 'label' => $sp_ai_name, 'icon' => 'chat', 'show' => in_array( 'use_ai_assistant', $caps ), 'modules' => [ 'ai' ] ];
 
+// Ask AI — type a question about the company's data, get a report. In private testing: shown only to
+// the battleplanweb login (sp_ask_visible), not a grantable capability yet.
+$sp_ask_visible = function_exists( 'sp_ask_visible' ) && sp_ask_visible();
+$nav[] = [ 'slug' => 'ask-ai', 'label' => 'Ask AI', 'icon' => 'search', 'show' => $sp_ask_visible, 'modules' => [ 'ai' ] ];
+
 // Import tools now live inside the sections they feed: "Import Reports" under Stores and "Import
 // Comment Cards" under Customer Feedback. Both are gated by the import_data capability (see above).
 
@@ -352,7 +386,7 @@ $nav[] = [
 	'slug'  => 'admin',
 	'label' => 'Settings',
 	'icon'  => 'settings',
-	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ) || $cap_book_services || in_array( 'manage_booking_settings', $caps ),
+	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ) || $cap_book_services || in_array( 'manage_booking_settings', $caps ) || $cap_store_settings || $cap_store_products,
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ],
@@ -364,6 +398,7 @@ $nav[] = [
 		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ) ],
 		[ 'slug' => 'admin-booking',   'label' => 'Booking',        'icon' => 'calendar', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ) ],
+		[ 'slug' => 'admin-store',     'label' => 'Store',          'icon' => 'store',    'show' => $cap_store_settings || $cap_store_products ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_notifications', $caps ) ],
 		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_api_keys', $caps ) ],
@@ -864,6 +899,34 @@ if ( in_array( 'view_action_items', $caps, true ) ) {
 	$printPage .= '</section>';
 }
 
+// Notes Panel — ongoing notepads. The list, filters and the note editor are all built client-side
+// (initNotes / loadNotes in script-site-pulse.js); the cards reuse the Action Items card styling.
+if ( in_array( 'view_notes', $caps, true ) ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-notes">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Notes</h2>';
+	$printPage .=     '<div class="sp-panel-header-actions">';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-note-btn">+ New Note</button>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-report-filters">';
+	$printPage .=     '<input type="search" id="sp-notes-search" class="sp-input sp-action-search" placeholder="Search notes &amp; log entries…" autocomplete="off">';
+	$printPage .=     '<select id="sp-notes-filter-show" class="sp-select">';
+	$printPage .=       '<option value="">All notes</option>';
+	$printPage .=       '<option value="personal">Just me</option>';
+	$printPage .=       '<option value="shared">Shared</option>';
+	$printPage .=     '</select>';
+	$printPage .=     '<select id="sp-notes-filter-label" class="sp-select"><option value="">All labels</option></select>';
+	$printPage .=     '<select id="sp-notes-sort" class="sp-select">';
+	$printPage .=       '<option value="edited">Order by Last Edited</option>';
+	$printPage .=       '<option value="created">Order by Newest</option>';
+	$printPage .=       '<option value="title">Order by Title</option>';
+	$printPage .=       '<option value="custom">Order by Custom</option>';
+	$printPage .=     '</select>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-action-items-list sp-notes-list" id="sp-notes-list"></div>';
+	$printPage .= '</section>';
+}
+
 // AI Assistant Panel — company-voiced AI chat (role + brand voice). Loads lazily on first open.
 if ( in_array( 'use_ai_assistant', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-ai-assistant">';
@@ -881,6 +944,31 @@ if ( in_array( 'use_ai_assistant', $caps ) ) {
 	$printPage .=     '<textarea id="sp-ai-input" class="sp-input sp-ai-input" rows="3" placeholder="Ask for anything — e.g. “Write ad copy for a Mother’s Day special”"></textarea>';
 	$printPage .=     '<button type="submit" class="unique sp-btn sp-btn-primary" id="sp-ai-send">Send</button>';
 	$printPage .=   '</form>';
+	$printPage .= '</section>';
+}
+
+// Ask AI Panel — question → AI investigates the permitted data → report. Runs step by step from JS.
+if ( $sp_ask_visible ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-ask-ai">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Ask AI</h2>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-ask-new">New question</button>';
+	$printPage .=   '</div>';
+	$printPage .=   '<p class="sp-help-text sp-ask-intro">Ask anything about your company&#039;s data — reviews, comment cards, customer emails, manager reports, action items, expenses and mileage. The AI reads the actual records, not just keywords, and writes you a report. Bigger questions take a minute or two.</p>';
+	$printPage .=   '<div class="sp-ask-layout">';
+	$printPage .=     '<div class="sp-ask-main">';
+	$printPage .=       '<form class="sp-ask-composer" id="sp-ask-form">';
+	$printPage .=         '<textarea id="sp-ask-input" class="sp-input sp-ask-input" rows="3" maxlength="1000" placeholder="e.g. “What are customers saying about our servers over the past 6 months?”"></textarea>';
+	$printPage .=         '<button type="submit" class="unique sp-btn sp-btn-primary" id="sp-ask-go">Ask</button>';
+	$printPage .=       '</form>';
+	$printPage .=       '<div class="sp-ask-examples" id="sp-ask-examples"></div>';
+	$printPage .=       '<div class="sp-ask-output" id="sp-ask-output"></div>';
+	$printPage .=     '</div>';
+	$printPage .=     '<aside class="sp-ask-side">';
+	$printPage .=       '<h3 class="sp-ask-side-title">Recent questions</h3>';
+	$printPage .=       '<div class="sp-ask-history" id="sp-ask-history"></div>';
+	$printPage .=       '<div class="sp-ask-index" id="sp-ask-index"></div>';
+	$printPage .=     '</aside>';
+	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
 
@@ -969,13 +1057,15 @@ if ( in_array( 'view_analytics', $caps ) ) {
 	$printPage .= '</section>';
 }
 
-// Import Past Reports Panel — upload PDFs/CSVs of historical GM reports, AI-parse, review/confirm
-// attribution, and save. No action items are generated for imported reports. Gated by import_data.
+// Import Past Reports Panel — pick a report type (any active template), upload PDFs/CSVs/images of
+// past reports of that type, AI-parse, review/confirm attribution, and save. No action items are
+// generated for imported reports. Gated by import_data.
 if ( $cap_import ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-import-reports">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Import Past Reports</h2></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload past <strong>GM or Supervisor reports</strong> (PDF, CSV, or image — JPG/PNG, one report per file). Claude reads each file and fills in the matching fields; the report <strong>type is auto-detected from who wrote it</strong> (and editable). Review the detected info below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Supervisor reports aren\'t tied to a location.</em></div></div>';
-	$printPage .=   '<div class="sp-import-drop" id="sp-import-drop">';
+	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">First <strong>choose which report</strong> you\'re importing, then upload past copies of it (PDF, CSV, or image — JPG/PNG, one report per file). Claude reads each file and fills in that report\'s fields. Review the detected person, location and dates below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Location is optional — leave it blank for reports that aren\'t tied to a store.</em></div></div>';
+	$printPage .=   '<label class="sp-import-f sp-import-tpl"><span>Which report are you importing?</span><select class="sp-select" id="sp-import-template"><option value="0">Loading…</option></select></label>';
+	$printPage .=   '<div class="sp-import-drop is-locked" id="sp-import-drop">';
 	$printPage .=     '<input type="file" id="sp-import-files" accept=".pdf,.csv,.jpg,.jpeg,.jpe,.jfif,.png,application/pdf,text/csv,image/jpeg,image/png" multiple hidden>';
 	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-pick">Choose PDF / CSV / Image files</button>';
 	$printPage .=     '<span class="sp-import-hint">…or drop files here</span>';
@@ -1059,7 +1149,11 @@ if ( $cap_x_tolls ) {
 	$printPage .=   '<div class="sp-meta-bar"><div class="sp-toll-intro">Upload the CSV or Excel (.xlsx) export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-toll-toolbar">';
 	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="file" id="sp-toll-file" class="sp-toll-file">';
+	// accept= keeps phone file-pickers on document sources (otherwise Android offers Camera, and can
+	// stick there as the remembered default). octet-stream is in the list because NTTA exports
+	// sometimes have no extension — without it the picker greys them out. Content is still sniffed
+	// on upload, so this is a picker hint only, never the validation.
+	$printPage .=       '<input type="file" id="sp-toll-file" class="sp-toll-file" accept=".csv,.xlsx,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream">';
 	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-toll-upload-btn" disabled>Upload</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
@@ -1345,9 +1439,13 @@ if ( function_exists( 'sp_fleet_is_hub' ) && sp_fleet_is_hub()
 	$printPage .=       '<select id="sp-fleet-sort" class="sp-select">';
 	$printPage .=         '<option value="severity" selected>Problems first</option>';
 	$printPage .=         '<option value="name">Name</option>';
-	$printPage .=         '<option value="traffic">Traffic (30d)</option>';
+	$printPage .=         '<option value="traffic">Traffic</option>';
 	$printPage .=         '<option value="change">Biggest change</option>';
 	$printPage .=         '<option value="audit">Oldest audit</option>';
+	$printPage .=       '</select>';
+	$printPage .=       '<select id="sp-fleet-sort-dir" class="sp-select" aria-label="Sort direction">';
+	$printPage .=         '<option value="" selected>Normal order</option>';
+	$printPage .=         '<option value="reverse">Reverse order</option>';
 	$printPage .=       '</select>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
@@ -1538,6 +1636,72 @@ $sp_book_tripwire .=   'Everything below is filled in by <code>script-site-pulse
 $sp_book_tripwire .=   'The copy on this server was last written <strong>' . esc_html( $sp_book_js_stamp ) . '</strong>. If that is older than your last upload, the file did not land. ';
 $sp_book_tripwire .=   'If the date looks right, hard-refresh with Ctrl+Shift+R and purge the CDN cache.';
 $sp_book_tripwire .= '</div>';
+/*--------------------------------------------------------------
+# Store panels - orders, inventory, and the setup screen.
+# Structure only; every list is filled by JS (spAjax) once the store
+# endpoints land. Slugs match the nav children above. Reuses the booking
+# JS tripwire above, which is about the shared script file, not about booking.
+--------------------------------------------------------------*/
+if ( $cap_store_orders ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-orders">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Store', 'Orders' );
+	if ( $cap_store_manage ) {
+		$printPage .= '<div class="sp-panel-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-store-order-new">New Order</button></div>';
+	}
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-store-order-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-store-order-search" class="sp-input" placeholder="Search name, email, or order number&hellip;">';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">Status</span>';
+	$printPage .=       '<select id="sp-store-order-status" class="sp-select">';
+	foreach ( sp_store_order_statuses() as $sp_so_status => $sp_so_label ) {
+		$printPage .=     '<option value="' . esc_attr( $sp_so_status ) . '"' . ( 'open' === $sp_so_status ? ' selected' : '' ) . '>' . esc_html( $sp_so_label ) . '</option>';
+	}
+	$printPage .=       '<option value="">All</option></select>';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">Fulfillment</span>';
+	$printPage .=       '<select id="sp-store-order-fulfillment" class="sp-select"><option value="">Any</option>';
+	foreach ( sp_store_fulfillment_statuses() as $sp_sf_status => $sp_sf_label ) {
+		$printPage .=     '<option value="' . esc_attr( $sp_sf_status ) . '">' . esc_html( $sp_sf_label ) . '</option>';
+	}
+	$printPage .=       '</select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-table-card" id="sp-store-orders"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+if ( $cap_store_products ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-inventory">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Store', 'Inventory' ) . '</div>';
+	$printPage .=   '<div class="sp-toolbar" id="sp-store-inventory-toolbar">';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<input type="search" id="sp-store-inventory-search" class="sp-input" placeholder="Search product or SKU&hellip;">';
+	$printPage .=     '</div>';
+	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=       '<span class="sp-toolbar-label">Show</span>';
+	$printPage .=       '<select id="sp-store-inventory-filter" class="sp-select">';
+	$printPage .=         '<option value="">All tracked items</option>';
+	$printPage .=         '<option value="low">Low stock</option>';
+	$printPage .=         '<option value="out">Out of stock</option>';
+	$printPage .=       '</select>';
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-table-card" id="sp-store-inventory"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+if ( $cap_store_settings || $cap_store_products ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-store">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Store' ) . '</div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div id="sp-store-settings"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+
 /*--------------------------------------------------------------
 # Booking panels - calendar, booking list, passes, and the setup screen.
 # Structure only; every list is filled by JS (spAjax) once the booking

@@ -587,6 +587,13 @@ function bp_admin_columns($config){
 				'bp-featured-image' => fn() => get_the_post_thumbnail($id, [130,130]),
 
 				'value'  => fn() => bp_render_meta($id,$cols,$col,$pt),
+
+				// A computed column: the config supplies a callable, which is handed the post id
+				// and returns ready HTML. For data that is not postmeta and not a taxonomy —
+				// e.g. a store product's price range, which lives in the variants table.
+				'callback' => fn() => is_callable($cols[$col]['callback'] ?? null)
+					? call_user_func($cols[$col]['callback'], $id, $col, $pt)
+					: '',
 				'date'   => fn() => bp_render_meta($id,$cols,$col,$pt),
 				'number' => fn() => bp_render_meta($id,$cols,$col,$pt),
 
@@ -2317,6 +2324,28 @@ function bp_taxonomy($key, $taxonomy, $label, $args = []) {
 			'sortable'   => true,
 			'filterable' => true,
 			'inline_edit' => true,
+		], $args)
+	];
+}
+
+/**
+ * A COMPUTED column: $callback receives the post id and returns the cell's HTML.
+ *
+ * bp_meta() covers anything stored in postmeta and bp_taxonomy() anything stored as
+ * a term. This covers the third case — a value that lives in the module's own table
+ * and has to be worked out, like a product's price range or available stock. Not
+ * sortable or inline-editable by default, because a derived value has nothing for
+ * either one to write back to.
+ */
+function bp_col($key, $label, $callback, $args = []) {
+	return [
+		$key => array_merge([
+			'type'       => 'callback',
+			'label'      => $label,
+			'callback'   => $callback,
+			'sortable'   => false,
+			'filterable' => false,
+			'inline_edit'=> false,
 		], $args)
 	];
 }

@@ -119,10 +119,44 @@
 	// ---- Rendering ------------------------------------------------------
 	function addBubble(role, text) {
 		var wrap = el('div', 'bp-chat-msg bp-chat-' + role);
-		wrap.appendChild(el('div', 'bp-chat-bubble', text));
+		wrap.appendChild(role === 'assistant' ? linkify(text) : el('div', 'bp-chat-bubble', text));
 		log.appendChild(wrap);
 		log.scrollTop = log.scrollHeight;
 		return wrap;
+	}
+
+	// Assistant text → bubble with real links. The model writes [Page name](url);
+	// a bare URL that slips through is linked too. Built with DOM nodes (never
+	// innerHTML) and only http(s) or on-site "/" URLs, so replies can't inject markup.
+	var LINK_RE = /\[([^\]\n]+)\]\(([^)\s]+)\)|(https?:\/\/[^\s<]+[^\s<.,;:!?)'"])/g;
+
+	function linkify(text) {
+		var b = el('div', 'bp-chat-bubble');
+		var s = String(text == null ? '' : text), last = 0, m;
+		LINK_RE.lastIndex = 0;
+		while ((m = LINK_RE.exec(s))) {
+			var url = m[2] || m[3], label = m[1] || m[3];
+			if (!/^(https?:\/\/|\/(?!\/))/i.test(url)) continue; // leave anything else as plain text
+			if (m.index > last) b.appendChild(document.createTextNode(s.slice(last, m.index)));
+			b.appendChild(chatLink(url, label));
+			last = LINK_RE.lastIndex;
+		}
+		if (last < s.length) b.appendChild(document.createTextNode(s.slice(last)));
+		return b;
+	}
+
+	function chatLink(url, label) {
+		var a = el('a', 'bp-chat-link', label);
+		a.href = url;
+		if (a.host && a.host !== location.host) {
+			a.target = '_blank'; a.rel = 'noopener';
+		} else {
+			// Same site: navigate in place and reopen the chat on the next page.
+			a.addEventListener('click', function () {
+				try { sessionStorage.setItem(STORE_KEY + '_open', '1'); } catch (e) {}
+			});
+		}
+		return a;
 	}
 
 	function renderAll() {
@@ -299,4 +333,12 @@
 	loadState();
 	build();
 	renderAll(); // paint the greeting (or restored transcript) up front
+
+	// Came here from a same-site link in the chat → pick up where they left off.
+	try {
+		if (sessionStorage.getItem(STORE_KEY + '_open')) {
+			sessionStorage.removeItem(STORE_KEY + '_open');
+			toggle();
+		}
+	} catch (e) {}
 })();

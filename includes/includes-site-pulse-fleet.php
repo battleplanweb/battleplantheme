@@ -404,6 +404,41 @@ function sp_fleet_chips( array $row ): array {
 	return $chips;
 }
 
+/**
+ * Sessions + trend % for every traffic window the panel can cycle through (30d / 3m / 6m / 12m).
+ *
+ * 30d comes from the denormalised columns so snapshots pushed before the longer windows
+ * existed still show it; the rest come from the payload and are null until a site has run
+ * the updated collector. A % is only given when the prior window is ~fully covered by the
+ * site's GA4 history — otherwise a young site's 12m reads as an enormous fake gain.
+ */
+function sp_fleet_traffic_windows( array $row, array $payload ): array {
+	$traffic = is_array( $payload['traffic'] ?? null ) ? $payload['traffic'] : [];
+	$out     = [];
+
+	foreach ( [ 30, 90, 180, 365 ] as $days ) {
+		$key = 'd' . $days;
+		if ( 30 === $days ) {
+			$now   = (int) $row['sessions_30d'];
+			$prior = (int) $row['sessions_30d_prior'];
+			$full  = $prior > 0;
+		} elseif ( isset( $traffic[ $key ]['sessions'] ) ) {
+			$now   = (int) $traffic[ $key ]['sessions'];
+			$prior = (int) ( $traffic[ $key . '_prior' ]['sessions'] ?? 0 );
+			$full  = (int) ( $traffic[ $key . '_prior' ]['days'] ?? 0 ) >= $days * 0.9;
+		} else {
+			$out[ $key ] = null;
+			continue;
+		}
+		$out[ $key ] = [
+			'sessions' => $now,
+			'prior'    => $full ? $prior : 0,
+			'pct'      => $full && $prior > 0 ? (int) round( ( ( $now - $prior ) / $prior ) * 100 ) : null,
+		];
+	}
+	return $out;
+}
+
 /** Worst tone present, for sorting problem sites to the top. */
 function sp_fleet_severity( array $chips ): int {
 	$worst = 0;
@@ -428,6 +463,8 @@ function sp_fleet_ajax_get_fleet(): void {
 	$sites  = [];
 	$sparks = sp_fleet_sparklines();
 	$totals = [ 'sites' => 0, 'reporting' => 0, 'sessions_30d' => 0, 'sessions_30d_prior' => 0, 'alerts' => 0, 'audits_due' => 0 ];
+	// Fleet-wide sum per traffic window, so the stat card follows the period being viewed.
+	$window_totals = [];
 
 	foreach ( sp_fleet_rows() as $row ) {
 		$chips   = sp_fleet_chips( $row );
@@ -442,6 +479,19 @@ function sp_fleet_ajax_get_fleet(): void {
 		if ( sp_fleet_severity( $chips ) >= 2 ) $totals['alerts']++;
 		foreach ( $chips as $c ) if ( 'audit' === $c['key'] ) $totals['audits_due']++;
 
+		$windows = sp_fleet_traffic_windows( $row, $payload );
+		foreach ( $windows as $wkey => $w ) {
+			if ( ! $w ) continue;
+			$t = $window_totals[ $wkey ] ?? [ 'sessions' => 0, 'cmp' => 0, 'prior' => 0 ];
+			$t['sessions'] += $w['sessions'];
+			// The fleet % compares like with like: only sites that have a full prior window.
+			if ( $w['prior'] > 0 ) {
+				$t['cmp']   += $w['sessions'];
+				$t['prior'] += $w['prior'];
+			}
+			$window_totals[ $wkey ] = $t;
+		}
+
 		$sites[] = [
 			'key'          => (string) $row['site_key'],
 			'label'        => (string) ( $row['label'] ?: $row['site_key'] ),
@@ -455,6 +505,7 @@ function sp_fleet_ajax_get_fleet(): void {
 			'traffic_pct'  => (int) $row['sessions_30d_prior'] > 0
 				? (int) round( ( ( (int) $row['sessions_30d'] - (int) $row['sessions_30d_prior'] ) / (int) $row['sessions_30d_prior'] ) * 100 )
 				: null,
+			'traffic'      => $windows,
 			'audit_at'     => $row['audit_at'] ? strtotime( (string) $row['audit_at'] . ' UTC' ) : 0,
 			'audit_score'  => null !== $row['audit_score'] ? (int) $row['audit_score'] : null,
 			'kw_avg_rank'  => null !== $row['kw_avg_rank'] ? (float) $row['kw_avg_rank'] : null,
@@ -475,6 +526,14 @@ function sp_fleet_ajax_get_fleet(): void {
 	$totals['traffic_pct'] = $totals['sessions_30d_prior'] > 0
 		? (int) round( ( ( $totals['sessions_30d'] - $totals['sessions_30d_prior'] ) / $totals['sessions_30d_prior'] ) * 100 )
 		: null;
+
+	foreach ( $window_totals as $wkey => $w ) {
+		$window_totals[ $wkey ] = [
+			'sessions' => $w['sessions'],
+			'pct'      => $w['prior'] > 0 ? (int) round( ( ( $w['cmp'] - $w['prior'] ) / $w['prior'] ) * 100 ) : null,
+		];
+	}
+	$totals['traffic'] = $window_totals;
 
 	wp_send_json_success( [ 'sites' => $sites, 'totals' => $totals ] );
 }

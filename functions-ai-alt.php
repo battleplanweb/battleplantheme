@@ -477,12 +477,24 @@ Default: force-overwrite every matching tag. Filter
 bp_alt_sync_force_overwrite to false to only fill empty/missing alts.
 --------------------------------------------------------------*/
 
+// Attachments created during THIS request. Nothing can reference them in content yet, so
+// syncing their alt is a guaranteed no-op — and the sync is two unindexed LIKE '%…%' scans
+// over posts + postmeta, which on a big site took long enough to time out the Site Pulse
+// testimonial push (hub waits 25s; the photo sideload sets alt on a brand-new attachment).
+function bp_alt_sync_new_attachments($add = 0) {
+	static $ids = [];
+	if ($add) $ids[(int) $add] = true;
+	return $ids;
+}
+add_action('add_attachment', function($attachment_id) { bp_alt_sync_new_attachments($attachment_id); });
+
 add_action('updated_post_meta', 'bp_alt_sync_meta_changed', 10, 4);
 add_action('added_post_meta',   'bp_alt_sync_meta_changed', 10, 4);
 function bp_alt_sync_meta_changed($meta_id, $object_id, $meta_key, $meta_value) {
 	// update_post_meta only fires this when the value actually changed, so no
 	// extra "did it change?" guard is needed.
 	if ($meta_key !== '_wp_attachment_image_alt') return;
+	if (isset(bp_alt_sync_new_attachments()[(int) $object_id])) return;
 	if (get_post_type($object_id) !== 'attachment') return;
 
 	bp_alt_sync_to_content((int) $object_id, (string) $meta_value);

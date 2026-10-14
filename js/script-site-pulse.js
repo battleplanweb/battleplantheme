@@ -29,7 +29,8 @@ const ICON_CAMERA = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"
 const ICON_RECEIPT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
 const ICON_CHECK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 const ICON_ATTACH = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
-const ICON_TASK = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+const ICON_TASK ='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
 const ICON_MIC = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
 const ICON_REPLY = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
 const ICON_SEARCH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
@@ -705,6 +706,9 @@ function activatePanel(panelId) {
 	if (panelId === 'ai-assistant') {
 		initAiAssistant();
 	}
+	if (panelId === 'ask-ai') {
+		initAskAi();
+	}
 	if (panelId === 'agency-reviews') {
 		loadAgencyReviews();
 	}
@@ -719,10 +723,15 @@ function activatePanel(panelId) {
 		initDirectory();
 		loadDirectory();
 	}
+	if (panelId === 'notes') {
+		initNotes();
+		loadNotes();
+	}
 	if (panelId === 'customer-connect-customers') { initCcCustomers(); loadCcCustomers(); }
 	if (panelId === 'customer-connect-send')      { initCcSend(); loadCcSegments(); }
 	if (panelId === 'customer-connect-schedule')  { initCcSchedule(); loadCcSchedule(); }
 	if (panelId === 'admin-booking')              { initBookingAdmin(); loadBookingAdmin(); }
+	if (panelId === 'admin-store')                { loadStoreAdmin(); }
 	if (panelId === 'booking-calendar')           { initBookingCalendar(); loadBookingCalendar(); }
 	if (panelId === 'booking-list')               { initBookingList(); loadBookingList(); }
 	if (panelId === 'booking-passes')             { initBookingPasses(); loadBookingPasses(); }
@@ -931,11 +940,19 @@ function saveViewState(state) {
 // user meta (follows the account across devices) — delivered as D.lastChargeTo on load, and re-saved by
 // the expense/mileage save handlers. spSetLastChargeTo only updates the in-memory copy so later forms in
 // the SAME session pick it up immediately without a reload.
+//
+// OFF by default: the whole behavior is gated on the `remember_charge_to` preference capability, which
+// is granted per role (Roles grid) and/or per person (Individual overrides). The server already sends an
+// empty D.lastChargeTo when it's off; the same check here stops an in-session save from making it sticky
+// anyway. With it off, every form just opens on its plain default.
+function spRemembersChargeTo() {
+	return !!(typeof D !== 'undefined' && (D.userCaps || []).includes('remember_charge_to'));
+}
 function spLastChargeTo() {
-	return (typeof D !== 'undefined' && D.lastChargeTo) ? String(D.lastChargeTo) : '';
+	return (spRemembersChargeTo() && D.lastChargeTo) ? String(D.lastChargeTo) : '';
 }
 function spSetLastChargeTo(val) {
-	if (val && typeof D !== 'undefined') D.lastChargeTo = String(val);
+	if (val && spRemembersChargeTo()) D.lastChargeTo = String(val);
 }
 
 function restoreViewState() {
@@ -1335,7 +1352,10 @@ async function loadNotifications() {
 				$('#sp-notification-panel').hidden = true;
 				const ntype = item.dataset.ntype || '';
 
-				if (ntype === 'action_items' || ntype === 'action_resolved' || relatedType === 'action_item') {
+				if (relatedType === 'note') {
+					activatePanel('notes');
+					if (relatedId && ntype !== 'note_deleted') spOpenNote(parseInt(relatedId, 10));
+				} else if (ntype === 'action_items' || ntype === 'action_resolved' || relatedType === 'action_item') {
 					activatePanel('action-items');
 				} else if (relatedType === 'report' && relatedId) {
 					activatePanel('reports-review');
@@ -1917,7 +1937,7 @@ function spMsgStartReply(bubbleEl) {
 	let snippet = bodyEl ? bodyEl.textContent.trim() : '';
 	if (!snippet) {
 		if (bubbleEl.querySelector('.sp-msg-attach-img')) snippet = 'Photo';
-		else { const f = bubbleEl.querySelector('.sp-msg-attach-file'); if (f) snippet = (f.textContent || 'Attachment').trim(); }
+		else { const f = bubbleEl.querySelector('.sp-msg-attach-file'); if (f) snippet = f.dataset.attachName || 'Attachment'; }
 	}
 	if (snippet.length > 90) snippet = snippet.slice(0, 90) + '…';
 	_spMsg.replyTo = { id: bubbleEl.dataset.id, sender, snippet };
@@ -2054,12 +2074,28 @@ function msgBubbleHTML(m, isGroup) {
 	if (m.attach_url) {
 		const isImg = (m.attach_mime || '').indexOf('image/') === 0;
 		const dataAttrs = `data-attach-url="${esc(m.attach_url)}" data-attach-mime="${esc(m.attach_mime || '')}" data-attach-name="${esc(m.attach_name || '')}"`;
+		// Non-image files get a card that says what it is and that it can be downloaded — the old bare
+		// paperclip chip read as decoration, so people didn't realize a PDF had arrived.
 		attach = isImg
 			? `<button type="button" class="unique sp-msg-attach-img" ${dataAttrs}><img src="${esc(m.attach_url)}" alt="${esc(m.attach_name || '')}"></button>`
-			: `<button type="button" class="unique sp-msg-attach-file" ${dataAttrs}>${ICON_ATTACH} ${esc(m.attach_name || 'Attachment')}</button>`;
+			: `<div class="sp-msg-file-card"><button type="button" class="unique sp-msg-attach-file" ${dataAttrs}>`
+				+ `<strong class="sp-msg-file-badge">${esc(spMsgFileKind(m.attach_name, m.attach_mime))}</strong>`
+				+ `<div class="sp-msg-file-meta"><strong class="sp-msg-file-name">${esc(m.attach_name || 'Attachment')}</strong>`
+				+ `<div class="sp-msg-file-hint">File attached · tap to view or download</div></div></button>`
+				+ `<a class="unique sp-msg-file-dl" href="${esc(m.attach_url)}" download="${esc(m.attach_name || '')}" title="Download" aria-label="Download ${esc(m.attach_name || 'file')}">${ICON_DOWNLOAD}</a></div>`;
 	}
 	const bodyHtml = m.body ? `<div class="sp-msg-bubble-body">${esc(m.body)}</div>` : '';
 	return `<div class="sp-msg-bubble ${m.mine ? 'mine' : 'theirs'}" data-id="${m.id}">${actions}${sender}${reply}${attach}${bodyHtml}<div class="sp-msg-bubble-time">${esc(msgTime(m.at))}${m.edited ? ' · edited' : ''}</div></div>`;
+}
+
+// Short type label for a non-image attachment's badge (PDF, Word, Excel…), from extension then MIME.
+function spMsgFileKind(name, mime) {
+	const ext = ((name || '').match(/\.([a-z0-9]+)$/i) || [])[1];
+	const map = { pdf: 'PDF', doc: 'Word', docx: 'Word', rtf: 'Word', xls: 'Excel', xlsx: 'Excel', csv: 'CSV',
+		ppt: 'PPT', pptx: 'PPT', txt: 'Text', zip: 'ZIP' };
+	if (ext && map[ext.toLowerCase()]) return map[ext.toLowerCase()];
+	if ((mime || '') === 'application/pdf') return 'PDF';
+	return ext ? ext.toUpperCase().slice(0, 4) : 'File';
 }
 
 // Open a message attachment in a popup (like the "new message" dialog) instead of a new tab — far
@@ -2143,16 +2179,76 @@ async function uploadMsgFile(file) {
 	fd.append('reply_to_id', (_spMsg.replyTo && _spMsg.replyTo.id) || 0);
 	fd.append('file', file);
 	spMsgCancelReply();
+	// Placeholder bubble while the file goes up — a big PDF on a phone connection can take a while, and
+	// with no feedback it looked like attaching had simply done nothing.
+	const bubbles = $('#sp-msg-bubbles');
+	let pending = null;
+	if (bubbles) {
+		pending = document.createElement('div');
+		pending.className = 'sp-msg-bubble mine sp-msg-uploading';
+		pending.innerHTML = `<div class="sp-msg-bubble-body">Uploading ${esc(file.name || 'file')}…</div>`;
+		bubbles.appendChild(pending);
+		spMsgScrollBottom(bubbles);
+	}
 	try {
 		const r = await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd });
-		const res = await r.json();
+		let res = null;
+		try { res = await r.json(); } catch (_) { /* firewall / PHP error page, not JSON */ }
+		pending?.remove();
 		if (res && res.success) {
 			if (input) input.value = '';
-			const bubbles = $('#sp-msg-bubbles');
-			if (bubbles) spMsgAppendBubbleOnce(bubbles, res.data.message);
+			const live = $('#sp-msg-bubbles');
+			if (live) spMsgAppendBubbleOnce(live, res.data.message);
 			loadMsgConversations();
-		} else { alert((res && res.data && res.data.message) || 'Upload failed.'); }
-	} catch (e) { alert('Upload failed.'); }
+		} else {
+			alert((res && res.data && res.data.message) || `Upload of ${file.name || 'the file'} failed${r.ok ? '' : ' (server error ' + r.status + ')'}.`);
+		}
+	} catch (e) { pending?.remove(); alert(`Upload of ${file.name || 'the file'} failed — check your connection and try again.`); }
+}
+
+// Pull files off a paste. Screenshots arrive as an image item; files copied in Explorer/Finder arrive in
+// clipboardData.files (Chrome/Edge) — read both and de-dupe, since some browsers report the same file twice.
+function spMsgClipboardFiles(cd) {
+	if (!cd) return [];
+	const out = [];
+	const seen = new Set();
+	const add = (f) => {
+		if (!f) return;
+		const key = f.name + ':' + f.size + ':' + f.type;
+		if (seen.has(key)) return;
+		seen.add(key);
+		out.push(f);
+	};
+	Array.from(cd.files || []).forEach(add);
+	if (!out.length) {
+		Array.from(cd.items || []).forEach(it => { if (it.kind === 'file') add(it.getAsFile()); });
+	}
+	// A screenshot has no real name ("image.png" or blank) — give it a readable one for the thread + downloads.
+	return out.map(f => (!f.name || /^image\.(png|jpe?g|gif|webp)$/i.test(f.name))
+		? new File([f], `screenshot-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.${(f.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`, { type: f.type || 'image/png' })
+		: f);
+}
+
+// Ctrl/Cmd-V a screenshot (or a copied file) anywhere in an open conversation and it sends exactly like
+// the paperclip. Bound once on the document because the thread is rebuilt on every open/poll, and it used
+// to live on the textarea only — so pasting after clicking a message/photo instead of the box did nothing.
+function spMsgWirePaste() {
+	if (document._spMsgPasteWired) return;
+	document._spMsgPasteWired = true;
+	document.addEventListener('paste', (e) => {
+		const thread = $('#sp-msg-thread');
+		if (!_spMsg.cid || !thread || !$('#sp-msg-composer', thread) || !thread.offsetParent) return; // no open conversation on screen
+		if (document.getElementById('sp-form-modal')) return; // a popup (edit, attachment viewer…) owns the paste
+		const ae = document.activeElement;
+		const inThread = ae && thread.contains(ae);
+		const typingElsewhere = ae && !inThread && (ae.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName));
+		if (typingElsewhere) return;
+		const files = spMsgClipboardFiles(e.clipboardData);
+		if (!files.length) return; // plain text → let it paste normally
+		e.preventDefault(); // don't dump the image's raw data into the textarea
+		(async () => { for (const f of files) await uploadMsgFile(f); })(); // first one carries any typed caption
+		$('#sp-msg-input')?.focus();
+	});
 }
 
 // Startup: wire the New Message button + poll the unread badge (whole-app, like the bell).
@@ -2603,22 +2699,7 @@ function renderMsgThread(data) {
 	$('#sp-msg-composer', thread)?.addEventListener('submit', (e) => { e.preventDefault(); sendMsg(); });
 	const input = $('#sp-msg-input', thread);
 	input?.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } });
-	// Paste an image straight from the clipboard (e.g. a screenshot + Ctrl/Cmd-V) → send it as an attachment.
-	input?.addEventListener('paste', (e) => {
-		const items = e.clipboardData && e.clipboardData.items;
-		if (!items) return;
-		for (let i = 0; i < items.length; i++) {
-			const it = items[i];
-			if (it.kind === 'file' && it.type && it.type.indexOf('image/') === 0) {
-				let file = it.getAsFile();
-				if (!file) continue;
-				if (!file.name) file = new File([file], `pasted-${Date.now()}.png`, { type: file.type || 'image/png' });
-				e.preventDefault(); // don't dump the image's raw data into the textarea
-				uploadMsgFile(file); // includes any text already typed as the caption
-				return;
-			}
-		}
-	});
+	spMsgWirePaste(); // Ctrl/Cmd-V a screenshot or copied file anywhere in the thread → sends as an attachment
 	input?.focus();
 	const fileInput = $('#sp-msg-file', thread);
 	fileInput?.addEventListener('change', () => { if (fileInput.files && fileInput.files[0]) { uploadMsgFile(fileInput.files[0]); fileInput.value = ''; } });
@@ -3583,6 +3664,8 @@ function wireReportStopwatch(wrap) {
 			if (lastTs != null && nowTs >= lastTs) label += ` (${Math.round((nowTs - lastTs) / 60000)} min)`;
 			if (hidden) hidden.value = label;
 			if (valEl)  valEl.textContent = label;
+			// Setting a hidden input's value fires nothing — tell the form so Math fields recompute.
+			box.dispatchEvent(new Event('input', { bubbles: true }));
 		});
 	});
 }
@@ -3636,7 +3719,15 @@ function wireReportMathFields(wrap, fields) {
 		const values = {};
 		(fields || []).forEach(f => {
 			const el = wrap.querySelector(`[name="answers[${f.field_key}]"]`);
-			if (el) values[f.field_key] = el.value;
+			if (!el) return;
+			// A stopwatch counts as its elapsed minutes — the "(N min)" in "12:58 PM (2 min)" — not the
+			// clock digits parseFloat would grab. An unstamped or first stamp (no elapsed yet) counts as 0.
+			if (f.field_type === 'stopwatch') {
+				const m = String(el.value || '').match(/\((\d+)\s*min\)/i);
+				values[f.field_key] = m ? m[1] : '0';
+			} else {
+				values[f.field_key] = el.value;
+			}
 		});
 		for (let pass = 0; pass < 3; pass++) {
 			mathEls.forEach(el => {
@@ -6126,22 +6217,24 @@ function spParseLabels(cat) {
 
 // Shared "Labels" control for the Add/Edit modals: a MULTI-CHECK list of common + existing labels, plus a
 // box to add a brand-new one — so an item can carry more than one (e.g. "New Site" + "Call"). Returns the
-// checked labels joined comma-separated.
-function spLabelOptions(current) {
-	const seed = ['To-Do', 'Follow-up', 'Fix', 'Feature', 'Meeting', 'Call', 'Email', 'Errand'];
+// checked labels joined comma-separated. `opts` ({ labels, seed }) lets another screen (Notes) supply its
+// own label pool; without it the Action Items labels + to-do seed are used.
+function spLabelOptions(current, opts) {
+	const seed = (opts && opts.seed) || ['To-Do', 'Follow-up', 'Fix', 'Feature', 'Meeting', 'Call', 'Email', 'Errand'];
+	const pool = (opts && opts.labels) || _spActionLabels;
 	const seen = {}, list = [];
 	// Anything already ON this item must appear (and stay checkable), even a one-off custom label.
-	spParseLabels(current).concat(_spActionLabels, seed).forEach(l => {
+	spParseLabels(current).concat(pool, seed).forEach(l => {
 		const k = String(l).toLowerCase();
 		if (l && !seen[k]) { seen[k] = 1; list.push(l); }
 	});
 	return list;
 }
-function spLabelFieldHtml(current) {
+function spLabelFieldHtml(current, opts) {
 	const selected = spParseLabels(current);
 	const isOn = (l) => selected.some(s => s.toLowerCase() === l.toLowerCase());
 	let html = '<div class="sp-cat-multi">';
-	spLabelOptions(current).forEach(l => {
+	spLabelOptions(current, opts).forEach(l => {
 		html += `<label class="checkbox-label sp-cat-check"><input type="checkbox" class="sp-cat-cb" value="${esc(l)}"${isOn(l) ? ' checked' : ''}><span class="unique">${esc(l)}</span></label>`;
 	});
 	html += '</div>';
@@ -6809,8 +6902,13 @@ function renderActionItemCard(item, mode) {
 			let text = `Due for completion by ${formatDate(item.due_date)}`;
 			if (d !== null) {
 				if (d < 0) { const n = -d; text = `${n} day${n === 1 ? '' : 's'} past due`; cls += ' sp-due-urgent'; }
-				else if (d <= 1) { cls += ' sp-due-urgent'; }   // today or tomorrow
-				else if (d <= 3) { cls += ' sp-due-soon'; }     // 2–3 days out
+				else if (d === 0) { text = 'Due for completion TODAY'; cls += ' sp-due-urgent'; }
+				else if (d === 1) { text = 'Due for completion by TOMORROW'; cls += ' sp-due-urgent'; }
+				else if (d <= 7) {                              // inside a week → countdown + the date
+					text = `Due for completion in ${d} days (${formatDate(item.due_date)})`;
+					if (d <= 3) cls += ' sp-due-soon';          // 2–3 days out
+				}
+				// 8+ days out keeps the plain "Due for completion by <date>".
 			}
 			// Clickable → date picker to extend/move the due date.
 			html += `<div class="${cls}">`
@@ -6891,7 +6989,12 @@ async function reviewActionItem(itemId, decision, btn) {
 	}
 }
 
-function initActionItemDragDrop(wrap) {
+// Drag-to-reorder by the ≡ handle. Notes reuses it: `opts` swaps the sort dropdown, the save action and
+// the reload, and onReorder(ids) gets the new order after a successful save.
+function initActionItemDragDrop(wrap, opts = {}) {
+	const sortSel  = opts.sortSelect || '#sp-action-sort';
+	const saveAct  = opts.action || 'site_pulse_reorder_action_items';
+	const reload   = opts.reload || loadActionItems;
 	let dragItem = null;
 
 	$$('.sp-action-item.sp-reorderable', wrap).forEach(item => {
@@ -6947,17 +7050,593 @@ function initActionItemDragDrop(wrap) {
 				wrap.insertBefore(dragItem, item);
 			}
 
-			const sortSelect = $('#sp-action-sort');
+			const sortSelect = $(sortSel);
 			if (sortSelect) sortSelect.value = 'custom';
 
 			const newOrder = [...wrap.querySelectorAll('.sp-action-item.sp-reorderable')].map(el => el.dataset.itemId);
 			try {
-				await spAjax('site_pulse_reorder_action_items', { order: newOrder });
+				await spAjax(saveAct, { order: newOrder });
+				if (opts.onReorder) opts.onReorder(newOrder);
 			} catch (err) {
-				loadActionItems();
+				reload();
 			}
 		});
 	});
+}
+
+
+/*--------------------------------------------------------------
+# Notes — ongoing notepads (includes-site-pulse-notes.php)
+--------------------------------------------------------------*/
+// A note is a free-form body + a dated log + photos, personal or shared. The cards reuse the Action Items
+// card markup/styling. The editor AUTOSAVES; every body save carries the version it was loaded at, and a
+// save against a newer version comes back as a conflict to resolve instead of overwriting someone.
+
+let _spNotes = [];       // the loaded set — search, filters and sort all run over this client-side
+let _spNoteLabels = [];  // labels across the viewer's notes (label filter + picker suggestions)
+const SP_NOTE_LABEL_SEED = ['Ideas', 'Meeting', 'Vendor', 'Reference', 'Follow-up'];
+
+function initNotes() {
+	const list = $('#sp-notes-list');
+	if (!list || list._wired) return;
+	list._wired = true;
+	$$('#sp-notes-filter-show, #sp-notes-filter-label').forEach(el => el.addEventListener('change', renderNotes));
+	const sortSel = $('#sp-notes-sort');
+	sortSel?.addEventListener('change', () => {
+		renderNotes();
+		spAjax('site_pulse_notes_set_sort', { sort: sortSel.value }).catch(() => {});
+	});
+	let searchT = null;
+	$('#sp-notes-search')?.addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(renderNotes, 150); });
+	$('#sp-add-note-btn')?.addEventListener('click', () => spOpenNote(0));
+}
+
+async function loadNotes() {
+	const list = $('#sp-notes-list');
+	if (!list) return;
+	if (!_spNotes.length) list.innerHTML = '<div class="sp-loading"></div>';
+	try {
+		const res = await spAjax('site_pulse_notes_list', {});
+		if (!res.success) { list.innerHTML = `<div class="sp-empty-state"><p>${esc(res.data?.message || 'Error loading notes.')}</p></div>`; return; }
+		_spNotes = res.data.notes || [];
+		_spNoteLabels = res.data.labels || [];
+		// The remembered sort is applied once, on the first load — after that the dropdown is the truth.
+		const sortSel = $('#sp-notes-sort');
+		if (sortSel && !sortSel._restored) { sortSel._restored = true; if (res.data.sort) sortSel.value = res.data.sort; }
+		spNotesFillLabelFilter();
+		renderNotes();
+	} catch (e) {
+		list.innerHTML = '<div class="sp-empty-state"><p>Error loading notes.</p></div>';
+	}
+}
+
+function spNotesFillLabelFilter() {
+	const sel = $('#sp-notes-filter-label');
+	if (!sel) return;
+	const cur = sel.value;
+	sel.innerHTML = '<option value="">All labels</option>' + _spNoteLabels.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join('');
+	sel.value = _spNoteLabels.indexOf(cur) !== -1 ? cur : '';
+}
+
+// Keep the cached list in step with a note the editor just changed (and the label pool with it).
+function spNotesCache(n) {
+	const i = _spNotes.findIndex(x => x.id === n.id);
+	if (i === -1) _spNotes.unshift(n); else _spNotes[i] = n;
+	spParseLabels(n.labels).forEach(l => { if (!_spNoteLabels.some(x => x.toLowerCase() === l.toLowerCase())) _spNoteLabels.push(l); });
+	_spNoteLabels.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+function spNoteMatches(n, q) {
+	if (!q) return true;
+	return [n.title, n.body, n.labels].concat((n.entries || []).map(e => e.body)).join('\n').toLowerCase().includes(q);
+}
+
+function renderNotes() {
+	const list = $('#sp-notes-list');
+	if (!list) return;
+	const q     = ($('#sp-notes-search')?.value || '').trim().toLowerCase();
+	const show  = $('#sp-notes-filter-show')?.value || '';
+	const label = ($('#sp-notes-filter-label')?.value || '').toLowerCase();
+	const sort  = $('#sp-notes-sort')?.value || 'edited';
+
+	const notes = _spNotes.filter(n => {
+		const shared = (n.members || []).length > 1;
+		if (show === 'personal' && shared) return false;
+		if (show === 'shared' && !shared) return false;
+		if (label && !spParseLabels(n.labels).some(l => l.toLowerCase() === label)) return false;
+		return spNoteMatches(n, q);
+	});
+	const by = {
+		edited:  (a, b) => b.updated_ts - a.updated_ts,
+		created: (a, b) => b.created_ts - a.created_ts,
+		title:   (a, b) => String(a.title).localeCompare(String(b.title), undefined, { sensitivity: 'base' }),
+		custom:  (a, b) => (a.order - b.order) || (b.updated_ts - a.updated_ts),
+	};
+	notes.sort(by[sort] || by.edited);
+
+	if (!notes.length) {
+		list.innerHTML = `<div class="sp-empty-state"><p>${_spNotes.length ? 'No notes match.' : 'No notes yet. Click “+ New Note” to start one.'}</p></div>`;
+		return;
+	}
+	list.innerHTML = notes.map(spNoteCardHtml).join('');
+	markUniqueSpans(list);
+
+	$$('.sp-note-open', list).forEach(b => b.addEventListener('click', () => spOpenNote(parseInt(b.dataset.noteId, 10))));
+	$$('.sp-note-delete-btn', list).forEach(b => b.addEventListener('click', () => {
+		const n = _spNotes.find(x => x.id === parseInt(b.dataset.noteId, 10));
+		if (n) spDeleteNote(n);
+	}));
+	$$('.sp-action-attach-thumb', list).forEach(btn => {
+		btn.addEventListener('click', () => spMsgAttachModal(btn.dataset.url, btn.dataset.mime, btn.dataset.name));
+	});
+	initActionItemDragDrop(list, {
+		sortSelect: '#sp-notes-sort',
+		action: 'site_pulse_notes_reorder',
+		reload: loadNotes,
+		onReorder: (ids) => {
+			ids.forEach((id, i) => { const n = _spNotes.find(x => x.id === parseInt(id, 10)); if (n) n.order = i; });
+			spAjax('site_pulse_notes_set_sort', { sort: 'custom' }).catch(() => {});
+		},
+	});
+}
+
+// "Shared with A, B & you" — nothing for a personal note. The viewer's own name becomes "you", last.
+function spNoteSharedLine(n) {
+	const m = n.members || [];
+	if (m.length < 2) return '';
+	const others = [];
+	let hasMe = false;
+	m.forEach(p => { if (String(p.id) === String(D.userId)) hasMe = true; else others.push(esc(p.name)); });
+	const parts = hasMe ? others.concat('you') : others;
+	const label = parts.length <= 1 ? (parts[0] || '') : parts.slice(0, -1).join(', ') + ' & ' + parts[parts.length - 1];
+	return label ? 'Shared with ' + label : '';
+}
+
+// "Sep 29, 2:14 PM" (with the year once it isn't this year) — for log entries.
+function spNoteWhen(ts) {
+	if (!ts) return '';
+	const d = new Date(ts * 1000);
+	const o = { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' };
+	if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+	return d.toLocaleString('en-US', o);
+}
+
+function spNoteCardHtml(n) {
+	const labels = spParseLabels(n.labels);
+	let html = `<div class="sp-action-item sp-note-card sp-reorderable" data-item-id="${n.id}">`;
+	html += '<span class="sp-action-drag" title="Drag to reorder" aria-label="Drag to reorder">&#9776;</span>';
+	html += '<div class="sp-action-item-content">';
+	if (labels.length) html += `<div class="sp-action-item-category"><span class="unique">${esc(labels.join(' · '))}</span></div>`;
+	html += `<button type="button" class="unique sp-note-title sp-note-open" data-note-id="${n.id}">${esc(n.title)}</button>`;
+	if (n.body) html += `<div class="sp-note-preview">${esc(n.body)}</div>`;
+
+	const shared = spNoteSharedLine(n);
+	if (shared) html += `<div class="sp-action-item-sub sp-action-item-visible"><span class="unique">${shared}</span></div>`;
+	const who = String(n.updated_by) === String(D.userId) ? 'you' : esc(n.updated_by_name);
+	html += `<div class="sp-action-item-sub"><span class="unique">Edited by ${who} ${esc(timeAgo(n.updated_ts))}</span></div>`;
+
+	// The newest few log entries, newest first — the full log is in the editor.
+	const ents = n.entries || [];
+	if (ents.length) {
+		html += '<div class="sp-action-notes"><div class="sp-action-notes-label">Log:</div><ul>';
+		ents.slice(0, 3).forEach(e => {
+			html += `<li><span class="unique">${esc(e.body)}</span> <span class="unique sp-note-entry-by">(${esc(e.name)}, ${esc(spNoteWhen(e.ts))})</span></li>`;
+		});
+		if (ents.length > 3) html += `<li class="sp-note-entry-by">+ ${ents.length - 3} more</li>`;
+		html += '</ul></div>';
+	}
+
+	html += '<div class="sp-action-item-actions">';
+	html += iconBtn('delete', 'sp-note-delete-btn', `data-note-id="${n.id}"`);
+	html += `<button type="button" class="unique sp-btn sp-btn-primary sp-note-open" data-note-id="${n.id}">Open Note</button>`;
+	html += '</div>';
+
+	const atts = n.attachments || [];
+	if (atts.length) {
+		html += '<div class="sp-action-item-attachments">';
+		atts.forEach(a => {
+			html += '<div class="sp-action-attach">'
+				+ `<button type="button" class="unique sp-action-attach-thumb" data-url="${esc(a.url)}" data-mime="${esc(a.mime || '')}" data-name="${esc(a.name || '')}">`
+				+ `<img src="${esc(a.url)}" alt="${esc(a.name || '')}" loading="lazy"></button></div>`;
+		});
+		html += '</div>';
+	}
+	html += '</div></div>';
+	return html;
+}
+
+// Delete, mirroring Action Items. Owner of a shared note: "Delete for everyone" or "Just remove me".
+// Anyone else can only take it off their own list. Returns true when something was removed.
+async function spDeleteNote(n) {
+	const shared = (n.members || []).length > 1;
+	let scope = 'all';
+	if (shared && n.mine) {
+		const choice = await spChoiceDialog({
+			title: 'Delete note',
+			message: 'This note is shared with other people. Delete it for everyone, or just remove it from your notes and leave it with them?',
+			options: [
+				{ label: 'Delete for everyone', value: 'all', class: 'sp-btn-primary sp-btn-delete' },
+				{ label: 'Just remove me', value: 'me', class: 'sp-btn-secondary' },
+				{ label: 'Cancel', value: null, class: 'sp-btn-ghost' },
+			],
+		});
+		if (!choice) return false;
+		scope = choice;
+	} else if (shared) {
+		if (!confirm(`Remove “${n.title}” from your notes? ${n.owner_name} and the others keep it.`)) return false;
+		scope = 'me';
+	} else if (!confirm(`Delete “${n.title}”? This removes the note, its log and its photos. This cannot be undone.`)) {
+		return false;
+	}
+	try {
+		const res = await spAjax('site_pulse_notes_delete', { note_id: n.id, scope });
+		if (!res.success) { alert(res.data?.message || 'Could not delete the note.'); return false; }
+	} catch (e) { alert('Could not delete the note.'); return false; }
+	_spNotes = _spNotes.filter(x => x.id !== n.id);
+	renderNotes();
+	return true;
+}
+
+async function spUploadNotePhoto(noteId, file) {
+	const fd = new FormData();
+	fd.append('action', 'site_pulse_notes_upload');
+	fd.append('nonce', spGetNonce());
+	fd.append('note_id', noteId);
+	fd.append('file', file);
+	const r = await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd });
+	return r.json();
+}
+
+// The notepad. id 0 = a new note, created on its first save.
+async function spOpenNote(id) {
+	const backdrop = spFormModal();
+	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><div class="sp-loading"></div></div>';
+
+	let note = null;
+	if (id) {
+		try {
+			const r = await spAjax('site_pulse_notes_get', { note_id: id });
+			if (!r.success) {
+				closeFormModal();
+				alert(r.data?.message || 'Could not open the note.');
+				if (r.data?.gone) { _spNotes = _spNotes.filter(x => x.id !== id); renderNotes(); }
+				return;
+			}
+			note = r.data.note;
+		} catch (e) { closeFormModal(); alert('Could not open the note.'); return; }
+	}
+
+	// Only the owner shares/unshares, so only the owner needs the people list.
+	const isOwner = !note || !!note.mine;
+	let contacts = [];
+	if (isOwner) { try { const cr = await spAjax('site_pulse_messages_contacts', {}); if (cr && cr.success) contacts = cr.data.contacts || []; } catch (e) {} }
+	if (!document.body.contains(backdrop)) return; // closed while loading
+
+	const labelOpts = { labels: _spNoteLabels, seed: SP_NOTE_LABEL_SEED };
+	const memberIds = note ? (note.members || []).map(m => m.id) : [];
+	const st = { note, id: note ? note.id : 0, version: note ? note.version : 0, dirty: false, saving: null, resolving: false, timer: null, closing: false, peopleDirty: false };
+
+	let html = '<div class="sp-card sp-report-form-wrap sp-note-editor">';
+	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3 class="sp-ne-heading">${note ? 'Note' : 'New Note'}</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-ne-close">Close</button></div>`;
+	html += `<input type="text" class="sp-input sp-ne-title" maxlength="200" placeholder="Title" value="${esc(note ? note.title : '')}">`;
+	html += `<textarea class="sp-input sp-ne-body" rows="14" placeholder="Start typing…">${esc(note ? note.body : '')}</textarea>`;
+	html += '<div class="sp-action-item-sub sp-ne-status" aria-live="polite"></div>';
+
+	const labelField = '<div><label class="sp-field-label">Labels</label><div class="sp-ne-labels">' + spLabelFieldHtml(note ? note.labels : '', labelOpts) + '</div></div>';
+	let peopleField = '';
+	if (isOwner && contacts.length) {
+		const picks = contacts.map(c => `<label class="sp-msg-contact-pick"><input type="checkbox" class="sp-msg-pick sp-aai-people-pick" value="${c.id}" data-name="${esc(c.name)}"${memberIds.indexOf(c.id) !== -1 ? ' checked' : ''}><span class="sp-msg-contact-name">${esc(c.name)}</span></label>`).join('');
+		peopleField = '<div><label class="sp-field-label">Share with</label>'
+			+ '<div class="sp-aai-people" id="sp-aai-people">'
+			+ '<button type="button" class="sp-select sp-aai-people-toggle" id="sp-aai-people-toggle">Just me</button>'
+			+ '<div class="sp-aai-people-panel" id="sp-aai-people-panel" hidden>'
+			+ '<input type="text" class="sp-input sp-aai-people-search" placeholder="Search people…">'
+			+ '<div class="sp-msg-contacts sp-aai-people-list">' + picks + '</div>'
+			+ '</div></div></div>';
+	} else if (!isOwner) {
+		peopleField = `<div><label class="sp-field-label">Shared by</label><p class="sp-action-item-sub sp-ne-shared-by">${esc(note.owner_name)}</p></div>`;
+	}
+	html += peopleField ? '<div class="sp-aai-grid">' + labelField + peopleField + '</div>' : labelField;
+
+	html += spActionPhotoSectionHtml();
+
+	html += '<div class="sp-form-group sp-ne-log"><label class="sp-field-label">Log</label>';
+	html += '<div class="sp-ne-entry-add"><textarea class="sp-input sp-ne-entry-text" rows="2" placeholder="Add a dated entry…"></textarea>';
+	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-ne-entry-save">Add to Log</button></div>';
+	html += '<div class="sp-ne-entries"></div></div>';
+
+	html += '<div class="sp-report-form-actions">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-ne-done">Done</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-delete sp-ne-delete">Delete</button>';
+	html += '</div></div>';
+	backdrop.innerHTML = html;
+	markUniqueSpans(backdrop);
+	spWireLabelField(backdrop);
+
+	const titleEl  = $('.sp-ne-title', backdrop);
+	const bodyEl   = $('.sp-ne-body', backdrop);
+	const statusEl = $('.sp-ne-status', backdrop);
+	const setStatus = (text, warn) => {
+		statusEl.textContent = text || '';
+		statusEl.classList.toggle('sp-due-urgent', !!warn);
+	};
+	if (note) setStatus(`Last edited by ${String(note.updated_by) === String(D.userId) ? 'you' : note.updated_by_name} ${timeAgo(note.updated_ts)}`);
+
+	// A server copy of the note came back. Only a BODY save (or loading theirs) may move `version` — a log
+	// entry or photo response carries the server's current version, and adopting it would let this
+	// editor's stale text overwrite a body edit someone else made in the meantime.
+	const applyNote = (n, fromBodySave) => {
+		st.note = n;
+		st.id = n.id;
+		if (fromBodySave) st.version = n.version;
+		$('.sp-ne-heading', backdrop).textContent = 'Note';
+		spNotesCache(n);
+		renderEntries();
+		renderPhotos();
+	};
+
+	/* ---- Autosave ---- */
+	const pickedMembers = () => $$('.sp-aai-people-pick:checked', backdrop).map(cb => parseInt(cb.value, 10)).filter(Boolean);
+	const markDirty = () => {
+		st.dirty = true;
+		if (st.resolving) return;
+		setStatus('Unsaved changes…');
+		clearTimeout(st.timer);
+		st.timer = setTimeout(save, 1200);
+	};
+
+	async function save() {
+		clearTimeout(st.timer);
+		while (st.saving) await st.saving;
+		if (!st.dirty || st.resolving) return !st.dirty;
+		const title = titleEl.value, body = bodyEl.value;
+		if (!st.id && !title.trim() && !body.trim()) { st.dirty = false; setStatus(''); return true; } // nothing to create yet
+		const payload = { note_id: st.id, title, body, labels: spLabelFieldValue(backdrop), base_version: st.version };
+		if (!st.id) { payload.members = JSON.stringify(pickedMembers()); st.peopleDirty = false; }
+		st.dirty = false;
+		setStatus('Saving…');
+		st.saving = spAjax('site_pulse_notes_save', payload).catch(() => null);
+		let res;
+		try { res = await st.saving; } finally { st.saving = null; }
+		if (res && res.success) {
+			applyNote(res.data.note, true);
+			if (!st.dirty) setStatus('Saved ' + spFormatClock(new Date()));
+			return true;
+		}
+		if (res && res.data && res.data.conflict) return resolveConflict(res.data.note);
+		st.dirty = true;
+		setStatus(res?.data?.message || 'Couldn’t save. Check your connection; your text is still here.', true);
+		return false;
+	}
+
+	async function resolveConflict(theirs) {
+		st.resolving = true;
+		const who = String(theirs.updated_by) === String(D.userId) ? 'You (in another window)' : (theirs.updated_by_name || 'Someone');
+		const choice = await spChoiceDialog({
+			title: 'This note changed',
+			message: `${who} saved changes to this note while you were editing. Keep your version (it replaces theirs), or load theirs? If you load theirs, your text is copied to the clipboard first.`,
+			options: [
+				{ label: 'Keep mine', value: 'mine', class: 'sp-btn-primary' },
+				{ label: 'Load theirs', value: 'theirs', class: 'sp-btn-secondary' },
+			],
+		});
+		st.resolving = false;
+		if (choice === 'theirs') {
+			try { await navigator.clipboard.writeText(bodyEl.value); } catch (e) {}
+			titleEl.value = theirs.title;
+			bodyEl.value = theirs.body;
+			$('.sp-ne-labels', backdrop).innerHTML = spLabelFieldHtml(theirs.labels, labelOpts);
+			markUniqueSpans(backdrop);
+			spWireLabelField(backdrop);
+			applyNote(theirs, true);
+			st.dirty = false;
+			setStatus(`Loaded ${who === 'You (in another window)' ? 'the other window’s' : who + '’s'} version. Your text was copied to the clipboard.`);
+			return true;
+		}
+		st.version = theirs.version; // keep mine: save again on top of their version
+		st.dirty = true;
+		return save();
+	}
+
+	titleEl.addEventListener('input', markDirty);
+	bodyEl.addEventListener('input', markDirty);
+	backdrop.addEventListener('change', (e) => { if (e.target.closest('.sp-cat-multi')) markDirty(); });
+	const customLabel = $('.sp-cat-custom', backdrop);
+	customLabel?.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ',') setTimeout(markDirty, 0); });
+	customLabel?.addEventListener('blur', () => setTimeout(markDirty, 0));
+	// Ctrl/Cmd+S saves now rather than waiting for the pause.
+	backdrop.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); st.dirty = true; save(); } });
+
+	// A new note (or a note with no text yet) needs saving before a log entry or photo can hang off it.
+	async function ensureSaved() {
+		if (st.id) return true;
+		if (!titleEl.value.trim() && !bodyEl.value.trim()) { alert('Give the note a title first.'); titleEl.focus(); return false; }
+		st.dirty = true;
+		await save();
+		return !!st.id;
+	}
+
+	/* ---- Sharing (owner) ---- */
+	const ppToggle = $('#sp-aai-people-toggle', backdrop);
+	const ppPanel  = $('#sp-aai-people-panel', backdrop);
+	const ppSearch = $('.sp-aai-people-search', backdrop);
+	const syncPeople = () => {
+		const n = pickedMembers().length;
+		if (ppToggle) ppToggle.textContent = n ? `Me + ${n} ${n === 1 ? 'person' : 'people'}` : 'Just me';
+	};
+	async function pushMembers() {
+		if (!st.id || !st.peopleDirty) return;
+		st.peopleDirty = false;
+		try {
+			const res = await spAjax('site_pulse_notes_set_members', { note_id: st.id, members: JSON.stringify(pickedMembers()) });
+			if (res.success) applyNote(res.data.note, false);
+			else alert(res.data?.message || 'Could not update who this note is shared with.');
+		} catch (e) { alert('Could not update who this note is shared with.'); }
+	}
+	let peopleT = null;
+	if (ppToggle && ppPanel) {
+		syncPeople();
+		ppToggle.addEventListener('click', (e) => { e.stopPropagation(); ppPanel.hidden = !ppPanel.hidden; if (!ppPanel.hidden) ppSearch?.focus(); });
+		backdrop.addEventListener('click', (e) => { if (!e.target.closest('#sp-aai-people')) ppPanel.hidden = true; });
+	}
+	$$('.sp-aai-people-pick', backdrop).forEach(cb => cb.addEventListener('change', () => {
+		syncPeople();
+		st.peopleDirty = true;
+		clearTimeout(peopleT);
+		peopleT = setTimeout(pushMembers, 700);
+	}));
+	ppSearch?.addEventListener('input', () => {
+		const q = ppSearch.value.toLowerCase();
+		$$('.sp-aai-people-list .sp-msg-contact-pick', backdrop).forEach(l => {
+			const cb = l.querySelector('.sp-aai-people-pick');
+			l.style.display = cb && cb.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+		});
+	});
+
+	/* ---- Log entries ---- */
+	function renderEntries() {
+		const box = $('.sp-ne-entries', backdrop);
+		const ents = st.note ? (st.note.entries || []) : [];
+		if (!ents.length) { box.innerHTML = '<p class="sp-action-item-sub">No log entries yet.</p>'; return; }
+		box.innerHTML = '<ul class="sp-ne-entry-list">' + ents.map(e =>
+			`<li class="sp-ne-entry" data-entry-id="${e.id}"><div class="sp-ne-entry-body">${esc(e.body)}</div>`
+			+ `<div class="sp-ne-entry-meta"><span class="unique">${esc(e.name)} · ${esc(spNoteWhen(e.ts))}${e.edited ? ' · edited' : ''}</span>`
+			+ (e.can_edit ? iconBtn('edit', 'sp-ne-entry-edit', `data-entry-id="${e.id}"`) + iconBtn('delete', 'sp-ne-entry-del', `data-entry-id="${e.id}"`) : '')
+			+ '</div></li>').join('') + '</ul>';
+		markUniqueSpans(box);
+
+		$$('.sp-ne-entry-del', box).forEach(b => b.addEventListener('click', async () => {
+			if (!confirm('Delete this log entry?')) return;
+			b.disabled = true;
+			try {
+				const res = await spAjax('site_pulse_notes_delete_entry', { entry_id: b.dataset.entryId });
+				if (res.success) applyNote(res.data.note, false);
+				else { alert(res.data?.message || 'Could not delete the entry.'); b.disabled = false; }
+			} catch (e) { alert('Could not delete the entry.'); b.disabled = false; }
+		}));
+		$$('.sp-ne-entry-edit', box).forEach(b => b.addEventListener('click', () => {
+			const li = b.closest('.sp-ne-entry');
+			const entry = (st.note.entries || []).find(x => String(x.id) === String(b.dataset.entryId));
+			if (!li || !entry || li.querySelector('.sp-ne-entry-editor')) return;
+			const bodyDiv = li.querySelector('.sp-ne-entry-body');
+			const ed = document.createElement('div');
+			ed.className = 'sp-ne-entry-editor';
+			ed.innerHTML = `<textarea class="sp-input" rows="2">${esc(entry.body)}</textarea>`
+				+ '<div class="sp-ne-entry-editor-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-ne-entry-upd">Save</button><button type="button" class="unique sp-btn sp-btn-ghost sp-ne-entry-cancel">Cancel</button></div>';
+			bodyDiv.hidden = true;
+			bodyDiv.after(ed);
+			markUniqueSpans(ed);
+			const ta = ed.querySelector('textarea');
+			ta.focus();
+			ed.querySelector('.sp-ne-entry-cancel').addEventListener('click', () => { ed.remove(); bodyDiv.hidden = false; });
+			ed.querySelector('.sp-ne-entry-upd').addEventListener('click', async () => {
+				const text = ta.value.trim();
+				if (!text) { alert('An entry can’t be empty. Delete it instead.'); return; }
+				try {
+					const res = await spAjax('site_pulse_notes_update_entry', { entry_id: entry.id, body: text });
+					if (res.success) applyNote(res.data.note, false);
+					else alert(res.data?.message || 'Could not save the entry.');
+				} catch (e) { alert('Could not save the entry.'); }
+			});
+		}));
+	}
+
+	const entryText = $('.sp-ne-entry-text', backdrop);
+	const entrySave = $('.sp-ne-entry-save', backdrop);
+	async function addEntry() {
+		const text = entryText.value.trim();
+		if (!text) { entryText.focus(); return; }
+		if (!(await ensureSaved())) return;
+		entrySave.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_notes_add_entry', { note_id: st.id, body: text });
+			if (res.success) { entryText.value = ''; applyNote(res.data.note, false); }
+			else alert(res.data?.message || 'Could not add the entry.');
+		} catch (e) { alert('Could not add the entry.'); }
+		entrySave.disabled = false;
+	}
+	entrySave.addEventListener('click', addEntry);
+	// Enter adds the entry; Shift+Enter is a new line inside it.
+	entryText.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addEntry(); } });
+
+	/* ---- Photos (upload straight away; the note is saved first if it's new) ---- */
+	const strip = $('.sp-aai-photos-strip', backdrop);
+	const fileInput = $('.sp-aai-photos-input', backdrop);
+	function renderPhotos() {
+		strip.innerHTML = '';
+		(st.note ? st.note.attachments || [] : []).forEach(a => {
+			const cell = document.createElement('div');
+			cell.className = 'sp-action-attach';
+			cell.innerHTML = `<button type="button" class="unique sp-action-attach-thumb"><img src="${esc(a.url)}" alt="${esc(a.name || '')}"></button>`
+				+ '<button type="button" class="sp-action-attach-remove" title="Remove photo" aria-label="Remove photo">&times;</button>';
+			cell.querySelector('.sp-action-attach-thumb').addEventListener('click', () => spMsgAttachModal(a.url, a.mime, a.name));
+			cell.querySelector('.sp-action-attach-remove').addEventListener('click', async () => {
+				if (!confirm('Remove this photo?')) return;
+				try {
+					const res = await spAjax('site_pulse_notes_remove_attachment', { note_id: st.id, url: a.url });
+					if (res.success) applyNote(res.data.note, false);
+					else alert(res.data?.message || 'Could not remove the photo.');
+				} catch (e) { alert('Could not remove the photo.'); }
+			});
+			strip.appendChild(cell);
+		});
+	}
+	$('.sp-aai-photos-add', backdrop)?.addEventListener('click', () => fileInput && fileInput.click());
+	fileInput?.addEventListener('change', async () => {
+		const files = Array.from(fileInput.files || []).filter(f => /^image\//.test(f.type));
+		fileInput.value = '';
+		if (!files.length || !(await ensureSaved())) return;
+		for (let i = 0; i < files.length; i++) {
+			setStatus(`Uploading photo ${i + 1} of ${files.length}…`);
+			try {
+				const res = await spUploadNotePhoto(st.id, files[i]);
+				if (res.success) applyNote(res.data.note, false);
+				else alert(res.data?.message || 'Could not upload the photo.');
+			} catch (e) { alert('Could not upload the photo.'); }
+		}
+		setStatus('Photos saved ' + spFormatClock(new Date()));
+	});
+
+	/* ---- Close / delete ---- */
+	const onUnload = (e) => { if (st.dirty || st.saving) { e.preventDefault(); e.returnValue = ''; } };
+	window.addEventListener('beforeunload', onUnload);
+
+	async function close() {
+		if (st.closing) return;
+		st.closing = true;
+		clearTimeout(peopleT);
+		const ok = await save();
+		await pushMembers();
+		if (!ok && !confirm('Your latest changes haven’t saved. Close anyway and lose them?')) { st.closing = false; return; }
+		window.removeEventListener('beforeunload', onUnload);
+		closeFormModal();
+		renderNotes();
+	}
+	$('.sp-ne-close', backdrop).addEventListener('click', close);
+	$('.sp-ne-done', backdrop).addEventListener('click', close);
+	// Clicking outside the box must save first — so take the backdrop click before spFormModal's own
+	// close-without-saving handler sees it.
+	backdrop.addEventListener('click', (e) => { if (e.target === backdrop) { e.stopImmediatePropagation(); close(); } }, true);
+
+	$('.sp-ne-delete', backdrop).addEventListener('click', async () => {
+		if (!st.id) {
+			if ((titleEl.value.trim() || bodyEl.value.trim()) && !confirm('Discard this new note?')) return;
+			st.dirty = false;
+			window.removeEventListener('beforeunload', onUnload);
+			closeFormModal();
+			return;
+		}
+		clearTimeout(st.timer);
+		if (await spDeleteNote(st.note)) {
+			st.dirty = false;
+			window.removeEventListener('beforeunload', onUnload);
+			closeFormModal();
+		}
+	});
+
+	renderEntries();
+	renderPhotos();
+	if (note) { bodyEl.focus(); bodyEl.setSelectionRange(bodyEl.value.length, bodyEl.value.length); } else titleEl.focus();
 }
 
 
@@ -7006,6 +7685,26 @@ function spApiKeyDefs(data) {
 			placeholder: 'Enter the website-restricted key (AIza...)',
 			help: 'Runs in visitors\' browsers — the route map and place search. Restrict by <strong>Website (HTTP referrer)</strong> to <code>rovin.work</code>, and enable <strong>Maps JavaScript API</strong> + <strong>Places API (New)</strong>.',
 		},
+		// Store payment keys. Only shown when the Store module is on — a site that doesn't
+		// sell anything shouldn't be invited to paste in payment credentials. There is
+		// deliberately NO publishable-key field: Checkout is a redirect, so nothing Stripe
+		// runs in the browser, and a field that does nothing is a field someone will fill in.
+		...(data.store_module_on ? [
+		{
+			label: 'Stripe Secret Key (Store)' + (data.store_stripe_secret_set ? ' — ' + (data.store_stripe_mode === 'live' ? 'LIVE mode' : 'test mode') : ''),
+			settingKey: 'store_stripe_secret', inputId: 'sp-setting-store-stripe-secret',
+			set: data.store_stripe_secret_set, masked: data.store_stripe_forced ? 'set in wp-config.php' : data.store_stripe_secret_masked,
+			placeholder: 'rk_live_… or sk_test_…',
+			help: 'Takes payment for the online store. <strong>Use a restricted key (<code>rk_…</code>), not your full secret key</strong> — create one at <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe → Developers → API keys → Create restricted key</a> with write access to <em>Checkout Sessions</em> and <em>Refunds</em> and nothing else. Then a stolen key can\'t move money out or export your customers. Test keys and live keys are both fine here — the mode is read from the key itself, so there is no switch to forget. Stored encrypted (AES-256-GCM) with a key derived from this site\'s wp-config salts, so a database dump on its own cannot reveal it.',
+		},
+		{
+			label: 'Stripe Webhook Signing Secret (Store)',
+			settingKey: 'store_stripe_webhook', inputId: 'sp-setting-store-stripe-webhook',
+			set: data.store_stripe_webhook_set, masked: data.store_stripe_forced ? 'set in wp-config.php' : data.store_stripe_webhook_masked,
+			placeholder: 'whsec_…',
+			help: 'How the site knows a payment confirmation really came from Stripe. In <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener">Stripe → Developers → Webhooks</a> add an endpoint pointing at <code>' + esc(data.store_webhook_url || '') + '</code>, subscribe it to <code>checkout.session.completed</code> and <code>checkout.session.expired</code>, then paste its signing secret here. <strong>Without this, paid orders are never confirmed</strong> — the customer is charged and the order sits unpaid.',
+		},
+		] : []),
 		{
 			label: 'TollGuru API Key', settingKey: 'tollguru_api_key', inputId: 'sp-setting-tollguru-key',
 			set: data.tollguru_api_key_set, masked: data.tollguru_api_key_masked,
@@ -7738,6 +8437,281 @@ function spWireOverrides(wrap, data) {
 		Object.keys(overrides).forEach((tok) => unpreview(tok));
 		spWireOverrides(wrap, { override_base: base, overrides: {}, brand: brand });
 		if (st) st.textContent = 'Reset — click Save overrides to keep it.';
+	});
+}
+
+
+/* ---- Store settings ---- */
+
+async function loadStoreAdmin() {
+	const wrap = $('#sp-store-settings');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+
+	try {
+		const res = await spAjax('site_pulse_store_settings', {});
+		if (!res.success) { wrap.innerHTML = '<p>Error loading store settings.</p>'; return; }
+		renderStoreAdmin(wrap, res.data);
+		loadStoreShipping();
+	} catch (err) {
+		wrap.innerHTML = '<p>Error loading store settings.</p>';
+	}
+}
+
+// Fields are drawn from the server's declarations, so adding a setting is a row in
+// sp_store_setting_defs() and nothing here changes.
+function renderStoreAdmin(wrap, data) {
+	let html = '<div class="sp-card sp-settings-card">';
+
+	// Status first. A store with no Stripe key cannot take money, and that belongs on
+	// the screen rather than being discovered by a customer at checkout.
+	// A configuration that cannot work outranks the ready/not-ready line, because a
+	// store that takes money and charges no tax looks healthy until it isn't.
+	if (data.warning) {
+		html += '<div class="sp-notice sp-notice-warning" style="margin:0 0 20px;">' + data.warning + '</div>';
+	}
+
+	if (!data.stripe_ready) {
+		html += '<div class="sp-notice sp-notice-warning" style="margin:0 0 20px;">';
+		html += '<strong>Checkout is switched off.</strong> No payment key is set for ' + esc(data.provider_label || 'this processor') + ', so the Add to Cart button is hidden from customers. Add one under <strong>Settings &rarr; API Keys</strong>.';
+		html += '</div>';
+	} else {
+		html += '<div class="sp-help-text" style="margin:0 0 20px;">Checkout is live in <strong>' + esc(data.stripe_mode === 'live' ? 'LIVE' : 'test') + '</strong> mode. Stripe webhook URL: <code>' + esc(data.webhook_url || '') + '</code></div>';
+	}
+
+	let section = '';
+	(data.fields || []).forEach(f => {
+		// Fields carry their own section, so grouping is declared server-side rather
+		// than hardcoded here — a new group is a key in sp_store_setting_defs().
+		if ((f.section || '') !== section) {
+			section = f.section || '';
+			if (section) html += '<h3 style="margin:28px 0 4px;text-align:left;">' + esc(section) + '</h3>';
+			if (section === 'Colors') {
+				html += '<p class="sp-help-text" style="margin:0 0 18px;">Leave a colour blank to keep using the website&rsquo;s own palette. Only the ones you set are overridden.</p>';
+			}
+		}
+
+		// Colour rows are a compact list, matching the dashboard's own colour panel:
+		// swatch, label, hex, and a Reset that only appears once a colour is overridden.
+		// No "override" checkbox — the swatch opens on the colour the shop is ACTUALLY
+		// using, inherited or not, and changing it is what makes it an override.
+		if (f.type === 'color') {
+			const eff = f.effective || f.inherited || '';
+			const isOv = !!f.value;
+			// data-override carries the SAVED override, so a row nobody touches still
+			// saves what it already had rather than quietly reverting to inherited.
+			html += '<div class="sp-store-color-row" data-key="' + esc(f.key) + '" data-inherited="' + esc(f.inherited || '') + '"'
+				+ ' data-override="' + esc(f.value || '') + '"'
+				+ ' style="display:flex;align-items:center;gap:10px;padding:5px 0;text-align:left;">';
+			html += '<input type="color" class="sp-store-swatch" value="' + esc(eff || '#000000') + '"'
+				+ ' title="' + esc(f.help || f.label) + '" style="width:30px;height:26px;padding:0;border:1px solid var(--sp-border);border-radius:6px;cursor:pointer;flex:0 0 auto;">';
+			html += '<div style="flex:1 1 auto;text-align:left;">' + esc(f.label) + '</div>';
+			html += '<code class="sp-store-hex" style="font-size:0.76em;color:var(--sp-text-light);">' + esc(eff || '—') + '</code>';
+			html += '<button type="button" class="sp-store-color-reset unique sp-btn sp-btn-ghost" style="padding:2px 7px;font-size:0.72em;'
+				+ (isOv ? '' : 'visibility:hidden;') + '">Reset</button>';
+			html += '</div>';
+			return;
+		}
+
+		html += '<div class="sp-field" style="margin-bottom:22px;">';
+		html += '<label style="display:block;font-weight:600;margin-bottom:6px;text-align:left;">' + esc(f.label) + '</label>';
+
+		if (f.type === 'choice') {
+			Object.keys(f.choices || {}).forEach(key => {
+				const id = 'sp-store-set-' + f.key + '-' + key;
+				html += '<label class="checkbox-label" for="' + id + '" style="display:flex;gap:10px;align-items:flex-start;margin:0 0 8px;cursor:pointer;">';
+				html += '<input type="radio" id="' + id + '" name="sp-store-set-' + esc(f.key) + '" value="' + esc(key) + '" data-key="' + esc(f.key) + '"' + (f.value === key ? ' checked' : '') + '>';
+				html += '<div>' + esc(f.choices[key]) + '</div>';
+				html += '</label>';
+			});
+		} else if (f.type === 'toggle') {
+			const id = 'sp-store-set-' + f.key;
+			html += '<label class="checkbox-label" for="' + id + '" style="display:flex;gap:10px;align-items:center;cursor:pointer;">';
+			html += '<input type="checkbox" id="' + id + '" data-key="' + esc(f.key) + '" value="1"' + (f.value === '1' ? ' checked' : '') + '>';
+			html += '<div>Enabled</div>';
+			html += '</label>';
+		} else {
+			html += '<input type="text" class="sp-input" data-key="' + esc(f.key) + '" value="' + esc(f.value) + '" style="max-width:280px;">';
+		}
+
+		// Help text is authored server-side and may contain markup, so it is injected
+		// rather than escaped — it never carries user input.
+		if (f.help) html += '<div class="sp-help-text" style="margin-top:6px;">' + f.help + '</div>';
+		html += '</div>';
+	});
+
+	html += '<div style="display:flex;align-items:center;gap:12px;">';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-store-save-settings">Save Settings</button>';
+	html += '<span id="sp-store-settings-saved" class="sp-help-text"></span>';
+	html += '</div></div>';
+
+	// Shipping rates are a CRUD table rather than a declared field, so they get
+	// their own card below the settings. Filled by its own request.
+	html += '<div id="sp-store-shipping"></div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	// Touching a swatch is what turns an inherited colour into an override — there is no
+	// separate switch to find. Reset puts the row back to the inherited colour and marks
+	// it to be cleared on save.
+	$$('.sp-store-color-row', wrap).forEach(row => {
+		const swatch = $('.sp-store-swatch', row);
+		const hex    = $('.sp-store-hex', row);
+		const reset  = $('.sp-store-color-reset', row);
+
+		swatch.addEventListener('input', () => {
+			row.dataset.override = swatch.value;
+			if (hex) hex.textContent = swatch.value;
+			if (reset) reset.style.visibility = 'visible';
+		});
+
+		reset.addEventListener('click', () => {
+			const inherited = row.dataset.inherited || '';
+			row.dataset.override = '';
+			if (inherited) swatch.value = inherited;
+			if (hex) hex.textContent = inherited || '—';
+			reset.style.visibility = 'hidden';
+		});
+	});
+
+	const saveBtn = $('#sp-store-save-settings', wrap);
+	saveBtn.addEventListener('click', async () => {
+		const settings = {};
+		$$('[data-key]', wrap).forEach(el => {
+			const key = el.dataset.key;
+			// Colour rows are a wrapper, not an input — their value is the override
+			// recorded on the row, which is '' when the colour is inherited.
+			if (el.classList.contains('sp-store-color-row')) settings[key] = el.dataset.override || '';
+			else if (el.type === 'radio') { if (el.checked) settings[key] = el.value; }
+			else if (el.type === 'checkbox') settings[key] = el.checked ? '1' : '';
+			else settings[key] = el.value;
+		});
+
+		saveBtn.disabled = true;
+		const note = $('#sp-store-settings-saved', wrap);
+		if (note) note.textContent = 'Saving…';
+		try {
+			const res = await spAjax('site_pulse_store_save_settings', { settings });
+			if (note) note.textContent = res.success ? 'Saved.' : 'Could not save.';
+		} catch (err) {
+			if (note) note.textContent = 'Could not save.';
+		}
+		saveBtn.disabled = false;
+	});
+}
+
+
+/* ---- Store shipping rates ---- */
+
+// Rates are edited as a SET and saved in one go, like the variants table on the
+// product screen. The posted list is the whole truth, so removing a row and
+// saving is how a rate gets deleted -- no separate delete call to get out of step.
+async function loadStoreShipping() {
+	const wrap = $('#sp-store-shipping');
+	if (!wrap) return;
+	wrap.innerHTML = '<div class="sp-loading"></div>';
+
+	try {
+		const res = await spAjax('site_pulse_store_shipping_rates', {});
+		if (!res.success) { wrap.innerHTML = '<p>Error loading shipping rates.</p>'; return; }
+		renderStoreShipping(wrap, res.data.rates || []);
+	} catch (err) {
+		wrap.innerHTML = '<p>Error loading shipping rates.</p>';
+	}
+}
+
+function spShippingRow(r) {
+	r = r || {};
+	const v = k => esc(r[k] === undefined || r[k] === null ? '' : String(r[k]));
+	const sel = m => (r.method === m ? ' selected' : '');
+
+	return '<tr class="sp-ship-row" data-id="' + (parseInt(r.id, 10) || 0) + '">'
+		+ '<td><input type="text" class="sp-input" data-f="name" value="' + v('name') + '" placeholder="Standard Shipping"></td>'
+		+ '<td><select class="sp-select" data-f="method">'
+			+ '<option value="flat"' + sel('flat') + '>Flat</option>'
+			+ '<option value="free"' + (r.method === 'free' ? ' selected' : '') + '>Free</option>'
+			+ '</select></td>'
+		+ '<td><input type="text" class="sp-input" data-f="amount" value="' + v('amount') + '" placeholder="0.00" style="width:80px"></td>'
+		+ '<td><input type="text" class="sp-input" data-f="per_item" value="' + v('per_item') + '" placeholder="0.00" style="width:80px"></td>'
+		+ '<td><input type="text" class="sp-input" data-f="min_subtotal" value="' + v('min_subtotal') + '" placeholder="any" style="width:80px"></td>'
+		+ '<td><input type="text" class="sp-input" data-f="max_subtotal" value="' + v('max_subtotal') + '" placeholder="any" style="width:80px"></td>'
+		+ '<td><input type="text" class="sp-input" data-f="estimate" value="' + v('estimate') + '" placeholder="3-5 business days"></td>'
+		+ '<td style="text-align:center"><input type="checkbox" data-f="active"' + (r.active === 0 ? '' : ' checked') + '></td>'
+		+ '<td style="text-align:center"><button type="button" class="unique sp-btn sp-btn-ghost sp-ship-del" style="padding:2px 8px">&times;</button></td>'
+		+ '</tr>';
+}
+
+function renderStoreShipping(wrap, rates) {
+	let html = '<div class="sp-card sp-settings-card">';
+	html += '<h3 style="margin:0 0 4px;text-align:left;">Shipping rates</h3>';
+	html += '<div class="sp-help-text" style="margin:0 0 16px;">'
+		+ 'What a customer can choose from at checkout. <strong>With no active rates, nothing physical can be bought</strong> &mdash; there would be no way to charge for postage. '
+		+ 'Leave <em>Order $ from</em> and <em>to</em> blank to let a rate apply to any order; set <em>from</em> to 75 on a Free rate to get free shipping over $75. '
+		+ 'The first matching rate is not special &mdash; the customer sees every rate that matches and picks one.'
+		+ '</div>';
+
+	html += '<div style="overflow-x:auto;">';
+	html += '<table class="sp-table" style="min-width:860px;"><thead><tr>'
+		+ '<th style="text-align:left">Name</th>'
+		+ '<th style="text-align:left">Type</th>'
+		+ '<th style="text-align:left">Amount</th>'
+		+ '<th style="text-align:left">+ per extra item</th>'
+		+ '<th style="text-align:left">Order $ from</th>'
+		+ '<th style="text-align:left">Order $ to</th>'
+		+ '<th style="text-align:left">Delivery estimate</th>'
+		+ '<th>Active</th><th></th>'
+		+ '</tr></thead><tbody id="sp-ship-body">';
+
+	(rates.length ? rates : []).forEach(r => { html += spShippingRow(r); });
+	html += '</tbody></table></div>';
+
+	html += '<div style="display:flex;align-items:center;gap:12px;margin-top:14px;">';
+	html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-ship-add">Add rate</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-ship-save">Save Shipping Rates</button>';
+	html += '<span id="sp-ship-saved" class="sp-help-text"></span>';
+	html += '</div></div>';
+
+	wrap.innerHTML = html;
+	markUniqueSpans(wrap);
+
+	const body = $('#sp-ship-body', wrap);
+
+	// Delegated, so rows added after render behave the same as rows that came
+	// from the server.
+	body.addEventListener('click', e => {
+		const del = e.target.closest('.sp-ship-del');
+		if (del) del.closest('tr').remove();
+	});
+
+	$('#sp-ship-add', wrap).addEventListener('click', () => {
+		body.insertAdjacentHTML('beforeend', spShippingRow({ method: 'flat', active: 1 }));
+	});
+
+	const saveBtn = $('#sp-ship-save', wrap);
+	saveBtn.addEventListener('click', async () => {
+		const rates = [];
+		$$('.sp-ship-row', wrap).forEach(tr => {
+			const row = { id: parseInt(tr.dataset.id, 10) || 0 };
+			$$('[data-f]', tr).forEach(el => {
+				row[el.dataset.f] = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
+			});
+			rates.push(row);
+		});
+
+		saveBtn.disabled = true;
+		const note = $('#sp-ship-saved', wrap);
+		if (note) note.textContent = 'Saving…';
+		try {
+			const res = await spAjax('site_pulse_store_save_shipping_rates', { rates: JSON.stringify(rates) });
+			if (note) note.textContent = res.success ? (res.data.message || 'Saved.') : 'Could not save.';
+			// Reload so new rows pick up their real database ids; saving twice would
+			// otherwise insert duplicates instead of updating what was just created.
+			if (res.success) loadStoreShipping();
+		} catch (err) {
+			if (note) note.textContent = 'Could not save.';
+		}
+		saveBtn.disabled = false;
 	});
 }
 
@@ -11712,6 +12686,10 @@ function renderSurveyCard(s) {
 	).join('');
 
 	const tags      = [s.experience, s.referral].filter(Boolean).map(esc).join(' · ');
+	// Questions beyond the fixed columns ("What did you order?", visit time, …) as Label: value lines.
+	const extras    = (s.extra || []).map(x =>
+		`<div class="sp-survey-extra"><strong>${esc(x.label)}:</strong> ${esc(x.value)}</div>`
+	).join('');
 	const cityState = [s.city, s.state].filter(Boolean).map(esc).join(', ');
 	const phoneHref = s.phone ? s.phone.replace(/[^\d+]/g, '') : '';
 
@@ -11741,6 +12719,7 @@ function renderSurveyCard(s) {
 				(tags ? `<div class="sp-survey-tags">${tags}</div>` : '') +
 			'</div>' +
 			`<div class="sp-survey-rates">${rows}</div>` +
+			(extras ? `<div class="sp-survey-extras">${extras}</div>` : '') +
 			(s.comments ? `<p class="sp-survey-comments">${esc(s.comments)}</p>` : '') +
 			`<div class="sp-survey-person">${person}</div>` +
 			`<div class="sp-survey-actions">${archiveBtn}${editBtn}${del}</div>` +
@@ -11868,11 +12847,11 @@ function spEditSurvey(s) {
 
 
 /*--------------------------------------------------------------
-# Import Past Reports (GOD-only) — PDF/CSV → AI parse → review → save
+# Import Past Reports (import_data) — pick report → PDF/CSV/image → AI parse → review → save
 --------------------------------------------------------------*/
 
-let spImportMeta   = null;   // {gm_template_id, supervisor_template_id, fields, users(with type), locations, has_api_key}
-let spImportRows   = [];     // [{fileName, status, data, userId, type, locationId, periodStart, periodEnd, include, error}]
+let spImportMeta   = null;   // {templates:[{id,name,fields}], users:[{id,name,location_id}], locations, has_api_key}
+let spImportRows   = [];     // [{fileName, templateId, status, data, userId, locationId, periodStart, periodEnd, include, error}]
 let _spImportWired = false;
 
 async function initImportReports() {
@@ -11880,11 +12859,12 @@ async function initImportReports() {
 	if (!panel) return;
 
 	if (!_spImportWired) {
-		$('#sp-import-pick')?.addEventListener('click', () => $('#sp-import-files')?.click());
+		$('#sp-import-pick')?.addEventListener('click', () => { if (spImportTemplateId()) $('#sp-import-files')?.click(); });
 		$('#sp-import-files')?.addEventListener('change', e => { handleImportFiles(e.target.files); e.target.value = ''; });
 		$('#sp-import-save-all')?.addEventListener('click', saveAllImports);
 		$('#sp-import-list')?.addEventListener('change', onImportListChange);
 		$('#sp-import-list')?.addEventListener('click', onImportListClick);
+		$('#sp-import-template')?.addEventListener('change', spSyncImportLock);
 
 		const drop = $('#sp-import-drop');
 		if (drop) {
@@ -11906,13 +12886,27 @@ async function spLoadImportMeta() {
 		return;
 	}
 	spImportMeta = res.data;
+	const sel = $('#sp-import-template');
+	if (sel) sel.innerHTML = '<option value="0">— Choose a report —</option>' + spImportMeta.templates.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+	spSyncImportLock();
 	if (!spImportMeta.has_api_key) spFlash('No Claude API key set (Settings → API Keys) — parsing will fail until it is.');
 }
 
-// Role-based report type for a user id, via the meta user list ('supervisor' | 'gm').
-function spImportUserType(userId) {
-	const u = (spImportMeta && spImportMeta.users || []).find(x => x.id === userId);
-	return u ? u.type : 'gm';
+// The report chosen in the picker (0 = none yet).
+function spImportTemplateId() {
+	return parseInt($('#sp-import-template')?.value, 10) || 0;
+}
+
+function spImportTemplate(id) {
+	return (spImportMeta && spImportMeta.templates || []).find(t => t.id === id) || null;
+}
+
+// Dim the drop zone + disable the picker button until a report is chosen.
+function spSyncImportLock() {
+	const on = !!spImportTemplateId();
+	$('#sp-import-drop')?.classList.toggle('is-locked', !on);
+	const pick = $('#sp-import-pick');
+	if (pick) pick.disabled = !on;
 }
 
 function spFileToDataURL(file) {
@@ -11924,21 +12918,22 @@ function spFileToDataURL(file) {
 	});
 }
 
-// Parse each dropped/picked file (sequential — keeps API load sane and order stable).
+// Parse each dropped/picked file against the chosen report (sequential — keeps API load sane and order stable).
 async function handleImportFiles(files) {
+	const templateId = spImportTemplateId();
+	if (!templateId) { alert('Choose which report you are importing first.'); return; }
 	for (const f of Array.from(files || [])) {
-		const row = { fileName: f.name, status: 'parsing', data: null, userId: 0, type: 'gm', locationId: 0, periodStart: '', periodEnd: '', include: true, error: '' };
+		const row = { fileName: f.name, templateId, status: 'parsing', data: null, userId: 0, locationId: 0, periodStart: '', periodEnd: '', include: true, error: '' };
 		spImportRows.push(row);
 		renderImportRows();
 		try {
 			const dataUrl = await spFileToDataURL(f);
-			const res = await spAjax('site_pulse_import_parse', { file: dataUrl, mime: f.type || '' });
+			const res = await spAjax('site_pulse_import_parse', { template_id: templateId, file: dataUrl, mime: f.type || '' });
 			if (!res.success) { row.status = 'error'; row.error = res.data?.message || 'Parse failed.'; }
 			else {
 				row.status      = 'ok';
 				row.data        = res.data;
 				row.userId      = res.data.matched_user_id || 0;
-				row.type        = res.data.detected_type || 'gm';   // auto-detected from who wrote it
 				row.locationId  = res.data.matched_location_id || 0;
 				row.periodStart = res.data.period_start || '';
 				row.periodEnd   = res.data.period_end || '';
@@ -11956,14 +12951,16 @@ function renderImportRows() {
 	if (actions) actions.hidden = !spImportRows.some(r => r.status === 'ok');
 }
 
-function spImportFieldLabel(key) {
-	const f = spImportMeta && spImportMeta.fields.find(x => x.key === key);
+function spImportFieldLabel(templateId, key) {
+	const t = spImportTemplate(templateId);
+	const f = t && t.fields.find(x => x.key === key);
 	return f ? f.label : key;
 }
 
 function renderImportRow(row, i) {
+	const tplName = esc(spImportTemplate(row.templateId)?.name || 'Report');
 	if (row.status === 'parsing') {
-		return `<div class="sp-card-sm sp-import-card" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><span class="unique sp-import-status">Reading…</span></div><div class="sp-loading"></div></div>`;
+		return `<div class="sp-card-sm sp-import-card" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><span class="unique sp-import-status">Reading as ${tplName}…</span></div><div class="sp-loading"></div></div>`;
 	}
 	if (row.status === 'error') {
 		return `<div class="sp-card-sm sp-import-card sp-import-card-error" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><button type="button" class="unique sp-btn sp-btn-ghost sp-import-remove" data-i="${i}">Remove</button></div><div class="sp-import-err">${esc(row.error)}</div></div>`;
@@ -11973,19 +12970,15 @@ function renderImportRow(row, i) {
 	const ans       = d.answers || {};
 	const users     = spImportMeta ? spImportMeta.users : [];
 	const locs      = spImportMeta ? spImportMeta.locations : [];
-	const rtype     = row.type === 'supervisor' ? 'supervisor' : 'gm';
-	const needsLoc  = rtype === 'gm';
-	const who       = rtype === 'supervisor' ? 'Supervisor' : 'GM';
-	const userOpts  = `<option value="0">— Select ${who} —</option>` + users.map(u => `<option value="${u.id}"${u.id === row.userId ? ' selected' : ''}>${esc(u.name)}</option>`).join('');
-	const locOpts   = '<option value="0">— Select Location —</option>' + locs.map(l => `<option value="${l.id}"${l.id === row.locationId ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
-	const typeOpts  = `<option value="gm"${rtype === 'gm' ? ' selected' : ''}>GM Report</option><option value="supervisor"${rtype === 'supervisor' ? ' selected' : ''}>Supervisor Report</option>`;
+	const userOpts  = '<option value="0">— Select person —</option>' + users.map(u => `<option value="${u.id}"${u.id === row.userId ? ' selected' : ''}>${esc(u.name)}</option>`).join('');
+	const locOpts   = '<option value="0">— No location —</option>' + locs.map(l => `<option value="${l.id}"${l.id === row.locationId ? ' selected' : ''}>${esc(l.name)}</option>`).join('');
 
-	const detected  = [ d.gm_name ? `${who}: “${esc(d.gm_name)}”` : '', ( needsLoc && d.location_name ) ? `Location: “${esc(d.location_name)}”` : '' ].filter(Boolean).join(' · ');
-	const warn      = ( !row.userId || ( needsLoc && !row.locationId ) ) ? `<span class="unique sp-import-warn">needs ${who}${needsLoc ? ' + location' : ''}</span>` : '';
+	const detected  = [ d.person_name ? `Submitted by: “${esc(d.person_name)}”` : '', d.location_name ? `Location: “${esc(d.location_name)}”` : '' ].filter(Boolean).join(' · ');
+	const warn      = !row.userId ? '<span class="unique sp-import-warn">needs a person</span>' : '';
 
 	const ansKeys  = Object.keys(ans);
 	const ansRows  = ansKeys.length
-		? ansKeys.map(k => `<div class="sp-import-ans-row"><span class="unique sp-import-ans-label">${esc(spImportFieldLabel(k))}</span><span class="unique sp-import-ans-val">${esc(Array.isArray(ans[k]) ? ans[k].join(', ') : String(ans[k]))}</span></div>`).join('')
+		? ansKeys.map(k => `<div class="sp-import-ans-row"><span class="unique sp-import-ans-label">${esc(spImportFieldLabel(row.templateId, k))}</span><span class="unique sp-import-ans-val">${esc(Array.isArray(ans[k]) ? ans[k].join(', ') : String(ans[k]))}</span></div>`).join('')
 		: '<div class="sp-import-ans-row">No fields were extracted.</div>';
 
 	return `<div class="sp-card-sm sp-import-card" data-i="${i}">` +
@@ -11994,11 +12987,10 @@ function renderImportRow(row, i) {
 			warn +
 			`<button type="button" class="unique sp-btn sp-btn-ghost sp-import-remove" data-i="${i}">Remove</button>` +
 		'</div>' +
-		(detected ? `<div class="sp-import-detected">Detected — ${detected}</div>` : '') +
+		`<div class="sp-import-detected">${tplName}${detected ? ' — detected ' + detected : ''}</div>` +
 		'<div class="sp-import-grid">' +
-			`<label class="sp-import-f"><span>Report type</span><select class="sp-select sp-import-type-sel" data-i="${i}">${typeOpts}</select></label>` +
-			`<label class="sp-import-f"><span>${who}</span><select class="sp-select sp-import-user" data-i="${i}">${userOpts}</select></label>` +
-			( needsLoc ? `<label class="sp-import-f"><span>Location</span><select class="sp-select sp-import-loc" data-i="${i}">${locOpts}</select></label>` : '' ) +
+			`<label class="sp-import-f"><span>Submitted by</span><select class="sp-select sp-import-user" data-i="${i}">${userOpts}</select></label>` +
+			`<label class="sp-import-f"><span>Location</span><select class="sp-select sp-import-loc" data-i="${i}">${locOpts}</select></label>` +
 			`<label class="sp-import-f"><span>Period start</span><input type="date" class="sp-input sp-import-start" data-i="${i}" value="${esc(row.periodStart)}"></label>` +
 			`<label class="sp-import-f"><span>Period end</span><input type="date" class="sp-input sp-import-end" data-i="${i}" value="${esc(row.periodEnd)}"></label>` +
 		'</div>' +
@@ -12010,19 +13002,20 @@ function onImportListChange(e) {
 	const el = e.target;
 	const i  = parseInt(el.dataset.i, 10);
 	if (isNaN(i) || !spImportRows[i]) return;
+	const row = spImportRows[i];
 
-	if (el.classList.contains('sp-import-type-sel')) {
-		spImportRows[i].type = el.value === 'supervisor' ? 'supervisor' : 'gm';
-		renderImportRows();                                   // toggle the location field + labels
-	} else if (el.classList.contains('sp-import-user')) {
-		spImportRows[i].userId = parseInt(el.value, 10) || 0;
-		// Auto-correct the report type to the chosen person's role (this is the Ed-is-a-supervisor fix).
-		if (spImportRows[i].userId) spImportRows[i].type = spImportUserType(spImportRows[i].userId);
+	if (el.classList.contains('sp-import-user')) {
+		row.userId = parseInt(el.value, 10) || 0;
+		// No location yet? Use the person's profile location, same as a normal submission would.
+		if (row.userId && !row.locationId) {
+			const u = (spImportMeta?.users || []).find(x => x.id === row.userId);
+			if (u && u.location_id) row.locationId = u.location_id;
+		}
 		renderImportRows();
-	} else if (el.classList.contains('sp-import-loc'))     { spImportRows[i].locationId  = parseInt(el.value, 10) || 0; }
-	else if (el.classList.contains('sp-import-start'))     { spImportRows[i].periodStart = el.value; }
-	else if (el.classList.contains('sp-import-end'))       { spImportRows[i].periodEnd   = el.value; }
-	else if (el.classList.contains('sp-import-include'))   { spImportRows[i].include     = el.checked; }
+	} else if (el.classList.contains('sp-import-loc'))     { row.locationId  = parseInt(el.value, 10) || 0; }
+	else if (el.classList.contains('sp-import-start'))     { row.periodStart = el.value; }
+	else if (el.classList.contains('sp-import-end'))       { row.periodEnd   = el.value; }
+	else if (el.classList.contains('sp-import-include'))   { row.include     = el.checked; }
 }
 
 function onImportListClick(e) {
@@ -12036,21 +13029,19 @@ async function saveAllImports() {
 	const btn    = $('#sp-import-save-all');
 	const toSave = spImportRows.filter(r => r.status === 'ok' && r.include);
 	if (!toSave.length) { alert('Nothing checked to save.'); return; }
-	// GM rows need a location; supervisor rows don't. Every row needs a person.
-	if (toSave.some(r => !r.userId || (r.type !== 'supervisor' && !r.locationId))) {
-		alert('Some checked reports still need a GM/Supervisor (and a Location for GM reports). Fix or uncheck them first.');
+	if (toSave.some(r => !r.userId)) {
+		alert('Some checked reports still need the person who submitted them. Fix or uncheck them first.');
 		return;
 	}
 
-	btn.disabled = true;
+	const restore = spBtnBusy(btn, 'Saving…');
 	let saved = 0, failed = 0;
 	for (const r of toSave) {
-		const isSup = r.type === 'supervisor';
 		try {
 			const res = await spAjax('site_pulse_import_save', {
-				type:         isSup ? 'supervisor' : 'gm',
+				template_id:  r.templateId,
 				user_id:      r.userId,
-				location_id:  isSup ? 0 : r.locationId,
+				location_id:  r.locationId,
 				period_start: r.periodStart,
 				period_end:   r.periodEnd,
 				answers:      JSON.stringify((r.data && r.data.answers) || {}),
@@ -12061,7 +13052,7 @@ async function saveAllImports() {
 	}
 	spImportRows = spImportRows.filter(r => !r.saved); // drop the ones that imported
 	renderImportRows();
-	btn.disabled = false;
+	restore();
 	spFlash(`Imported ${saved} report${saved === 1 ? '' : 's'}${failed ? `, ${failed} failed` : ''}.`);
 }
 
@@ -15240,7 +16231,7 @@ function spToast(message, ms = 3200) {
 
 // When a period is submitted/approved it locks: hide the "+ Add Expense" button and show a banner.
 // (Row edit/delete + save are also blocked server-side, so this is the friendly front for that.)
-function spApplyExpenseLock(prefix, locked) {
+function spApplyExpenseLock(prefix, locked, lockedBy) {
 	const addBtn = $('#sp-' + prefix + '-add-btn');
 	if (addBtn) addBtn.style.display = locked ? 'none' : '';
 	const content = $('#sp-' + prefix + '-content');
@@ -15251,9 +16242,11 @@ function spApplyExpenseLock(prefix, locked) {
 		if (!banner) {
 			banner = document.createElement('div');
 			banner.className = 'sp-locked-banner sp-locked-banner-' + prefix;
-			banner.textContent = 'This pay period has been submitted for approval and is locked. Ask your supervisor to send it back if you need to make changes.';
 			host.insertBefore(banner, content);
 		}
+		// Name the report(s) doing the locking, so a report that ran past its pay period is obvious.
+		const which = (lockedBy || []).map(r => `${fmtReportDate(r.period_start)} – ${fmtReportDate(r.period_end)} (${r.status})`).join(', ');
+		banner.textContent = 'This pay period is locked' + (which ? ' by your expense report for ' + which : ' by a submitted expense report') + '. Ask your supervisor to send it back if you need to make changes.';
 	} else if (banner) { banner.remove(); }
 }
 
@@ -15268,7 +16261,7 @@ async function loadVehicleExpenses() {
 		_spVexp.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderVehicleExpenses();
-		spApplyExpenseLock('vexp', res.data.locked);
+		spApplyExpenseLock('vexp', res.data.locked, res.data.locked_by);
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
 }
 
@@ -15482,7 +16475,7 @@ async function loadTravelExpenses() {
 		_spTrav.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderTravelExpenses();
-		spApplyExpenseLock('trav', res.data.locked);
+		spApplyExpenseLock('trav', res.data.locked, res.data.locked_by);
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
 }
 
@@ -15659,7 +16652,7 @@ async function loadBusinessMeals() {
 		_spMeal.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderBusinessMeals();
-		spApplyExpenseLock('meal', res.data.locked);
+		spApplyExpenseLock('meal', res.data.locked, res.data.locked_by);
 	} catch (e) { wrap.innerHTML = '<p>Error loading meals.</p>'; }
 }
 
@@ -15863,7 +16856,7 @@ async function loadCompetitiveShopping() {
 		_spShop.list = res.data.expenses || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderCompetitiveShopping();
-		spApplyExpenseLock('shop', res.data.locked);
+		spApplyExpenseLock('shop', res.data.locked, res.data.locked_by);
 	} catch (e) { wrap.innerHTML = '<p>Error loading visits.</p>'; }
 }
 
@@ -16047,7 +17040,7 @@ async function loadOtherExpenses() {
 		_spOexp.recurring = res.data.recurring || [];
 		_spExpDestinations = res.data.destinations || _spExpDestinations;
 		renderOtherExpenses();
-		spApplyExpenseLock('oexp', res.data.locked);
+		spApplyExpenseLock('oexp', res.data.locked, res.data.locked_by);
 	} catch (e) { wrap.innerHTML = '<p>Error loading expenses.</p>'; }
 }
 
@@ -16575,13 +17568,31 @@ function spRepSubmitControl(data) {
 	}
 	let h = '';
 	if (rep && rep.status === 'rejected') h += `<span class="sp-submit-pill sp-submit-pill-rejected" title="${esc(rep.reject_note || 'Sent back for edits')}">Sent back</span>`;
-	if (data.can_submit_report) h += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-rep-submit-btn">Submit for Approval</button>';
+	if (data.can_submit_report && data.submit_paused) {
+		// Temporarily paused server-side — show the button, greyed out and unclickable.
+		h += '<button type="button" class="unique sp-btn sp-btn-primary" disabled title="Submitting expense reports is temporarily paused">Submit for Approval</button>';
+	} else if (data.can_submit_report) {
+		h += spRepIsPayPeriod(_spRep.start, _spRep.end)
+			? '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-rep-submit-btn">Submit for Approval</button>'
+			: '<span class="sp-help-text">Pick a single pay period to submit</span>';
+	}
 	return h;
+}
+
+// Only a whole pay period can be submitted — a custom range (Last 30 Days, an edited end date…) would
+// lock dates that belong to the next period. Pay periods when configured, else calendar months.
+function spRepIsPayPeriod(start, end) {
+	if (!start || !end) return false;
+	if (mileagePeriodLength > 0 && mileagePeriodAnchor) {
+		return computeMileagePeriods(mileagePeriodAnchor, mileagePeriodLength, 60, 1).some(p => p.start === start && p.end === end);
+	}
+	const [y, m, d] = start.split('-').map(Number);
+	return d === 1 && end === mMonthEnd(y, m);
 }
 
 // Freeze the current period to a PDF, then post it for the supervisor's approval. Locks the period.
 async function submitExpenseReport() {
-	if (!_spRep.start || !_spRep.end) { alert('Pick a pay period first.'); return; }
+	if (!spRepIsPayPeriod(_spRep.start, _spRep.end)) { alert('Pick a single pay period first (use "This Period" or the Jump menu).'); return; }
 	const btn = $('#sp-rep-submit-btn');
 	if (!confirm('Submit this expense report to your supervisor for approval?\n\nYou won\'t be able to edit this period afterward unless it is sent back to you.')) return;
 	if (btn) { btn.disabled = true; btn.textContent = 'Building PDF…'; }
@@ -16615,7 +17626,7 @@ async function loadApproveExpense() {
 	if (!wrap) return;
 	wrap.hidden = false;
 	wrap.innerHTML = '<div class="sp-loading"></div>';
-	const res = await spAjax('site_pulse_get_expense_approvals', {});
+	const res = await spAjax('site_pulse_get_expense_approvals', {}).catch(() => ({ success: false, data: { message: 'The queue took too long to load — refresh to try again.' } }));
 	if (!res.success) { wrap.innerHTML = `<div class="sp-empty-state"><p>${esc(res.data?.message || 'Could not load the queue.')}</p></div>`; return; }
 	_spAppr.reports = res.data.reports || [];
 	_spAppr.auto = (res.data.auto_approve || []).map(n => parseInt(n, 10));
@@ -16679,6 +17690,7 @@ async function openReportDetail(r, mode, detail, listWrap) {
 		bar += '<button type="button" class="unique sp-btn sp-btn-primary" data-appr-approve>Approve</button>';
 	} else if (r.status === 'approved') {
 		bar += `<span class="sp-submit-pill sp-submit-pill-approved">Approved on ${dt(r.approved_at)}${r.approved_by_name ? ' by ' + esc(r.approved_by_name) : ''}</span>`;
+		if (D.isGod) bar += '<button type="button" class="unique sp-btn sp-btn-secondary sp-appr-reject" data-appr-reopen>Reopen</button>';
 	} else if (r.status === 'rejected') {
 		bar += '<span class="sp-submit-pill sp-submit-pill-rejected">Sent back</span>';
 	}
@@ -16698,6 +17710,7 @@ async function openReportDetail(r, mode, detail, listWrap) {
 	detail.querySelector('[data-appr-pdf]')?.addEventListener('click', () => downloadReportPdf(r.id));
 	detail.querySelector('[data-appr-approve]')?.addEventListener('click', () => approveReport(r, mode));
 	detail.querySelector('[data-appr-reject]')?.addEventListener('click', () => rejectReport(r, mode));
+	detail.querySelector('[data-appr-reopen]')?.addEventListener('click', () => reopenReport(r, mode));
 	detail.querySelector('[data-appr-auto]')?.addEventListener('change', (e) => toggleAutoApprove(r, e.target.checked, mode));
 
 	const data = await fetchMileageReport(r.period_start, r.period_end, r.user_id);
@@ -16707,10 +17720,23 @@ async function openReportDetail(r, mode, detail, listWrap) {
 	renderExpenseReport(data, { target: host, readonly: true });
 }
 
+// Spinner + disabled on a .sp-btn while a slow call runs. Returns a restore() for the failure path.
+function spBtnBusy(btn, label) {
+	if (!btn) return () => {};
+	const orig = btn.textContent;
+	btn.disabled = true;
+	btn.classList.add('is-busy');
+	btn.textContent = label;
+	return () => { btn.disabled = false; btn.classList.remove('is-busy'); btn.textContent = orig; };
+}
+
 async function approveReport(r, mode) {
 	if (!confirm('Approve this report? It will be emailed to accounting and ' + r.user_name + ' will be notified.')) return;
+	const bar = $(mode === 'view' ? '#sp-approved-detail' : '#sp-approve-detail');
+	bar?.querySelector('[data-appr-reject]')?.setAttribute('disabled', '');
+	const restore = spBtnBusy(bar?.querySelector('[data-appr-approve]'), 'Approving…');
 	const res = await spAjax('site_pulse_approve_expense_report', { report_id: r.id });
-	if (!res.success) { alert(res.data?.message || 'Could not approve.'); return; }
+	if (!res.success) { restore(); bar?.querySelector('[data-appr-reject]')?.removeAttribute('disabled'); alert(res.data?.message || 'Could not approve.'); return; }
 	if (res.data && res.data.emailed === false) alert('Approved — but no accounting email is set (Settings → Expense Reports), so nothing was emailed. Set it, then re-approve if needed.');
 	refreshAfterAction(mode);
 }
@@ -16718,8 +17744,22 @@ async function approveReport(r, mode) {
 async function rejectReport(r, mode) {
 	const note = prompt('Send this report back to ' + r.user_name + ' for edits. Add a note (optional):', '');
 	if (note === null) return;
+	const bar = $(mode === 'view' ? '#sp-approved-detail' : '#sp-approve-detail');
+	bar?.querySelector('[data-appr-approve]')?.setAttribute('disabled', '');
+	const restore = spBtnBusy(bar?.querySelector('[data-appr-reject]'), 'Sending back…');
 	const res = await spAjax('site_pulse_reject_expense_report', { report_id: r.id, note: note });
-	if (!res.success) { alert(res.data?.message || 'Could not send it back.'); return; }
+	if (!res.success) { restore(); bar?.querySelector('[data-appr-approve]')?.removeAttribute('disabled'); alert(res.data?.message || 'Could not send it back.'); return; }
+	refreshAfterAction(mode);
+}
+
+// GOD-only: reopen an approved report (wrong date range etc.). Unlocks its dates; the employee resubmits.
+async function reopenReport(r, mode) {
+	const note = prompt('Reopen ' + r.user_name + '\'s APPROVED report?\n\nIt unlocks the period so they can fix and resubmit. Accounting already received the PDF — let them know to discard it.\n\nNote to ' + r.user_name + ' (optional):', '');
+	if (note === null) return;
+	const detail = $(mode === 'view' ? '#sp-approved-detail' : '#sp-approve-detail');
+	const restore = spBtnBusy(detail?.querySelector('[data-appr-reopen]'), 'Reopening…');
+	const res = await spAjax('site_pulse_reopen_expense_report', { report_id: r.id, note: note });
+	if (!res.success) { restore(); alert(res.data?.message || 'Could not reopen.'); return; }
 	refreshAfterAction(mode);
 }
 
@@ -16766,7 +17806,7 @@ async function loadApprovedExpense() {
 	if (!wrap) return;
 	wrap.hidden = false;
 	wrap.innerHTML = '<div class="sp-loading"></div>';
-	const res = await spAjax('site_pulse_get_approved_expense_reports', { start: $('#sp-approved-start')?.value || '', end: $('#sp-approved-end')?.value || '' });
+	const res = await spAjax('site_pulse_get_approved_expense_reports', { start: $('#sp-approved-start')?.value || '', end: $('#sp-approved-end')?.value || '' }).catch(() => ({ success: false, data: { message: 'Could not load — refresh to try again.' } }));
 	if (!res.success) { wrap.innerHTML = `<div class="sp-empty-state"><p>${esc(res.data?.message || 'Could not load the archive.')}</p></div>`; return; }
 	_spArch.reports = res.data.reports || [];
 	renderApprovedList();
@@ -18408,6 +19448,16 @@ let spFleetSites  = [];
 let spFleetTotals = null;
 let spFleetLoaded = false;
 
+// Traffic window shown in every card's traffic cell + the fleet stat card. Clicking any
+// traffic cell steps all of them to the next one; the Traffic / Biggest change sorts follow it.
+const SP_FLEET_PERIODS = [
+	{ key: 'd30',  label: '30d' },
+	{ key: 'd90',  label: '3m'  },
+	{ key: 'd180', label: '6m'  },
+	{ key: 'd365', label: '12m' },
+];
+let spFleetPeriod = 0;
+
 function initFleet() {
 	const panel = $('#sp-panel-fleet');
 	if (!panel) return;
@@ -18415,7 +19465,14 @@ function initFleet() {
 	$('#sp-fleet-search')?.addEventListener('input', renderFleet);
 	$('#sp-fleet-filter')?.addEventListener('change', renderFleet);
 	$('#sp-fleet-sort')?.addEventListener('change', renderFleet);
+	$('#sp-fleet-sort-dir')?.addEventListener('change', renderFleet);
 	$('#sp-fleet-list')?.addEventListener('click', (e) => {
+		if (e.target.closest('.sp-fleet-name a')) return;   // title link → that site's wp-admin
+		if (e.target.closest('.sp-fleet-metric-traffic')) {
+			spFleetPeriod = (spFleetPeriod + 1) % SP_FLEET_PERIODS.length;
+			renderFleet();
+			return;
+		}
 		const head = e.target.closest('.sp-fleet-head');
 		if (head) head.closest('.sp-fleet-card')?.classList.toggle('sp-fleet-open');
 	});
@@ -18475,6 +19532,19 @@ function fleetSpark(points) {
 	return `<svg class="sp-fleet-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${coords}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 }
 
+// The active window's { sessions, pct } for one site, or null when that site hasn't
+// reported it yet (snapshot predates the 3m/6m/12m collector).
+function fleetTraffic(s) {
+	const key = SP_FLEET_PERIODS[spFleetPeriod].key;
+	if (s.traffic) return s.traffic[key] || null;
+	return key === 'd30' ? { sessions: s.sessions_30d, pct: s.traffic_pct } : null;
+}
+
+// Uppercased metric label with the period kept lowercase, so "30d" never reads as "300".
+function fleetPeriodLabel(prefix) {
+	return `${prefix} <strong class="sp-fleet-period">${SP_FLEET_PERIODS[spFleetPeriod].label}</strong>`;
+}
+
 function renderFleet() {
 	const list = $('#sp-fleet-list');
 	if (!list) return;
@@ -18482,6 +19552,7 @@ function renderFleet() {
 	const q      = ($('#sp-fleet-search')?.value || '').trim().toLowerCase();
 	const filter = $('#sp-fleet-filter')?.value || '';
 	const sort   = $('#sp-fleet-sort')?.value || 'severity';
+	const dir    = $('#sp-fleet-sort-dir')?.value === 'reverse' ? -1 : 1;
 
 	let rows = spFleetSites.slice();
 
@@ -18490,14 +19561,16 @@ function renderFleet() {
 	if (filter === 'silent') rows = rows.filter(s => !s.reporting || s.chips.some(c => c.key === 'stale'));
 	if (filter === 'audit')  rows = rows.filter(s => s.chips.some(c => c.key === 'audit'));
 
-	rows.sort((a, b) => {
+	const sessions = s => fleetTraffic(s)?.sessions ?? -1;
+	const pct      = s => fleetTraffic(s)?.pct ?? 0;
+	rows.sort((a, b) => dir * (() => {
 		if (sort === 'name')    return (a.label || '').localeCompare(b.label || '');
-		if (sort === 'traffic') return b.sessions_30d - a.sessions_30d;
-		if (sort === 'change')  return (a.traffic_pct ?? 0) - (b.traffic_pct ?? 0);   // worst drop first
-		if (sort === 'audit')   return (a.audit_at || 0) - (b.audit_at || 0);         // never-audited first
+		if (sort === 'traffic') return sessions(b) - sessions(a);
+		if (sort === 'change')  return pct(a) - pct(b);                         // worst drop first
+		if (sort === 'audit')   return (a.audit_at || 0) - (b.audit_at || 0);   // never-audited first
 		// severity: problems first, then biggest site among equals
 		return (b.severity - a.severity) || (b.sessions_30d - a.sessions_30d);
-	});
+	})());
 
 	renderFleetStats(rows.length);
 
@@ -18515,18 +19588,21 @@ function renderFleet() {
 			? `${s.kw_avg_rank !== null ? 'avg ' + s.kw_avg_rank : '—'} · ${s.kw_top10} in top 10`
 			: 'not tracked';
 		const rev = s.rating !== null ? `${s.rating} ★ (${fleetNum(s.reviews)})` : '—';
+		const traffic = fleetTraffic(s);
 
 		return `
 		<article class="sp-fleet-card${s.reporting ? '' : ' sp-fleet-silent'}" data-key="${esc(s.key)}">
 			<div class="sp-fleet-head">
 				<div class="sp-fleet-id">
-					<div class="sp-fleet-name">${esc(s.label)}</div>
+					<div class="sp-fleet-name">${s.url
+						? `<a class="unique" href="${esc(s.url)}/wp-admin/" target="_blank" rel="noopener" title="Open wp-admin">${esc(s.label)}</a>`
+						: esc(s.label)}</div>
 					<div class="sp-fleet-chips">${chips}</div>
 				</div>
 				<div class="sp-fleet-metrics">
-					<div class="sp-fleet-metric">
-						<div class="sp-fleet-metric-label">Traffic 30d</div>
-						<div class="sp-fleet-metric-value">${fleetNum(s.sessions_30d)} ${fleetDelta(s.traffic_pct)}</div>
+					<div class="sp-fleet-metric sp-fleet-metric-traffic" title="Click to switch 30d / 3m / 6m / 12m">
+						<div class="sp-fleet-metric-label">${fleetPeriodLabel('Traffic')}</div>
+						<div class="sp-fleet-metric-value">${traffic ? `${fleetNum(traffic.sessions)} ${fleetDelta(traffic.pct)}` : '—'}</div>
 					</div>
 					<div class="sp-fleet-metric">
 						<div class="sp-fleet-metric-label">Audit</div>
@@ -18551,11 +19627,6 @@ function renderFleet() {
 					${s.php   ? `<div>PHP ${esc(s.php)}</div>` : ''}
 					${s.theme ? `<div>Theme ${esc(s.theme)}</div>` : ''}
 				</div>
-				${s.url ? `<div class="sp-fleet-links">
-					<a class="unique sp-btn sp-btn-ghost" href="${esc(s.url)}" target="_blank" rel="noopener">Visit site</a>
-					<a class="unique sp-btn sp-btn-ghost" href="${esc(s.url)}/wp-admin/" target="_blank" rel="noopener">wp-admin</a>
-					<a class="unique sp-btn sp-btn-ghost" href="${esc(s.url)}/wp-admin/index.php?page=bp-analytics" target="_blank" rel="noopener">Analytics</a>
-				</div>` : ''}
 			</div>
 		</article>`;
 	}).join('');
@@ -18567,10 +19638,12 @@ function renderFleetStats(shown) {
 	const box = $('#sp-fleet-stats');
 	if (!box || !spFleetTotals) return;
 	const t = spFleetTotals;
+	const period = SP_FLEET_PERIODS[spFleetPeriod];
+	const total  = t.traffic?.[period.key] || (period.key === 'd30' ? { sessions: t.sessions_30d, pct: t.traffic_pct } : null);
 	box.innerHTML = [
 		spStatCard('Sites reporting', `${fleetNum(t.reporting)} / ${fleetNum(t.sites)}`, 'globe'),
 		spStatCard('Needs attention', fleetNum(t.alerts), 'bell', t.alerts > 0 ? 'warning' : ''),
-		spStatCard('Fleet traffic 30d', `${fleetNum(t.sessions_30d)} ${fleetDelta(t.traffic_pct)}`, 'chart'),
+		spStatCard(`Fleet traffic ${period.label}`, total ? `${fleetNum(total.sessions)} ${fleetDelta(total.pct)}` : '—', 'chart'),
 		spStatCard('Audits due', fleetNum(t.audits_due), 'audit'),
 	].join('');
 	if (shown !== undefined && shown !== t.sites) {
@@ -20490,4 +21563,363 @@ async function spBookSaveTravel() {
 	} catch (e) { alert('Could not save.'); }
 	finally { if (btn) btn.disabled = false; }
 }
+/*--------------------------------------------------------------
+# Ask AI — question → stepped AI run (live progress) → report
+--------------------------------------------------------------*/
+
+// token: bumping it abandons whatever run loop is in flight (new question, history click, reset).
+const _spAsk = { wired: false, token: 0, runId: 0 };
+
+const SP_ASK_EXAMPLES = [
+	'What are the trends in customer complaints about servers over the past 6 months?',
+	'Were there more complaints about green beans in the past year, or the year before?',
+	'How many action items company-wide have to do with maintenance issues?',
+	'How much has the company spent on mileage this year compared to the same time last year?',
+	'What are GMs reporting about staffing in their manager reports this quarter?',
+];
+
+const spAskSleep = ms => new Promise(r => setTimeout(r, ms));
+
+function initAskAi() {
+	if (!_spAsk.wired) {
+		_spAsk.wired = true;
+		$('#sp-ask-form')?.addEventListener('submit', e => { e.preventDefault(); spAskStart(); });
+		$('#sp-ask-input')?.addEventListener('keydown', e => {
+			if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); spAskStart(); }
+		});
+		$('#sp-ask-new')?.addEventListener('click', spAskReset);
+		const ex = $('#sp-ask-examples');
+		if (ex) {
+			ex.innerHTML = SP_ASK_EXAMPLES.map(q => `<button type="button" class="unique sp-ask-example">${esc(q)}</button>`).join('');
+			ex.addEventListener('click', e => {
+				const b = e.target.closest('.sp-ask-example');
+				const input = $('#sp-ask-input');
+				if (b && input) { input.value = b.textContent; input.focus(); }
+			});
+		}
+		$('#sp-ask-history')?.addEventListener('click', spAskHistoryClick);
+		$('#sp-ask-index')?.addEventListener('click', e => { if (e.target.closest('#sp-ask-index-build')) spAskBuildIndex(); });
+	}
+	spAskLoadHistory();
+}
+
+function spAskReset() {
+	_spAsk.token++;
+	_spAsk.runId = 0;
+	const out = $('#sp-ask-output');
+	if (out) out.innerHTML = '';
+	$('#sp-ask-examples')?.removeAttribute('hidden');
+	const input = $('#sp-ask-input');
+	if (input) { input.value = ''; input.focus(); }
+	spAskLoadHistory();
+}
+
+async function spAskStart(question) {
+	const input = $('#sp-ask-input');
+	const q = (question || input?.value || '').trim();
+	if (q.length < 5) { input?.focus(); return; }
+	const restore = spBtnBusy($('#sp-ask-go'), 'Asking…');
+	const res = await spAjax('site_pulse_ask_start', { question: q }).catch(() => null);
+	restore();
+	if (!res || !res.success) { alert(res?.data?.message || 'Could not start — please try again.'); return; }
+	if (input) input.value = '';
+	spAskFollow(res.data.run_id, q);
+	spAskLoadHistory();
+}
+
+// Drive a run to completion one server step at a time, repainting the progress log after each.
+async function spAskFollow(runId, question) {
+	const token = ++_spAsk.token;
+	_spAsk.runId = runId;
+	const out = $('#sp-ask-output');
+	if (!out) return;
+	$('#sp-ask-examples')?.setAttribute('hidden', '');
+	out.innerHTML = spAskShell(question);
+	spAskRenderProgress(out, [{ kind: 'step', text: 'Starting…' }], '', runId, 'running');
+
+	let fails = 0;
+	while (token === _spAsk.token) {
+		const res = await spAjax('site_pulse_ask_step', { run_id: runId }).catch(() => null);
+		if (token !== _spAsk.token) return;
+		if (!res || !res.success) {
+			// A slow step can trip a gateway timeout; the run itself is fine, so retry a few times.
+			if (++fails >= 4) { spAskRenderProgress(out, null, res?.data?.message || 'Lost the connection while working.', runId, 'stalled'); return; }
+			await spAskSleep(2500);
+			continue;
+		}
+		fails = 0;
+		const d = res.data;
+		spAskRenderProgress(out, d.log, d.status === 'error' ? (d.error || 'Something went wrong.') : '', runId, d.status);
+		if (d.status === 'done') { spAskRenderReport(out, d.report); spAskLoadHistory(); return; }
+		if (d.status === 'error') { spAskLoadHistory(); return; }
+		await spAskSleep(300);
+	}
+}
+
+function spAskShell(question) {
+	return `<div class="sp-ask-run"><div class="sp-ask-question">${esc(question)}</div><div class="sp-ask-progress"></div><div class="sp-ask-report"></div></div>`;
+}
+
+function spAskRenderProgress(out, log, error, runId, status) {
+	const p = out.querySelector('.sp-ask-progress');
+	if (!p) return;
+	let h = '';
+	if (log && log.length) {
+		h += '<ol class="sp-ask-steps">' + log.map((l, i) => {
+			const active = i === log.length - 1 && status === 'running';
+			const cls = l.kind === 'error' ? 'is-error' : (active ? 'is-active' : 'is-done');
+			return `<li class="sp-ask-step ${cls}">${esc(l.text)}</li>`;
+		}).join('') + '</ol>';
+	}
+	if (error) {
+		h += `<div class="sp-ask-error">${esc(error)} <button type="button" class="unique sp-btn sp-btn-ghost sp-ask-retry">Try again</button></div>`;
+	}
+	p.innerHTML = h;
+	p.classList.toggle('is-collapsed', status === 'done');
+	p.querySelector('.sp-ask-retry')?.addEventListener('click', () => {
+		const q = out.querySelector('.sp-ask-question')?.textContent || '';
+		// A failed run is final server-side, so "try again" asks afresh; a stalled connection just resumes.
+		if (status === 'error') spAskStart(q); else spAskFollow(runId, q);
+	});
+}
+
+function spAskRenderReport(out, r) {
+	const host = out.querySelector('.sp-ask-report');
+	if (!host || !r) return;
+	host.innerHTML = spAskReportHtml(r)
+		+ '<div class="sp-ask-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-ask-print">Download PDF</button></div>';
+	host.querySelector('.sp-ask-print')?.addEventListener('click', () => spAskPrint(r));
+}
+
+// Report → HTML. Shared by the panel and the print window, so it uses no spans for dynamic text
+// (markUniqueSpans would exempt them from inherited color — see the Site Pulse color trap).
+function spAskReportHtml(r) {
+	const labels = r.labels || {};
+	let h = `<div class="sp-ask-doc"><h3 class="sp-ask-title">${esc(r.title || '')}</h3>`;
+	if (r.stats && r.stats.length) {
+		h += '<div class="sp-ask-stats">' + r.stats.map(s =>
+			`<div class="sp-ask-stat"><div class="sp-ask-stat-value">${esc(s.value)}</div><div class="sp-ask-stat-label">${esc(s.label)}</div></div>`
+		).join('') + '</div>';
+	}
+	if (r.summary) h += `<div class="sp-ask-md">${spAskMd(r.summary)}</div>`;
+	(r.sections || []).forEach(s => {
+		h += '<section class="sp-ask-section">' + (s.heading ? `<h4 class="sp-ask-h">${esc(s.heading)}</h4>` : '');
+		if (s.type === 'text') h += `<div class="sp-ask-md">${spAskMd(s.body || '')}</div>`;
+		else if (s.type === 'table') h += spAskTable(s.columns || [], s.rows || []);
+		else if (s.type === 'items') h += spAskItems(s.items || [], labels);
+		else if (s.type === 'chart') h += spAskChart(s);
+		h += '</section>';
+	});
+	if (r.scope) h += `<div class="sp-ask-scope"><strong>Scope:</strong> ${esc(r.scope)}</div>`;
+	return h + '</div>';
+}
+
+function spAskTable(cols, rows) {
+	if (!rows.length) return '<p class="sp-help-text">Nothing to show.</p>';
+	return '<div class="sp-card sp-table-card sp-ask-table-wrap"><table class="sp-table sp-ask-table"><thead class="sp-thead"><tr>'
+		+ cols.map(c => `<th>${esc(c)}</th>`).join('') + '</tr></thead><tbody>'
+		+ rows.map(r => '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('')
+		+ '</tbody></table></div>';
+}
+
+// The specific examples (date / location / source / customer / rating / finding), filled in server-side.
+function spAskItems(items, labels) {
+	if (!items.length) return '<p class="sp-help-text">No examples.</p>';
+	const has = k => items.some(i => i[k] !== null && i[k] !== undefined && i[k] !== '');
+	const opt = [
+		['rating', 'Rating', v => v + '★'],
+		['amount', 'Amount', v => '$' + Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+		['qty', 'Miles', v => Number(v).toLocaleString()],
+		['status', 'Status', v => v],
+	].filter(([k]) => has(k));
+	const cols = ['Date', 'Location', 'Source', 'Person'].concat(opt.map(o => o[1]), ['Finding']);
+	const rows = items.map(i => [fmtReportDate(i.date), i.location || '—', labels[i.source] || i.source, i.who || '—']
+		.concat(opt.map(([k, , fmt]) => (i[k] !== null && i[k] !== undefined && i[k] !== '') ? fmt(i[k]) : ''), [i.finding || '']));
+	return spAskTable(cols, rows);
+}
+
+// Bar (categories) or line (time) chart as inline SVG; colors come from the .sp-ask-c* classes.
+function spAskChart(s) {
+	const labels = s.labels || [], series = s.series || [];
+	if (!labels.length || !series.length) return '';
+	const W = 680, H = 260, padL = 44, padR = 10, padT = 18, padB = 48;
+	const iw = W - padL - padR, ih = H - padT - padB;
+	const max = spAskNiceMax(Math.max(1, ...series.flatMap(se => se.values.map(v => +v || 0))));
+	const y = v => padT + ih - ((+v || 0) / max) * ih;
+	const n = labels.length, step = iw / n;
+	const tip = (se, i, v) => `<title>${esc(se.name)} · ${esc(labels[i])}: ${spAskFmtNum(v)}</title>`;
+	let g = '';
+	for (let i = 0; i <= 4; i++) {
+		const v = max * i / 4, yy = y(v);
+		g += `<line class="sp-ask-grid" x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}"/>`
+			+ `<text class="sp-ask-axis" x="${padL - 6}" y="${yy + 4}" text-anchor="end">${spAskFmtNum(v)}</text>`;
+	}
+	if (s.kind === 'line') {
+		series.forEach((se, si) => {
+			const pts = se.values.map((v, i) => `${padL + step * (i + 0.5)},${y(v)}`).join(' ');
+			g += `<polyline class="sp-ask-line sp-ask-c${si}" points="${pts}"/>`;
+			se.values.forEach((v, i) => { g += `<circle class="sp-ask-dot sp-ask-c${si}" cx="${padL + step * (i + 0.5)}" cy="${y(v)}" r="3.5">${tip(se, i, v)}</circle>`; });
+		});
+	} else {
+		const bw = Math.max(2, (step * 0.72) / series.length);
+		const label = n * series.length <= 16; // value labels only when they won't collide
+		series.forEach((se, si) => se.values.forEach((v, i) => {
+			const x = padL + step * i + step * 0.14 + bw * si, yy = y(v);
+			g += `<rect class="sp-ask-bar sp-ask-c${si}" x="${x}" y="${yy}" width="${bw}" height="${Math.max(0, padT + ih - yy)}" rx="2">${tip(se, i, v)}</rect>`;
+			if (label && +v) g += `<text class="sp-ask-axis sp-ask-val" x="${x + bw / 2}" y="${yy - 4}" text-anchor="middle">${spAskFmtNum(v)}</text>`;
+		}));
+	}
+	const every = Math.ceil(n / 12);
+	labels.forEach((l, i) => {
+		if (i % every) return;
+		const t = String(l);
+		g += `<text class="sp-ask-axis" x="${padL + step * (i + 0.5)}" y="${H - padB + 18}" text-anchor="middle">${esc(t.length > 16 ? t.slice(0, 15) + '…' : t)}</text>`;
+	});
+	const legend = series.length > 1
+		? '<div class="sp-ask-legend">' + series.map((se, si) => `<div class="sp-ask-legend-item"><i class="sp-ask-swatch sp-ask-c${si}"></i>${esc(se.name)}</div>`).join('') + '</div>'
+		: '';
+	return `<div class="sp-ask-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(s.heading || 'Chart')}">${g}</svg>${legend}</div>`;
+}
+
+function spAskNiceMax(v) {
+	const p = Math.pow(10, Math.floor(Math.log10(v)));
+	const f = v / p;
+	return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+
+function spAskFmtNum(v) {
+	v = +v || 0;
+	return Number.isInteger(v) ? v.toLocaleString() : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+// Minimal markdown → HTML: paragraphs, #-headings, bullet/numbered lists, **bold**, *italic*.
+// Escapes first, so nothing in the AI's text can inject markup.
+function spAskMd(src) {
+	const inline = t => esc(t)
+		.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+		.replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+	let h = '', list = null, para = [];
+	const flush = () => { if (para.length) { h += `<p>${inline(para.join(' '))}</p>`; para = []; } };
+	const close = () => { if (list) { h += `</${list}>`; list = null; } };
+	for (const raw of String(src || '').replace(/\r/g, '').split('\n')) {
+		const l = raw.trim();
+		let m;
+		if (!l) { flush(); close(); continue; }
+		if ((m = l.match(/^#{1,6}\s+(.*)$/))) { flush(); close(); h += `<h5 class="sp-ask-md-h">${inline(m[1])}</h5>`; continue; }
+		if ((m = l.match(/^[-*•]\s+(.*)$/))) { flush(); if (list !== 'ul') { close(); h += '<ul>'; list = 'ul'; } h += `<li>${inline(m[1])}</li>`; continue; }
+		if ((m = l.match(/^\d+[.)]\s+(.*)$/))) { flush(); if (list !== 'ol') { close(); h += '<ol>'; list = 'ol'; } h += `<li>${inline(m[1])}</li>`; continue; }
+		close();
+		para.push(l);
+	}
+	flush(); close();
+	return h;
+}
+
+// History list + AI-index status in the side column.
+async function spAskLoadHistory() {
+	const res = await spAjax('site_pulse_ask_history', {}).catch(() => null);
+	if (!res || !res.success) return;
+	const runs = res.data.runs || [];
+	const list = $('#sp-ask-history');
+	if (list) {
+		list.innerHTML = runs.length ? runs.map(r => {
+			const state = r.status === 'error' ? ' · failed' : (r.status === 'running' ? ' · in progress' : '');
+			return `<div class="sp-ask-hist-row${r.id === _spAsk.runId ? ' is-current' : ''}">`
+				+ `<button type="button" class="unique sp-ask-hist-open" data-run="${r.id}">${esc(r.question)}</button>`
+				+ `<div class="sp-ask-hist-meta">${esc(fmtReportDate(String(r.created_at).slice(0, 10)))}${state}</div>`
+				+ `<button type="button" class="unique sp-ask-hist-del" data-run="${r.id}" aria-label="Delete this question" title="Delete">×</button>`
+				+ '</div>';
+		}).join('') : '<div class="sp-help-text">Your questions will appear here.</div>';
+	}
+	spAskRenderIndex(res.data.index || {});
+	const names = Object.values(res.data.sources || {}).map(s => String(s).toLowerCase());
+	const intro = $('.sp-ask-intro');
+	if (intro && names.length) {
+		const joined = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1] : names[0];
+		intro.textContent = `Ask anything about your company's data — ${joined}. The AI reads the actual records, not just keywords, and writes you a report. Bigger questions take a minute or two.`;
+	}
+}
+
+async function spAskHistoryClick(e) {
+	const del = e.target.closest('.sp-ask-hist-del');
+	if (del) {
+		if (!confirm('Delete this question and its report?')) return;
+		const id = parseInt(del.dataset.run, 10);
+		await spAjax('site_pulse_ask_delete', { run_id: id }).catch(() => null);
+		if (id === _spAsk.runId) spAskReset(); else spAskLoadHistory();
+		return;
+	}
+	const open = e.target.closest('.sp-ask-hist-open');
+	if (!open) return;
+	const id = parseInt(open.dataset.run, 10);
+	const res = await spAjax('site_pulse_ask_get', { run_id: id }).catch(() => null);
+	if (!res || !res.success) return;
+	const d = res.data;
+	if (d.status === 'running') { spAskFollow(id, d.question); spAskLoadHistory(); return; }
+	_spAsk.token++;
+	_spAsk.runId = id;
+	const out = $('#sp-ask-output');
+	if (!out) return;
+	$('#sp-ask-examples')?.setAttribute('hidden', '');
+	out.innerHTML = spAskShell(d.question);
+	spAskRenderProgress(out, d.log, d.status === 'error' ? (d.error || 'Something went wrong.') : '', id, d.status);
+	if (d.status === 'done') spAskRenderReport(out, d.report);
+	spAskLoadHistory();
+}
+
+function spAskRenderIndex(idx) {
+	const el = $('#sp-ask-index');
+	if (!el) return;
+	const rows = Object.values(idx);
+	if (!rows.length) { el.innerHTML = ''; return; }
+	const total = rows.reduce((a, r) => a + r.total, 0);
+	const done = rows.reduce((a, r) => a + r.indexed, 0);
+	const pct = total ? Math.floor(done / total * 100) : 100;
+	el.innerHTML = '<h3 class="sp-ask-side-title">AI index</h3>'
+		+ `<div class="sp-ask-index-bar"><div style="width:${pct}%"></div></div>`
+		+ `<div class="sp-ask-hist-meta">${pct}% of ${total.toLocaleString()} items read${pct < 100 ? ' — fills in automatically in the background' : ''}</div>`
+		+ rows.map(r => `<div class="sp-ask-hist-meta">${esc(r.label)}: ${r.indexed.toLocaleString()} / ${r.total.toLocaleString()}</div>`).join('')
+		+ (pct < 100 ? '<button type="button" class="unique sp-btn sp-btn-ghost sp-ask-index-build" id="sp-ask-index-build">Build index now</button>' : '');
+}
+
+// Index while the page is open — one server batch per call, until nothing is left (or 40 rounds).
+async function spAskBuildIndex() {
+	for (let i = 0; i < 40; i++) {
+		spBtnBusy($('#sp-ask-index-build'), 'Building…');
+		const res = await spAjax('site_pulse_ask_index_now', {}).catch(() => null);
+		if (!res || !res.success) {
+			if (res?.data?.message) alert(res.data.message);
+			spAskLoadHistory();
+			return;
+		}
+		spAskRenderIndex(res.data.index || {});
+		if (!res.data.indexed) return;
+	}
+}
+
+// "Download PDF" — the report in a clean print window; the browser's Save as PDF does the rest.
+function spAskPrint(r) {
+	const w = window.open('', '_blank');
+	if (!w) { alert('Allow pop-ups for this site to download the PDF.'); return; }
+	const css = [
+		'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#222;margin:36px;font-size:13px;line-height:1.5}',
+		'.q{color:#666;margin:0 0 6px}h3{font-size:22px;margin:0 0 14px}h4{font-size:15px;margin:22px 0 8px}h5{font-size:13px;margin:12px 0 4px}',
+		'.sp-ask-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 16px}',
+		'.sp-ask-stat{border:1px solid #ddd;border-radius:8px;padding:10px 12px}.sp-ask-stat-value{font-size:22px;font-weight:700}.sp-ask-stat-label{color:#666;font-size:12px}',
+		'table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #e3e3e3;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f4f4f4}',
+		'.sp-ask-scope{margin-top:20px;color:#555;font-size:12px;border-top:1px solid #ddd;padding-top:10px}',
+		'svg{width:100%;height:auto}.sp-ask-grid{stroke:#e5e5e5}.sp-ask-axis{font-size:11px;fill:#666}.sp-ask-line{fill:none;stroke-width:2.5}',
+		'.sp-ask-c0{fill:#e08a2c;stroke:#e08a2c}.sp-ask-c1{fill:#3e434a;stroke:#3e434a}.sp-ask-c2{fill:#2f8f57;stroke:#2f8f57}.sp-ask-c3{fill:#7a6fd0;stroke:#7a6fd0}',
+		'.sp-ask-line.sp-ask-c0,.sp-ask-line.sp-ask-c1,.sp-ask-line.sp-ask-c2,.sp-ask-line.sp-ask-c3{fill:none}',
+		'.sp-ask-legend{display:flex;gap:14px;font-size:12px}.sp-ask-swatch{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:2px}',
+		'.sp-ask-swatch.sp-ask-c0{background:#e08a2c}.sp-ask-swatch.sp-ask-c1{background:#3e434a}.sp-ask-swatch.sp-ask-c2{background:#2f8f57}.sp-ask-swatch.sp-ask-c3{background:#7a6fd0}',
+		'section{break-inside:avoid-page}',
+	].join('');
+	w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(r.title || 'Report')}</title><style>${css}</style></head><body>`
+		+ `<div class="q">${esc(r.question || '')}</div>${spAskReportHtml(r)}</body></html>`);
+	w.document.close();
+	w.focus();
+	setTimeout(() => w.print(), 350);
+}
+
 })();

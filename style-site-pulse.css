@@ -4202,6 +4202,14 @@ input[type="file"].sp-input::file-selector-button:hover {
 	border-top:                                                1px solid var(--sp-primary-lightest);
 }
 
+.sp-survey-extras {
+	margin:                                                    20px 0 0;
+	display:                                                   grid;
+	gap:                                                       4px;
+	color:                                                     var(--sp-primary-color);
+	font-size:                                                 var(--font-size-text);
+}
+
 .sp-survey-comments + .sp-survey-person {
 	margin:                                                    14px 0 0;
 	padding:                                                   12px 0 0;
@@ -4979,26 +4987,83 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	image-orientation:                                         from-image; /* honor EXIF for pre-fix uploads */
 }
 
+/* Non-image attachment card: type badge + name + "tap to view or download", with a download button beside it.
+   It sits OUTSIDE the coloured .sp-msg-bubble-body, so it carries its own background — the old chip was
+   white-on-transparent in your own bubbles and simply didn't show on the page background. */
+.sp-msg-file-card {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(0, 1fr) auto;
+	align-items:                                               stretch;
+	margin-bottom:                                             4px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	background:                                                var(--sp-secondary-lightest);
+	overflow:                                                  hidden;
+	max-width:                                                 320px;
+}
+
+.sp-msg-bubble.mine .sp-msg-file-card { margin-left: auto; }
+
 .sp-msg-attach-file {
-	display:                                                   inline-flex;
+	display:                                                   grid;
+	grid-template-columns:                                     auto minmax(0, 1fr);
 	align-items:                                               center;
-	gap:                                                       6px;
+	gap:                                                       10px;
 	border:                                                    none;
 	cursor:                                                    pointer;
 	font:                                                      inherit;
-	margin-bottom:                                             4px;
-	padding:                                                   8px 12px;
-	border-radius:                                             var(--sp-radius);
-	background:                                                rgba(0,0,0,0.06);
-	color:                                                     inherit;
-	text-decoration:                                           none;
-	font-size:                                                 var(--font-size-text);
-	word-break:                                                break-word;
+	padding:                                                   10px 12px;
+	background:                                                none;
+	color:                                                     var(--sp-text);
+	text-align:                                                left;
 }
 
-.sp-msg-bubble.mine .sp-msg-attach-file { background: rgba(255,255,255,0.22); color: var(--white); }
+.sp-msg-file-badge {
+	display:                                                   grid;
+	place-items:                                               center;
+	min-width:                                                 42px;
+	height:                                                    42px;
+	padding:                                                   0 4px;
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-primary-color);
+	color:                                                     var(--white);
+	font-size:                                                 var(--font-size-xs);
+	font-weight:                                               700;
+	letter-spacing:                                            0.3px;
+}
 
-.sp-msg-attach-file:hover { text-decoration: underline; }
+.sp-msg-file-meta { display: grid; gap: 2px; min-width: 0; }
+
+.sp-msg-file-name {
+	font-weight:                                               700;
+	color:                                                     var(--sp-text);
+	overflow-wrap:                                             anywhere;
+}
+
+.sp-msg-file-hint {
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-msg-file-dl {
+	display:                                                   grid;
+	place-items:                                               center;
+	padding:                                                   0 14px;
+	border-left:                                               1px solid var(--sp-border);
+	color:                                                     var(--sp-primary-color);
+	text-decoration:                                           none;
+}
+
+.sp-msg-attach-file:hover .sp-msg-file-name,
+.sp-msg-attach-file.active .sp-msg-file-name,
+.sp-msg-attach-file.tab-focus .sp-msg-file-name { text-decoration: underline; }
+
+.sp-msg-file-dl:hover,
+.sp-msg-file-dl.active,
+.sp-msg-file-dl.tab-focus { background: var(--sp-secondary-light); }
+
+/* Placeholder while an attachment uploads. */
+.sp-msg-uploading .sp-msg-bubble-body { opacity: 0.6; font-style: italic; }
 
 /* Attachment preview popup (uses spFormModal). */
 .sp-attach-modal {
@@ -5660,6 +5725,10 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	grid-template-columns:                                     repeat(3, 1fr);
 	gap:                                                       24px;
 	align-items:                                               stretch;
+}
+
+.sp-action-items-list.sp-notes-list {
+	grid-template-columns:                                     repeat(2, 1fr);
 }
 
 .sp-action-items-list > .sp-pending-section,
@@ -7904,6 +7973,16 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	background:                                                var(--sp-accent-lightest);
 }
 
+/* Report picker above the drop zone; the drop zone stays dimmed until a report is chosen */
+.sp-import-tpl {
+	max-width:                                                 420px;
+	margin:                                                    0 0 14px;
+}
+
+.sp-import-drop.is-locked {
+	opacity:                                                   0.5;
+}
+
 .sp-import-list {
 	display:                                                   flex;
 	flex-direction:                                            column;
@@ -8106,6 +8185,25 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 .sp-loading-inline {
 	padding:                                                   16px 0;
 	transform:                                                 scale(0.7);
+}
+
+/* Button busy state — spBtnBusy(btn, 'Approving…') while a slow AJAX call runs */
+.sp-btn.is-busy {
+	display:                                                   inline-flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	cursor:                                                    progress;
+	opacity:                                                   0.85;
+}
+
+.sp-btn.is-busy::before {
+	content:                                                   "";
+	width:                                                     14px;
+	height:                                                    14px;
+	border:                                                    2px solid currentColor;
+	border-top-color:                                          transparent;
+	border-radius:                                             var(--sp-radius-circle);
+	animation:                                                 sp-spin 0.6s linear infinite;
 }
 
 .sp-help-text {
@@ -9023,9 +9121,9 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 .sp-fleet-silent { opacity: 0.72; }
 
 .sp-fleet-head {
-	display:                                                   flex;
+	display:                                                   grid;
+	grid-template-columns:                                     1fr 2fr;
 	align-items:                                               center;
-	justify-content:                                           space-between;
 	gap:                                                       16px;
 	padding:                                                   14px 18px;
 	cursor:                                                    pointer;
@@ -9040,6 +9138,13 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	text-overflow:                                             ellipsis;
 	white-space:                                               nowrap;
 }
+
+.sp-fleet-name a {
+	color:                                                     inherit;
+	text-decoration:                                           none;
+}
+
+.sp-fleet-name a:hover { color: var(--sp-primary-color); text-decoration: underline; }
 
 .sp-fleet-chips {
 	display:                                                   flex;
@@ -9062,10 +9167,10 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 .sp-fleet-chip-info { background: var(--sp-primary-lightest); color: var(--sp-primary-dark); }
 
 .sp-fleet-metrics {
-	display:                                                   flex;
+	display:                                                   grid;
 	align-items:                                               center;
 	gap:                                                       22px;
-	flex:                                                      0 1 auto;
+	grid-template-columns:                                     repeat(auto-fit, minmax(94px, 1fr));
 }
 
 .sp-fleet-metric { min-width: 0; }
@@ -9076,6 +9181,16 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	letter-spacing:                                            0.04em;
 	color:                                                     var(--sp-text-light);
 }
+
+/* Period inside the uppercased label stays lowercase — an uppercase "30D" reads as "300". */
+.sp-fleet-period {
+	font-weight:                                               inherit;
+	text-transform:                                            none;
+}
+
+/* Clicking the traffic cell cycles 30d → 3m → 6m → 12m. */
+.sp-fleet-metric-traffic { cursor: pointer; }
+.sp-fleet-metric-traffic:hover .sp-fleet-metric-label { color: var(--sp-primary-color); }
 
 .sp-fleet-metric-value {
 	font-size:                                                 0.92em;
@@ -9111,8 +9226,6 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	font-size:                                                 0.8em;
 	color:                                                     var(--sp-text-light);
 }
-
-.sp-fleet-links { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .sp-fleet-shown {
 	align-self:                                                center;
@@ -9900,5 +10013,530 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 
 	.sp-book-cal-to {
 		display:                                                  none;
+	}
+}
+
+/*==============================================================================
+  Notes — the cards reuse the Action Items card (.sp-action-item + friends) and
+  the Add/Edit modal pieces; only the differences live here.
+==============================================================================*/
+
+#sp-panel-notes .sp-report-filters {
+	flex-wrap:                                                 wrap;
+}
+
+/* No urgency on a note, so the left rule and labels take the accent color. */
+.sp-action-item.sp-note-card {
+	border-left-color:                                         var(--sp-accent-color);
+}
+
+.sp-note-card .sp-action-item-category {
+	color:                                                     var(--sp-accent-dark);
+	border-color:                                              var(--sp-accent-color);
+}
+
+.sp-note-title {
+	display:                                                   block;
+	width:                                                     100%;
+	margin:                                                    0 0 8px;
+	padding:                                                   0;
+	background:                                                none;
+	border:                                                    none;
+	font:                                                      inherit;
+	font-size:                                                 var(--font-size-md);
+	font-weight:                                               700;
+	line-height:                                               1.35;
+	color:                                                     var(--sp-text);
+	text-align:                                                left;
+	cursor:                                                    pointer;
+	overflow-wrap:                                             anywhere;
+}
+
+.sp-note-title:hover,
+.sp-note-title.active,
+.sp-note-title.tab-focus {
+	color:                                                     var(--sp-accent-dark);
+	text-decoration:                                           underline;
+}
+
+/* The first several lines of the body, line breaks kept, fading out at the bottom. */
+.sp-note-preview {
+	height:                                                    45vh;
+	overflow:                                                  hidden;
+	margin-bottom:                                             12px;
+	font-size:                                                 var(--font-size-text);
+	line-height:                                               1.5;
+	color:                                                     var(--sp-text);
+	white-space:                                               pre-wrap;
+	overflow-wrap:                                             anywhere;
+	user-select:                                               text;
+	-webkit-mask-image:                                        linear-gradient(to bottom, #000 70%, transparent);
+	mask-image:                                                linear-gradient(to bottom, #000 70%, transparent);
+}
+
+.sp-note-entry-by {
+	color:                                                     var(--sp-text-secondary);
+}
+
+/* ── The notepad (editor modal) ── */
+
+.sp-note-editor .sp-ne-title {
+	width:                                                     100%;
+	box-sizing:                                                border-box;
+	margin-bottom:                                             12px;
+	font-size:                                                 var(--font-size-lg);
+	font-weight:                                               700;
+}
+
+.sp-note-editor .sp-ne-body {
+	width:                                                     100%;
+	box-sizing:                                                border-box;
+	min-height:                                                320px;
+	resize:                                                    vertical;
+	font-family:                                               inherit;
+	line-height:                                               1.55;
+}
+
+.sp-ne-status {
+	min-height:                                                20px;
+	margin:                                                    6px 0 4px;
+}
+
+.sp-ne-shared-by {
+	margin:                                                    8px 0 0;
+}
+
+.sp-ne-log {
+	margin-top:                                                20px;
+}
+
+.sp-ne-entry-add {
+	display:                                                   grid;
+	grid-template-columns:                                     1fr auto;
+	gap:                                                       10px;
+	align-items:                                               end;
+	margin:                                                    8px 0 14px;
+}
+
+.sp-ne-entry-add .sp-input {
+	width:                                                     100%;
+	box-sizing:                                                border-box;
+}
+
+.sp-ne-entry-list {
+	display:                                                   grid;
+	gap:                                                       10px;
+	margin:                                                    0;
+	padding:                                                   0;
+	list-style:                                                none;
+}
+
+.sp-ne-entry {
+	padding:                                                   10px 12px;
+	background:                                                var(--sp-secondary-light);
+	border:                                                    1px solid var(--sp-secondary-color);
+	border-left:                                               3px solid var(--sp-secondary-darkest);
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-ne-entry-body {
+	font-size:                                                 var(--font-size-text);
+	line-height:                                               1.5;
+	color:                                                     var(--sp-text);
+	white-space:                                               pre-wrap;
+	overflow-wrap:                                             anywhere;
+	user-select:                                               text;
+}
+
+/* flex, not grid: the name/date runs as long as it needs and margin-auto pushes the two icon buttons right */
+.sp-ne-entry-meta {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       6px;
+	margin-top:                                                6px;
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-ne-entry-meta > span {
+	margin-right:                                              auto;
+}
+
+.sp-ne-entry-editor .sp-input {
+	width:                                                     100%;
+	box-sizing:                                                border-box;
+}
+
+/* flex, not grid: two buttons sized to their labels */
+.sp-ne-entry-editor-actions {
+	display:                                                   flex;
+	gap:                                                       8px;
+	margin-top:                                                8px;
+}
+
+@media (max-width: 576px) {
+	.sp-ne-entry-add {
+		grid-template-columns:                                    1fr;
+	}
+
+	.sp-note-editor .sp-ne-body {
+		min-height:                                               240px;
+	}
+}
+
+/*==============================================================================
+  Ask AI — question box, live progress, report
+==============================================================================*/
+
+.sp-ask-intro {
+	margin:                                                    0 0 14px;
+}
+
+.sp-ask-layout {
+	display:                                                   grid;
+	grid-template-columns:                                     minmax(0, 1fr) 280px;
+	gap:                                                       24px;
+	align-items:                                               start;
+}
+
+/* flex, not grid: the textarea takes the slack and the button sizes to its label */
+.sp-ask-composer {
+	display:                                                   flex;
+	gap:                                                       8px;
+	align-items:                                               flex-end;
+}
+
+.sp-ask-input {
+	flex:                                                      1 1 auto;
+	resize:                                                    vertical;
+	min-height:                                                72px;
+}
+
+/* flex, not grid: example chips are different lengths and should wrap row by row */
+.sp-ask-examples {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       8px;
+	margin:                                                    12px 0 0;
+}
+
+.sp-ask-examples[hidden] {
+	display:                                                   none;
+}
+
+.sp-ask-example {
+	appearance:                                                none;
+	border:                                                    1px solid var(--sp-border);
+	background:                                                var(--sp-bg-white);
+	color:                                                     var(--sp-text);
+	border-radius:                                             999px;
+	padding:                                                   6px 12px;
+	font-size:                                                 var(--font-size-sm);
+	text-align:                                                left;
+	cursor:                                                    pointer;
+	transition:                                                border-color var(--sp-transition);
+}
+
+.sp-ask-example:hover,
+.sp-ask-example.active,
+.sp-ask-example.tab-focus {
+	border-color:                                              var(--sp-accent-color);
+}
+
+.sp-ask-run {
+	margin-top:                                                20px;
+}
+
+.sp-ask-question {
+	font-weight:                                               700;
+	font-size:                                                 17px;
+	margin:                                                    0 0 10px;
+}
+
+/* Progress log — a spinner on the active step, a dot on finished ones */
+.sp-ask-steps {
+	list-style:                                                none;
+	margin:                                                    0 0 16px;
+	padding:                                                   12px 14px;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	background:                                                var(--sp-bg-white);
+	display:                                                   grid;
+	gap:                                                       6px;
+	font-size:                                                 var(--font-size-sm);
+}
+
+.sp-ask-progress.is-collapsed .sp-ask-steps {
+	display:                                                   none;
+}
+
+.sp-ask-step {
+	display:                                                   grid;
+	grid-template-columns:                                     16px 1fr;
+	gap:                                                       8px;
+	align-items:                                               center;
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-ask-step::before {
+	content:                                                   "";
+	width:                                                     12px;
+	height:                                                    12px;
+	border-radius:                                             50%;
+	background:                                                var(--sp-success);
+}
+
+.sp-ask-step.is-active {
+	color:                                                     var(--sp-text);
+	font-weight:                                               600;
+}
+
+.sp-ask-step.is-active::before {
+	box-sizing:                                                border-box;
+	background:                                                none;
+	border:                                                    2px solid var(--sp-accent-color);
+	border-top-color:                                          transparent;
+	animation:                                                 sp-spin 0.7s linear infinite;
+}
+
+.sp-ask-step.is-error {
+	color:                                                     var(--sp-danger);
+}
+
+.sp-ask-step.is-error::before {
+	background:                                                var(--sp-danger);
+}
+
+.sp-ask-error {
+	color:                                                     var(--sp-danger);
+	margin:                                                    0 0 12px;
+}
+
+/* The report */
+.sp-ask-doc {
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius);
+	background:                                                var(--sp-bg-white);
+	padding:                                                   20px 22px;
+}
+
+.sp-ask-title {
+	margin:                                                    0 0 14px;
+	font-size:                                                 22px;
+}
+
+.sp-ask-stats {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(auto-fit, minmax(150px, 1fr));
+	gap:                                                       12px;
+	margin:                                                    0 0 18px;
+}
+
+.sp-ask-stat {
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	padding:                                                   12px 14px;
+	background:                                                var(--sp-primary-lightest);
+}
+
+.sp-ask-stat-value {
+	font-size:                                                 26px;
+	font-weight:                                               700;
+	line-height:                                               1.1;
+}
+
+.sp-ask-stat-label {
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+	margin-top:                                                4px;
+}
+
+.sp-ask-md p,
+.sp-ask-md ul,
+.sp-ask-md ol {
+	margin:                                                    0 0 10px;
+}
+
+.sp-ask-md ul,
+.sp-ask-md ol {
+	padding-left:                                              22px;
+}
+
+.sp-ask-md-h {
+	margin:                                                    14px 0 6px;
+	font-size:                                                 15px;
+}
+
+.sp-ask-section {
+	margin-top:                                                22px;
+}
+
+.sp-ask-h {
+	margin:                                                    0 0 10px;
+	font-size:                                                 17px;
+}
+
+.sp-ask-table-wrap {
+	overflow-x:                                                auto;
+}
+
+.sp-ask-table td {
+	vertical-align:                                            top;
+}
+
+.sp-ask-chart svg {
+	width:                                                     100%;
+	height:                                                    auto;
+	display:                                                   block;
+}
+
+.sp-ask-grid {
+	stroke:                                                    var(--sp-border);
+}
+
+.sp-ask-axis {
+	font-size:                                                 11px;
+	fill:                                                      var(--sp-text-secondary);
+}
+
+.sp-ask-c0 { fill: var(--sp-accent-color);  stroke: var(--sp-accent-color); }
+.sp-ask-c1 { fill: var(--sp-primary-color); stroke: var(--sp-primary-color); }
+.sp-ask-c2 { fill: var(--sp-success);       stroke: var(--sp-success); }
+.sp-ask-c3 { fill: var(--sp-warning);       stroke: var(--sp-warning); }
+
+/* After the color classes, so a line is never filled in */
+.sp-ask-line {
+	fill:                                                      none;
+	stroke-width:                                              2.5;
+}
+
+/* flex, not grid: legend entries are different widths and just flow in a row */
+.sp-ask-legend {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       16px;
+	font-size:                                                 var(--font-size-sm);
+	margin-top:                                                6px;
+}
+
+.sp-ask-swatch {
+	display:                                                   inline-block;
+	width:                                                     10px;
+	height:                                                    10px;
+	border-radius:                                             2px;
+	margin-right:                                              6px;
+}
+
+.sp-ask-swatch.sp-ask-c0 { background: var(--sp-accent-color); }
+.sp-ask-swatch.sp-ask-c1 { background: var(--sp-primary-color); }
+.sp-ask-swatch.sp-ask-c2 { background: var(--sp-success); }
+.sp-ask-swatch.sp-ask-c3 { background: var(--sp-warning); }
+
+.sp-ask-scope {
+	margin-top:                                                22px;
+	padding-top:                                               12px;
+	border-top:                                                1px solid var(--sp-border);
+	font-size:                                                 var(--font-size-sm);
+	color:                                                     var(--sp-text-secondary);
+}
+
+.sp-ask-actions {
+	margin-top:                                                12px;
+}
+
+/* Side column: history + index */
+.sp-ask-side-title {
+	font-size:                                                 14px;
+	margin:                                                    0 0 8px;
+}
+
+.sp-ask-history {
+	display:                                                   grid;
+	gap:                                                       2px;
+	margin-bottom:                                             22px;
+}
+
+.sp-ask-hist-row {
+	display:                                                   grid;
+	grid-template-columns:                                     1fr 24px;
+	align-items:                                               start;
+	padding:                                                   6px 8px;
+	border-radius:                                             var(--sp-radius-sm);
+}
+
+.sp-ask-hist-row.is-current,
+.sp-ask-hist-row:hover,
+.sp-ask-hist-row.active,
+.sp-ask-hist-row.tab-focus {
+	background:                                                var(--sp-primary-lightest);
+}
+
+.sp-ask-hist-open {
+	appearance:                                                none;
+	border:                                                    none;
+	background:                                                none;
+	padding:                                                   0;
+	text-align:                                                left;
+	color:                                                     var(--sp-text);
+	font-size:                                                 var(--font-size-sm);
+	cursor:                                                    pointer;
+	grid-column:                                               1;
+}
+
+.sp-ask-hist-del {
+	appearance:                                                none;
+	border:                                                    none;
+	background:                                                none;
+	padding:                                                   0;
+	color:                                                     var(--sp-text-secondary);
+	font-size:                                                 18px;
+	line-height:                                               1;
+	cursor:                                                    pointer;
+	grid-column:                                               2;
+	grid-row:                                                  1 / span 2;
+}
+
+.sp-ask-hist-del:hover,
+.sp-ask-hist-del.active,
+.sp-ask-hist-del.tab-focus {
+	color:                                                     var(--sp-danger);
+}
+
+.sp-ask-hist-meta {
+	font-size:                                                 12px;
+	color:                                                     var(--sp-text-secondary);
+	grid-column:                                               1;
+}
+
+.sp-ask-index-bar {
+	height:                                                    8px;
+	border-radius:                                             999px;
+	background:                                                var(--sp-primary-lightest);
+	overflow:                                                  hidden;
+	margin-bottom:                                             6px;
+}
+
+.sp-ask-index-bar > div {
+	height:                                                    100%;
+	background:                                                var(--sp-success);
+}
+
+.sp-ask-index-build {
+	margin-top:                                                10px;
+}
+
+@media (max-width: 1024px) {
+	.sp-ask-layout {
+		grid-template-columns:                                 1fr;
+	}
+}
+
+@media (max-width: 576px) {
+	.sp-ask-composer {
+		flex-direction:                                        column;
+		align-items:                                           stretch;
+	}
+	.sp-ask-doc {
+		padding:                                               14px;
 	}
 }

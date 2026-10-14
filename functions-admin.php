@@ -305,6 +305,14 @@ function bp_an_audit_metrics_payload(): array {
 			[ 'key' => 'domains',   'label' => 'Linking Domains', 'unit' => 'int' ],
 		] ], $bl );
 	}
+	// Index coverage — pages indexed vs not (URL Inspection, weekly). Reason buckets live in the raw option.
+	if ( $ix = $snap( 'bp_gsc_coverage_history', [ 'indexed', 'not_indexed', 'total' ] ) ) {
+		$out['indexCoverage'] = array_merge( [ 'metrics' => [
+			[ 'key' => 'indexed',     'label' => 'Pages Indexed', 'unit' => 'int' ],
+			[ 'key' => 'not_indexed', 'label' => 'Not Indexed',   'unit' => 'int' ],
+			[ 'key' => 'total',       'label' => 'Pages Checked',  'unit' => 'int' ],
+		] ], $ix );
+	}
 	if ( $ct = $snap( 'bp_content_history', [ 'blog', 'pages', 'jobsites', 'galleries', 'testimonials', 'images' ] ) ) {
 		$out['content'] = array_merge( [ 'metrics' => [
 			[ 'key' => 'blog',         'label' => 'Blog Posts',   'unit' => 'int' ],
@@ -1186,6 +1194,7 @@ function bp_analytics_page() {
 	foreach ( [
 		[ 'searchConsole', 'Search Console', 'Google Search <b>clicks, impressions, CTR</b> &amp; <b>average position</b> (US), per day — from the Search Analytics API, refreshed every ~3 days. Follows the range &amp; grain controls above.' ],
 		[ 'backlinks',     'Backlinks',      'Total <b>backlinks</b> and distinct <b>linking domains</b> from Search Console. Google refreshes link data slowly, so the line steps rather than wiggles.' ],
+		[ 'indexCoverage', 'Pages Indexed', 'Pages <b>indexed vs not indexed</b> in Google, from the URL Inspection API — a weekly oldest-first sampler, so large sites cycle ~monthly and the total fills in over the first cycle.' ],
 		[ 'content',       'Content',        'Published <b>Blog posts, Jobsites, Galleries &amp; Testimonials</b> over time.' ],
 		[ 'reviews',       'Reviews',        'Google <b>review count</b> &amp; average <b>star rating</b> over time.' ],
 		[ 'gbpPerf',       'Google Business Profile', 'GBP <b>impressions, call clicks, website clicks</b> &amp; <b>direction requests</b> per day, pulled via the GBP hub (refreshed every ~3 days). Google reports these with a ~3-day lag.' ],

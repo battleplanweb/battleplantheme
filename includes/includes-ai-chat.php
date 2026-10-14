@@ -24,35 +24,70 @@ function bp_chat_config(): array {
 }
 
 /**
+ * Info-only mode (`'mode' => 'info'`): the chat answers questions from the
+ * knowledge + FAQ files and never collects leads or texts anyone. No Twilio
+ * or A2P needed — for non-contractor sites (restaurants, etc.).
+ */
+function bp_chat_info_only( array $o = [] ): bool {
+	if ( ! $o ) $o = bp_chat_config();
+	return strtolower( trim( (string) ( $o['mode'] ?? '' ) ) ) === 'info';
+}
+
+/**
+ * Read the first non-empty readable file from a list of candidates. Relative
+ * paths resolve against the child theme.
+ */
+function bp_chat_read_first_file( array $candidates ): string {
+	foreach ( $candidates as $f ) {
+		if ( ! $f ) continue;
+		$is_abs = ( $f[0] ?? '' ) === '/' || preg_match( '#^[A-Za-z]:#', $f );
+		$path   = $is_abs ? $f : get_stylesheet_directory() . '/' . ltrim( $f, '/' );
+		if ( is_readable( $path ) ) {
+			$txt = file_get_contents( $path );
+			if ( $txt !== false && trim( $txt ) !== '' ) return trim( $txt );
+		}
+	}
+	return '';
+}
+
+/**
  * Resolve the company knowledge block. Order of precedence:
  *   1. Inline `company_knowledge` in the site_option (short blurbs).
  *   2. An explicit `knowledge_file` (path relative to the child theme, or absolute).
  *   3. A conventional file in the child theme: ai-chat-knowledge.md / .txt.
  * Lets long, formatted knowledge live in its own file instead of functions-site.php.
+ *
+ * Client-maintained add-on files are appended after it, each under its own
+ * heading: FAQs (`faq_file`, else child-theme ai-chat-faq.txt / .md) and
+ * allergens (`allergies_file`, else ai-chat-allergies.txt / .md). Kept apart so
+ * the client can edit them on their own without touching the site knowledge.
  */
 function bp_chat_company_knowledge( array $o ): string {
 	static $cache = null;
 	if ( $cache !== null ) return $cache;
 
-	$inline = trim( (string) ( $o['company_knowledge'] ?? '' ) );
-	if ( $inline !== '' ) return $cache = $inline;
-
-	$candidates = [];
-	if ( ! empty( $o['knowledge_file'] ) ) {
-		$f = (string) $o['knowledge_file'];
-		$is_abs = ( $f[0] ?? '' ) === '/' || preg_match( '#^[A-Za-z]:#', $f );
-		$candidates[] = $is_abs ? $f : get_stylesheet_directory() . '/' . ltrim( $f, '/' );
+	$knowledge = trim( (string) ( $o['company_knowledge'] ?? '' ) );
+	if ( $knowledge === '' ) {
+		$knowledge = bp_chat_read_first_file( [
+			(string) ( $o['knowledge_file'] ?? '' ),
+			'ai-chat-knowledge.md',
+			'ai-chat-knowledge.txt',
+		] );
 	}
-	$candidates[] = get_stylesheet_directory() . '/ai-chat-knowledge.md';
-	$candidates[] = get_stylesheet_directory() . '/ai-chat-knowledge.txt';
 
-	foreach ( $candidates as $path ) {
-		if ( $path && is_readable( $path ) ) {
-			$txt = file_get_contents( $path );
-			if ( $txt !== false && trim( $txt ) !== '' ) return $cache = trim( $txt );
-		}
+	// Client-maintained add-on files: option key => [ default basename, section heading ].
+	$extras = [
+		'faq_file'       => [ 'ai-chat-faq',       'Frequently asked questions (from the business — treat these answers as authoritative)' ],
+		'allergies_file' => [ 'ai-chat-allergies', 'Allergen and dietary information (from the business — authoritative; answer allergen questions ONLY from this, never guess, and suggest confirming with staff for severe allergies)' ],
+	];
+
+	$parts = $knowledge !== '' ? [ $knowledge ] : [];
+	foreach ( $extras as $key => [ $base, $heading ] ) {
+		$txt = bp_chat_read_first_file( [ (string) ( $o[ $key ] ?? '' ), "{$base}.txt", "{$base}.md" ] );
+		if ( $txt !== '' ) $parts[] = "## {$heading}\n" . $txt;
 	}
-	return $cache = '';
+
+	return $cache = implode( "\n\n", $parts );
 }
 
 /**
@@ -130,9 +165,10 @@ function bp_chat_reply_number( array $o = [] ): string {
 
 /**
  * The widget can run only when both an Anthropic key and a Twilio
- * destination + credentials are configured.
+ * destination + credentials are configured. Info-only mode needs just the key.
  */
 function bp_chat_ready(): bool {
+	if ( bp_chat_info_only() ) return bp_chat_api_key() !== '';
 	return bp_chat_api_key() !== ''
 		&& bp_chat_twilio( 'sid' ) !== '' && bp_chat_twilio( 'token' ) !== ''
 		&& bp_chat_twilio( 'number' ) !== ''
@@ -185,6 +221,12 @@ function bp_chat_enqueue_assets(): void {
 	// Policy + Terms links after it.
 	$default_consent = "By providing your mobile number, you consent to receive customer care text messages from "
 		. "{$company}. Message frequency varies; msg & data rates may apply. Reply STOP to opt out.";
+
+	// Info-only never texts, so no SMS disclosure (the Privacy/Terms links still show).
+	if ( bp_chat_info_only( $o ) ) {
+		$default_greeting = "Hi! Have a question? Ask me anything and I'll help.";
+		$default_consent  = '';
+	}
 
 	wp_localize_script( 'bp-ai-chat', 'bpChat', [
 		'restUrl'     => esc_url_raw( rest_url( 'bp-chat/v1/message' ) ),
@@ -370,7 +412,7 @@ function bp_chat_run( array $messages, string $cid ) {
 	$o['company_knowledge'] = bp_chat_company_knowledge( $o );
 
 	$system = bp_chat_system_prompt( $o, $customer );
-	$tools  = bp_chat_tools();
+	$tools  = bp_chat_info_only( $o ) ? [] : bp_chat_tools();
 
 	// Persist the browser transcript so a handoff to SMS continues seamlessly.
 	$conv = bp_chat_conv_get_or_create_by_cid( $cid );
@@ -405,7 +447,11 @@ function bp_chat_run( array $messages, string $cid ) {
 		if ( ( $block['type'] ?? '' ) === 'text' ) $reply .= $block['text'];
 	}
 	$reply = trim( $reply );
-	if ( $reply === '' ) $reply = "Thanks! Someone from " . ( $customer['name'] ?? 'our team' ) . " will follow up shortly.";
+	if ( $reply === '' ) {
+		$reply = bp_chat_info_only( $o )
+			? "Sorry, I didn't catch that. Could you ask another way?"
+			: "Thanks! Someone from " . ( $customer['name'] ?? 'our team' ) . " will follow up shortly.";
+	}
 
 	bp_chat_msg_add( (int) $conv['id'], 'assistant', $reply, 'web' );
 
@@ -585,8 +631,8 @@ function bp_chat_call_claude( string $system, array $messages, array $tools ) {
 			'cache_control' => [ 'type' => 'ephemeral' ],
 		] ],
 		'messages' => $messages,
-		'tools'    => $tools,
 	];
+	if ( $tools ) $body['tools'] = $tools;
 
 	// `effort` is Opus/Sonnet-only — it errors on Haiku. Low effort keeps the
 	// chat snappy and cheap; the task is light qualification, not deep reasoning.

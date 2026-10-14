@@ -1346,8 +1346,10 @@ function battleplan_getBuildArchive($atts, $content = null) {
 
 		// Service + location label for THIS job. WordPress collapses the "--" in the term SLUG down to a
 		// single dash, but the term NAME keeps "service--city-st" — so split the NAME (fall back to the
-		// slug if a name ever lacks it). Service goes in the <h3>, location in a <span> (framework
-		// sub-head pattern), i.e. <h3>Roofing Installation<span>Oglesby, TX</span></h3>.
+		// slug if a name ever lacks it). The two read as one phrase joined by " in ", i.e.
+		// <h3>Roofing Installation<span> in Oglesby, TX</span></h3> — the span is a styling hook only,
+		// nothing in the framework styles it, so the separator has to be real text or the two jam
+		// together ("Roofing InstallationOglesby, TX", which is how this shipped).
 		$jobsiteService = $jobsiteLocation = '';
 		if ( ! empty($jobsiteSvcTerm) ) {
 			$raw   = ( strpos((string) $jobsiteSvcTerm->name, '--') !== false ) ? $jobsiteSvcTerm->name : $jobsiteSvcTerm->slug;
@@ -1370,7 +1372,7 @@ function battleplan_getBuildArchive($atts, $content = null) {
 		$subhead = '';
 		if ( $jobsiteService !== '' ) :
 			$subheadText = esc_html($jobsiteService);
-			if ( $jobsiteLocation !== '' ) $subheadText .= '<span>'.esc_html($jobsiteLocation).'</span>';
+			if ( $jobsiteLocation !== '' ) $subheadText .= '<span class="jobsite-subhead-location"> in '.esc_html($jobsiteLocation).'</span>';
 			$subhead = '<h3 class="jobsite-subhead">';
 			$subhead .= $linkLoc !== '' ? '<a href="'.esc_url($linkLoc).'">'.$subheadText.'</a>' : $subheadText;
 			$subhead .= '</h3>';
@@ -1641,7 +1643,16 @@ function battleplan_getPostSlider($atts, $content = null ) {
 	$pause = esc_attr($a['pause']) == "true" ? "hover" : "false";
 
 	if ( $link == "" ) :
-		$linkTo = ( $type === "jobsite_geo" ) ? "/areas-we-serve/" : "/".$type."/";
+		// jobsite_geo has no public archive of its own, so the "View All" button needs a real
+		// destination. /areas-we-serve/ is a town list — nobody clicking View More under a project
+		// photo expects that — so point at the busiest /service/ page instead and only fall back to
+		// the town list if this site has no service terms yet.
+		if ( $type === "jobsite_geo" ) :
+			$topService = bp_geo_top_service_url();
+			$linkTo     = $topService !== '' ? $topService : "/areas-we-serve/";
+		else :
+			$linkTo = "/".$type."/";
+		endif;
 	elseif ( $link == "none" || $link == "false" || $link == "no" ) :
 		$link = "none";
 	endif;

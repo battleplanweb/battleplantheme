@@ -6,10 +6,12 @@ require_once get_template_directory() . '/includes/includes-site-pulse-brightloc
 require_once get_template_directory() . '/includes/includes-site-pulse-agency-reviews.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-fleet.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-reports-ai.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-ask.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-surveys.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-import.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-card-import.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-messages.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-notes.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-sms-nudge.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-push.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-pwa.php';
@@ -18,6 +20,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-directory
 require_once get_template_directory() . '/includes/includes-site-pulse-emails.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-customer-messages.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-booking.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
 
@@ -43,7 +46,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-booking.p
 # Constants & Setup
 --------------------------------------------------------------*/
 
-define( 'SITE_PULSE_DB_VERSION', '1.64' );
+define( 'SITE_PULSE_DB_VERSION', '1.65' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
@@ -921,6 +924,8 @@ function site_pulse_install_db(): void {
 	// HMAC-signed — see includes-site-pulse-surveys.php). One row per submission. `ratings` is a
 	// JSON map of dimension => 1-5 (dimensions can differ per brand); `avg_rating`/`overall` are
 	// denormalized for fast sorting + summary cards. `location` is the customer-picked restaurant.
+	// `extra` is a JSON list of [{label, value}] — any question the form asks beyond the fixed
+	// columns, so a new survey question flows through with no schema change (DB 1.65).
 	$sql .= "CREATE TABLE " . site_pulse_table('surveys') . " (
 		id int(11) NOT NULL AUTO_INCREMENT,
 		location varchar(150) DEFAULT NULL,
@@ -939,6 +944,7 @@ function site_pulse_install_db(): void {
 		avg_rating decimal(3,2) DEFAULT NULL,
 		overall tinyint(4) DEFAULT NULL,
 		comments text DEFAULT NULL,
+		extra longtext DEFAULT NULL,
 		source_ip varchar(60) DEFAULT NULL,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
@@ -1718,7 +1724,7 @@ function site_pulse_seed_roles(): void {
 		[
 			'slug'            => 'system-admin',
 			'label'           => 'System Admin',
-			'capabilities'    => wp_json_encode( array_keys( site_pulse_capability_catalog_all() ) ),
+			'capabilities'    => wp_json_encode( array_values( array_diff( array_keys( site_pulse_capability_catalog_all() ), site_pulse_preference_caps() ) ) ),
 			'hierarchy_level' => 110,
 		],
 		[
@@ -1753,7 +1759,7 @@ function site_pulse_seed_extra_roles(): void {
 	$t = site_pulse_table('roles');
 	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $t ) ) !== $t ) return;
 	$extra = [
-		[ 'slug' => 'system-admin', 'label' => 'System Admin', 'capabilities' => wp_json_encode( array_keys( site_pulse_capability_catalog_all() ) ), 'hierarchy_level' => 110, 'is_active' => 1 ],
+		[ 'slug' => 'system-admin', 'label' => 'System Admin', 'capabilities' => wp_json_encode( array_values( array_diff( array_keys( site_pulse_capability_catalog_all() ), site_pulse_preference_caps() ) ) ), 'hierarchy_level' => 110, 'is_active' => 1 ],
 		[ 'slug' => 'user',         'label' => 'User',         'capabilities' => wp_json_encode( [ 'submit_reports', 'submit_mileage' ] ),         'hierarchy_level' => 10,  'is_active' => 1 ],
 	];
 	foreach ( $extra as $r ) {
@@ -2016,7 +2022,11 @@ function site_pulse_enqueue_assets(): void {
 		'userRole'           => $role_data ? $role_data['slug'] : '',
 		'userCaps'           => site_pulse_effective_caps( $eff_user_id ),
 		// Sticky default for the expense/mileage "Charge To" — this user's last-used store/account.
-		'lastChargeTo'       => (string) get_user_meta( $eff_user_id, '_sp_last_charge_to', true ),
+		// Gated on the `remember_charge_to` preference capability (off unless a role/person is given
+		// it), so with it off the forms open on the plain default. The value keeps being RECORDED
+		// either way, so granting the cap works from the very next page load.
+		'lastChargeTo'       => site_pulse_user_can( $eff_user_id, 'remember_charge_to' )
+			? (string) get_user_meta( $eff_user_id, '_sp_last_charge_to', true ) : '',
 		'locationId'         => $profile ? (int) $profile['location_id'] : 0,
 		'locationName'       => $location_name,
 		'appName'            => site_pulse_get_setting( 'app_name', 'Site Pulse' ),
@@ -2208,6 +2218,7 @@ function site_pulse_capability_catalog_all(): array {
 		'view_supervisor_action_items' => 'View all supervisor action items',
 		'view_chat'         => 'Use Chat',
 		'view_action_items' => 'View Action Items',
+		'view_notes'        => 'Use Notes',
 		'view_analytics'    => 'View analytics',
 		'view_ai_insights'  => 'View AI insights',
 		'use_ai_assistant'  => 'Use AI Assistant',
@@ -2223,6 +2234,7 @@ function site_pulse_capability_catalog_all(): array {
 		'send_customer_push'     => 'Send customer notifications',
 		'view_schedule_requests' => 'View scheduling requests',
 		'view_bookings'          => 'View all bookings',
+		'view_orders'            => 'View orders',
 		'view_own_bookings'      => 'View own bookings only',
 		'see_superadmin'    => 'See protected admin in lists',
 		'view_activity_log' => 'View the activity log',
@@ -2234,6 +2246,8 @@ function site_pulse_capability_catalog_all(): array {
 		'view_other_expenses'        => 'Other Expenses',
 		'view_travel_expenses'       => 'Travel Expenses',
 		'view_expense_overview'      => 'Expense Report Overview',
+		// A PREFERENCE, not access (see site_pulse_preference_caps) — off unless a role/person is given it.
+		'remember_charge_to'         => 'Remember last &quot;Charge To&quot; (defaults the next expense/mileage form to it)',
 		'approve_expense_reports'    => 'Approve expense reports (supervisor queue)',
 		'view_approved_expense_reports' => 'View approved expense reports (archive)',
 		'import_data'       => 'Import reports &amp; comment cards',
@@ -2261,6 +2275,10 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_booking_services'  => 'Manage services, resources &amp; availability',
 		'manage_booking_payments'  => 'Manage passes, memberships &amp; refunds',
 		'manage_booking_settings'  => 'Manage booking settings',
+		'manage_orders'            => 'Process, fulfill &amp; cancel orders',
+		'manage_products'          => 'Manage products, variants &amp; inventory',
+		'manage_store_payments'    => 'Refund orders &amp; view payment records',
+		'manage_store_settings'    => 'Manage store settings',
 	] );
 }
 
@@ -2313,13 +2331,30 @@ function site_pulse_parse_overrides( $raw ): array {
  * site_pulse_user_can() for server-side AJAX gating, the dashboard template, and the JS localization.
  */
 function site_pulse_effective_caps( int $user_id ): array {
+	$caps = site_pulse_stored_caps( $user_id );   // role capabilities + per-user overrides
+
 	// A god sees and can do everything, all the time — the FULL capability catalog, never
 	// module-filtered. (Impersonation passes the impersonated user's id here, so this only
 	// applies when a god is acting as themselves; an impersonated god gets the user's real caps.)
+	// The ONE exception is preference caps: they are UX defaults, not access, so they stay opt-in
+	// for a god too — otherwise a "default off" preference would be permanently on for gods.
 	if ( site_pulse_is_god( $user_id ) ) {
-		return array_merge( array_keys( site_pulse_capability_catalog_all() ), [ 'god_mode' ] );
+		$prefs = site_pulse_preference_caps();
+		$all   = array_values( array_diff( array_keys( site_pulse_capability_catalog_all() ), $prefs ) );
+		return array_merge( $all, array_values( array_intersect( $caps, $prefs ) ), [ 'god_mode' ] );
 	}
 
+	// Caps owned by an off module go inert here — the single runtime chokepoint for
+	// site_pulse_user_can() and the dashboard's per-user nav. Stored caps are untouched.
+	return site_pulse_filter_caps_by_module( $caps );
+}
+
+/**
+ * The capabilities STORED for a user — their access role's capability list with their per-user
+ * overrides applied on top (an override of true grants a cap the role lacks; false revokes one it
+ * grants). No god shortcut and no module filtering; site_pulse_effective_caps() adds both.
+ */
+function site_pulse_stored_caps( int $user_id ): array {
 	$profile = site_pulse_get_user_profile( $user_id );
 	if ( ! $profile ) return [];
 
@@ -2334,9 +2369,18 @@ function site_pulse_effective_caps( int $user_id ): array {
 			$caps = array_values( array_diff( $caps, [ $cap ] ) );
 		}
 	}
-	// Caps owned by an off module go inert here — the single runtime chokepoint for
-	// site_pulse_user_can() and the dashboard's per-user nav. Stored caps are untouched.
-	return site_pulse_filter_caps_by_module( $caps );
+	return $caps;
+}
+
+/**
+ * PREFERENCE capabilities — catalog entries that switch on a convenience behavior rather than grant
+ * access to anything. They live in the same Roles / Individual grids (so they can be turned on per role
+ * AND per person), but they are deliberately left OUT of every blanket grant: god's "everything" set,
+ * the dashboard's god branch, and the seeded full-access roles. That keeps "default off" honest —
+ * nobody gets one without somebody ticking the box.
+ */
+function site_pulse_preference_caps(): array {
+	return [ 'remember_charge_to' ];
 }
 
 function site_pulse_user_can( int $user_id, string $capability ): bool {
@@ -6694,9 +6738,14 @@ function site_pulse_ajax_admin_save_setting(): void {
 	// sp_book_set_secret) — read access to this database must not be read access to
 	// the client's money. They still route through manage_api_keys like every other key.
 	$booking_secret_keys = [ 'booking_stripe_secret_key', 'booking_stripe_webhook_secret' ];
+	// The Store's payment secrets get the same treatment as Booking's, through the Store
+	// module's own encryption (a separately namespaced key, so the two modules' secrets
+	// are not interchangeable even on a site running both).
+	$store_secret_keys   = [ 'store_stripe_secret', 'store_stripe_webhook' ];
 	$api_key_keys   = array_merge(
 		[ 'claude_api_key', 'maps_js_api_key', 'google_api_key', 'tollguru_api_key', 'brightlocal_api_key', 'booking_stripe_publishable_key' ],
-		$booking_secret_keys
+		$booking_secret_keys,
+		$store_secret_keys
 	);
 	$notif_keys     = [ 'push_enabled', 'messages_email_enabled', 'notifications_email_enabled', 'push_contact_email' ];
 	$required_cap   = in_array( $key, $api_key_keys, true ) ? 'manage_api_keys'
@@ -6707,6 +6756,8 @@ function site_pulse_ajax_admin_save_setting(): void {
 		site_pulse_set_api_key( $value );
 	} elseif ( in_array( $key, $booking_secret_keys, true ) && function_exists( 'sp_book_set_secret' ) ) {
 		sp_book_set_secret( substr( $key, 8 ), sanitize_text_field( $value ) );   // strip the 'booking_' namespace prefix
+	} elseif ( in_array( $key, $store_secret_keys, true ) && function_exists( 'sp_store_set_secret' ) ) {
+		sp_store_set_secret( substr( $key, 6 ), sanitize_text_field( $value ) );  // strip the 'store_' namespace prefix
 	} else {
 		site_pulse_set_setting( $key, sanitize_text_field( $value ) );
 	}
@@ -6738,9 +6789,25 @@ function site_pulse_ajax_admin_get_settings(): void {
 	$bl_key    = (string) site_pulse_get_setting( 'brightlocal_api_key', '' );
 	$bl_masked = $bl_key ? substr( $bl_key, 0, 6 ) . '...' . substr( $bl_key, -4 ) : '';
 
+	// Store payment secrets. Decrypted only to be MASKED — the real value never goes back
+	// to the browser. The mode badge is derived from the key's own sk_/rk_ prefix rather
+	// than from a separate setting that could disagree with it.
+	$store_secret = function_exists( 'sp_store_get_secret' ) ? sp_store_get_secret( 'stripe_secret' ) : '';
+	$store_hook   = function_exists( 'sp_store_get_secret' ) ? sp_store_get_secret( 'stripe_webhook' ) : '';
+	$store_forced = defined( 'BP_STORE_STRIPE_SECRET' ) && BP_STORE_STRIPE_SECRET;
+
 	wp_send_json_success( [
 		'claude_api_key_masked'      => $masked,
 		'claude_api_key_set'         => ! empty( $api_key ),
+		'store_stripe_secret_masked'  => $store_secret ? sp_store_mask_secret( $store_secret ) : '',
+		'store_stripe_secret_set'     => ! empty( $store_secret ) || $store_forced,
+		'store_stripe_webhook_masked' => $store_hook ? sp_store_mask_secret( $store_hook ) : '',
+		'store_stripe_webhook_set'    => ! empty( $store_hook ) || ( defined( 'BP_STORE_STRIPE_WEBHOOK_SECRET' ) && BP_STORE_STRIPE_WEBHOOK_SECRET ),
+		// Shown beside the fields so there is no guessing about what to paste into Stripe.
+		'store_webhook_url'           => function_exists( 'sp_store_webhook_url' ) ? sp_store_webhook_url() : '',
+		'store_stripe_mode'           => function_exists( 'sp_store_stripe_mode' ) ? sp_store_stripe_mode() : '',
+		'store_stripe_forced'         => (bool) $store_forced,
+		'store_module_on'             => function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'store' ),
 		'google_api_key_masked'      => $google_masked,
 		'google_api_key_set'         => ! empty( $google_key ),
 		'maps_js_api_key_masked'     => $maps_masked,
@@ -10633,6 +10700,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 			return [ 'id' => (int) $r['id'], 'status' => $r['status'], 'submitted_at' => $r['submitted_at'], 'approved_at' => $r['approved_at'], 'approved_by_name' => $r['approved_by_name'] ?? '', 'reject_note' => $r['reject_note'], 'emailed_at' => $r['emailed_at'] ];
 		} )(),
 		'can_submit_report'   => ( $start !== '' && $end !== '' && $user_id === site_pulse_effective_user_id() ),
+		'submit_paused'       => site_pulse_expense_submit_paused(), // button shows greyed-out while paused
 	] );
 }
 
@@ -10950,6 +11018,7 @@ function site_pulse_ajax_get_expenses(): void {
 		'recurring'    => site_pulse_recurring_get( $user_id ), // this user's recurring templates (Other Expenses)
 		// Locked = a submitted/approved report overlaps this period, so the screen freezes add/edit/delete.
 		'locked'       => site_pulse_expense_range_locked( $user_id, $start, $end ),
+		'locked_by'    => site_pulse_expense_locking_reports( $user_id, $start, $end ), // which report(s), for the banner
 	] );
 }
 
@@ -11069,6 +11138,18 @@ function site_pulse_expense_range_locked( int $user_id, string $start, string $e
 	) );
 }
 
+// The submitted/approved reports that overlap [start,end] — named in the lock banner so a bad range
+// (e.g. a report that ran past its pay period) is obvious instead of a mystery lock.
+function site_pulse_expense_locking_reports( int $user_id, string $start, string $end ): array {
+	if ( $start === '' || $end === '' ) return [];
+	global $wpdb;
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT id, period_start, period_end, status FROM " . site_pulse_table('expense_reports') . "
+		 WHERE user_id = %d AND status IN ( 'submitted', 'approved' ) AND period_start <= %s AND period_end >= %s ORDER BY period_start",
+		$user_id, $end, $start
+	), ARRAY_A ) ?: [];
+}
+
 // The report row for an EXACT period (drives the Overview submit button / pill state). Any status.
 function site_pulse_expense_report_row( int $user_id, string $start, string $end ): ?array {
 	if ( $start === '' || $end === '' ) return null;
@@ -11125,6 +11206,48 @@ function site_pulse_expense_auto_approve_set( int $supervisor_id, int $employee_
 	update_user_meta( $supervisor_id, 'sp_expense_auto_approve', $ids );
 	return $ids;
 }
+
+// Auto-approve is effectively a per-EMPLOYEE flag: it's ON if ANY user's list names them. (It used to be
+// saved on whoever clicked the toggle — a god or an impersonating god — while submit only checked the
+// employee's own supervisor's list, so the box showed checked and reports still queued.)
+function site_pulse_expense_auto_approved_ids(): array {
+	global $wpdb;
+	$ids = [];
+	foreach ( $wpdb->get_col( $wpdb->prepare( "SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s", 'sp_expense_auto_approve' ) ) as $owner ) {
+		$ids = array_merge( $ids, site_pulse_expense_auto_approve_get( (int) $owner ) );
+	}
+	return array_values( array_unique( array_map( 'intval', $ids ) ) );
+}
+function site_pulse_expense_is_auto_approved( int $employee_id ): bool {
+	return in_array( $employee_id, site_pulse_expense_auto_approved_ids(), true );
+}
+
+// Turn an employee's auto-approve on/off. ON is filed under the employee's supervisor (falling back to
+// the actor); OFF clears them from EVERY list so stray entries can't keep it on.
+function site_pulse_expense_auto_approve_toggle( int $employee_id, bool $on, int $actor_id ): void {
+	global $wpdb;
+	if ( $on ) {
+		$prof  = site_pulse_get_user_profile( $employee_id );
+		$owner = ( $prof && (int) $prof['supervisor_id'] ) ? (int) $prof['supervisor_id'] : $actor_id;
+		site_pulse_expense_auto_approve_set( $owner, $employee_id, true );
+	} else {
+		foreach ( $wpdb->get_col( $wpdb->prepare( "SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key = %s", 'sp_expense_auto_approve' ) ) as $owner ) {
+			if ( site_pulse_expense_auto_approve_is( (int) $owner, $employee_id ) ) site_pulse_expense_auto_approve_set( (int) $owner, $employee_id, false );
+		}
+	}
+}
+
+// Approve every still-SUBMITTED report from auto-approved employees (whoever they're routed to). Run when
+// the toggle turns on and whenever the queue loads, so anything stuck from the old bug clears itself.
+function site_pulse_expense_sweep_auto_approved( int $actor_id ): void {
+	$ids = site_pulse_expense_auto_approved_ids();
+	if ( ! $ids ) return;
+	global $wpdb;
+	$in   = implode( ',', array_map( 'intval', $ids ) );
+	$rows = $wpdb->get_results( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE status = 'submitted' AND user_id IN ($in)", ARRAY_A ) ?: [];
+	foreach ( $rows as $r ) site_pulse_finalize_expense_approval( $r, (int) $r['supervisor_id'] ?: $actor_id );
+}
+add_action( 'site_pulse_expense_auto_sweep', static function () { site_pulse_expense_sweep_auto_approved( 0 ); } );
 
 // Email the frozen PDF to accounting (Settings → Expense Reports → AP email). Returns whether it sent.
 function site_pulse_email_expense_report_to_ap( array $row ): bool {
@@ -11185,10 +11308,18 @@ function site_pulse_finalize_expense_approval( array $row, int $approver_id ): a
 	return [ 'emailed' => $emailed, 'row' => $fresh ? site_pulse_expense_report_public( $fresh ) : [] ];
 }
 
+// TEMPORARY PAUSE (2026-10-06): expense report submission is switched off while the pay-period / lock
+// issues get sorted out. To turn submitting back on, change `true` to `false` here (or add
+// `add_filter( 'site_pulse_expense_submit_paused', '__return_false' );` in the child theme).
+function site_pulse_expense_submit_paused(): bool {
+	return (bool) apply_filters( 'site_pulse_expense_submit_paused', true );
+}
+
 // Employee submits a pay period for approval; the browser posts the frozen PDF (base64).
 add_action( 'wp_ajax_site_pulse_submit_expense_report', 'site_pulse_ajax_submit_expense_report' );
 function site_pulse_ajax_submit_expense_report(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( site_pulse_expense_submit_paused() ) wp_send_json_error( [ 'message' => 'Submitting expense reports is temporarily paused. Your entries are saved — please check back soon.' ] );
 	$user_id = site_pulse_effective_user_id();
 	if ( ! site_pulse_god_can_override() && ! site_pulse_user_can( $user_id, 'view_expense_overview' ) && ! site_pulse_user_can( $user_id, 'manage_mileage' ) ) {
 		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
@@ -11235,7 +11366,7 @@ function site_pulse_ajax_submit_expense_report(): void {
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
 
 	// Auto-approved employee? Approve on arrival (email + notify), still shown in the queue as approved.
-	if ( $sup && site_pulse_expense_auto_approve_is( $sup, $user_id ) ) {
+	if ( site_pulse_expense_is_auto_approved( $user_id ) ) {
 		$res = site_pulse_finalize_expense_approval( $row, $sup );
 		wp_send_json_success( [ 'report' => $res['row'], 'auto_approved' => true ] );
 	}
@@ -11251,7 +11382,7 @@ function site_pulse_ajax_submit_expense_report(): void {
 add_action( 'wp_ajax_site_pulse_approve_expense_report', 'site_pulse_ajax_approve_expense_report' );
 function site_pulse_ajax_approve_expense_report(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid = get_current_user_id();
+	$uid = site_pulse_effective_user_id();
 	$id  = (int) ( $_POST['report_id'] ?? 0 );
 	global $wpdb;
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
@@ -11266,7 +11397,7 @@ function site_pulse_ajax_approve_expense_report(): void {
 add_action( 'wp_ajax_site_pulse_reject_expense_report', 'site_pulse_ajax_reject_expense_report' );
 function site_pulse_ajax_reject_expense_report(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid  = get_current_user_id();
+	$uid  = site_pulse_effective_user_id();
 	$id   = (int) ( $_POST['report_id'] ?? 0 );
 	$note = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
 	global $wpdb;
@@ -11284,32 +11415,56 @@ function site_pulse_ajax_reject_expense_report(): void {
 	wp_send_json_success( [ 'report' => site_pulse_expense_report_public( $fresh ) ] );
 }
 
+// GOD-ONLY: reopen an APPROVED report (e.g. it was submitted with the wrong date range). Deliberately
+// not a capability — Glendon wants this un-delegatable so it can't be abused. Same end state as a
+// send-back: status rejected (unlocks its dates), employee notified, they resubmit. Logged.
+add_action( 'wp_ajax_site_pulse_reopen_expense_report', 'site_pulse_ajax_reopen_expense_report' );
+function site_pulse_ajax_reopen_expense_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	$id   = (int) ( $_POST['report_id'] ?? 0 );
+	$note = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
+	global $wpdb;
+	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $row ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+	if ( $row['status'] !== 'approved' ) wp_send_json_error( [ 'message' => 'Only approved reports can be reopened.' ] );
+	$wpdb->update( site_pulse_table('expense_reports'),
+		[ 'status' => 'rejected', 'reject_note' => $note, 'approved_at' => null, 'approved_by' => 0, 'emailed_at' => null, 'updated_at' => current_time( 'mysql' ) ],
+		[ 'id' => $id ] );
+	$label = (string) ( $row['period_label'] ?: ( $row['period_start'] . ' – ' . $row['period_end'] ) );
+	site_pulse_dispatch_notification( 'expense_report_rejected', (int) $row['user_id'],
+		'Your approved expense report for ' . $label . ' was reopened' . ( $note !== '' ? ': ' . $note : ' — please review and resubmit.' ), $id, 'expense_report' );
+	site_pulse_log( 'expense_report_reopened', 'Reopened an approved expense report', [
+		'report_id' => $id, 'user_id' => (int) $row['user_id'], 'period' => $row['period_start'] . '..' . $row['period_end'],
+		'was_approved_by' => (int) $row['approved_by'], 'was_approved_at' => $row['approved_at'], 'note' => $note,
+	] );
+	wp_send_json_success( [] );
+}
+
 // Toggle auto-approve for one employee. Turning it ON also clears any of their already-queued submissions.
 add_action( 'wp_ajax_site_pulse_set_expense_auto_approve', 'site_pulse_ajax_set_expense_auto_approve' );
 function site_pulse_ajax_set_expense_auto_approve(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid = get_current_user_id();
+	$uid = site_pulse_effective_user_id();
 	if ( ! site_pulse_can_approve_expense_reports( $uid ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	$emp = (int) ( $_POST['user_id'] ?? 0 );
 	$on  = ! empty( $_POST['on'] ) && $_POST['on'] !== '0' && $_POST['on'] !== 'false';
 	if ( ! $emp ) wp_send_json_error( [ 'message' => 'No employee specified.' ] );
-	$ids = site_pulse_expense_auto_approve_set( $uid, $emp, $on );
-	if ( $on ) {
-		global $wpdb;
-		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE user_id = %d AND supervisor_id = %d AND status = 'submitted'",
-			$emp, $uid ), ARRAY_A ) ?: [];
-		foreach ( $rows as $r ) site_pulse_finalize_expense_approval( $r, $uid );
-	}
-	wp_send_json_success( [ 'auto_approve' => $ids, 'on' => $on ] );
+	site_pulse_expense_auto_approve_toggle( $emp, $on, $uid );
+	// Approve this employee's already-queued reports in the background (inline emailing can time out).
+	if ( $on && ! wp_next_scheduled( 'site_pulse_expense_auto_sweep' ) ) wp_schedule_single_event( time(), 'site_pulse_expense_auto_sweep' );
+	wp_send_json_success( [ 'auto_approve' => site_pulse_expense_auto_approved_ids(), 'on' => $on ] );
 }
 
 // The supervisor's approval queue: their team's submitted (top) + already-actioned reports.
 add_action( 'wp_ajax_site_pulse_get_expense_approvals', 'site_pulse_ajax_get_expense_approvals' );
 function site_pulse_ajax_get_expense_approvals(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid = get_current_user_id();
+	$uid = site_pulse_effective_user_id();
 	if ( ! site_pulse_can_approve_expense_reports( $uid ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	// Self-heal stuck auto-approve reports in the BACKGROUND — each approval emails a PDF, so doing it
+	// inline here timed the queue out (it spun forever). The sweep is idempotent.
+	if ( ! wp_next_scheduled( 'site_pulse_expense_auto_sweep' ) ) wp_schedule_single_event( time(), 'site_pulse_expense_auto_sweep' );
 	global $wpdb;
 	$t   = site_pulse_table('expense_reports');
 	$all = site_pulse_god_can_override() || site_pulse_user_can( $uid, 'manage_mileage' );
@@ -11321,7 +11476,7 @@ function site_pulse_ajax_get_expense_approvals(): void {
 	}
 	wp_send_json_success( [
 		'reports'      => array_map( 'site_pulse_expense_report_public', $rows ),
-		'auto_approve' => site_pulse_expense_auto_approve_get( $uid ),
+		'auto_approve' => site_pulse_expense_auto_approved_ids(),
 		'can_view_all' => $all,
 	] );
 }
@@ -11330,7 +11485,7 @@ function site_pulse_ajax_get_expense_approvals(): void {
 add_action( 'wp_ajax_site_pulse_get_approved_expense_reports', 'site_pulse_ajax_get_approved_expense_reports' );
 function site_pulse_ajax_get_approved_expense_reports(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid = get_current_user_id();
+	$uid = site_pulse_effective_user_id();
 	if ( ! site_pulse_can_view_approved_expense_reports( $uid ) ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	global $wpdb;
 	$t     = site_pulse_table('expense_reports');
@@ -11351,7 +11506,7 @@ function site_pulse_ajax_get_approved_expense_reports(): void {
 add_action( 'wp_ajax_site_pulse_get_expense_report_pdf', 'site_pulse_ajax_get_expense_report_pdf' );
 function site_pulse_ajax_get_expense_report_pdf(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid = get_current_user_id();
+	$uid = site_pulse_effective_user_id();
 	$id  = (int) ( $_POST['report_id'] ?? 0 );
 	global $wpdb;
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table('expense_reports') . " WHERE id = %d", $id ), ARRAY_A );

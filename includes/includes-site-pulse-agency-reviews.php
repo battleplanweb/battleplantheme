@@ -584,8 +584,11 @@ function site_pulse_ajax_agency_push_testimonial(): void {
 	$raw       = wp_json_encode( $payload );
 	$signature = hash_hmac( 'sha256', $timestamp . '.' . $raw, $secret );
 
+	// The client creates the post AND sideloads/resizes the reviewer photo before it answers, which on a
+	// slow or large install can run past 25s. Give it room (and keep this request alive long enough to wait).
+	if ( function_exists( 'set_time_limit' ) ) @set_time_limit( 75 );
 	$response = wp_remote_post( $url, [
-		'timeout' => 25,
+		'timeout' => 50,
 		'headers' => [
 			'X-BPGBP-Site'      => $site_key,
 			'X-BPGBP-Timestamp' => $timestamp,
@@ -596,14 +599,30 @@ function site_pulse_ajax_agency_push_testimonial(): void {
 	] );
 
 	if ( is_wp_error( $response ) ) {
-		wp_send_json_error( [ 'message' => 'Could not reach client site: ' . $response->get_error_message() ] );
+		$err = $response->get_error_message();
+		// A timeout usually means the client was still working, not that it failed. The testimonial is
+		// often already created, and a re-send is safe (the client dedupes by review id).
+		if ( false !== stripos( $err, 'cURL error 28' ) || false !== stripos( $err, 'timed out' ) ) {
+			wp_send_json_error( [ 'message' => 'The client site took too long to answer (' . $site_url . '). The testimonial may already be there. Send it again to check: a re-send never duplicates it.' ] );
+		}
+		wp_send_json_error( [ 'message' => 'Could not reach client site: ' . $err ] );
 	}
 
 	$code = wp_remote_retrieve_response_code( $response );
-	$data = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+	$body = (string) wp_remote_retrieve_body( $response );
+	$data = json_decode( $body, true );
+	// PHP notices / a BOM printed ahead of the JSON break json_decode — salvage the object if it's in there.
+	if ( ! is_array( $data ) && false !== ( $brace = strpos( $body, '{"ok"' ) ) ) {
+		$data = json_decode( substr( $body, $brace ), true );
+	}
 
 	if ( $code < 200 || $code >= 300 || ! is_array( $data ) || empty( $data['ok'] ) ) {
 		$msg = ( is_array( $data ) && isset( $data['message'] ) ) ? $data['message'] : ( 'Client site returned ' . $code );
+		if ( ! is_array( $data ) ) {
+			// Not JSON at all — show what came back so the cause is visible (HTML page, PHP warning, etc.).
+			$snip = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( substr( $body, 0, 1500 ) ) ) );
+			$msg .= ' but not the expected reply. ' . ( '' !== $snip ? 'It sent: "' . mb_substr( $snip, 0, 300 ) . '"' : 'The response was empty.' );
+		}
 		wp_send_json_error( [ 'message' => $msg ] );
 	}
 

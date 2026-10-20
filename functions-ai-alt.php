@@ -121,10 +121,10 @@ function bp_ai_vision_text($attachment_id, $prompt, $max_tokens = null) {
  * crop around the subject instead of the center. Captured here because it rides
  * the same vision call for free.
  */
-function bp_ai_generate_alt_text($attachment_id) {
+function bp_ai_generate_alt_text($attachment_id, $context_post_id = 0) {
 	$attachment_id = (int) $attachment_id;
 	$customer = function_exists('customer_info') ? customer_info() : [];
-	$prompt   = bp_ai_alt_build_prompt($attachment_id, $customer);
+	$prompt   = bp_ai_alt_build_prompt($attachment_id, $customer, $context_post_id);
 
 	$text = bp_ai_vision_text($attachment_id, $prompt);
 	if (is_wp_error($text)) return $text;
@@ -265,14 +265,16 @@ function bp_ai_alt_load_image_for_api($attachment_id) {
  * Build the Claude prompt — pulls in business context + the attachment's
  * parent post (for jobsite_geo this is the job title, etc.).
  */
-function bp_ai_alt_build_prompt($attachment_id, $customer) {
+function bp_ai_alt_build_prompt($attachment_id, $customer, $context_post_id = 0) {
 	$biz_name  = $customer['name']        ?? '';
 	$biz_type  = $customer['site-type']   ?? ($customer['business-type'] ?? '');
 	$city      = $customer['city']        ?? '';
 	$state     = $customer['state-abbr']  ?? ($customer['state-full'] ?? '');
 	$services  = is_array($customer['service-type'] ?? null) ? implode(', ', $customer['service-type']) : '';
 
-	$parent_id    = wp_get_post_parent_id($attachment_id);
+	// $context_post_id — the post the image is shown on, when it isn't the parent
+	// (GEO app uploads are unattached but live in a jobsite's photo slots).
+	$parent_id    = (int) $context_post_id ?: wp_get_post_parent_id($attachment_id);
 	$parent_title = $parent_id ? get_the_title($parent_id) : '';
 	$parent_type  = $parent_id ? get_post_type($parent_id) : '';
 	$parent_excerpt = '';

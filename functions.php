@@ -1744,6 +1744,7 @@ require_once get_template_directory() . '/functions-chron.php';
 
 if ( is_admin() || _USER_LOGIN == "battleplanweb" ) require_once get_template_directory().'/functions-admin.php';
 if ( is_admin() ) require_once get_template_directory().'/functions-media-replace.php';
+require_once get_template_directory().'/functions-media-cleanup.php';
 if ( is_admin() ) require_once get_template_directory().'/functions-search-replace.php';
 require_once get_template_directory().'/functions-ai-alt.php';
 if (!empty( get_site_option('bp_rovin_secret')) || !empty( get_site_option('bp_rovin_survey_secret'))) { require_once get_template_directory() . '/functions-rovin.php'; }

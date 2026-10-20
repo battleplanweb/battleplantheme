@@ -526,7 +526,7 @@ add_action('bp_geo_caption_cron', function($post_id, $img_field, $cap_field) {
 	$aid = (int) get_field($img_field, $post_id);
 	if (!$aid) return;
 
-	$alt = bp_ai_generate_alt_text($aid); // also stores _bp_focus_position
+	$alt = bp_ai_generate_alt_text($aid, $post_id); // also stores _bp_focus_position
 	if (is_wp_error($alt) || $alt === '') return;
 
 	update_field($cap_field, $alt, $post_id);                 // visible caption (ACF)
@@ -623,6 +623,82 @@ add_action('acf/save_post', function($post_id) {
 	if (get_post_type($post_id) !== 'jobsite_geo') return;
 	bp_geo_map_children_to_acf((int) $post_id);
 }, 20);
+
+// ---------------------------------------------------------
+// # Removed photos are deleted, not just unslotted
+// ---------------------------------------------------------
+// Clicking X on a photo in the editor only empties the ACF slot — the attachment
+// stays in the library, still parented to the post, and the bridge above drops it
+// straight back into the next empty slot on the following Update (removed photos
+// "reappear"). Snapshot the slots before ACF saves (priority 5), then after it
+// (15, ahead of the bridge at 20) fully delete anything that fell out of every
+// slot — gone from the post AND the media library, same as deleting it there.
+function bp_geo_photo_slot_ids($post_id) {
+	$ids = [];
+	foreach (['jobsite_photo_1', 'jobsite_photo_2', 'jobsite_photo_3', 'jobsite_photo_4'] as $f) {
+		$ids[$f] = (int) get_post_meta($post_id, $f, true);
+	}
+	return $ids;
+}
+
+// Only delete a photo this jobsite owns: parented here (or unattached, as GEO app
+// uploads are) and not used anywhere else on the site (bp_media_in_use, from
+// functions-media-cleanup.php — the same check the Clean Up Library tool uses).
+function bp_geo_photo_is_deletable($aid, $post_id) {
+	if (get_post_type($aid) !== 'attachment') return false;
+	$parent = (int) get_post_field('post_parent', $aid);
+	if ($parent && $parent !== (int) $post_id) return false;
+	return !bp_media_in_use($aid, $post_id);
+}
+
+add_action('acf/save_post', function($post_id) {
+	if (!is_numeric($post_id) || get_post_type($post_id) !== 'jobsite_geo') return;
+	$GLOBALS['bp_geo_photo_snapshot'][(int) $post_id] = bp_geo_photo_slot_ids((int) $post_id);
+}, 5);
+
+add_action('acf/save_post', function($post_id) {
+	if (!is_numeric($post_id)) return;
+	$post_id = (int) $post_id;
+	$before  = $GLOBALS['bp_geo_photo_snapshot'][$post_id] ?? null;
+	if ($before === null) return;
+	unset($GLOBALS['bp_geo_photo_snapshot'][$post_id]);
+
+	$after = bp_geo_photo_slot_ids($post_id);
+
+	// An emptied slot keeps its old caption in the form — clear it so whatever
+	// lands there next gets its own (AI) caption instead of the removed photo's.
+	foreach ($after as $slot => $aid) {
+		if (!$aid && $before[$slot]) update_field($slot . '_alt', '', $post_id);
+	}
+
+	$removed = array_diff(array_filter($before), array_filter($after));
+	foreach (array_unique($removed) as $aid) {
+		if (bp_geo_photo_is_deletable($aid, $post_id)) wp_delete_attachment($aid, true);
+	}
+
+	$thumb = $after['jobsite_photo_1'];
+	if ($thumb && $thumb !== $before['jobsite_photo_1']) set_post_thumbnail($post_id, $thumb);
+}, 15);
+
+// Permanently deleting a jobsite takes its photos with it (slotted + anything
+// parented to it), unless another post still uses them. Runs before WP re-parents
+// the attachments, so post_parent still points here.
+add_action('before_delete_post', function($post_id) {
+	if (get_post_type($post_id) !== 'jobsite_geo') return;
+	$post_id = (int) $post_id;
+
+	$ids = array_filter(bp_geo_photo_slot_ids($post_id));
+	$ids = array_merge($ids, get_children([
+		'post_parent' => $post_id,
+		'post_type'   => 'attachment',
+		'fields'      => 'ids',
+		'numberposts' => -1,
+	]));
+
+	foreach (array_unique(array_map('intval', $ids)) as $aid) {
+		if (bp_geo_photo_is_deletable($aid, $post_id)) wp_delete_attachment($aid, true);
+	}
+});
 
 // One-time reconciliation: repair existing posts whose photos are parented but
 // never reached the ACF fields (invisible until now, no alt text).
@@ -2309,7 +2385,7 @@ function bp_geo_ai_meta_box_html( $post ) {
 	</button>
 	<p style="font-size:11px;color:#888;margin-top:5px;">
 		<?php if ( $ai_ran ) : ?>
-			Re-running will overwrite current post content with a fresh AI rewrite.<br>The original client text is always preserved above.
+			Re-running will overwrite current post content and photo captions with a fresh AI rewrite.<br>The original client text is always preserved above.
 		<?php else : ?>
 			Runs automatically on first publish. Use this button to run manually or re-run after editing.
 		<?php endif; ?>
@@ -2338,9 +2414,32 @@ function bp_geo_ai_meta_box_html( $post ) {
 			.then(r => r.json())
 			.then(function(data){
 				if (data.success) {
+					var slots = (data.data.photos || []).slice(), total = slots.length, failed = 0;
 					status.style.color = '#2e7d32';
-					status.textContent = '✓ ' + data.data.message + ' — reloading...';
-					setTimeout(function(){ location.reload(); }, 1500);
+
+					(function next(){
+						var slot = slots.shift();
+						if (!slot) {
+							status.textContent = '✓ ' + data.data.message
+								+ (total ? ' · ' + (total - failed) + ' of ' + total + ' captions rewritten' : '') + ' — reloading...';
+							setTimeout(function(){ location.reload(); }, 1500);
+							return;
+						}
+						status.textContent = '✓ Description rewritten. Rewriting photo captions (' + (total - slots.length) + ' of ' + total + ')...';
+						fetch(ajaxurl, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+							body: new URLSearchParams({
+								action:  'bp_geo_recaption',
+								post_id: btn.dataset.postId,
+								slot:    slot,
+								nonce:   btn.dataset.nonce
+							})
+						})
+						.then(r => r.json())
+						.then(function(c){ if (!c.success) failed++; next(); })
+						.catch(function(){ failed++; next(); });
+					})();
 				} else {
 					status.style.color  = '#c62828';
 					status.textContent  = '✗ ' + (data.data || 'Unknown error');
@@ -2559,11 +2658,41 @@ function bp_geo_ajax_handler() {
 		wp_send_json_error( $result->get_error_message() );
 	}
 
+	$photos = [];
+	foreach ( ['jobsite_photo_1', 'jobsite_photo_2', 'jobsite_photo_3', 'jobsite_photo_4'] as $slot ) {
+		if ( (int) get_post_meta( $post_id, $slot, true ) ) $photos[] = $slot;
+	}
+
 	wp_send_json_success([
 		'message' => 'Rewrite complete. Category: ' . ( $result['term_slug'] ?? 'n/a' ),
 		'excerpt' => wp_trim_words( $result['rewritten'], 20, '...' ),
+		'photos'  => $photos,
 	]);
 }
+
+// Re-caption one photo slot against the freshly rewritten description. Called by
+// the AI Rewrite button once per photo (one vision call per request keeps each
+// well under the PHP timeout). Overwrites the caption, manual or not.
+add_action( 'wp_ajax_bp_geo_recaption', function () {
+	if ( ! check_ajax_referer( 'bp_geo_ai_rewrite_nonce', 'nonce', false ) ) wp_send_json_error( 'Invalid nonce.' );
+	if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error( 'Insufficient permissions.' );
+
+	$post_id = intval( $_POST['post_id'] ?? 0 );
+	$slot    = sanitize_key( $_POST['slot'] ?? '' );
+	if ( get_post_type( $post_id ) !== BP_GEO_CPT || ! preg_match( '/^jobsite_photo_[1-4]$/', $slot ) ) wp_send_json_error( 'Invalid request.' );
+
+	$aid = (int) get_post_meta( $post_id, $slot, true );
+	if ( ! $aid ) wp_send_json_error( 'No photo in that slot.' );
+	if ( ! function_exists( 'bp_ai_generate_alt_text' ) || ! bp_ai_alt_available() ) wp_send_json_error( 'AI captions unavailable.' );
+
+	$alt = bp_ai_generate_alt_text( $aid, $post_id );
+	if ( is_wp_error( $alt ) ) wp_send_json_error( $alt->get_error_message() );
+	if ( $alt === '' ) wp_send_json_error( 'Empty caption returned.' );
+
+	update_field( $slot . '_alt', $alt, $post_id );
+	update_post_meta( $aid, '_wp_attachment_image_alt', $alt );
+	wp_send_json_success( [ 'caption' => $alt ] );
+} );
 
 
 // ---------------------------------------------------------

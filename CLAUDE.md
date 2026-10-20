@@ -86,6 +86,7 @@ battleplantheme/
 ├── functions-global.php           # Constants and globals
 ├── functions-grid.php             # Layout/grid shortcodes
 ├── functions-media-replace.php    # Media replace (absorbed Enable Media Replace plugin; admin-only)
+├── functions-media-cleanup.php    # Clean Up Library (unused-image scan → quarantine → purge) + bp_media_in_use()
 ├── functions-icons.php            # Icon system
 ├── functions-ai-alt.php           # AI alt-text generation (Claude vision) + alt→content sync
 ├── functions-style-sheets.php     # CSS enqueueing logic

@@ -628,6 +628,12 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		if ( $end && $now > $end ) return null;
 	endif;
 
+	// FAQPage schema: a question-titled accordion is a Q&A pair. bp_output_faq_schema() emits them.
+	if ( substr(trim($a['title']), -1) === '?' && bp_faq_schema_on() ) :
+		$answer = trim( preg_replace('/\s+/', ' ', wp_strip_all_tags( do_shortcode($content) ) ) );
+		if ( $answer !== '' ) $GLOBALS['bp_faq_schema'][] = [ 'q' => bp_decode_text( trim($a['title']) ), 'a' => bp_decode_text($answer) ];
+	endif;
+
 	return do_shortcode('<div class="block block-accordion'.$class.$scroll.'"'.$multiple.$tracking.'>'.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.$content.'</div></div>'.$addBtn.'</div>');
 }
 

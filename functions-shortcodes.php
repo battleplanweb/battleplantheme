@@ -77,6 +77,16 @@ function battleplan_getBizInfo($atts, $content = null) {
 	}
 
 	/*--------------------------------------------------------------
+	# SHORT NAME — name minus a trailing legal suffix (", LLC", " Inc.")
+	# for headlines. Plain "name" keeps the legal name (policies, footer).
+	--------------------------------------------------------------*/
+
+	if ($data === 'name-short') {
+		$name = (string) ($customer_info['name'] ?? '');
+		return $icon.esc_html(preg_replace('/,?\s+(LLC|L\.L\.C\.|Inc\.?|PLLC)$/i', '', trim($name)));
+	}
+
+	/*--------------------------------------------------------------
 	# GENERIC FIELD
 	--------------------------------------------------------------*/
 
@@ -533,7 +543,8 @@ function battleplan_socialBtn( $atts, $content = null ) {
 	$type = esc_attr($a['type']);
 	$link = esc_attr($a['link']) === '' ? do_shortcode('[get-biz info="'.$type.'"]') : esc_attr($a['link']);
 	$prefix = $type === "email" ? "mailto:" : "";
-	$alt = $type === "email" ? "Email us" : "Visit us on ".$type;
+	$labels = array( 'bbb'=>'the Better Business Bureau', 'nextdoor'=>'Nextdoor', 'youtube'=>'YouTube', 'tiktok'=>'TikTok', 'linkedin'=>'LinkedIn' );
+	$alt = $type === "email" ? "Email us" : "Visit us on ".( $labels[$type] ?? ucfirst($type) );
 	if ( esc_attr($a['img']) === '' ) :
 		return do_shortcode('[get-icon type="'.$type.'" class="social-btn '.$type.'-btn" link="'.$prefix.$link.'" new-tab="yes" sr="'.esc_attr($alt).'"]');
 	else:

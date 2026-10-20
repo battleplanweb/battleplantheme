@@ -34,6 +34,28 @@ So the working order is always:
 
 This applies to the framework's variable-driven systems too: prefer setting the existing `--button-*` / color / spacing variables on a scope over hand-writing full property blocks (see the button and bullet-list sections below).
 
+### Check what the framework already positions BEFORE adding layout CSS
+
+**Before writing any `display`, `grid-*`, `align-*`, `justify-*`, `position`, `line-height` or padding rule to place an element, look up what the framework already does to that element** — grep `style-grid.css`, `style.css` and `style-navigation.css` for its selector and for its parents. Most structural elements are already positioned, and a site rule written on top of them fights the framework instead of using it. Then style only what is genuinely different (colour, font, size, spacing between your own items).
+
+Already handled at framework level — do not redo it:
+- **Header strips** (`.top-strip`, `.logo-strip`, `.divider-strip`) render with `.strip-elem`, which **vertically centres every `.col`** (`.strip-elem .flex .col { align-self: center }`). `.top-strip` already has `padding-top/bottom: 8px`. At ≤860 the framework centres the strip's cols and their text itself.
+- `.flex` is already a grid on the content column; `.col-inner` is already a 12-column grid with every child spanning 12.
+- `.phone-number`, `.tag-line`, `.address` are already `position: relative`.
+- Column alignment comes from the shortcode (`align=""`, `valign=""` on `[layout]` / `[col]`) or framework helper classes (`text-left`, `text-right`, `text-center`) — use those before writing CSS.
+
+The traps this rule exists for (Firehouse top strip, Oct 2026):
+- **Never fake vertical centring with `line-height: <strip height>`** (e.g. `line-height: 36px` on a tag line and a phone block). It only lines up while every item has the same font size and the strip has no padding; change one font size and the row goes crooked. The cols are already centred — leave the line-height alone.
+- **Don't zero a strip's framework padding and re-stretch its cols** (`padding: 0` + `align-items: stretch` + `align-self: center`) to make a coloured block run edge to edge. Give the block its own padding instead.
+- **Items of different sizes that must centre on each other in a row: use flex with `align-items: center` on their wrapper — NOT `inline-block` + `vertical-align: middle`.** An inline row sits in a line box that also reserves the wrapper's own line height (the "strut", from the inherited body font). When that strut is taller than the items it adds dead space, and it changes when the body font (Open Sans) swaps in after first paint, so the strip visibly grows a few px *after* load. Flex items create no line box, so the row is exactly as tall as its tallest item. (Firehouse top strip: phone block + links in the right column.) Remember to restate `justify-content` at ≤860, where the framework switches the strip's columns to `text-align: center`, which flex ignores.
+- **Don't pin a framework strip with `position: fixed` + a hard-coded `padding-top` on `#masthead`.** `lockDiv()` already does it, and with its default `docFlow` it pads `#page` by the strip's real height. A hard-coded number goes wrong the moment the strip's font size changes.
+
+### Font weight — `normal` or `bold`, never numbers
+
+Write `font-weight: normal` or `font-weight: bold` — **never `400`, `500`, `600`, `700`**. The same goes for the weight variables (`--h-font-weight`, `--button-font-weight`, `--input-font-weight`, …). In an `@font-face` for a variable font, write the range as `font-weight: normal bold;` (= 400–700), not `200 700`.
+
+Why: Glendon wants two weights in the vocabulary, not a scale. In-between numbers like 500/600 render differently in every face (and not at all in a static face that has no such instance), so they read as "bold-ish" by accident rather than by decision.
+
 ### Layout: default to `display: grid`, override to `flex` only with a reason
 
 **Always reach for `display: grid` first.** It is the default layout tool for this framework — page sections, forms, card galleries, anything where content lines up in two dimensions (rows *and* columns). Glendon prefers grid and uses it for everything, so grid should be the assumption on every new build unless there is a specific reason not to.
@@ -478,13 +500,17 @@ Practical consequences:
 
 **Trap — `div.grid-1-1-1-1` collapses to two columns at 1280px and never collapses again.** There is no one-column rule for it at 860 or 576, so a four-up row of cards stays 2×2 on a phone. That is usually right for short cards and wrong for anything wordy; pin the count yourself per breakpoint (`#hero-trust .trust-card { grid-template-columns: 1fr }`) rather than assuming it stacks. An ID-scoped rule outranks the framework's `:not()` chain comfortably.
 
+**Trap — at ≤860 every `grid-1-2-1` / `1-1-1` / `1-1-2` / `2-1-1` col is forced to `grid-column: 1/-1` and its `.col-inner` to `width: 85%`.** Overriding the track list (even with `!important`) does nothing, because the cols still span the full row; and the 85% inner box pushes content off-centre. Keep a row side by side with an ID-scoped rule on the cols themselves: `#footer-main .col { grid-column: auto }` + `#footer-main .col .col-inner { width: auto; max-width: none; margin: 0 }` (1-x-x beats the 0-6-1 `:not()` chain). Hit on Select Mechanical's header and footer.
+
+**Trap — only Page Bottom gets `wpautop`.** The framework removes `wpautop` from `the_content`, so the editor, Page Top and every Elements post (header, footer) render shortcodes with no auto-`<p>`. Page Bottom goes through `bp_wpautop()`: shortcodes first, then real `wpautop` over the output. There, a block tag in the middle of inline content inside a `<div>` leaves an orphan `</p>` (an empty `<p>` in the grid), and the cleanup pass strips a legitimate `</p>` sitting right before `</div>`. A `[get-icon grid="…"]` card is wrapped whole in `no-wpautop`, so it's the safe container for rich rows (heading + link + icon) in Page Bottom.
+
 **Trap — `div.grid-1-1` (and `grid-3-2` / `grid-2-3`) stay two columns until 576px.** A photo + copy split is still side by side on a 700px tablet. Stack it yourself at 860 by ID (`#purpose .flex { grid-template-columns: 1fr }`).
 
 **Trap — `[parallax]` defaults to `width="edge"`, so its `.flex` spans edge to edge.** `section.section-edge .flex` puts the hero copy flush against the screen edge. Pull it back into the content column with `#home-hero .flex { grid-column: default-start / default-end }`.
 
 **Trap — every heading centres at ≤1024px.** `style.css` sets `.screen-mobile h1–h6 { --h-text-align: center }`. Copy under a heading stays left unless you centre it too, so decide per band: either centre the copy column at 1024 to match, or pin a heading left with an ID-scoped `--h-text-align: left` (1-0-1 beats 0-1-1). Headings that sit inside a card beside an icon, or in the footer, almost always want the pin.
 
-**Trap — `[get-biz info="…" icon="phone"]` prints the icon OUTSIDE the `<a>`.** The icon is a sibling before the link. A "phone button" box, background or hover has to go on the wrapper (`.phone-btn`), not on `.phone-btn a`, or the icon sits outside the box.
+**`[get-biz info="…" icon="phone"]` prints the icon INSIDE the `<a>`** (corrected 2026-10-15; it used to sit outside). Colour a phone number on its wrapper (`.phone-number { color }`), not on the link: the framework's `.phone-number a.phone-link { color: inherit }` (0-2-1) outranks a site `.phone-number a` rule, and hovers need the `.phone-link` class in the selector too.
 
 **Trap — links underline by default.** Nothing in the framework sets `text-decoration: none` on `a` (`--link-decoration` is declared but never consumed). Footer lists, phone links and contact rows need an explicit `text-decoration: none`.
 

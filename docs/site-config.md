@@ -26,7 +26,9 @@ Set via `add_filter('body_class', ...)`. Pick one from each group:
 
 ```php
 $customer_info = array(
-    "year"          => "202x",         // founding year (used by [get-years])
+    "year"          => "202x",         // year they became a Battle Plan customer (used by [get-years])
+    "founded"       => "1998",         // optional — business founding date → schema foundingDate (YYYY, YYYY-MM or YYYY-MM-DD)
+    "founder"       => "Jane Doe",     // optional — schema founder; array of names for several
     "area-before"   => "",             // e.g. "(" for (469)
     "area-after"    => "-",            // separator after area code
     "area"          => "000",          // area code

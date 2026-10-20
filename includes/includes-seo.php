@@ -276,6 +276,9 @@ function bp_seo_is_noindex(): bool {
 	}
 	if ( is_author() || is_date() )              $noindex = true;   // noindex-author / disable-date archives
 	if ( is_search() || is_404() )               $noindex = true;
+	// Tag archives are bare post listings with no unique content (thin/duplicate). Categories stay
+	// indexed (/blog/). noindex,follow so crawlers still reach the posts. Sitemap drops post_tag too.
+	if ( is_tag() )                              $noindex = true;
 
 	if ( is_post_type_archive( ['testimonials', 'products', 'galleries', 'optimized'] ) ) $noindex = true;
 
@@ -379,11 +382,16 @@ add_filter( 'pre_get_document_title', function ( $title ) {
 	return isset( $map[ $slug ]['title'] ) ? bp_seo_render_value( $map[ $slug ]['title'] ) : $title;
 }, 25 );
 
+/** Form thank-you / utility slugs — noindexed below and dropped from the sitemap (§10). */
+function bp_seo_noindex_slugs(): array {
+	return array( 'email-received', 'message-received', 'thank-you', 'thanks' );
+}
+
 /** Keep form thank-you / utility pages out of the index (no snippet needed — they shouldn't rank). */
 add_filter( 'bp_seo_noindex', function ( $noindex, $obj ) {
 	if ( is_singular() ) {
 		$slug = get_post_field( 'post_name', get_queried_object_id() );
-		if ( in_array( $slug, array( 'email-received', 'message-received', 'thank-you', 'thanks' ), true ) ) return true;
+		if ( in_array( $slug, bp_seo_noindex_slugs(), true ) ) return true;
 	}
 	return $noindex;
 }, 10, 2 );
@@ -534,6 +542,40 @@ function bp_seo_narrow_area_jobsite( array $node ): array {
 	return $node;
 }
 
+/**
+ * Org-node fields the stored schema blob doesn't carry, filled live so they land without
+ * waiting on the GBP cron:
+ *   logo / image  — the uploads-folder logo (bp_site_logo: logo.webp → .png → .jpg)
+ *   foundingDate  — customer_info['founded'] (YYYY, YYYY-MM or YYYY-MM-DD)
+ *   founder       — customer_info['founder'], a name or an array of names
+ */
+function bp_seo_org_extras( array $org, array $ci ): array {
+	if ( empty($org['logo']) && function_exists('battleplan_fetch_site_logo') && ( $file = battleplan_fetch_site_logo() ) ) {
+		$org['logo'] = [ '@type' => 'ImageObject', 'url' => content_url('/uploads/' . $file) ];
+	}
+	if ( empty($org['image']) ) {
+		if ( ! empty($org['logo']['url']) )                         $org['image'] = $org['logo']['url'];
+		elseif ( ! empty($org['logo']) && is_string($org['logo']) ) $org['image'] = $org['logo'];
+	}
+
+	// NOT customer_info['year'] — that's the year they became a Battle Plan customer.
+	$founded = trim((string) ( $ci['founded'] ?? '' ));
+	if ( empty($org['foundingDate']) && preg_match('/^\d{4}(-\d{2}(-\d{2})?)?$/', $founded) ) {
+		$org['foundingDate'] = $founded;
+	}
+
+	if ( empty($org['founder']) && ! empty($ci['founder']) ) {
+		$people = [];
+		foreach ( (array) $ci['founder'] as $n ) {
+			$n = bp_decode_text( trim((string) $n) );
+			if ( $n !== '' ) $people[] = [ '@type' => 'Person', 'name' => $n ];
+		}
+		if ( $people ) $org['founder'] = count($people) === 1 ? $people[0] : $people;
+	}
+
+	return $org;
+}
+
 add_action('wp_head', 'bp_seo_schema_graph', 2);
 function bp_seo_schema_graph() {
 	if ( bp_seo_defer() ) return;
@@ -555,6 +597,7 @@ function bp_seo_schema_graph() {
 		// Same reasoning as @type above: an install whose stored blob was built from the
 		// esc_html'd blogname carries "R &amp; S" as its name. Decode on the way out.
 		if ( isset($org['name']) ) $org['name'] = bp_decode_text( $org['name'] );
+		$org = bp_seo_org_extras($org, $ci);
 		$org['@id'] = home_url('#organization');
 		$org = bp_seo_narrow_area_service($org);
 		$org = bp_seo_narrow_area_jobsite($org);
@@ -850,10 +893,36 @@ add_filter('wp_sitemaps_taxonomies', function($taxonomies) {
 		'gallery-type', 'gallery-tags', 'image-categories', 'image-tags',
 		'jobsite_geo-service-types', 'jobsite_geo-service-areas', 'jobsite_geo-techs',  // vague / 301'd to /service/
 		'product-brand', 'product-type', 'product-class',
+		'post_tag',      // tag archives are noindexed (§3) — thin post listings
 	]);
 	foreach ( (array) $drop as $tax ) unset( $taxonomies[$tax] );
-	return $taxonomies;   // keeps jobsite_geo-services (/service/), category, post_tag
+	return $taxonomies;   // keeps jobsite_geo-services (/service/), category
 });
+// Per-post noindex: drop anything ticked "noindex" in the SEO box, plus the thank-you/utility slugs.
+// Core builds both the URL list and the page count from these args, so the index stays consistent.
+// (A per-site bp_seo_noindex filter on singulars can't be seen here — pair it with this filter.)
+add_filter('wp_sitemaps_posts_query_args', function($args, $post_type) {
+	if ( bp_seo_defer() ) return $args;
+	$not_noindexed = [
+		'relation' => 'OR',
+		[ 'key' => BP_SEO_NOINDEX, 'compare' => 'NOT EXISTS' ],
+		[ 'key' => BP_SEO_NOINDEX, 'value' => '1', 'compare' => '!=' ],
+	];
+	$args['meta_query'] = empty($args['meta_query'])
+		? $not_noindexed
+		: [ 'relation' => 'AND', $args['meta_query'], $not_noindexed ];
+	// WP_Query has post_name__in but no post_name__not_in — resolve the slugs to ids.
+	$utility = get_posts([
+		'post_type'      => $post_type,
+		'post_name__in'  => bp_seo_noindex_slugs(),
+		'post_status'    => 'publish',
+		'fields'         => 'ids',
+		'posts_per_page' => -1,
+		'no_found_rows'  => true,
+	]);
+	if ( $utility ) $args['post__not_in'] = array_merge( (array) ( $args['post__not_in'] ?? [] ), $utility );
+	return $args;
+}, 10, 2);
 // Drop the author/users sitemap (/wp-sitemap-users-*.xml). Author archives are noindexed on these
 // (effectively single-operator) client sites, so listing them adds nothing.
 add_filter('wp_sitemaps_add_provider', function($provider, $name) {

@@ -943,6 +943,15 @@ endpoint, so the cart layer can subscribe without this file changing.
 			if ( window.console ) console.error( 'store: checkout failed to initialise', e );
 		}
 
+		var toolbar = document.querySelector( '.store-toolbar' );
+		if ( toolbar ) {
+			toolbar.addEventListener( 'change', function ( e ) {
+				if ( e.target && e.target.tagName === 'SELECT' ) toolbar.submit();
+			} );
+			var go = toolbar.querySelector( '.store-toolbar-go' );
+			if ( go ) go.hidden = true;
+		}
+
 		var products = document.querySelectorAll( '.store-single[data-product]' );
 		Array.prototype.forEach.call( products, function ( root ) {
 			try {

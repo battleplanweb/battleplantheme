@@ -38,6 +38,8 @@ get_header(); ?>
 
 		if ( have_posts() ) {
 
+			echo sp_store_catalog_toolbar();
+
 			echo '<div class="store-grid" style="--store-cols:3">';
 			while ( have_posts() ) : the_post();
 				echo sp_store_product_card( get_the_ID() );

@@ -2,7 +2,7 @@
 /* Battle Plan Web Design - HVAC FAQ */
 
 $printPage = '
-	<h1>Frequently Asked Questions</h1>
+	<h1>HVAC Questions Answered by [get-biz info="name-short"]</h1>
 
 	<p>Click a question below to reveal the answer.</p>
 	

@@ -5,7 +5,6 @@ require_once get_template_directory() . '/includes/includes-site-pulse-reviews.p
 require_once get_template_directory() . '/includes/includes-site-pulse-brightlocal.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-agency-reviews.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-fleet.php';
-require_once get_template_directory() . '/includes/includes-site-pulse-reports-ai.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-ask.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-surveys.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-import.php';
@@ -1182,9 +1181,6 @@ add_action( 'init', function() {
 	}
 
 	// Hourly cron to AI-condense submitted reports into search/trend digests (self-gates on count + key).
-	if ( ! wp_next_scheduled( 'site_pulse_digest_reports' ) ) {
-		wp_schedule_event( time() + 600, 'hourly', 'site_pulse_digest_reports' );
-	}
 
 	// Every-5-min sweep for unread-chat SMS nudges (self-gates on the org toggle + Twilio + opt-in).
 	if ( ! wp_next_scheduled( 'site_pulse_sms_nudge_sweep' ) ) {
@@ -1686,37 +1682,37 @@ function site_pulse_seed_roles(): void {
 		[
 			'slug'            => 'god',
 			'label'           => 'Odinson',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'submit_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'god_mode', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'submit_reports', 'view_gm_action_items', 'view_supervisor_action_items', 'god_mode', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 255,
 		],
 		[
 			'slug'            => 'owner',
 			'label'           => 'Owner',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 100,
 		],
 		[
 			'slug'            => 'admin',
 			'label'           => 'Administrator',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'manage_mileage', 'submit_mileage', 'view_reviews', 'manage_reviews', 'view_surveys', 'manage_surveys' ] ),
 			'hierarchy_level' => 90,
 		],
 		[
 			'slug'            => 'supervisor',
 			'label'           => 'Supervisor',
-			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'view_analytics', 'submit_mileage', 'view_reviews', 'view_surveys' ] ),
+			'capabilities'    => wp_json_encode( [ 'view_gm_reports', 'submit_reports', 'submit_mileage', 'view_reviews', 'view_surveys' ] ),
 			'hierarchy_level' => 50,
 		],
 		[
 			'slug'            => 'manager',
 			'label'           => 'GM',
-			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_analytics', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
 		[
 			'slug'            => 'non-store-manager',
 			'label'           => 'Manager',
-			'capabilities'    => wp_json_encode( [ 'submit_reports', 'view_analytics', 'submit_mileage' ] ),
+			'capabilities'    => wp_json_encode( [ 'submit_reports', 'submit_mileage' ] ),
 			'hierarchy_level' => 20,
 		],
 		// System Admin = a full-access role (every current capability). Below God; auto NOT dynamic — an
@@ -2219,8 +2215,6 @@ function site_pulse_capability_catalog_all(): array {
 		'view_chat'         => 'Use Chat',
 		'view_action_items' => 'View Action Items',
 		'view_notes'        => 'Use Notes',
-		'view_analytics'    => 'View analytics',
-		'view_ai_insights'  => 'View AI insights',
 		'use_ai_assistant'  => 'Use AI Assistant',
 		'view_forms'        => 'View Forms',
 		'view_reviews'      => 'View reviews',
@@ -4409,7 +4403,6 @@ function site_pulse_page_access_map(): array {
 		'expense-report'      => 'view_expense_overview',
 		// Customer Feedback area. A page with both a view + manage cap lists both (shown as two rows).
 		'reviews'             => [ 'view_reviews', 'manage_reviews' ],
-		'review-trends'       => 'view_reviews',
 		'agency-reviews'      => 'manage_reviews',
 		'customer-messages'   => [ 'view_customer_messages', 'manage_customer_messages' ],
 		'surveys'             => [ 'view_surveys', 'manage_surveys' ],
@@ -4420,7 +4413,6 @@ function site_pulse_page_access_map(): array {
 		'fleet'               => [ 'view_fleet', 'manage_fleet' ],
 		'forms'               => [ 'view_forms', 'upload_forms' ],
 		'forms-all'           => [ 'view_forms', 'upload_forms' ],
-		'analytics'           => 'view_analytics',
 		'ai-assistant'        => 'use_ai_assistant',
 		// Settings sub-pages.
 		'admin-users'         => 'manage_users',
@@ -6214,6 +6206,43 @@ function sp_action_item_editable_by( array $item, int $me ): bool {
 	return in_array( (int) $item['user_id'], site_pulse_visible_action_item_user_ids( $me ), true );
 }
 
+// Notes are stored as "M/D — text" (no year). The date is read as its most recent occurrence on or
+// before today, so a 12/30 note read in January belongs to last December. Returns Y-m-d or ''.
+function sp_action_note_date( string $note ): string {
+	if ( ! preg_match( '#^(\d{1,2})/(\d{1,2}) — #u', $note, $m ) ) return '';
+	$today = current_time( 'Y-m-d' );
+	$y     = (int) substr( $today, 0, 4 );
+	if ( ! checkdate( (int) $m[1], (int) $m[2], $y ) && ! checkdate( (int) $m[1], (int) $m[2], $y - 1 ) ) return '';
+	$d = sprintf( '%04d-%02d-%02d', $y, (int) $m[1], (int) $m[2] );
+	return $d > $today ? sprintf( '%04d-%02d-%02d', $y - 1, (int) $m[1], (int) $m[2] ) : $d;
+}
+
+// Keep notes in date order (oldest first) so a back-dated note lands where it belongs. notes[0] is the
+// seeded original item and stays first; a note without a date keeps the date of the note before it.
+function sp_action_notes_sort( array $notes ): array {
+	if ( count( $notes ) < 3 ) return $notes;
+	$head = array_shift( $notes );
+	$keyed = [];
+	$last  = '';
+	foreach ( array_values( $notes ) as $i => $n ) {
+		$d = sp_action_note_date( (string) $n );
+		if ( '' === $d ) $d = $last; else $last = $d;
+		$keyed[] = [ $d, $i, $n ];
+	}
+	usort( $keyed, fn( $a, $b ) => [ $a[0], $a[1] ] <=> [ $b[0], $b[1] ] );
+	return array_merge( [ $head ], array_column( $keyed, 2 ) );
+}
+
+// A note date from the browser: a real Y-m-d, not in the future. '' = today.
+function sp_action_note_input_date( string $raw ): ?string {
+	$today = current_time( 'Y-m-d' );
+	if ( '' === $raw ) return $today;
+	if ( ! preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m ) || ! checkdate( (int) $m[2], (int) $m[3], (int) $m[1] ) ) return null;
+	if ( $raw > $today ) return null;
+	if ( $raw < gmdate( 'Y-m-d', strtotime( $today . ' -364 days' ) ) ) return null; // M/D can't tell years apart
+	return $raw;
+}
+
 // Add Note: append a note, keep a running notes list (seeded with the original item), and let the AI
 // rewrite the item description to reflect the latest state. The item STAYS open.
 add_action( 'wp_ajax_site_pulse_add_action_note', 'site_pulse_ajax_add_action_note' );
@@ -6224,6 +6253,8 @@ function site_pulse_ajax_add_action_note(): void {
 	$note    = sanitize_textarea_field( wp_unslash( $_POST['note'] ?? '' ) );
 	if ( ! $item_id )       wp_send_json_error( [ 'message' => 'Invalid item.' ] );
 	if ( $note === '' )     wp_send_json_error( [ 'message' => 'Please enter a note.' ] );
+	$note_date = sp_action_note_input_date( sanitize_text_field( wp_unslash( $_POST['note_date'] ?? '' ) ) );
+	if ( null === $note_date ) wp_send_json_error( [ 'message' => 'Pick a date within the past year, not in the future.' ] );
 
 	global $wpdb;
 	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
@@ -6234,7 +6265,10 @@ function site_pulse_ajax_add_action_note(): void {
 	if ( ! is_array( $meta ) ) $meta = [];
 	$notes = ( isset( $meta['notes'] ) && is_array( $meta['notes'] ) ) ? $meta['notes'] : [];
 	if ( ! $notes ) $notes[] = (string) $item['description']; // seed list with the original item
-	$notes[] = current_time( 'n/j' ) . ' — ' . $note; // stamp each added note with a short M/D date
+	// Stamp with a short M/D date — today, or the back-dated day the person picked — then re-sort so a
+	// late entry sits in date order.
+	$notes[] = gmdate( 'n/j', strtotime( $note_date ) ) . ' — ' . $note;
+	$notes   = sp_action_notes_sort( $notes );
 	$meta['notes'] = $notes;
 
 	// Rewrite the item from the original + all notes, and let the AI extend the due date when the
@@ -6286,6 +6320,40 @@ function site_pulse_ajax_add_action_note(): void {
 	}
 
 	wp_send_json_success( [ 'due_date' => $new_due ] );
+}
+
+// Change the date on an existing note. The note is identified by its index AND its current text, so a
+// list that changed underneath the browser can't rewrite the wrong note. Synced across grouped copies.
+add_action( 'wp_ajax_site_pulse_set_action_note_date', 'site_pulse_ajax_set_action_note_date' );
+function site_pulse_ajax_set_action_note_date(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me      = site_pulse_effective_user_id();
+	$item_id = (int) ( $_POST['item_id'] ?? 0 );
+	$index   = (int) ( $_POST['index'] ?? -1 );
+	$text    = (string) wp_unslash( $_POST['note'] ?? '' );
+	$date    = sp_action_note_input_date( sanitize_text_field( wp_unslash( $_POST['note_date'] ?? '' ) ) );
+	if ( ! $item_id || $index < 1 ) wp_send_json_error( [ 'message' => 'Invalid note.' ] );
+	if ( null === $date )           wp_send_json_error( [ 'message' => 'Pick a date within the past year, not in the future.' ] );
+
+	global $wpdb;
+	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . site_pulse_table( 'action_items' ) . " WHERE id = %d", $item_id ), ARRAY_A );
+	if ( ! $item )                                   wp_send_json_error( [ 'message' => 'Item not found.' ] );
+	if ( ! sp_action_item_editable_by( $item, $me ) ) wp_send_json_error( [ 'message' => 'Not allowed.' ] );
+
+	$meta  = $item['meta'] ? json_decode( $item['meta'], true ) : [];
+	$notes = ( is_array( $meta ) && isset( $meta['notes'] ) && is_array( $meta['notes'] ) ) ? $meta['notes'] : [];
+	if ( ! isset( $notes[ $index ] ) || (string) $notes[ $index ] !== $text ) {
+		wp_send_json_error( [ 'message' => 'That note changed since the page loaded — refresh and try again.' ] );
+	}
+	$body = preg_replace( '#^\d{1,2}/\d{1,2} — #u', '', $text );
+	$notes[ $index ] = gmdate( 'n/j', strtotime( $date ) ) . ' — ' . $body;
+	$meta['notes']   = sp_action_notes_sort( $notes );
+
+	$fields = [ 'meta' => wp_json_encode( $meta ), 'updated_at' => current_time( 'mysql' ) ];
+	$group  = (string) ( $item['group_id'] ?? '' );
+	if ( '' !== $group ) $wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'group_id' => $group ] );
+	else                 $wpdb->update( site_pulse_table( 'action_items' ), $fields, [ 'id' => $item_id ] );
+	wp_send_json_success();
 }
 
 // Attach a photo to an action item. Stored in the item's meta.attachments[] (JSON — no schema change)
@@ -7795,106 +7863,6 @@ function site_pulse_ajax_admin_generate_color_scheme(): void {
 		? 'Built locally — add a Claude API key under Settings → API Keys for AI tuning.'
 		: 'Built locally (AI unavailable' . ( $debug ? ": $debug" : '' ) . ').';
 	wp_send_json_success( [ 'vars' => site_pulse_build_color_scheme( $brand ), 'rationale' => $note ] );
-}
-
-
-/*--------------------------------------------------------------
-# Analytics AJAX
---------------------------------------------------------------*/
-
-add_action( 'wp_ajax_site_pulse_get_analytics', 'site_pulse_ajax_get_analytics' );
-function site_pulse_ajax_get_analytics(): void {
-	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-
-	$user_id = site_pulse_effective_user_id();
-	if ( ! site_pulse_user_can( $user_id, 'view_analytics' ) ) {
-		wp_send_json_error( [ 'message' => 'Not authorized.' ] );
-	}
-
-	global $wpdb;
-
-	$loc_id    = (int) ( $_POST['location_id'] ?? 0 );
-	$loc_where = $loc_id ? $wpdb->prepare( " AND location_id = %d", $loc_id ) : '';
-	$loc_where_r = $loc_id ? $wpdb->prepare( " AND r.location_id = %d", $loc_id ) : '';
-
-	// Action items by priority
-	$priority_counts = $wpdb->get_results(
-		"SELECT priority, COUNT(*) AS count FROM " . site_pulse_table('action_items') . " WHERE status = 'open'" . $loc_where . " GROUP BY priority ORDER BY FIELD(priority, 'high', 'medium', 'low')",
-		ARRAY_A
-	) ?: [];
-
-	// Action items by category
-	$category_counts = $wpdb->get_results(
-		"SELECT category, COUNT(*) AS count FROM " . site_pulse_table('action_items') . " WHERE status = 'open' AND category != ''" . $loc_where . " GROUP BY category ORDER BY count DESC LIMIT 10",
-		ARRAY_A
-	) ?: [];
-
-	// Reports by location
-	$location_counts = $wpdb->get_results(
-		"SELECT l.name, COUNT(r.id) AS count FROM " . site_pulse_table('reports') . " r LEFT JOIN " . site_pulse_table('locations') . " l ON l.id = r.location_id WHERE r.status = 'submitted'" . $loc_where_r . " GROUP BY r.location_id ORDER BY count DESC",
-		ARRAY_A
-	) ?: [];
-
-	// Resolution rate
-	$total_items = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . site_pulse_table('action_items') . " WHERE 1=1" . $loc_where );
-	$resolved_items = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . site_pulse_table('action_items') . " WHERE status = 'resolved'" . $loc_where );
-	$open_items = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . site_pulse_table('action_items') . " WHERE status = 'open'" . $loc_where );
-
-	// Avg resolution time (days)
-	$avg_resolution = $wpdb->get_var(
-		"SELECT AVG(DATEDIFF(resolved_at, created_at)) FROM " . site_pulse_table('action_items') . " WHERE status = 'resolved' AND resolved_at IS NOT NULL" . $loc_where
-	);
-
-	// --- Mileage analytics (MTD + YTD totals, top destinations) ---
-	$today       = current_time( 'Y-m-d' );
-	$month_start = substr( $today, 0, 7 ) . '-01';
-	$year_start  = substr( $today, 0, 4 ) . '-01-01';
-	$me  = site_pulse_table('mileage_entries');
-	$ml  = site_pulse_table('mileage_locations');
-	$mlg = site_pulse_table('mileage_legs');
-	// When a location filter is set, scope to drivers based at that location.
-	$m_where = $loc_id
-		? $wpdb->prepare( " AND e.user_id IN (SELECT user_id FROM " . site_pulse_table('user_profiles') . " WHERE location_id = %d)", $loc_id )
-		: '';
-
-	$mtd = $wpdb->get_row( $wpdb->prepare(
-		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb, COALESCE(SUM(total_tolls),0) tolls, COALESCE(SUM(total_trailer),0) trailer, COUNT(*) entries, COUNT(DISTINCT user_id) drivers
-		 FROM $me e WHERE entry_date >= %s AND entry_date <= %s" . $m_where,
-		$month_start, $today
-	), ARRAY_A );
-	$ytd = $wpdb->get_row( $wpdb->prepare(
-		"SELECT COALESCE(SUM(total_miles),0) miles, COALESCE(SUM(reimbursement_amount),0) reimb, COALESCE(SUM(total_tolls),0) tolls, COALESCE(SUM(total_trailer),0) trailer
-		 FROM $me e WHERE entry_date >= %s AND entry_date <= %s" . $m_where,
-		$year_start, $today
-	), ARRAY_A );
-	$top_dest = $wpdb->get_results( $wpdb->prepare(
-		"SELECT ml.name, COUNT(*) count
-		 FROM $mlg l
-		 INNER JOIN $me e ON e.id = l.entry_id
-		 INNER JOIN $ml ml ON ml.id = l.to_location_id
-		 WHERE e.entry_date >= %s AND e.entry_date <= %s AND ml.is_private = 0" . $m_where . "
-		 GROUP BY l.to_location_id ORDER BY count DESC LIMIT 6",
-		$year_start, $today
-	), ARRAY_A ) ?: [];
-
-	wp_send_json_success( [
-		'priority'    => $priority_counts,
-		'categories'  => $category_counts,
-		'locations'   => $location_counts,
-		'resolution'  => [
-			'total'          => $total_items,
-			'resolved'       => $resolved_items,
-			'open'           => $open_items,
-			'rate'           => $total_items > 0 ? round( ( $resolved_items / $total_items ) * 100 ) : 0,
-			'avg_days'       => $avg_resolution !== null ? round( (float) $avg_resolution, 1 ) : null,
-		],
-		'mileage'     => [
-			'month'            => $mtd ?: [ 'miles' => 0, 'reimb' => 0, 'tolls' => 0, 'trailer' => 0, 'entries' => 0, 'drivers' => 0 ],
-			'ytd'              => $ytd ?: [ 'miles' => 0, 'reimb' => 0, 'tolls' => 0, 'trailer' => 0 ],
-			'top_destinations' => $top_dest,
-			'rate'             => site_pulse_mileage_rate(),
-		],
-	] );
 }
 
 

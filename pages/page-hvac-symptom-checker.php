@@ -2,7 +2,7 @@
 /* Battle Plan Web Design - HVAC Symptom Checker */
 
 $printPage = '
-	<h1>Symptom Checker</h1>
+	<h1>HVAC Symptom Checker from [get-biz info="name-short"]</h1>
 
 	<p>System isn’t working? No matter what the problem, we’re here to help. Before you call for service, try these simple tips for troubleshooting your heating and cooling system.</p>
 

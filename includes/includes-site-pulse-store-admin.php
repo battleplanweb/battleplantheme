@@ -144,6 +144,32 @@ function sp_store_setting_defs(): array {
 			],
 			'help'    => 'Applies to every product in the shop. Tiles use the picture you tagged with that choice under Product Images, so a colour swatch needs no extra upload.',
 		],
+		'products_per_page' => [
+			'label'   => 'Products per page',
+			'type'    => 'choice',
+			'default' => '24',
+			'choices' => [
+				'12' => '12',
+				'24' => '24',
+				'48' => '48',
+				'96' => '96',
+			],
+			'help'    => 'How many products a shop or category page shows before it paginates. Customers can switch to a different count from the shop page itself; this is what they get before they choose.',
+		],
+		'default_sort' => [
+			'label'   => 'Default product order',
+			'type'    => 'choice',
+			'default' => 'featured',
+			'choices' => [
+				'featured'     => 'Featured — the order you drag products into',
+				'newest'       => 'New Products — most recently added first',
+				'name'         => 'Name (A–Z)',
+				'price-low'    => 'Price Low to High',
+				'price-high'   => 'Price High to Low',
+				'best-sellers' => 'Top Sellers — most units sold first',
+			],
+			'help'    => 'The order products appear in before a customer sorts them. <strong>Featured</strong> uses the Order field on each product, so it is the only one you control by hand. Top Sellers only appears in the customer drop-down once something has actually sold.',
+		],
 		'buy_style' => [
 			'label'   => 'Add to Cart button',
 			'type'    => 'choice',

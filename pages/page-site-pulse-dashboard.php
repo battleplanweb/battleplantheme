@@ -41,7 +41,7 @@ if ( $is_god && ! $impersonating ) {
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
 } elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'view_analytics', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'view_ai_insights', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_notes', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports' ];
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_notes', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports' ];
 	$role_label = 'Administrator';
 } else {
 	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
@@ -116,6 +116,12 @@ $icons = [
 	'printer'   => '<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
 	'mail'      => '<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/>',
 	'chat'      => '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+	// Robot face. Head 14x16 plus the two ears spans 1.4..22.6 wide and 3..21 tall, so it
+	// fills more of the box than a bare ring could — a circle has to be drawn oversized to
+	// look the same weight as the clipboard or the gear, and even then reads light.
+	// Eyes and mouth are FILLED, not stroked: at 20px a stroked 1.4 pupil closes up into a
+	// blob anyway, and filling makes the face legible instead of muddy.
+	'ai-head'   => '<rect x="5" y="4" width="14" height="16" rx="4.5"/><rect x="2.4" y="9.25" width="2.6" height="5.5" rx="1.3"/><rect x="19" y="9.25" width="2.6" height="5.5" rx="1.3"/><circle cx="9.1" cy="10.6" r="1.4" fill="currentColor" stroke="none"/><circle cx="14.9" cy="10.6" r="1.4" fill="currentColor" stroke="none"/><path d="M9.3 14.1h5.4a2.7 2.7 0 0 1-5.4 0z" fill="currentColor" stroke="none"/>',
 	'tasks'     => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
 	'notes'     => '<path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z"/><polyline points="16 3 16 8 21 8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/>',
 	'palette'   => '<circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.563-2.512 5.563-5.564C22 6.012 17.5 2 12 2z"/>',
@@ -244,7 +250,6 @@ $nav[] = [
 		// On the review hub (your agency site) you manage clients via Client Reviews and don't need the
 		// site's own Reviews tab; client installs (e.g. Rovin) get Reviews but never Client Reviews.
 		[ 'slug' => 'reviews',        'label' => 'Reviews',        'show' => $cap_reviews_area && ! $is_review_hub ],
-		[ 'slug' => 'review-trends',  'label' => 'Trends',         'show' => $cap_reviews_area && ! $is_review_hub ],
 		[ 'slug' => 'agency-reviews', 'label' => 'Client Reviews', 'show' => $cap_agency_reviews ],
 			[ 'slug' => 'customer-messages', 'label' => 'Direct Messages', 'show' => $cap_cm_area ],
 		[ 'slug' => 'surveys',        'label' => 'Comment Cards', 'show' => $cap_surveys_area ],
@@ -367,12 +372,11 @@ $nav[] = [
 	'children' => $forms_children,
 ];
 
-$nav[] = [ 'slug' => 'analytics', 'label' => 'Analytics', 'icon' => 'chart', 'show' => in_array( 'view_analytics', $caps ), 'modules' => [ 'ai' ] ];
 
 // AI Assistant — company-voiced AI chat. Gated by the use_ai_assistant capability (AI module).
 // Label is the company-set assistant name (default "AI Assistant"; e.g. "bAIbes").
 $sp_ai_name = function_exists( 'site_pulse_ai_assistant_name' ) ? site_pulse_ai_assistant_name() : 'AI Assistant';
-$nav[] = [ 'slug' => 'ai-assistant', 'label' => $sp_ai_name, 'icon' => 'chat', 'show' => in_array( 'use_ai_assistant', $caps ), 'modules' => [ 'ai' ] ];
+$nav[] = [ 'slug' => 'ai-assistant', 'label' => $sp_ai_name, 'icon' => 'ai-head', 'show' => in_array( 'use_ai_assistant', $caps ), 'modules' => [ 'ai' ] ];
 
 // Ask AI — type a question about the company's data, get a report. In private testing: shown only to
 // the battleplanweb login (sp_ask_visible), not a grantable capability yet.
@@ -391,14 +395,14 @@ $nav[] = [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
-		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ) ],
-		[ 'slug' => 'review-settings', 'label' => 'Reviews',        'icon' => 'star',    'show' => in_array( 'manage_reviews', $caps ) && ! $is_review_hub ],
+		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ), 'modules' => [ 'reports' ] ],
+		[ 'slug' => 'review-settings', 'label' => 'Reviews',        'icon' => 'star',    'show' => in_array( 'manage_reviews', $caps ) && ! $is_review_hub, 'modules' => [ 'reviews' ] ],
 		[ 'slug' => 'admin-ai-prompts','label' => 'AI Prompts',     'icon' => 'chat',    'show' => in_array( 'manage_settings', $caps ) ],
-		[ 'slug' => 'admin-mileage',   'label' => 'Expense Reports', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ) ],
-		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ) ],
-		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ) ],
-		[ 'slug' => 'admin-booking',   'label' => 'Booking',        'icon' => 'calendar', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ) ],
-		[ 'slug' => 'admin-store',     'label' => 'Store',          'icon' => 'store',    'show' => $cap_store_settings || $cap_store_products ],
+		[ 'slug' => 'admin-mileage',   'label' => 'Expense Reports', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ), 'modules' => [ 'mileage' ] ],
+		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ), 'modules' => [ 'forms' ] ],
+		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ), 'modules' => [ 'customer_connect' ] ],
+		[ 'slug' => 'admin-booking',   'label' => 'Booking',        'icon' => 'calendar', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ), 'modules' => [ 'booking' ] ],
+		[ 'slug' => 'admin-store',     'label' => 'Store',          'icon' => 'store',    'show' => $cap_store_settings || $cap_store_products, 'modules' => [ 'store' ] ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
 		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_notifications', $caps ) ],
 		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_api_keys', $caps ) ],
@@ -490,22 +494,49 @@ $printPage .= '</div>';
 // contains no inactive modules to partition — the loop below sees one flat list exactly as before.
 $nav_inactive = [];
 if ( $eff_is_god ) {
-	$nav_live = $nav_settings = [];
-	foreach ( $nav as $sp_nav_item ) {
-		if ( $sp_nav_item['slug'] === 'admin' ) { $nav_settings[] = $sp_nav_item; continue; }
-
-		// An item is inactive only if it is owned by module(s) and NONE of them is on. Untagged
-		// items (Dashboard, Chat, Action Items) are core — they belong to no module and always stay put.
-		$sp_mods = $sp_nav_item['modules'] ?? [];
-		$sp_off  = ! empty( $sp_mods );
+	// An item is inactive only if it is owned by module(s) and NONE of them is on. Untagged
+	// items (Dashboard, Chat, Action Items) are core — they belong to no module and always stay put.
+	$sp_nav_off = function( array $item ): bool {
+		$sp_mods = $item['modules'] ?? [];
 		foreach ( $sp_mods as $sp_mod ) {
-			if ( site_pulse_module_on( $sp_mod ) ) { $sp_off = false; break; }
+			if ( site_pulse_module_on( $sp_mod ) ) return false;
+		}
+		return ! empty( $sp_mods );
+	};
+
+	$nav_live = $nav_settings = [];
+	$sp_settings_off = [];
+	foreach ( $nav as $sp_nav_item ) {
+		if ( $sp_nav_item['slug'] === 'admin' ) {
+			// Settings is split the same way, child by child: a not-installed module's settings
+			// page moves to a Settings group inside the Not Installed shelf, so the main Settings
+			// menu lists only what this site actually runs.
+			$sp_settings_live = [];
+			foreach ( $sp_nav_item['children'] as $sp_child ) {
+				if ( $sp_nav_off( $sp_child ) ) $sp_settings_off[]  = $sp_child;
+				else                            $sp_settings_live[] = $sp_child;
+			}
+			$sp_nav_item['children'] = $sp_settings_live;
+			$nav_settings[] = $sp_nav_item;
+			continue;
 		}
 
-		if ( $sp_off ) $nav_inactive[] = $sp_nav_item;
-		else           $nav_live[]     = $sp_nav_item;
+		if ( $sp_nav_off( $sp_nav_item ) ) $nav_inactive[] = $sp_nav_item;
+		else                               $nav_live[]     = $sp_nav_item;
 	}
 	$nav = array_merge( $nav_live, $nav_settings );
+
+	// Its own group slug, so it opens and closes independently of the main Settings group. The
+	// children keep their real slugs, so they open the same panels as before.
+	if ( $sp_settings_off ) {
+		$nav_inactive[] = [
+			'slug'     => 'admin-inactive',
+			'label'    => 'Settings',
+			'icon'     => 'settings',
+			'show'     => (bool) array_filter( array_column( $sp_settings_off, 'show' ) ),
+			'children' => $sp_settings_off,
+		];
+	}
 }
 
 // One item's markup, so the live list and the not-installed list render identically.
@@ -567,10 +598,12 @@ if ( $nav_inactive ) {
 		$sp_item_html = $sp_render_nav_item( $item );
 		if ( $sp_item_html === '' ) continue;
 		$sp_inactive_html .= $sp_item_html;
-		$sp_inactive_shown++;
+		// The badge counts modules. The Settings group is just those modules' settings pages,
+		// so it renders here without adding to the count.
+		if ( $item['slug'] !== 'admin-inactive' ) $sp_inactive_shown++;
 	}
 
-	if ( $sp_inactive_shown ) {
+	if ( $sp_inactive_html !== '' ) {
 		$printPage .= '<div class="sp-nav-inactive-wrap" id="sp-nav-inactive">';
 		$printPage .=   '<button type="button" class="unique sp-nav-inactive-toggle" id="sp-nav-inactive-toggle" aria-expanded="false" aria-controls="sp-nav-inactive-items">';
 		$printPage .=     '<span class="sp-nav-inactive-label">Not Installed</span>';
@@ -972,91 +1005,6 @@ if ( $sp_ask_visible ) {
 	$printPage .= '</section>';
 }
 
-// Analytics Panel
-if ( in_array( 'view_analytics', $caps ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-analytics">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Analytics</h2></div>';
-
-	// Report AI search — grantable via the view_ai_insights capability (god always passes). Users
-	// without it still see the "Coming Soon" placeholder.
-	if ( $eff_is_god || in_array( 'view_ai_insights', $caps, true ) ) {
-		$printPage .=   '<div class="sp-reports-ai" id="sp-reports-ai">';
-		$printPage .=     '<div class="sp-reports-ai-bar">';
-		$printPage .=       '<input type="search" id="sp-reports-ai-q" class="sp-input sp-reports-ai-q" placeholder="Search by keyword, or ask a question…">';
-		$printPage .=       '<select id="sp-reports-ai-type" class="sp-select"><option value="">All reports</option><option value="manager">GM</option><option value="supervisor">Supervisor</option></select>';
-		$printPage .=       '<select id="sp-reports-ai-location" class="sp-select"><option value="">All locations</option></select>';
-		$printPage .=       '<select id="sp-reports-ai-range" class="sp-select"><option value="">All time</option><option value="90">Last 90 days</option><option value="180">Last 6 months</option><option value="365">Last 12 months</option><option value="730">Last 2 years</option></select>';
-		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reports-ai-search-btn">Search</button>';
-		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-reports-ai-ask-btn">Ask AI</button>';
-		$printPage .=     '</div>';
-		$printPage .=     '<div class="sp-reports-ai-tools">';
-		$printPage .=       '<span class="sp-reports-aiprep-status" id="sp-reports-digest-status"></span>';
-		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reports-digest-btn">Index reports for AI</button>';
-		$printPage .=     '</div>';
-		$printPage .=     '<div class="sp-reports-ai-results" id="sp-reports-ai-results"></div>';
-		$printPage .=   '</div>';
-	} else {
-		$printPage .=   '<div class="sp-analytics-search sp-coming-soon">';
-		$printPage .=     '<div class="sp-coming-soon-badge"><span class="unique">Coming Soon</span></div>';
-		$printPage .=     '<div class="sp-analytics-search-inner">';
-		$printPage .=       '<input type="text" class="sp-input" placeholder="Ask a question about your reports..." disabled>';
-		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" disabled>Submit</button>';
-		$printPage .=     '</div>';
-		$printPage .=     '<p class="sp-coming-soon-text">Natural language search across all reports</p>';
-		$printPage .=   '</div>';
-	}
-
-	// Analytics Filters
-	if ( $cap_view_other_reports ) {
-		$printPage .= '<div class="sp-report-filters" style="margin-bottom:20px;">';
-		$printPage .=   '<select id="sp-analytics-filter-location" class="sp-select"><option value="">All Locations</option></select>';
-		$printPage .= '</div>';
-	}
-
-	// Analytics Dashboard
-	$printPage .=   '<div class="sp-analytics-grid">';
-
-	// Action Items by Priority
-	$printPage .=     '<div class="sp-card sp-analytics-card" id="sp-analytics-priority">';
-	$printPage .=       '<h4>Action Items by Priority</h4>';
-	$printPage .=       '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
-	$printPage .=     '</div>';
-
-	// Action Items by Category
-	$printPage .=     '<div class="sp-card sp-analytics-card" id="sp-analytics-category">';
-	$printPage .=       '<h4>Action Items by Category</h4>';
-	$printPage .=       '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
-	$printPage .=     '</div>';
-
-	// Reports by Location
-	$printPage .=     '<div class="sp-card sp-analytics-card" id="sp-analytics-locations">';
-	$printPage .=       '<h4>Reports by Location</h4>';
-	$printPage .=       '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
-	$printPage .=     '</div>';
-
-	// Resolution Rate
-	$printPage .=     '<div class="sp-card sp-analytics-card" id="sp-analytics-resolution">';
-	$printPage .=       '<h4>Resolution Rate</h4>';
-	$printPage .=       '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
-	$printPage .=     '</div>';
-
-	// Survey Results by Location (only for users who can view surveys). Stores down the side,
-	// each with a 1-5 distribution bar chart; the dropdown toggles which question is shown.
-	if ( in_array( 'view_surveys', $caps ) ) {
-		$printPage .=   '<div class="sp-card sp-analytics-card" id="sp-analytics-surveys">';
-		$printPage .=     '<div class="sp-card-header sp-header sp-analytics-card-head">';
-		$printPage .=       '<h4>Comment Card Results by Location</h4>';
-		$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-analytics-survey-link">View Comment Cards</button>';
-		$printPage .=     '</div>';
-		$printPage .=     '<div class="sp-analytics-card-toolbar"><select id="sp-analytics-survey-dim" class="sp-select"></select></div>';
-		$printPage .=     '<div class="sp-analytics-card-body"><div class="sp-loading"></div></div>';
-		$printPage .=   '</div>';
-	}
-
-	$printPage .=   '</div>';
-	$printPage .= '</section>';
-}
-
 // Import Past Reports Panel — pick a report type (any active template), upload PDFs/CSVs/images of
 // past reports of that type, AI-parse, review/confirm attribution, and save. No action items are
 // generated for imported reports. Gated by import_data.
@@ -1350,25 +1298,6 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 	$printPage .=     '<div class="sp-reviews-count" id="sp-reviews-count" hidden></div>';
 	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-reviews-load-older" hidden>Load older reviews</button>';
 	$printPage .=   '</div>';
-	$printPage .= '</section>';
-}
-
-// Trends Panel — each store's overall + per-category averages vs the company baseline. Loads lazily.
-if ( ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) && ! $is_review_hub ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-review-trends">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Trends' ) . '</div>';
-	$printPage .=   '<div class="sp-reviews-statbar">';
-	$printPage .=     '<select id="sp-trends-group" class="sp-select"><option value="store">By store</option><option value="supervisor">By supervisor</option></select>';
-	$printPage .=     '<select id="sp-trends-supervisor" class="sp-select"><option value="">All supervisors</option></select>';
-	$printPage .=     '<select id="sp-trends-brand" class="sp-select"><option value="">All brands</option></select>';
-	$printPage .=     '<select id="sp-trends-range" class="sp-select">';
-	$printPage .=       '<option value="90">Last 90 days</option>';
-	$printPage .=       '<option value="365" selected>Last 12 months</option>';
-	$printPage .=       '<option value="ytd">Year to date</option>';
-	$printPage .=       '<option value="all">All time</option>';
-	$printPage .=     '</select>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div id="sp-trends-content"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 

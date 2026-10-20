@@ -13,7 +13,7 @@
   11. Expenses
   12. Reviews
   13. Surveys
-  14. Feedback analytics (trends / charts)
+  14. Feedback analytics (charts)
   15. Emails
   16. Messages
   17. Directory
@@ -1532,20 +1532,6 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	color:                                                     var(--sp-tile-label, var(--sp-secondary-darkest));
 }
 
-.sp-tile-icon {
-	flex:                                                      0 0 auto;
-	width:                                                     55px;
-	height:                                                    55px;
-	display:                                                   grid;
-	place-items:                                               center;
-	color:                                                     var(--sp-secondary-darkest);
-	order:                                                     1;
-}
-
-.sp-tile-icon svg {
-	font-size:                                                 30px;
-}
-
 .sp-modal-backdrop {
 	position:                                                  fixed !important;
 	top:                                                       0;
@@ -1608,7 +1594,7 @@ button.sp-chart-toggle-btn + .sp-chart-toggle-btn {
 	display:                                                   flex;
 	align-items:                                               center;
 	justify-content:                                           start;
-	gap:                                                       8px;
+	gap:                                                       14px;
 }
 
 .sp-card.sp-table-card thead th.sp-th-num,
@@ -2015,17 +2001,17 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
   Badges, pills & status
 ==============================================================================*/
 
-.sp-stat-icon.is-success,
+.sp-stat-value.is-success,
 .sp-status-reviewed,
 .sp-email-cat-pos {
 	color:                                                     var(--sp-success);
 }
 
-.sp-stat-icon.is-warning {
+.sp-stat-value.is-warning {
 	color:                                                     var(--sp-warning);
 }
 
-.sp-stat-icon.is-danger,
+.sp-stat-value.is-danger,
 .sp-mileage-stop-remove:hover,
 .sp-email-cat-neg {
 	color:                                                     var(--sp-danger);
@@ -2059,20 +2045,26 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	margin-bottom:                                             24px;
 }
 
-.sp-stat-text {
-	min-width:                                                 0;
-	order:                                                     2;
-}
-
-.sp-stat-label {
-	text-transform:                                            uppercase;
-}
-
+/* Value on the left at its natural width, label beside it behind a hairline rule. Capped at
+   45% so a long number cannot squeeze the label to nothing, and min-width:0 on the label so a
+   long one wraps inside the tile instead of widening the grid column. */
 .sp-stat-value {
-	font-size:                                                 var(--font-size-xl);
+	flex:                                                      0 0 auto;
+	max-width:                                                 45%;
+	font-size:                                                 26px;
 	font-weight:                                               bold;
 	line-height:                                               1.1;
 	color:                                                     var(--sp-text);
+}
+
+.sp-stat-label {
+	flex:                                                      1 1 auto;
+	min-width:                                                 0;
+	padding-left:                                              20px;
+	border-left:                                               1px solid var(--sp-secondary-darkest);
+	font-size:                                                 var(--font-size-sm);
+	text-transform:                                            uppercase;
+	color:                                                     var(--sp-text-secondary);
 }
 
 .sp-m-status-inner {
@@ -2118,49 +2110,6 @@ body.has-site-pulse .sp-table .sp-mileage-charge {
 	display:                                                   flex;
 	justify-content:                                           center;
 	margin-top:                                                4px;
-}
-
-/* Report AI: search bar + results (GOD rollout). */
-.sp-reports-ai {
-	margin:                                                    0 0 24px;
-}
-
-.sp-reports-ai-bar {
-	display:                                                   flex;
-	flex-wrap:                                                 wrap;
-	gap:                                                       8px;
-	align-items:                                               center;
-}
-
-.sp-reports-ai-q {
-	flex:                                                      1 1 260px;
-	width:                                                     auto;
-	min-width:                                                 0;
-}
-
-.sp-reports-ai-bar .sp-select {
-	flex:                                                      0 1 160px;
-	width:                                                     auto;
-	min-width:                                                 0;
-}
-
-.sp-reports-ai-tools {
-	display:                                                   flex;
-	align-items:                                               center;
-	justify-content:                                           flex-end;
-	gap:                                                       12px;
-	margin:                                                    8px 0 0;
-}
-
-.sp-reports-aiprep-status {
-	font-size:                                                 var(--font-size-sm);
-	color:                                                     var(--sp-text-light);
-}
-
-.sp-reports-ai-results {
-	display:                                                   grid;
-	gap:                                                       12px;
-	margin-top:                                                14px;
 }
 
 .sp-report-result {
@@ -3398,8 +3347,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	border-bottom-color:                                       var(--sp-accent-color);
 }
 
-.sp-reviews-stat-label,
-.sp-survey-loc-empty { font-size: 12px; color: var(--sp-text-secondary); }
+.sp-reviews-stat-label { font-size: 12px; color: var(--sp-text-secondary); }
 
 .sp-reviews-statbar {
 	display:                                                   flex;
@@ -3969,39 +3917,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 	font-style:                                                italic;
 }
 
-/*==============================================================================
-  Surveys
-==============================================================================*/
-
-.sp-survey-loc-chart {
-	display:                                                   flex;
-	flex-direction:                                            column;
-	gap:                                                       16px;
-	margin:                                                    12px 0 0;
-}
-
-.sp-survey-loc-row {
-	display:                                                   flex;
-	align-items:                                               center;
-	gap:                                                       16px;
-}
-
-.sp-survey-loc-name {
-	flex:                                                      0 0 200px;
-	font-size:                                                 var(--font-size-text);
-	font-weight:                                               700;
-	color:                                                     var(--sp-text);
-}
-
-.sp-survey-loc-count {
-	font-weight:                                               600;
-	color:                                                     var(--sp-text-secondary);
-}
-
-.sp-survey-loc-row .sp-survey-bars {
-	width:                                                     min(100%, 280px);
-}
-
 /* Single stacked satisfaction bar per store: red (1-3) | yellow (4) | green (5), widths = share. */
 .sp-survey-stack {
 	display:                                                   flex;
@@ -4271,7 +4186,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 }
 
 /*==============================================================================
-  Feedback analytics (trends / charts)
+  Feedback analytics (charts)
 ==============================================================================*/
 
 /* Customer Feedback widget — a tile per channel with a count. */
@@ -4378,41 +4293,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 
 .sp-fb-actions .sp-fb-name { width: auto; flex: 0 1 240px; min-width: 160px; }
 
-.sp-analytics-search {
-	position:                                                  relative;
-	margin-bottom:                                             24px;
-}
-
-.sp-analytics-search-inner {
-	display:                                                   grid;
-	grid-template-columns:                                     1fr auto;
-	gap:                                                       8px;
-}
-
-.sp-analytics-grid {
-	display:                                                   grid;
-	grid-template-columns:                                     1fr 1fr;
-	gap:                                                       24px;
-}
-
-.sp-analytics-card {
-	background:                                                var(--sp-bg-white);
-	border:                                                    1px solid var(--sp-border);
-	border-radius:                                             var(--sp-radius-lg);
-	padding:                                                   0;            /* header + body provide their own padding */
-	overflow:                                                  hidden;
-}
-
-.sp-analytics-card h4 {
-	margin:                                                    0;
-	padding:                                                   16px 20px;
-	border-bottom:                                             1px solid var(--sp-border);
-}
-
-.sp-analytics-card-body {
-	padding:                                                   16px 20px;
-}
-
 .sp-chart-bars {
 	display:                                                   grid;
 	gap:                                                       12px;
@@ -4507,28 +4387,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 	margin-left:                                               7px;
 }
 
-/* Full-width within the analytics grid (stores stack down the side). */
-.sp-analytics-card-head {
-	padding:                                                   16px 20px;
-	border-bottom:                                             1px solid var(--sp-border); /* spans the full card */
-}
-
-/* The card's base h4 carries its own padding + border-bottom; inside the flex head the head
-   provides those instead, so neutralize them on the h4 (otherwise the underline is short). */
-.sp-analytics-card-head h4 {
-	margin:                                                    0;
-	padding:                                                   0;
-	border-bottom:                                             none;
-}
-
-.sp-analytics-card-toolbar {
-	padding:                                                   14px 20px 0;
-}
-
-.sp-analytics-card-toolbar .sp-select {
-	width:                                                     100%;
-}
-
 .sp-feedback-stat-tile {
 	display:                                                   flex;
 	align-items:                                               center;
@@ -4539,110 +4397,6 @@ input[type="file"].sp-input::file-selector-button:hover {
 	padding:                                                   14px;
 	box-shadow:                                                var(--sp-shadow-sm);
 }
-
-.sp-trend-table th:hover { color: var(--sp-accent-color); }
-
-.sp-trend-th-store { text-align: left; min-width: 180px; }
-
-.sp-trend-cell { white-space: nowrap; }
-
-.sp-trend-up {
-	color:                                                     var(--sp-trend-pos);
-	font-size:                                                 0.85em;
-	font-weight:                                               700;
-	margin-left:                                               5px;
-}
-
-.sp-trend-down { color: var(--sp-trend-neg); font-size: 0.85em; font-weight: 700; }
-
-.sp-trend-na { color: var(--sp-text-light); }
-
-.sp-trend-company { background: rgba(0, 0, 0, 0.04); }
-
-.sp-trend-company td { border-bottom: 2px solid var(--sp-border); }
-
-/* Ranked overall-rating bar chart above the table. */
-.sp-trend-chart,
-.sp-trendline-card { margin-bottom: 14px; padding: 14px 16px; }
-
-.sp-trend-chart-head { margin-bottom: 12px; }
-
-.sp-trend-chart-head strong {
-	display:                                                   inline-block;
-	width:                                                     235px;
-}
-
-.sp-trend-metric-sel,
-.sp-trend-metric-sel:focus { vertical-align: middle; margin: 0 4px; --input-padding: 2px 24px 2px 8px; --input-font-size: 13px; height: auto; width: 300px; }
-
-.sp-trend-bars { display: grid; gap: 8px; }
-
-.sp-trend-bar-row { display: grid; grid-template-columns: 235px 1fr 36px; align-items: center; gap: 12px; }
-
-.sp-trend-bar-name {
-	white-space:                                               nowrap;
-	overflow:                                                  hidden;
-	text-overflow:                                             ellipsis;
-	font-size:                                                 var(--font-size-text);
-	order:                                                     1;
-}
-
-.sp-trend-bar-track {
-	position:                                                  relative;
-	height:                                                    16px;
-	background:                                                rgba(0, 0, 0, 0.06);
-	border-radius:                                             var(--sp-radius-xs);
-	order: 2
-}
-
-.sp-trend-bar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: var(--sp-radius-xs); animation: spBarGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-.sp-trend-bar-up { background: #1faa59; }
-
-.sp-trend-bar-down { background: #d23b3b; }
-
-.sp-trend-avgline { position: absolute; top: -2px; bottom: -2px; width: 0; border-left: 2px dashed var(--sp-text-light); }
-
-.sp-trend-bar-val {
-	text-align:                                                right;
-	font-weight:                                               600;
-	font-size:                                                 var(--font-size-text);
-	order:                                                     3;
-}
-
-/* Supervisor rows/bars are clicksp-trend-bar-name-to-drill into that supervisor's stores. */
-.sp-trend-drill { cursor: pointer; }
-
-tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
-
-.sp-trend-bar-row.sp-trend-drill:hover .sp-trend-bar-name { text-decoration: underline; }
-
-/* Over-time line chart (stores compared month-by-month). */
-.sp-trendline-svg { width: 100%; height: auto; display: block; margin-top: 8px; }
-
-.sp-tl-grid { stroke: var(--sp-border); stroke-width: 1; }
-
-.sp-tl-axis { fill: var(--sp-text-light); font-size: 11px; }
-
-.sp-tl-company { stroke: var(--sp-text-light); stroke-width: 2; }
-
-/* Lines round off at joins/ends and animate "drawing" on. pathLength=100 normalises every line so one
-   dash + offset reveals it regardless of real length. */
-.sp-tl-line { stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 100; animation: spTlDraw 0.8s ease both; }
-
-.sp-tl-company.sp-tl-line { stroke-dasharray: 4 4; animation: none; }
-
-.sp-tl-dot { animation: spTlDot 0.4s ease both; animation-delay: 0.55s; }
-
-.sp-tl-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
-
-.sp-tl-legend-item { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; font-size: 12px; color: var(--sp-text); padding: 2px 4px; }
-
-.sp-tl-legend-off { opacity: 0.4; text-decoration: line-through; }
-
-.sp-tl-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; flex: 0 0 auto; }
-
-.sp-tl-swatch-co { background: var(--sp-text-light); }
 
 .sp-rev-fill-pos { background: var(--sp-trend-pos); color: var(--sp-trend-pos); }
 
@@ -5999,7 +5753,8 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	position:                                                  relative;
 }
 
-.sp-action-due-btn {
+.sp-action-due-btn,
+.sp-note-date-btn {
 	background:                                                none;
 	border:                                                    none;
 	padding:                                                   0;
@@ -6009,13 +5764,20 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 	cursor:                                                    pointer;
 	text-align:                                                left;
 	border-bottom:                                             1px dashed currentColor;
+	font-weight:                                               bold;
 }
 
-.sp-action-due-btn:hover {
+.sp-action-due-btn:hover,
+.sp-action-due-btn.active,
+.sp-action-due-btn.tab-focus,
+.sp-note-date-btn:hover,
+.sp-note-date-btn.active,
+.sp-note-date-btn.tab-focus {
 	opacity:                                                   0.75;
 }
 
-.sp-action-due-input {
+.sp-action-due-input,
+.sp-note-date-input {
 	position:                                                  absolute;
 	left:                                                      0;
 	bottom:                                                    0;
@@ -7001,8 +6763,7 @@ tr.sp-trend-drill:hover td { background: rgba(0, 0, 0, 0.04); }
 
 /* Sortable headers */
 .sp-forms-table th.sp-forms-sort,
-.sp-users-table th.sp-users-sort,
-.sp-trend-table th {
+.sp-users-table th.sp-users-sort {
 	cursor:                                                    pointer;
 	user-select:                                               none;
 	white-space:                                               nowrap;
@@ -7865,35 +7626,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	margin-top:                                                0;
 }
 
-.sp-coming-soon {
-	opacity:                                                   0.6;
-}
-
-.sp-coming-soon-badge {
-	position:                                                  absolute;
-	top:                                                       -10px;
-	right:                                                     12px;
-	z-index:                                                   1;
-}
-
-.sp-coming-soon-badge span {
-	background:                                                var(--sp-accent-color);
-	color:                                                     var(--white);
-	font-size:                                                 var(--font-size-xs);
-	font-weight:                                               700;
-	padding:                                                   3px 10px;
-	border-radius:                                             var(--sp-radius);
-	text-transform:                                            uppercase;
-	letter-spacing:                                            0.04em;
-}
-
-.sp-coming-soon-text {
-	font-size:                                                 var(--font-size-text);
-	color:                                                     var(--sp-text-light);
-	margin:                                                    8px 0 0;
-	text-align:                                                center;
-}
-
 /* Inside a settings card the card already provides the framing, so the rate row sits flush. */
 .sp-settings-card-body .sp-admin-mileage-rate {
 	margin-bottom:                                             0;
@@ -8283,10 +8015,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 }
 
 /* dashed reference line: no draw anim */
-@keyframes spTlDraw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
-
-@keyframes spTlDot { from { opacity: 0; } }
-
 @keyframes spBarGrow {
 	from {
 		width:                                                    0;
@@ -8394,8 +8122,7 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	body .sp-msg-attach-btn { order: 3; }
 	body .sp-msg-composer button[type="submit"] { order: 4; margin-left: auto; }
 
-	body .sp-dashboard-widgets,
-	body .sp-analytics-grid {
+	body .sp-dashboard-widgets {
 		grid-template-columns:                                    1fr;
 	}
 
@@ -8495,10 +8222,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 	body .sp-summary-modal .sp-panel-header-actions { justify-content: flex-start; }
 
 	body .sp-mileage-form-top { grid-template-columns: 1fr; gap: 14px; }
-
-	body .sp-survey-loc-row    { flex-direction: column; align-items: flex-start; gap: 6px; }
-	body .sp-survey-loc-name   { flex-basis: auto; }
-	body .sp-survey-loc-row .sp-survey-bars { max-width: none; width: 100%; }
 
 	body .sp-dir-filters {
 		flex-wrap:                                                wrap;
@@ -8720,19 +8443,6 @@ a.sp-forms-row-btn.sp-forms-download:hover,
 		gap:                                                      8px;
 	}
 
-	body .sp-trend-bar-row {
-		grid-template-columns:                                    1fr 50px;
-	}
-
-	body .sp-trend-bar-track {
-		order:                                                    3;
-		grid-column:                                              span 2;
-	}
-
-	body .sp-trend-bar-val {
-		order:                                                    2;
-	}
-
 	body .sp-review-head {
 		display:                                                  grid;
 		grid-template-columns:                                    40px 1fr;
@@ -8832,8 +8542,6 @@ body.sp-printing-mileage .sp-notification-panel {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.sp-tl-line, .sp-tl-dot { animation: none; }
-
 	.sp-survey-bar-fill,
 	.sp-pie-slice {
 		animation:                                                none;
@@ -10206,6 +9914,29 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	align-items:                                               flex-end;
 }
 
+/* Hidden while a conversation is open — the follow-up box under it takes over */
+.sp-ask-composer[hidden] {
+	display:                                                   none;
+}
+
+/* Follow-up box: sits under the latest report, like the reply box in a chat */
+.sp-ask-followup {
+	margin:                                                    24px 0 0;
+	padding:                                                   20px 0 0;
+	border-top:                                                1px solid var(--sp-border);
+}
+
+.sp-ask-followup .sp-ask-input {
+	min-height:                                                52px;
+}
+
+/* Each exchange after the first is set off from the report above it */
+.sp-ask-run + .sp-ask-run {
+	margin-top:                                                28px;
+	padding-top:                                               24px;
+	border-top:                                                1px solid var(--sp-border);
+}
+
 .sp-ask-input {
 	flex:                                                      1 1 auto;
 	resize:                                                    vertical;
@@ -10247,10 +9978,38 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	margin-top:                                                20px;
 }
 
+/* The question, built as an action-item card — same white box, 24px radius, 4px coloured
+   left edge and ruled uppercase eyebrow as .sp-action-item. A thread of follow-ups is one
+   unbroken column of prose otherwise, with nothing marking where each answer starts. */
 .sp-ask-question {
+	margin:                                                    0 0 18px;
+	padding:                                                   16px 20px;
+	background:                                                var(--white);
+	border:                                                    1px solid var(--sp-secondary-color);
+	border-left:                                               4px solid var(--sp-accent-dark);
+	border-radius:                                             24px;
+	box-shadow:                                                1px 1px 3px var(--sp-button-shadow);
 	font-weight:                                               700;
 	font-size:                                                 17px;
-	margin:                                                    0 0 10px;
+	line-height:                                               1.45;
+	overflow-wrap:                                             anywhere;
+}
+
+.sp-ask-question::before {
+	content:                                                   "You asked";
+	display:                                                   block;
+	margin-bottom:                                             8px;
+	border-bottom:                                             1px solid var(--sp-accent-dark);
+	font-size:                                                 var(--font-size-text);
+	font-weight:                                               700;
+	letter-spacing:                                            0.04em;
+	text-transform:                                            uppercase;
+	color:                                                     var(--sp-accent-dark);
+}
+
+/* spAskShell() already marks follow-up runs, so the label costs no JS change. */
+.sp-ask-run[data-followup] .sp-ask-question::before {
+	content:                                                   "Follow-up";
 }
 
 /* Progress log — a spinner on the active step, a dot on finished ones */
@@ -10313,7 +10072,29 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 }
 
 /* The report */
+/* Report headings are bold so they stand out from the prose. The framework styles every heading
+   through --h-* variables declared ON the h1-h6 elements themselves (normal weight, capitalized), so
+   they must be overridden on the headings — set on .sp-ask-doc they never reach them. Titles are
+   AI-written in their own case, so no forced capitalization ("1- And 2-Star"). */
+.sp-ask-doc h3,
+.sp-ask-doc h4,
+.sp-ask-doc h5 {
+	--h-font-weight:                                           700;
+	--h-text-transform:                                        none;
+}
+
+.sp-ask-doc h3 {
+	margin-bottom:                                             24px;
+}
+
+/* Report tiles: two across. AI labels run long ("Customer complaints read (reviews, surveys…"),
+   and four in a row crushed them into tall, narrow boxes. */
+.sp-stat-grid.sp-ask-stats {
+	grid-template-columns:                                     repeat(2, minmax(0, 1fr));
+}
+
 .sp-ask-doc {
+	overflow-wrap:                                             anywhere;
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius);
 	background:                                                var(--sp-bg-white);
@@ -10323,32 +10104,6 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 .sp-ask-title {
 	margin:                                                    0 0 14px;
 	font-size:                                                 22px;
-}
-
-.sp-ask-stats {
-	display:                                                   grid;
-	grid-template-columns:                                     repeat(auto-fit, minmax(150px, 1fr));
-	gap:                                                       12px;
-	margin:                                                    0 0 18px;
-}
-
-.sp-ask-stat {
-	border:                                                    1px solid var(--sp-border);
-	border-radius:                                             var(--sp-radius-sm);
-	padding:                                                   12px 14px;
-	background:                                                var(--sp-primary-lightest);
-}
-
-.sp-ask-stat-value {
-	font-size:                                                 26px;
-	font-weight:                                               700;
-	line-height:                                               1.1;
-}
-
-.sp-ask-stat-label {
-	font-size:                                                 var(--font-size-sm);
-	color:                                                     var(--sp-text-secondary);
-	margin-top:                                                4px;
 }
 
 .sp-ask-md p,
@@ -10384,11 +10139,77 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	vertical-align:                                            top;
 }
 
+.sp-ask-chart {
+	position:                                                  relative;
+}
+
 .sp-ask-chart svg {
 	width:                                                     100%;
 	height:                                                    auto;
 	display:                                                   block;
 }
+.sp-ask-chart-zoom {
+	position:                                                  absolute;
+	top:                                                       0;
+	right:                                                     0;
+	z-index:                                                   1;
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           center;
+	width:                                                     32px;
+	height:                                                    32px;
+	padding:                                                   0;
+	border:                                                    1px solid var(--sp-border);
+	border-radius:                                             var(--sp-radius-sm);
+	background:                                                var(--sp-bg-white);
+	color:                                                     var(--sp-text-secondary);
+	cursor:                                                    pointer;
+}
+
+.sp-ask-chart-zoom:hover,
+.sp-ask-chart-zoom:focus-visible {
+	color:                                                     var(--sp-accent-dark);
+	border-color:                                              var(--sp-accent-dark);
+}
+
+/* The expanded chart. Its width is deliberately held ABOVE phone width — the labels only
+   become legible around 900px, so the overlay scrolls sideways instead of shrinking to fit
+   and recreating the exact problem it exists to solve. */
+.sp-modal.sp-ask-chart-full {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	gap:                                                       16px;
+	height:                                                    auto;
+	max-height:                                                90vh;
+	overflow:                                                  hidden;
+}
+
+.sp-ask-chart-full-scroll {
+	overflow:                                                  auto;
+	flex:                                                      1 1 auto;
+	-webkit-overflow-scrolling:                                touch;
+}
+
+.sp-ask-chart-full-scroll svg {
+	display:                                                   block;
+	width:                                                     100%;
+	min-width:                                                 900px;
+	height:                                                    auto;
+}
+
+.sp-ask-chart-full-scroll .sp-ask-legend {
+	min-width:                                                 900px;
+	margin-top:                                                12px;
+}
+
+@media print {
+
+	.sp-ask-chart-zoom {
+		display:                                                  none;
+	}
+
+}
+
 
 .sp-ask-grid {
 	stroke:                                                    var(--sp-border);
@@ -10525,18 +10346,35 @@ mark.sp-msg-search-hit.current { background: #ff9f1c; color: #1a1a1a; box-shadow
 	margin-top:                                                10px;
 }
 
+/* Grid items default to min-width:auto — without these a wide table or chart widens the column
+   past the screen instead of scrolling inside its own box. */
+.sp-ask-main,
+.sp-ask-side {
+	min-width:                                                 0;
+}
+
 @media (max-width: 1024px) {
+	/* minmax(0, 1fr), not 1fr: a bare 1fr track never shrinks below its content */
 	.sp-ask-layout {
-		grid-template-columns:                                 1fr;
+		grid-template-columns:                                    minmax(0, 1fr);
 	}
 }
 
 @media (max-width: 576px) {
 	.sp-ask-composer {
-		flex-direction:                                        column;
-		align-items:                                           stretch;
+		flex-direction:                                           column;
+		align-items:                                              stretch;
 	}
 	.sp-ask-doc {
-		padding:                                               14px;
+		padding:                                                  14px;
+	}
+	.sp-stat-grid.sp-ask-stats {
+		grid-template-columns:                                    minmax(0, 1fr);
 	}
 }
+
+/* Action item notes — back-datable note date */
+.sp-note-date-wrap {
+	position:                                                  relative;
+}
+

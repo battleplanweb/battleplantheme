@@ -385,6 +385,117 @@ function sp_store_price_range_label( int $product_id ): string {
 		. ' <span class="store-price-now">' . $now . '</span>';
 }
 
+
+/*--------------------------------------------------------------
+# Sort Keys
+--------------------------------------------------------------*/
+
+/**
+ * Prices live in the variants table, which WP_Query has no way to sort on. So the
+ * numbers a shopper sorts by are mirrored onto the product as ordinary post meta and
+ * refreshed whenever the data behind them changes.
+ *
+ * Every product carries every key, even as 0. `orderby => meta_value_num` is an INNER
+ * JOIN: a product missing the key would vanish from a sorted page altogether rather
+ * than merely sort oddly, and a product nobody can find is worse than one in the
+ * wrong place.
+ */
+function sp_store_refresh_sort_meta( int $product_id ): void {
+	if ( get_post_type( $product_id ) !== SITE_PULSE_STORE_CPT ) return;
+
+	$price   = null;
+	$savings = 0;
+
+	foreach ( sp_store_get_variants( $product_id, true ) as $variant ) {
+		$effective = sp_store_variant_price( $variant );
+		$price     = $price === null ? $effective : min( $price, $effective );
+		$savings   = max( $savings, (int) $variant['price_cents'] - $effective );
+	}
+
+	update_post_meta( $product_id, '_sp_store_sort_price',   (int) $price );
+	update_post_meta( $product_id, '_sp_store_sort_savings', (int) $savings );
+
+	// Brand is typed by hand and may never have been saved; sorting by it is the same
+	// INNER JOIN, so an absent brand has to exist as an empty string.
+	if ( get_post_meta( $product_id, '_sp_store_brand', true ) === '' ) {
+		update_post_meta( $product_id, '_sp_store_brand', '' );
+	}
+
+	delete_transient( 'sp_store_sort_flags' );
+}
+
+/** Units sold and kept: refunds subtracted, unpaid orders never counted at all. */
+function sp_store_refresh_sold_count( int $product_id ): void {
+	global $wpdb;
+
+	$sold = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COALESCE( SUM( i.qty - i.qty_refunded ), 0 )
+		   FROM " . sp_store_table( 'order_items' ) . " i
+		   JOIN " . sp_store_table( 'orders' ) . " o ON o.id = i.order_id
+		  WHERE i.product_id = %d AND o.payment_status = 'paid'",
+		$product_id
+	) );
+
+	update_post_meta( $product_id, '_sp_store_sold', $sold );
+	delete_transient( 'sp_store_sort_flags' );
+}
+
+// A sale moves every product it touched up the Top Sellers order.
+add_action( 'sp_store_order_paid', 'sp_store_refresh_sold_after_order' );
+function sp_store_refresh_sold_after_order( int $order_id ): void {
+	foreach ( sp_store_order_items( $order_id ) as $item ) {
+		if ( (int) $item['product_id'] ) sp_store_refresh_sold_count( (int) $item['product_id'] );
+	}
+}
+
+// Priority 20: after sp_store_save_product has written the variants this reads.
+add_action( 'save_post_' . SITE_PULSE_STORE_CPT, 'sp_store_refresh_sort_meta_on_save', 20 );
+function sp_store_refresh_sort_meta_on_save( $post_id ): void {
+	$post_id = (int) $post_id;
+	sp_store_refresh_sort_meta( $post_id );
+	if ( get_post_meta( $post_id, '_sp_store_sold', true ) === '' ) {
+		update_post_meta( $post_id, '_sp_store_sold', 0 );
+	}
+}
+
+/** Build every product's sort keys from scratch. Runs on install and on DB upgrade. */
+function sp_store_backfill_sort_meta(): void {
+	$ids = get_posts( [
+		'post_type'        => SITE_PULSE_STORE_CPT,
+		'post_status'      => 'any',
+		'numberposts'      => -1,
+		'fields'           => 'ids',
+		'suppress_filters' => true,
+	] );
+
+	foreach ( $ids as $id ) {
+		sp_store_refresh_sort_meta( (int) $id );
+		sp_store_refresh_sold_count( (int) $id );
+	}
+}
+
+/**
+ * Which sorts this shop can honestly offer.
+ *
+ * A shop with no sale on and nothing sold yet should not show "Savings" and "Top
+ * Sellers" options that every product ties at zero on — that looks broken in a way
+ * an empty result never does.
+ */
+function sp_store_sort_flags(): array {
+	$flags = get_transient( 'sp_store_sort_flags' );
+	if ( is_array( $flags ) ) return $flags;
+
+	global $wpdb;
+	$flags = [
+		'savings' => (bool) $wpdb->get_var( "SELECT 1 FROM $wpdb->postmeta WHERE meta_key = '_sp_store_sort_savings' AND meta_value > 0 LIMIT 1" ),
+		'sold'    => (bool) $wpdb->get_var( "SELECT 1 FROM $wpdb->postmeta WHERE meta_key = '_sp_store_sold' AND meta_value > 0 LIMIT 1" ),
+		'brand'   => (bool) $wpdb->get_var( "SELECT 1 FROM $wpdb->postmeta WHERE meta_key = '_sp_store_brand' AND meta_value <> '' LIMIT 1" ),
+	];
+
+	set_transient( 'sp_store_sort_flags', $flags, HOUR_IN_SECONDS );
+	return $flags;
+}
+
 /**
  * Create or update one variant. Returns the id, or a WP_Error.
  *
@@ -456,6 +567,7 @@ function sp_store_save_variant( array $data ) {
 	}
 
 	sp_store_flush_variant_cache( $product_id );
+	sp_store_refresh_sort_meta( $product_id );
 
 	return $id ?: new WP_Error( 'sp_store_save_failed', 'Could not save that variant.' );
 }
@@ -488,6 +600,7 @@ function sp_store_delete_variant( int $variant_id ): bool {
 	}
 
 	sp_store_flush_variant_cache( (int) $variant['product_id'] );
+	sp_store_refresh_sort_meta( (int) $variant['product_id'] );
 	return $done;
 }
 
@@ -1416,7 +1529,7 @@ function sp_store_gallery_tile( int $index, array $item, array $tags ): string {
 	}
 	$out .= '</select>';
 
-	$out .= '<button type="button" class="button-link sp-store-tile-remove" aria-label="Remove picture">&times;</button>';
+	$out .= '<button type="button" class="sp-store-tile-remove" aria-label="Remove picture" title="Remove picture">&times;</button>';
 	return $out . '</div>';
 }
 
@@ -1428,7 +1541,10 @@ function sp_store_images_box_assets(): void {
 		.sp-store-tile.is-dragging { opacity: .4; }
 		.sp-store-tile img { display: block; width: 100%; height: 110px; object-fit: cover; border-radius: 2px; background: #f0f0f1; }
 		.sp-store-tile select { width: 100%; margin-top: 6px; font-size: 12px; }
-		.sp-store-tile-remove { position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%; background: #b32d2e; color: #fff !important; text-align: center; line-height: 20px; text-decoration: none; cursor: pointer; border: 0; }
+		/* INSIDE the tile, not hanging off the corner: a negative offset is clipped to
+		   nothing by any ancestor with overflow hidden, and a metabox is a likely one. */
+		.sp-store-tile-remove { position: absolute; top: 12px; right: 12px; z-index: 2; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: #b32d2e; color: #fff !important; font-size: 17px; line-height: 1; text-decoration: none; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
+		.sp-store-tile-remove:hover { background: #8a2324; }
 	</style>
 	<script>
 	( function () {

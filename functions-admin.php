@@ -1262,10 +1262,10 @@ function battleplan_admin_footer_text() {
 		$printFooter .= '<a class="button" href="mailto:' . esc_attr($owner_email) . '">Owner Email</a>';
 	}
 
-	$socials = ['facebook','twitter','instagram','pinterest','yelp','tiktok','youtube'];
+	$socials = ['facebook','twitter','instagram','pinterest','yelp','tiktok','youtube','nextdoor','bbb'];
 	foreach ($socials as $key) {
 		if (!empty($customer_info[$key])) {
-			$printFooter .= '<a class="button" href="' . esc_url($customer_info[$key]) . '" target="_blank" rel="noopener">' . esc_html(ucfirst($key)) . '</a>';
+			$printFooter .= '<a class="button" href="' . esc_url($customer_info[$key]) . '" target="_blank" rel="noopener">' . esc_html($key === 'bbb' ? 'BBB' : ucfirst($key)) . '</a>';
 		}
 	}
 

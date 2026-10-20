@@ -44,8 +44,13 @@
 	/* #page has overflow:hidden in normalize, which makes it a scroll container and
 	   silently kills position:sticky in every descendant (same trap documented in
 	   style-schedules.css). Using clip rather than visible keeps the horizontal
-	   overflow guard — clip does not create a scroll container, so sticky survives. */
+	   overflow guard — clip does not create a scroll container, so sticky survives.
+	   But clip also drops the block formatting context overflow:hidden gave us, so the
+	   JS margin-top on #wrapper-content (fixed-header offset) collapses up through
+	   #page and body, dragging the fixed masthead down with it. flow-root restores
+	   the BFC without a scroll container. */
 	body.jobsite_geo #page {
+		display:                                                  flow-root;
 		overflow-x:                                               clip;
 		overflow-y:                                               visible;
 	}

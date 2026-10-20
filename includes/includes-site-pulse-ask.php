@@ -55,6 +55,8 @@ const SP_ASK_READ_BATCH    = 40;    // items per reader call
 const SP_ASK_PARALLEL      = 6;     // reader calls in flight at once
 const SP_ASK_INDEX_BATCH   = 30;    // items per index call
 const SP_ASK_STEP_BUDGET   = 32;    // seconds of reading per step (WP Engine kills requests at 60s)
+const SP_ASK_MAX_FOLLOWUPS = 10;    // follow-up questions per conversation
+const SP_ASK_MAX_HISTORY   = 1200000; // characters of message history before a conversation must start over
 
 // Own schema version (same idiom as Notes/Store) — only installs while the AI module is on.
 // Keep prose OUT of the CREATE TABLE strings — dbDelta parses comments as columns.
@@ -1264,7 +1266,7 @@ function sp_ask_step( array $run ): array {
 	$tool_uses = array_values( array_filter( $content, fn( $b ) => ( $b['type'] ?? '' ) === 'tool_use' ) );
 	foreach ( $tool_uses as $tu ) {
 		if ( 'deliver_report' === ( $tu['name'] ?? '' ) ) {
-			$report = sp_ask_finalize_report( (array) ( $tu['input'] ?? [] ), $st, $sources, (string) $run['question'] );
+			$report = sp_ask_finalize_report( (array) ( $tu['input'] ?? [] ), $st, $sources, sp_ask_current_question( $run, $st ) );
 			sp_ask_log( $st, 'Report ready', 'done' );
 			sp_ask_save( $run_id, $st, [ 'status' => 'done', 'report' => wp_json_encode( $report ) ] );
 			return sp_ask_payload( $run_id, 'done', $st, $report );
@@ -1279,9 +1281,79 @@ function sp_ask_step( array $run ): array {
 	// Ended without the report tool (a short direct answer, or out of tokens) — show what it said.
 	$text = trim( sp_ask_response_text( $data ) );
 	if ( '' === $text ) return sp_ask_fail( $run_id, $st, 'The AI finished without an answer. Try rephrasing the question.' );
-	$report = sp_ask_finalize_report( [ 'title' => $run['question'], 'summary' => $text, 'scope' => '' ], $st, $sources, (string) $run['question'] );
+	$q      = sp_ask_current_question( $run, $st );
+	$report = sp_ask_finalize_report( [ 'title' => $q, 'summary' => $text, 'scope' => '' ], $st, $sources, $q );
 	sp_ask_save( $run_id, $st, [ 'status' => 'done', 'report' => wp_json_encode( $report ) ] );
 	return sp_ask_payload( $run_id, 'done', $st, $report );
+}
+
+// A run is a conversation: the first question lives in the row, each follow-up in the state.
+function sp_ask_current_question( array $run, array $st ): string {
+	return (string) ( $st['question'] ?? $run['question'] );
+}
+
+// The earlier exchanges of a conversation, oldest first, for redrawing the thread.
+function sp_ask_thread( array $st ): array {
+	return array_values( array_map( fn( $x ) => [ 'question' => (string) ( $x['question'] ?? '' ), 'report' => $x['report'] ?? null ], (array) ( $st['thread'] ?? [] ) ) );
+}
+
+/**
+ * Continue a finished (or failed) conversation with a follow-up question. The planner keeps its whole
+ * message history — every tool result it already gathered — so "now just Frisco" or "why did that
+ * jump in March?" builds on the last answer instead of starting over, and the cached prefix makes
+ * that history cheap to resend.
+ *
+ * The API needs every tool_use answered before a new user turn, so the last assistant turn's tool
+ * calls (normally just deliver_report) get closing results, and the follow-up rides in that same
+ * user message. A run that failed mid-step may instead end on a user turn; the follow-up is appended
+ * to it.
+ */
+function sp_ask_continue_run( array $run, string $question ): void {
+	$st = json_decode( (string) $run['state'], true ) ?: [];
+
+	// A finished exchange joins the thread; a failed one is simply replaced by the new question.
+	if ( 'done' === $run['status'] ) {
+		$st['thread'][] = [ 'question' => sp_ask_current_question( $run, $st ), 'report' => json_decode( (string) $run['report'], true ) ];
+	}
+
+	$prompt = "Follow-up question: {$question}\n\n"
+		. 'Answer it the same way: use the tools for anything you have not already looked up, then call deliver_report. '
+		. 'Earlier reports in this conversation are still on screen, so focus this report on the follow-up rather than repeating them. '
+		. 'If it asks to narrow, widen or re-cut an earlier answer, build on what you already found.';
+
+	$messages = (array) ( $st['messages'] ?? [] );
+	$last     = end( $messages ) ?: [];
+	if ( ( $last['role'] ?? '' ) === 'assistant' ) {
+		$closing = [];
+		foreach ( (array) ( $last['content'] ?? [] ) as $b ) {
+			if ( ( $b['type'] ?? '' ) !== 'tool_use' ) continue;
+			$closing[] = [
+				'type'        => 'tool_result',
+				'tool_use_id' => (string) $b['id'],
+				'content'     => 'deliver_report' === ( $b['name'] ?? '' ) ? 'Report delivered to the user.' : 'Not run — the conversation moved on.',
+			];
+		}
+		$closing[]  = [ 'type' => 'text', 'text' => $prompt ];
+		$messages[] = [ 'role' => 'user', 'content' => $closing ];
+	} else {
+		$i       = count( $messages ) - 1;
+		$content = $messages[ $i ]['content'] ?? '';
+		if ( is_string( $content ) ) $content = [ [ 'type' => 'text', 'text' => $content ] ];
+		$content[] = [ 'type' => 'text', 'text' => $prompt ];
+		$messages[ $i ]['content'] = $content;
+	}
+
+	$st['messages']  = $messages;
+	$st['question']  = $question;
+	$st['followups'] = (int) ( $st['followups'] ?? 0 ) + 1;
+	$st['pending']   = [];
+	$st['results']   = [];
+	$st['job']       = null;
+	$st['turns']     = 0;   // the step allowance is per question, not per conversation
+	$st['fails']     = 0;
+	$st['log']       = [ [ 'kind' => 'step', 'text' => 'Looking at the follow-up' ] ];
+
+	sp_ask_save( (int) $run['id'], $st, [ 'status' => 'running', 'report' => null, 'error' => null ] );
 }
 
 function sp_ask_fail( int $run_id, array $st, string $msg ): array {
@@ -1435,8 +1507,28 @@ function site_pulse_ajax_ask_get(): void {
 	$run = sp_ask_own_run( $uid );
 	$st  = json_decode( (string) $run['state'], true ) ?: [];
 	$out = sp_ask_payload( (int) $run['id'], (string) $run['status'], $st, json_decode( (string) $run['report'], true ), (string) $run['error'] );
-	$out['question'] = (string) $run['question'];
+	$out['question'] = sp_ask_current_question( $run, $st );
+	$out['thread']   = sp_ask_thread( $st );
 	wp_send_json_success( $out );
+}
+
+add_action( 'wp_ajax_site_pulse_ask_followup', 'site_pulse_ajax_ask_followup' );
+function site_pulse_ajax_ask_followup(): void {
+	$uid = sp_ask_gate();
+	$run = sp_ask_own_run( $uid );
+	if ( ! site_pulse_get_api_key() ) wp_send_json_error( [ 'message' => 'No Claude API key is set (Settings → API Keys).' ] );
+	if ( 'running' === $run['status'] ) wp_send_json_error( [ 'message' => 'Still working on the last question — wait for it to finish.' ] );
+	$q = trim( sanitize_textarea_field( wp_unslash( $_POST['question'] ?? '' ) ) );
+	if ( mb_strlen( $q ) < 2 ) wp_send_json_error( [ 'message' => 'Type a follow-up first.' ] );
+	$q = mb_substr( $q, 0, 1000 );
+
+	$st = json_decode( (string) $run['state'], true ) ?: [];
+	if ( (int) ( $st['followups'] ?? 0 ) >= SP_ASK_MAX_FOLLOWUPS ) wp_send_json_error( [ 'message' => 'This conversation has reached its follow-up limit. Start a new question.' ] );
+	if ( strlen( wp_json_encode( $st['messages'] ?? [] ) ) > SP_ASK_MAX_HISTORY ) wp_send_json_error( [ 'message' => 'This conversation has gathered too much data to continue. Start a new question.' ] );
+
+	sp_ask_continue_run( $run, $q );
+	site_pulse_log( 'ask_ai_question', 'Asked AI (follow-up): ' . mb_substr( $q, 0, 200 ), [ 'run_id' => (int) $run['id'] ] );
+	wp_send_json_success( [ 'run_id' => (int) $run['id'] ] );
 }
 
 add_action( 'wp_ajax_site_pulse_ask_history', 'site_pulse_ajax_ask_history' );

@@ -51,9 +51,9 @@ function site_pulse_modules(): array {
 			'default' => true,
 		],
 		'ai' => [
-			'label'   => 'AI Insights &amp; Analytics',
-			'desc'    => 'Cross-module analytics dashboards, AI-generated insights, and the company-voiced AI Assistant.',
-			'caps'    => [ 'view_analytics', 'view_ai_insights', 'use_ai_assistant' ],
+			'label'   => 'AI Assistant &amp; Ask AI',
+			'desc'    => 'Ask AI, which answers questions across every module, and the company-voiced AI Assistant.',
+			'caps'    => [ 'use_ai_assistant' ],
 			'default' => true,
 		],
 		'mileage' => [

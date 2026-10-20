@@ -1307,3 +1307,78 @@ body.store-drawer-open { overflow: hidden; }
 	font-size:                                                 13px;
 	line-height:                                               1.4;
 }
+
+
+/*--------------------------------------------------------------
+# Catalog Toolbar
+--------------------------------------------------------------*/
+
+.store-toolbar {
+	display:                                                   flex;
+	align-items:                                               center;
+	justify-content:                                           space-between;
+	flex-wrap:                                                 wrap;
+	gap:                                                       16px;
+	margin:                                                    0 0 24px;
+	padding:                                                   0 0 16px;
+	border-bottom:                                             var(--store-border);
+}
+
+form p:last-of-type.store-toolbar-count {
+	margin:                                                    0;
+	color:                                                     var(--store-muted);
+	font-size:                                                 15px;
+	margin-bottom:                                             0;
+}
+
+.store-toolbar-controls {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       16px;
+}
+
+.store-toolbar-field {
+	display:                                                   flex;
+	align-items:                                               center;
+	gap:                                                       8px;
+	margin:                                                    0;
+	font-size:                                                 15px;
+	white-space:                                               nowrap;
+}
+
+.store-toolbar-field span {
+	color:                                                     var(--store-muted);
+}
+
+.store-toolbar-field select {
+	margin:                                                    0;
+	padding:                                                   6px 32px 6px 10px;
+	border:                                                    var(--store-border-active);
+	border-radius:                                             var(--store-radius);
+	background-color:                                          var(--store-card-bg);
+	font-size:                                                 15px;
+	line-height:                                               1.4;
+}
+
+/* Hidden by script-store.js once the selects submit on their own. Without JS it
+   stays, because two drop-downs that do nothing are worse than one extra button. */
+.store-toolbar-go[hidden] {
+	display:                                                   none;
+}
+
+@media screen and (max-width: 576px) {
+
+	.store-toolbar-controls {
+		width:                                                    100%;
+		flex-wrap:                                                wrap;
+	}
+
+	.store-toolbar-field {
+		flex:                                                     1 1 140px;
+	}
+
+	.store-toolbar-field select {
+		width:                                                    100%;
+	}
+
+}

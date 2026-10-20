@@ -59,7 +59,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // The store owns its own schema version, separate from SITE_PULSE_DB_VERSION, so a
 // store schema change doesn't re-run dbDelta across all ~40 core Site Pulse tables
 // on every install in the fleet (and vice versa). Same idiom as Booking and Fleet.
-define( 'SITE_PULSE_STORE_DB_VERSION', '1.1' );
+define( 'SITE_PULSE_STORE_DB_VERSION', '1.2' );
 
 /** The post type that holds product CONTENT. Commerce lives in the tables below. */
 define( 'SITE_PULSE_STORE_CPT', 'bp_product' );
@@ -774,6 +774,10 @@ function sp_store_install_db(): void {
 	if ( ! $has_guard ) {
 		$wpdb->query( "ALTER TABLE $orders ADD UNIQUE KEY provider_checkout (provider, provider_checkout)" );
 	}
+
+	// Products created before the sort keys existed have none, and a product with no
+	// sort key drops out of a sorted archive entirely. Build them once, here.
+	sp_store_backfill_sort_meta();
 
 	update_option( 'site_pulse_store_db_version', SITE_PULSE_STORE_DB_VERSION );
 }

@@ -1134,6 +1134,8 @@ function battleplan_footer_social_box() {
 		if ( do_shortcode('[get-biz info="pinterest"]') ) $buildLeft .= do_shortcode('[social-btn type="pinterest"]');
 		if ( do_shortcode('[get-biz info="youtube"]') ) $buildLeft .= do_shortcode('[social-btn type="youtube"]');
 		if ( do_shortcode('[get-biz info="tiktok"]') ) $buildLeft .= do_shortcode('[social-btn type="tiktok"]');
+		if ( do_shortcode('[get-biz info="nextdoor"]') ) $buildLeft .= do_shortcode('[social-btn type="nextdoor"]');
+		if ( do_shortcode('[get-biz info="bbb"]') ) $buildLeft .= do_shortcode('[social-btn type="bbb"]');
 		if ( do_shortcode('[get-biz info="location"]') ) $buildLeft .= do_shortcode('[social-btn type="location"]');
 		if ( do_shortcode('[get-biz info="email"]') ) $buildLeft .= do_shortcode('[social-btn type="email"]');
 		if ( do_shortcode('[get-biz info="user"]') ) $buildLeft .= do_shortcode('[social-btn type="user"]');
@@ -2422,6 +2424,36 @@ function update_customer_info(array $customer_info_new): bool {
     return $ok;
 }
 
+// functions-site.php's battleplan_updateSiteOptions() saves its raw array with a plain
+// update_option('customer_info', …), which wiped everything Chron A merged in from GBP — hours
+// ([get-hours] went blank), lat/long, phone-format, schema — until the next Chron A. Chron B runs
+// it nightly and the admin Clear Cache button runs it on demand. Re-merge the STORED GBP data
+// (bp_gbp_update — no API call) on any save that arrives without it.
+add_filter('pre_update_option_customer_info', 'bp_ci_keep_gbp_fields', 10, 1);
+function bp_ci_keep_gbp_fields($new) {
+	if ( ! is_array($new) || ! empty($new['current-hours']) ) return $new;   // Chron A's own save is already merged
+
+	if ( ! function_exists('ci_merge_gbp_into_ci') ) {
+		$f = get_template_directory() . '/functions-chron-helpers.php';
+		if ( ! is_file($f) ) return $new;
+		require_once $f;
+	}
+
+	$google_info = get_option('bp_gbp_update') ?: [];
+	$pids        = ci_normalize_pids($new['pid'] ?? []);
+	$gbp         = ( $pids && is_array($google_info[$pids[0]] ?? null) ) ? $google_info[$pids[0]] : [];
+	if ( ! $gbp ) return $new;
+
+	$pid_sync = (bool) filter_var($new['pid-sync'] ?? false, FILTER_VALIDATE_BOOLEAN);
+	[$new]    = ci_merge_gbp_into_ci($new, $gbp, $pid_sync);
+	ci_finalize_fields($new);
+	$new['schema'] = ci_build_schema($new, $gbp, $google_info, [
+		'include_aggregate_rating' => true,
+		'min_rating_value'         => 4.0,
+	]);
+	return $new;
+}
+
 // Extend Yoast's schema code
 function bp_get_base_schema(): array {
     $customer_info = get_option('customer_info');
@@ -2555,6 +2587,44 @@ function bp_output_test_schema() {
         '</script>';
 }
 
+// FAQPage schema, fed by $GLOBALS['bp_faq_schema'] — every [accordion] whose title ends in "?"
+// adds itself (battleplan_buildAccordion). Default: the /faq/ page only. Opt another page in/out:
+//   add_filter('bp_faq_schema', fn($on) => $on || is_page('service-faq'));
+function bp_faq_schema_on(): bool {
+	if ( is_admin() || ! did_action('wp') ) return false;   // shortcodes rendered outside a front-end query
+	$on = is_singular() && get_post_field('post_name', get_queried_object_id()) === 'faq';
+	return (bool) apply_filters('bp_faq_schema', $on);
+}
+
+add_action('wp_footer', 'bp_output_faq_schema', 999);
+function bp_output_faq_schema() {
+	if ( empty($GLOBALS['bp_faq_schema']) || ! bp_faq_schema_on() ) return;
+
+	$seen = [];
+	$qa   = [];
+	foreach ( $GLOBALS['bp_faq_schema'] as $f ) {
+		if ( isset($seen[ $f['q'] ]) ) continue;   // same question in content + a widget
+		$seen[ $f['q'] ] = 1;
+		$qa[] = [
+			'@type'          => 'Question',
+			'name'           => $f['q'],
+			'acceptedAnswer' => [ '@type' => 'Answer', 'text' => $f['a'] ],
+		];
+	}
+
+	$url = function_exists('bp_seo_canonical') ? ( bp_seo_canonical() ?: get_permalink() ) : get_permalink();
+	echo '<script type="application/ld+json">' .
+		wp_json_encode([
+			'@context'   => 'https://schema.org',
+			'@type'      => 'FAQPage',
+			'@id'        => $url . '#faq',
+			'url'        => $url,
+			'isPartOf'   => [ '@id' => home_url('#website') ],
+			'mainEntity' => $qa,
+		], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) .
+		'</script>';
+}
+
 // Jobsite GEO slider → Service schema (one node per job shown). Fed by $GLOBALS['bp_jobsite_schema'],
 // which the jobsite_geo archive branch in functions-shortcodes.php populates — a job is a completed
 // service in an area, NOT a review, so it must never land in the bp_reviews graph above.
@@ -2630,7 +2700,10 @@ function battleplan_fetch_background_image($clear=false) {
 function battleplan_fetch_site_logo($clear=false) {
 	$logoData = get_option('bp_site_logo');
 
-	if ( $logoData === false || !isset($logoData['name']) || $clear ) {
+	// Stored as a bare filename ('' when none). The old !isset($logoData['name']) test was
+	// always true for a string, so every call rescanned the disk and rewrote the option —
+	// it now runs per page view (SEO schema logo), so only rescan on miss or nightly clear.
+	if ( $logoData === false || ! is_string($logoData) || $clear ) {
 		$logoData = null;
 
 		if (is_file($_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/logo.webp')) {

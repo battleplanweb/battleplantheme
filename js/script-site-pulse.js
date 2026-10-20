@@ -34,6 +34,7 @@ const ICON_TASK ='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" st
 const ICON_MIC = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
 const ICON_REPLY = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
 const ICON_SEARCH = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
+const ICON_EXPAND = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>';
 const ICON_CHART_BAR = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';
 const ICON_CHART_PIE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>';
 
@@ -214,35 +215,17 @@ function receiptIconBtn(cls, id) {
 }
 
 /* Shared stat-card builder (the at-a-glance metric tiles). Reused by any module that shows
-   summary numbers — pass a label, a pre-formatted value, an icon key, and an optional tint
-   ('success'|'warning'|'danger'). Styling lives in .sp-stat-tile / .sp-stat-icon (variable-driven). */
-const SP_STAT_ICONS = {
-	gauge:   '<path d="M12 13.5 15.5 10"/><path d="M4 18a8 8 0 1 1 16 0"/><circle cx="12" cy="13.8" r="1.1" fill="currentColor" stroke="none"/>',
-	car:     '<path d="M5 17h14M3 13l2-6h14l2 6M5 17a2 2 0 0 0 4 0M15 17a2 2 0 0 0 4 0M3 13v4h18v-4"/>',
-	trailer: '<rect x="1.5" y="7" width="13" height="9" rx="1"/><path d="M14.5 10H19l3 3v3h-7.5z"/><circle cx="6" cy="18" r="1.5"/><circle cx="18" cy="18" r="1.5"/>',
-	ticket:  '<path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M12 6.5v11"/>',
-	wallet:  '<path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0H5a2 2 0 0 0-2 2z"/><path d="M3 8h16a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/>',
-	clock:   '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
-	items:   '<rect x="3" y="4.5" width="3.2" height="3.2" rx="0.6"/><rect x="3" y="10.4" width="3.2" height="3.2" rx="0.6"/><rect x="3" y="16.3" width="3.2" height="3.2" rx="0.6"/><path d="M9.8 6.1h11.2"/><path d="M9.8 12h11.2"/><path d="M9.8 17.9h11.2"/>',
-	// Site Fleet set — same 24-viewBox stroke style as the rest.
-	globe:   '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
-	bell:    '<path d="M18 8a6 6 0 1 0-12 0c0 6-2 7-2 7h16s-2-1-2-7"/><path d="M10.3 19a2 2 0 0 0 3.4 0"/>',
-	chart:   '<path d="M3 3v16.5A1.5 1.5 0 0 0 4.5 21H21"/><path d="m7 15 3.5-4L14 14l4-6"/>',
-	audit:   '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/>',
-	plane:   '<path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>',
-};
+   summary numbers — pass a label, a pre-formatted value and an optional tint
+   ('success'|'warning'|'danger'). Styling lives in .sp-stat-tile (variable-driven).
 
-function spStatIcon(key, tint) {
-	const cls = `sp-tile-icon sp-stat-icon${tint ? ' is-' + tint : ''}`;
-	// Prefer a framework icon registered via battleplan_icon_map (512-viewBox, fill-based,
-	// inherits color). Fall back to the built-in 24-viewBox stroke set.
-	const fw = D.icons && D.icons[key];
-	if (fw) return `<div class="${cls}"><svg viewBox="0 0 512 512" fill="currentColor">${fw}</svg></div>`;
-	return `<div class="${cls}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${SP_STAT_ICONS[key] || ''}</svg></div>`;
-}
-
+   NO ICON. A generic gauge/car/wallet glyph says less than the number beside it and the set
+   never covered every metric, so tiles read value-first with the label ruled off to its right.
+   `iconKey` stays in the signature only because 21 call sites pass `tint` after it. */
 function spStatCard(label, value, iconKey, tint) {
-	return `<div class="sp-tile sp-stat-tile"><div class="sp-stat-text"><div class="sp-tile-label sp-stat-label">${esc(label)}</div><div class="sp-tile-value sp-stat-value">${value}</div></div>${spStatIcon(iconKey, tint)}</div>`;
+	return `<div class="sp-tile sp-stat-tile">`
+		+ `<div class="sp-tile-value sp-stat-value${tint ? ' is-' + tint : ''}">${value}</div>`
+		+ `<div class="sp-tile-label sp-stat-label">${esc(label)}</div>`
+		+ `</div>`;
 }
 
 // Shared popup shell for the admin add/edit forms, so every "Add" opens a centered modal
@@ -680,13 +663,17 @@ function activatePanel(panelId) {
 			const parentBtn = group.querySelector('.sp-nav-item');
 			if (parentBtn) parentBtn.classList.add('active');
 		}
+
+		// A panel opened from outside the menu (a link, a redirect) can belong to the collapsed
+		// Not Installed shelf; open the shelf too, or the highlighted item is invisible.
+		const shelf = navBtn.closest('.sp-nav-inactive-wrap');
+		if (shelf && !shelf.classList.contains('expanded')) {
+			shelf.classList.add('expanded');
+			const t = shelf.querySelector('.sp-nav-inactive-toggle');
+			if (t) t.setAttribute('aria-expanded', 'true');
+		}
 	}
 
-	if (panelId === 'analytics') {
-		populateAnalyticsFilters();
-		loadAnalytics(true);
-		initReportsDigestBtn();
-	}
 	if (panelId === 'mileage-map') {
 		loadMileageMap();
 	}
@@ -699,9 +686,6 @@ function activatePanel(panelId) {
 	}
 	if (panelId === 'review-settings') {
 		loadReviewSettings();
-	}
-	if (panelId === 'review-trends') {
-		loadReviewTrends();
 	}
 	if (panelId === 'ai-assistant') {
 		initAiAssistant();
@@ -4311,407 +4295,6 @@ function renderReviewList(container, reports) {
 
 
 /*--------------------------------------------------------------
-# Analytics
---------------------------------------------------------------*/
-
-let analyticsLoaded = false;
-let analyticsFiltersPopulated = false;
-
-// God-only: build/refresh the AI report index (condense each report into a search/trend digest). Loops
-// batches like the review-analyzer so a big backlog finishes on one click; the cron keeps it current.
-function initReportsDigestBtn() {
-	const btn = $('#sp-reports-digest-btn');
-	if (btn && !btn._wired) { btn._wired = true; btn.addEventListener('click', runReportsDigest); }
-
-	const sBtn = $('#sp-reports-ai-search-btn');
-	if (sBtn && !sBtn._wired) { sBtn._wired = true; sBtn.addEventListener('click', () => runReportSearch()); }
-
-	const aBtn = $('#sp-reports-ai-ask-btn');
-	if (aBtn && !aBtn._wired) {
-		aBtn._wired = true;
-		aBtn.addEventListener('click', () => runReportAsk());
-		// Enter in the box asks a question (the headline action); use the Search button for keyword lookups.
-		$('#sp-reports-ai-q')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runReportAsk(); } });
-	}
-}
-
-// Keyword search across the report corpus (digests + raw answers). Results link into the report detail.
-async function runReportSearch() {
-	const box = $('#sp-reports-ai-results');
-	if (!box) return;
-	const q = $('#sp-reports-ai-q')?.value.trim() || '';
-	const type = $('#sp-reports-ai-type')?.value || '';
-	const location_id = $('#sp-reports-ai-location')?.value || '';
-	const range = $('#sp-reports-ai-range')?.value || '';
-	box.innerHTML = '<div class="sp-loading"></div>';
-	try {
-		const res = await spAjax('site_pulse_reports_search', { q, type, location_id, range });
-		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Search failed.')}</div>`; return; }
-		spFillReportLocations(res.data.locations || []);
-		renderReportSearch(res.data.results || []);
-	} catch (e) { box.innerHTML = '<div class="sp-empty">Search error.</div>'; }
-}
-
-let _spReportLocLoaded = false;
-function spFillReportLocations(locs) {
-	const sel = $('#sp-reports-ai-location');
-	if (!sel || _spReportLocLoaded) return;
-	_spReportLocLoaded = true;
-	const cur = sel.value;
-	sel.innerHTML = '<option value="">All locations</option>' + locs.map(l => `<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
-	sel.value = cur;
-}
-
-function renderReportSearch(results) {
-	const box = $('#sp-reports-ai-results');
-	if (!box) return;
-	if (!results.length) { box.innerHTML = '<div class="sp-empty">No reports match.</div>'; return; }
-	box.innerHTML = results.map(r => {
-		const date = r.period_end ? new Date(r.period_end + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-		const chips = (r.categories || []).map(c => {
-			const cls = c.score >= 4 ? 'sp-report-chip-good' : (c.score === 3 ? 'sp-report-chip-ok' : 'sp-report-chip-bad');
-			return `<span class="unique sp-report-chip ${cls}">${esc(c.label)}${c.score ? ' ' + c.score : ''}</span>`;
-		}).join('');
-		return `<div class="sp-report-result" data-report-id="${r.id}">` +
-			`<div class="sp-card-header sp-header sp-report-result-head"><span class="unique sp-report-result-title">${esc(r.location || r.author || 'Report')}</span>` +
-			`<span class="unique sp-report-result-meta">${esc(r.type)}${date ? ' · ' + esc(date) : ''}${r.author ? ' · ' + esc(r.author) : ''}</span></div>` +
-			(r.summary ? `<p class="sp-report-result-summary">${esc(r.summary)}</p>` : '') +
-			(chips ? `<div class="sp-report-result-chips">${chips}</div>` : '') +
-		'</div>';
-	}).join('');
-	markUniqueSpans(box);
-	$$('.sp-report-result', box).forEach(el => el.addEventListener('click', () => {
-		activatePanel('reports-review');
-		showReportDetail(el.dataset.reportId, 'review');
-	}));
-}
-
-// Ask AI: send the question + scope; Sonnet reads the in-scope digests and answers trends/insights.
-async function runReportAsk() {
-	const box = $('#sp-reports-ai-results');
-	if (!box) return;
-	const q = $('#sp-reports-ai-q')?.value.trim() || '';
-	if (!q) { spFlash('Type a question first.'); return; }
-	const type = $('#sp-reports-ai-type')?.value || '';
-	const location_id = $('#sp-reports-ai-location')?.value || '';
-	const range = $('#sp-reports-ai-range')?.value || '';
-	box.innerHTML = '<div class="sp-loading"></div><p class="sp-help-text" style="text-align:center;margin-top:8px;">Reading the reports…</p>';
-	try {
-		const res = await spAjax('site_pulse_reports_ask', { q, type, location_id, range });
-		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not answer that.')}</div>`; return; }
-		renderReportAnswer(res.data.answer || '', res.data.count || 0, q);
-	} catch (e) { box.innerHTML = '<div class="sp-empty">Could not answer that.</div>'; }
-}
-
-// Minimal markdown → HTML for the AI answer (escape first, then **bold**, bullets, and paragraphs).
-function spLightMarkdown(t) {
-	let h = esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-	const lines = h.split('\n');
-	let out = '', inList = false;
-	lines.forEach(line => {
-		const m = line.match(/^\s*[-*•]\s+(.*)$/);
-		if (m) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${m[1]}</li>`; return; }
-		if (inList) { out += '</ul>'; inList = false; }
-		if (line.trim() !== '') out += `<p>${line}</p>`;
-	});
-	if (inList) out += '</ul>';
-	return out;
-}
-
-function renderReportAnswer(answer, count, question) {
-	const box = $('#sp-reports-ai-results');
-	if (!box) return;
-	box.innerHTML =
-		'<div class="sp-card-sm sp-report-answer">' +
-			`<div class="sp-report-answer-q">${esc(question)}</div>` +
-			`<div class="sp-report-answer-body">${spLightMarkdown(answer)}</div>` +
-			`<div class="sp-report-answer-meta">Based on ${spComma(count)} report${count === 1 ? '' : 's'}.</div>` +
-		'</div>';
-}
-
-async function runReportsDigest() {
-	const btn = $('#sp-reports-digest-btn');
-	const status = $('#sp-reports-digest-status');
-	if (!btn || btn.disabled) return;
-	const orig = btn.textContent;
-	btn.disabled = true;
-	btn.textContent = 'Indexing…';
-	let errored = false, total = 0;
-	try {
-		while (true) {
-			const res = await spAjax('site_pulse_reports_digest_batch', {});
-			if (!res.success) { spFlash(res.data?.message || 'Indexing failed.'); errored = true; break; }
-			total += res.data.done || 0;
-			if (status) status.textContent = res.data.remaining > 0 ? `Indexed ${spComma(total)} — ${spComma(res.data.remaining)} to go…` : `Indexed ${spComma(total)}.`;
-			if (res.data.error) { spFlash(res.data.error); errored = true; break; }
-			if (!res.data.remaining || res.data.done === 0) break;
-		}
-	} catch (e) { spFlash('Indexing failed.'); errored = true; }
-	btn.disabled = false;
-	btn.textContent = orig;
-	if (!errored) spFlash('Report index up to date.');
-}
-
-async function populateAnalyticsFilters() {
-	if (analyticsFiltersPopulated) return;
-	analyticsFiltersPopulated = true;
-
-	const locSelect = $('#sp-analytics-filter-location');
-	if (!locSelect) return;
-
-	try {
-		const res = await spAjax('site_pulse_get_review_filters', {});
-		if (!res.success) return;
-		if (res.data.locations) {
-			res.data.locations.forEach(l => {
-				const opt = document.createElement('option');
-				opt.value = l.id;
-				opt.textContent = l.name;
-				locSelect.appendChild(opt);
-			});
-		}
-	} catch (err) {}
-
-	locSelect.addEventListener('change', () => loadAnalytics(true));
-}
-
-async function loadAnalytics(force = false) {
-	if (analyticsLoaded && !force) return;
-	analyticsLoaded = true;
-
-	const locationId = $('#sp-analytics-filter-location')?.value || '';
-
-	try {
-		const res = await spAjax('site_pulse_get_analytics', { location_id: locationId });
-		if (!res.success) return;
-		const d = res.data;
-
-		renderPriorityChart(d.priority);
-		renderCategoryChart(d.categories);
-		renderLocationsChart(d.locations);
-		renderResolutionCard(d.resolution);
-		renderMileageAnalytics(d.mileage);
-
-		// Survey-results-by-location widget (only present for users who can view surveys).
-		if ($('#sp-analytics-surveys')) {
-			const sres = await spAjax('site_pulse_get_survey_analytics', {});
-			if (sres.success) renderSurveyLocationChart(sres.data);
-		}
-	} catch (err) {}
-}
-
-let _spSurveyAnalytics = null;
-
-// Stores down the side, each with a 1-5 distribution bar chart (reusing surveyBars). The
-// dropdown toggles which question is charted; defaults to Overall Impression.
-function renderSurveyLocationChart(data) {
-	const card = $('#sp-analytics-surveys');
-	if (!card) return;
-	_spSurveyAnalytics = data;
-	const sel  = $('#sp-analytics-survey-dim');
-	const body = card.querySelector('.sp-analytics-card-body');
-
-	// "View Surveys" jumps to the Surveys tab. Wire once.
-	const linkBtn = $('#sp-analytics-survey-link');
-	if (linkBtn && !linkBtn.dataset.wired) {
-		linkBtn.dataset.wired = '1';
-		linkBtn.addEventListener('click', () => activatePanel('surveys'));
-	}
-
-	if (!data || !data.locations || !data.locations.length) {
-		if (body) body.innerHTML = '<div class="sp-widget-empty">No comment cards yet.</div>';
-		return;
-	}
-	if (sel && !sel.dataset.filled) {
-		const dims = data.dimensions || {};
-		sel.innerHTML = Object.keys(dims).map(k =>
-			`<option value="${esc(k)}"${k === 'impression' ? ' selected' : ''}>${esc(dims[k])}</option>`).join('');
-		sel.dataset.filled = '1';
-		sel.addEventListener('change', drawSurveyLocationChart);
-	}
-	drawSurveyLocationChart();
-}
-
-function drawSurveyLocationChart() {
-	const card = $('#sp-analytics-surveys');
-	if (!card || !_spSurveyAnalytics) return;
-	const body = card.querySelector('.sp-analytics-card-body');
-	if (!body) return;
-	const dim = $('#sp-analytics-survey-dim')?.value || 'impression';
-	const rows = _spSurveyAnalytics.locations.map(loc => {
-		const dist = (loc.dists && loc.dists[dim]) || null;
-		const bar  = surveyStackBar(dist) || '<div class="sp-survey-loc-empty">No ratings</div>';
-		return `<div class="sp-survey-loc-row">` +
-			`<div class="sp-survey-loc-name">${esc(loc.location)} <span class="unique sp-survey-loc-count">${loc.count}</span></div>` +
-			bar +
-		`</div>`;
-	}).join('');
-	body.innerHTML = `<div class="sp-survey-loc-chart">${rows}</div>`;
-}
-
-// One compact horizontal bar per store: red (1-3) → yellow (4) → green (5), each segment's width
-// = its share of responses. Far more scalable than a 5-row chart once all stores report. Segment
-// widths are exact (sum to 100%); the % text is rounded and clipped if a segment is too narrow.
-function surveyStackBar(dist) {
-	if (!dist) return '';
-	const c = n => parseInt(dist[n], 10) || 0;
-	const total = c(1) + c(2) + c(3) + c(4) + c(5);
-	if (!total) return '';
-	const seg = (n, cls) => {
-		if (n <= 0) return '';
-		const w = (n / total) * 100;
-		return `<div class="sp-survey-seg ${cls}" style="width:${w}%" title="${Math.round(w)}%">${Math.round(w)}%</div>`;
-	};
-	return `<div class="sp-survey-stack">` +
-		seg(c(1) + c(2) + c(3), 'sp-rate-bad') +
-		seg(c(4), 'sp-rate-ok') +
-		seg(c(5), 'sp-rate-good') +
-	`</div>`;
-}
-
-// Analytics cards: Business Mileage (MTD/YTD) + Top Destinations. No-op if the cards
-// aren't on the page (user without mileage caps).
-function renderMileageAnalytics(m) {
-	const stat = $('#sp-analytics-mileage .sp-analytics-card-body');
-	if (stat) {
-		const mo = (m && m.month) || {}, yt = (m && m.ytd) || {};
-		stat.innerHTML = `<div class="sp-mileage-widget-stats">
-			<div><div class="sp-card-value">${parseFloat(mo.miles || 0).toFixed(1)}</div><div class="sp-card-label">Miles (MTD)</div></div>
-			<div><div class="sp-card-value">$${parseFloat(mo.reimb || 0).toFixed(2)}</div><div class="sp-card-label">Reimb (MTD)</div></div>
-			<div><div class="sp-card-value">${parseFloat(yt.miles || 0).toFixed(0)}</div><div class="sp-card-label">Miles (YTD)</div></div>
-			<div><div class="sp-card-value">$${parseFloat(yt.reimb || 0).toFixed(2)}</div><div class="sp-card-label">Reimb (YTD)</div></div>
-		</div>`;
-	}
-	const dest = $('#sp-analytics-mileage-dest .sp-analytics-card-body');
-	if (dest) {
-		const top = (m && m.top_destinations) || [];
-		if (!top.length) { dest.innerHTML = '<div class="sp-widget-empty">No trips logged yet.</div>'; return; }
-		const max = Math.max(...top.map(t => parseInt(t.count)));
-		let html = '<div class="sp-chart-bars">';
-		top.forEach(t => {
-			const pct = max > 0 ? Math.round((parseInt(t.count) / max) * 100) : 0;
-			html += `<div class="sp-chart-bar-row"><span class="unique sp-chart-label">${esc(t.name)}</span><div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:#15243a"></div></div><span class="unique sp-chart-value">${t.count}</span></div>`;
-		});
-		html += '</div>';
-		dest.innerHTML = html;
-		markUniqueSpans(dest);
-	}
-}
-
-function renderPriorityChart(data) {
-	const body = $('#sp-analytics-priority .sp-analytics-card-body');
-	if (!body) return;
-
-	if (!data || data.length === 0) {
-		body.innerHTML = '<div class="sp-widget-empty">No open action items.</div>';
-		return;
-	}
-
-	const colors = { high: '#dc2626', medium: '#f97316', low: '#eab308' };
-	const labels = { high: 'High', medium: 'Medium', low: 'Low' };
-	const total = data.reduce((sum, d) => sum + parseInt(d.count), 0);
-
-	let html = '<div class="sp-chart-bars">';
-	data.forEach(d => {
-		const pct = total > 0 ? Math.round((parseInt(d.count) / total) * 100) : 0;
-		html += `<div class="sp-chart-bar-row">`;
-		html += `<span class="unique sp-chart-label">${labels[d.priority] || d.priority}</span>`;
-		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:${colors[d.priority] || '#94a3b8'}"></div></div>`;
-		html += `<span class="unique sp-chart-value">${d.count}</span>`;
-		html += '</div>';
-	});
-	html += '</div>';
-
-	body.innerHTML = html;
-	markUniqueSpans(body);
-}
-
-function renderCategoryChart(data) {
-	const body = $('#sp-analytics-category .sp-analytics-card-body');
-	if (!body) return;
-
-	if (!data || data.length === 0) {
-		body.innerHTML = '<div class="sp-widget-empty">No data yet.</div>';
-		return;
-	}
-
-	const max = Math.max(...data.map(d => parseInt(d.count)));
-
-	let html = '<div class="sp-chart-bars">';
-	data.forEach(d => {
-		const pct = max > 0 ? Math.round((parseInt(d.count) / max) * 100) : 0;
-		html += `<div class="sp-chart-bar-row">`;
-		html += `<span class="unique sp-chart-label">${esc(d.category)}</span>`;
-		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:var(--sp-accent-color)"></div></div>`;
-		html += `<span class="unique sp-chart-value">${d.count}</span>`;
-		html += '</div>';
-	});
-	html += '</div>';
-
-	body.innerHTML = html;
-	markUniqueSpans(body);
-}
-
-function renderLocationsChart(data) {
-	const body = $('#sp-analytics-locations .sp-analytics-card-body');
-	if (!body) return;
-
-	if (!data || data.length === 0) {
-		body.innerHTML = '<div class="sp-widget-empty">No reports yet.</div>';
-		return;
-	}
-
-	const max = Math.max(...data.map(d => parseInt(d.count)));
-
-	let html = '<div class="sp-chart-bars">';
-	data.forEach(d => {
-		const pct = max > 0 ? Math.round((parseInt(d.count) / max) * 100) : 0;
-		html += `<div class="sp-chart-bar-row">`;
-		html += `<span class="unique sp-chart-label">${esc(d.name || 'Unknown')}</span>`;
-		html += `<div class="sp-chart-bar-track"><div class="sp-chart-bar-fill" style="width:${pct}%;background:var(--sp-accent-color)"></div></div>`;
-		html += `<span class="unique sp-chart-value">${d.count}</span>`;
-		html += '</div>';
-	});
-	html += '</div>';
-
-	body.innerHTML = html;
-	markUniqueSpans(body);
-}
-
-function renderResolutionCard(data) {
-	const body = $('#sp-analytics-resolution .sp-analytics-card-body');
-	if (!body) return;
-
-	if (!data || data.total === 0) {
-		body.innerHTML = '<div class="sp-widget-empty">No action items yet.</div>';
-		return;
-	}
-
-	const pct = data.rate;
-	const color = pct >= 75 ? 'var(--sp-success)' : pct >= 50 ? '#f97316' : 'var(--sp-danger)';
-
-	let html = '<div class="sp-resolution-stats">';
-	html += `<div class="sp-resolution-ring">`;
-	html += `<svg viewBox="0 0 36 36" class="sp-ring-svg">`;
-	html += `<path class="sp-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>`;
-	html += `<path class="sp-ring-fill" stroke="${color}" stroke-dasharray="${pct}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>`;
-	html += `<text x="18" y="20.35" class="sp-ring-text">${pct}%</text>`;
-	html += `</svg></div>`;
-	html += '<div class="sp-resolution-details">';
-	html += `<div><span class="unique sp-chart-label">Resolved</span> <strong>${data.resolved}</strong></div>`;
-	html += `<div><span class="unique sp-chart-label">Open</span> <strong>${data.open}</strong></div>`;
-	html += `<div><span class="unique sp-chart-label">Total</span> <strong>${data.total}</strong></div>`;
-	if (data.avg_days !== null) {
-		html += `<div><span class="unique sp-chart-label">Avg Resolution</span> <strong>${data.avg_days} days</strong></div>`;
-	}
-	html += '</div></div>';
-
-	body.innerHTML = html;
-	markUniqueSpans(body);
-}
-
-
-/*--------------------------------------------------------------
 # Admin Panel
 --------------------------------------------------------------*/
 
@@ -6644,6 +6227,22 @@ async function loadActionItems() {
 // Client-side search across the loaded action items — matches the item text, its label, and every note
 // (and the completion note). Re-renders instantly from the cached set; respects the current sort/filters.
 let _spActionData = { items: [], pending: [] };
+// Local Y-m-d for today, optionally shifted by whole days (note date pickers: max today, min a year back).
+function spTodayYmd(offsetDays = 0) {
+	const d = new Date();
+	d.setDate(d.getDate() + offsetDays);
+	return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+// A stored "M/D" note date → Y-m-d: its most recent occurrence on or before today (matches the server).
+function spNoteYmd(m, d) {
+	const now = new Date();
+	let y = now.getFullYear();
+	const pad = v => String(v).padStart(2, '0');
+	let ymd = `${y}-${pad(m)}-${pad(d)}`;
+	if (ymd > spTodayYmd()) ymd = `${y - 1}-${pad(m)}-${pad(d)}`;
+	return ymd;
+}
+
 function spActionItemMatches(item, q) {
 	if (!q) return true;
 	if (String(item.description || '').toLowerCase().includes(q)) return true;
@@ -6762,6 +6361,29 @@ function renderActionItems(container, items, pending = []) {
 					else { alert(res.data?.message || 'Error saving note.'); save.disabled = false; save.textContent = 'Save Details'; }
 				} catch (err) { alert('Error saving note.'); save.disabled = false; save.textContent = 'Save Details'; }
 			});
+		});
+	});
+
+	// Clickable note date → native date picker → re-date the note (the list re-sorts by date).
+	$$('.sp-note-date-btn', container).forEach(btn => {
+		btn.addEventListener('click', () => {
+			const input = btn.parentElement.querySelector('.sp-note-date-input');
+			if (!input) return;
+			if (typeof input.showPicker === 'function') { try { input.showPicker(); return; } catch (e) {} }
+			input.focus();
+			input.click();
+		});
+	});
+	$$('.sp-note-date-input', container).forEach(input => {
+		input.addEventListener('change', async () => {
+			if (!input.value) return;
+			try {
+				const res = await spAjax('site_pulse_set_action_note_date', {
+					item_id: input.dataset.itemId, index: input.dataset.index, note: input.dataset.note, note_date: input.value,
+				});
+				if (res.success) loadActionItems();
+				else alert(res.data?.message || 'Could not change the date.');
+			} catch (e) { alert('Could not change the date.'); }
 		});
 	});
 
@@ -6924,7 +6546,18 @@ function renderActionItemCard(item, mode) {
 	const notes = (meta && Array.isArray(meta.notes)) ? meta.notes : [];
 	if (notes.length) {
 		html += '<div class="sp-action-notes"><div class="sp-action-notes-label">Notes:</div><ul>';
-		notes.slice().reverse().forEach(n => { html += `<li><span class="unique">${esc(n)}</span></li>`; });
+		// Newest first. A dated note's M/D is a button that opens a date picker (back-date a late entry);
+		// notes[0] is the seeded original item and has no date.
+		const canEdit = isOpen;
+		for (let i = notes.length - 1; i >= 0; i--) {
+			const n = String(notes[i]);
+			const m = i > 0 && canEdit ? n.match(/^(\d{1,2})\/(\d{1,2}) — ([\s\S]*)$/) : null;
+			if (!m) { html += `<li><span class="unique">${esc(n)}</span></li>`; continue; }
+			html += `<li><span class="unique sp-note-date-wrap">`
+				+ `<button type="button" class="unique sp-note-date-btn" title="Change this note's date">${esc(m[1] + '/' + m[2])}</button>`
+				+ `<input type="date" class="sp-note-date-input" tabindex="-1" aria-hidden="true" data-item-id="${item.id}" data-index="${i}" data-note="${esc(n)}" value="${spNoteYmd(m[1], m[2])}" max="${spTodayYmd()}" min="${spTodayYmd(-364)}">`
+				+ `</span><span class="unique"> — ${esc(m[3])}</span></li>`;
+		}
 		html += '</ul></div>';
 	}
 
@@ -8461,89 +8094,57 @@ async function loadStoreAdmin() {
 // Fields are drawn from the server's declarations, so adding a setting is a row in
 // sp_store_setting_defs() and nothing here changes.
 function renderStoreAdmin(wrap, data) {
-	let html = '<div class="sp-card sp-settings-card">';
-
-	// Status first. A store with no Stripe key cannot take money, and that belongs on
-	// the screen rather than being discovered by a customer at checkout.
-	// A configuration that cannot work outranks the ready/not-ready line, because a
-	// store that takes money and charges no tax looks healthy until it isn't.
-	if (data.warning) {
-		html += '<div class="sp-notice sp-notice-warning" style="margin:0 0 20px;">' + data.warning + '</div>';
-	}
-
-	if (!data.stripe_ready) {
-		html += '<div class="sp-notice sp-notice-warning" style="margin:0 0 20px;">';
-		html += '<strong>Checkout is switched off.</strong> No payment key is set for ' + esc(data.provider_label || 'this processor') + ', so the Add to Cart button is hidden from customers. Add one under <strong>Settings &rarr; API Keys</strong>.';
-		html += '</div>';
-	} else {
-		html += '<div class="sp-help-text" style="margin:0 0 20px;">Checkout is live in <strong>' + esc(data.stripe_mode === 'live' ? 'LIVE' : 'test') + '</strong> mode. Stripe webhook URL: <code>' + esc(data.webhook_url || '') + '</code></div>';
-	}
-
-	let section = '';
+	// Each section is its own settings card, matching Settings -> Booking: h3 band, a
+	// line of help, the controls, then a right-aligned save. Fields carry their own
+	// section, so grouping is declared server-side — a new group is a key in
+	// sp_store_setting_defs(). Unsectioned fields form the first card. Grouped by
+	// first appearance, so a stray unsectioned field never lands in the card above it.
+	const groups = [];
 	(data.fields || []).forEach(f => {
-		// Fields carry their own section, so grouping is declared server-side rather
-		// than hardcoded here — a new group is a key in sp_store_setting_defs().
-		if ((f.section || '') !== section) {
-			section = f.section || '';
-			if (section) html += '<h3 style="margin:28px 0 4px;text-align:left;">' + esc(section) + '</h3>';
-			if (section === 'Colors') {
-				html += '<p class="sp-help-text" style="margin:0 0 18px;">Leave a colour blank to keep using the website&rsquo;s own palette. Only the ones you set are overridden.</p>';
+		const name = f.section || 'General';
+		let g = groups.find(x => x.name === name);
+		if (!g) groups.push(g = { name, fields: [] });
+		g.fields.push(f);
+	});
+
+	const intros = {
+		'General'          : 'How products, options and the buy button look and behave across the shop.',
+		'Tax and shipping' : 'What is added on top of the price at checkout. Shipping rates themselves are set in their own card below.',
+		'Colors'           : 'Leave a colour blank to keep using the website&rsquo;s own palette. Only the ones you set are overridden.',
+	};
+
+	let html = '';
+	groups.forEach((g, gi) => {
+		html += '<div class="sp-card sp-settings-card">';
+		html += '<h3>' + esc(g.name) + '</h3>';
+		if (intros[g.name]) html += '<p class="sp-help-text">' + intros[g.name] + '</p>';
+
+		// Status leads the first card. A store with no Stripe key cannot take money, and
+		// that belongs on the screen rather than being discovered by a customer at checkout.
+		// A configuration that cannot work outranks the ready/not-ready line, because a
+		// store that takes money and charges no tax looks healthy until it isn't.
+		if (gi === 0) {
+			if (data.warning) {
+				html += '<div class="sp-notice sp-notice-warning" style="margin:0 0 20px;">' + data.warning + '</div>';
+			}
+
+			if (!data.stripe_ready) {
+				html += '<div class="sp-notice sp-notice-warning" style="margin:0 0 20px;">';
+				html += '<strong>Checkout is switched off.</strong> No payment key is set for ' + esc(data.provider_label || 'this processor') + ', so the Add to Cart button is hidden from customers. Add one under <strong>Settings &rarr; API Keys</strong>.';
+				html += '</div>';
+			} else {
+				html += '<div class="sp-help-text" style="margin:0 0 20px;">Checkout is live in <strong>' + esc(data.stripe_mode === 'live' ? 'LIVE' : 'test') + '</strong> mode. Stripe webhook URL: <code>' + esc(data.webhook_url || '') + '</code></div>';
 			}
 		}
 
-		// Colour rows are a compact list, matching the dashboard's own colour panel:
-		// swatch, label, hex, and a Reset that only appears once a colour is overridden.
-		// No "override" checkbox — the swatch opens on the colour the shop is ACTUALLY
-		// using, inherited or not, and changing it is what makes it an override.
-		if (f.type === 'color') {
-			const eff = f.effective || f.inherited || '';
-			const isOv = !!f.value;
-			// data-override carries the SAVED override, so a row nobody touches still
-			// saves what it already had rather than quietly reverting to inherited.
-			html += '<div class="sp-store-color-row" data-key="' + esc(f.key) + '" data-inherited="' + esc(f.inherited || '') + '"'
-				+ ' data-override="' + esc(f.value || '') + '"'
-				+ ' style="display:flex;align-items:center;gap:10px;padding:5px 0;text-align:left;">';
-			html += '<input type="color" class="sp-store-swatch" value="' + esc(eff || '#000000') + '"'
-				+ ' title="' + esc(f.help || f.label) + '" style="width:30px;height:26px;padding:0;border:1px solid var(--sp-border);border-radius:6px;cursor:pointer;flex:0 0 auto;">';
-			html += '<div style="flex:1 1 auto;text-align:left;">' + esc(f.label) + '</div>';
-			html += '<code class="sp-store-hex" style="font-size:0.76em;color:var(--sp-text-light);">' + esc(eff || '—') + '</code>';
-			html += '<button type="button" class="sp-store-color-reset unique sp-btn sp-btn-ghost" style="padding:2px 7px;font-size:0.72em;'
-				+ (isOv ? '' : 'visibility:hidden;') + '">Reset</button>';
-			html += '</div>';
-			return;
-		}
+		g.fields.forEach(f => { html += spStoreFieldHtml(f); });
 
-		html += '<div class="sp-field" style="margin-bottom:22px;">';
-		html += '<label style="display:block;font-weight:600;margin-bottom:6px;text-align:left;">' + esc(f.label) + '</label>';
-
-		if (f.type === 'choice') {
-			Object.keys(f.choices || {}).forEach(key => {
-				const id = 'sp-store-set-' + f.key + '-' + key;
-				html += '<label class="checkbox-label" for="' + id + '" style="display:flex;gap:10px;align-items:flex-start;margin:0 0 8px;cursor:pointer;">';
-				html += '<input type="radio" id="' + id + '" name="sp-store-set-' + esc(f.key) + '" value="' + esc(key) + '" data-key="' + esc(f.key) + '"' + (f.value === key ? ' checked' : '') + '>';
-				html += '<div>' + esc(f.choices[key]) + '</div>';
-				html += '</label>';
-			});
-		} else if (f.type === 'toggle') {
-			const id = 'sp-store-set-' + f.key;
-			html += '<label class="checkbox-label" for="' + id + '" style="display:flex;gap:10px;align-items:center;cursor:pointer;">';
-			html += '<input type="checkbox" id="' + id + '" data-key="' + esc(f.key) + '" value="1"' + (f.value === '1' ? ' checked' : '') + '>';
-			html += '<div>Enabled</div>';
-			html += '</label>';
-		} else {
-			html += '<input type="text" class="sp-input" data-key="' + esc(f.key) + '" value="' + esc(f.value) + '" style="max-width:280px;">';
-		}
-
-		// Help text is authored server-side and may contain markup, so it is injected
-		// rather than escaped — it never carries user input.
-		if (f.help) html += '<div class="sp-help-text" style="margin-top:6px;">' + f.help + '</div>';
-		html += '</div>';
+		// Every card saves the whole set, so the button is always next to what was changed.
+		html += '<div class="sp-book-card-actions sp-book-card-actions-end" style="align-items:center;gap:12px;">';
+		html += '<span class="sp-help-text sp-store-settings-saved"></span>';
+		html += '<button type="button" class="unique sp-btn sp-btn-primary sp-store-save-settings">Save Settings</button>';
+		html += '</div></div>';
 	});
-
-	html += '<div style="display:flex;align-items:center;gap:12px;">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-store-save-settings">Save Settings</button>';
-	html += '<span id="sp-store-settings-saved" class="sp-help-text"></span>';
-	html += '</div></div>';
 
 	// Shipping rates are a CRUD table rather than a declared field, so they get
 	// their own card below the settings. Filled by its own request.
@@ -8551,7 +8152,69 @@ function renderStoreAdmin(wrap, data) {
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
+	spStoreBindSettings(wrap);
+}
 
+function spStoreFieldHtml(f) {
+	let html = '';
+
+	// Colour rows are a compact list, matching the dashboard's own colour panel:
+	// swatch, label, hex, and a Reset that only appears once a colour is overridden.
+	// No "override" checkbox — the swatch opens on the colour the shop is ACTUALLY
+	// using, inherited or not, and changing it is what makes it an override.
+	if (f.type === 'color') {
+		const eff = f.effective || f.inherited || '';
+		const isOv = !!f.value;
+		// data-override carries the SAVED override, so a row nobody touches still
+		// saves what it already had rather than quietly reverting to inherited.
+		html += '<div class="sp-store-color-row" data-key="' + esc(f.key) + '" data-inherited="' + esc(f.inherited || '') + '"'
+			+ ' data-override="' + esc(f.value || '') + '"'
+			+ ' style="display:flex;align-items:center;gap:10px;padding:5px 0;text-align:left;">';
+		html += '<input type="color" class="sp-store-swatch" value="' + esc(eff || '#000000') + '"'
+			+ ' title="' + esc(f.help || f.label) + '" style="width:30px;height:26px;padding:0;border:1px solid var(--sp-border);border-radius:6px;cursor:pointer;flex:0 0 auto;">';
+		html += '<div style="flex:1 1 auto;text-align:left;">' + esc(f.label) + '</div>';
+		html += '<code class="sp-store-hex" style="font-size:0.76em;color:var(--sp-text-light);">' + esc(eff || '—') + '</code>';
+		html += '<button type="button" class="sp-store-color-reset unique sp-btn sp-btn-ghost" style="padding:2px 7px;font-size:0.72em;'
+			+ (isOv ? '' : 'visibility:hidden;') + '">Reset</button>';
+		html += '</div>';
+		return html;
+	}
+
+	// .sp-form-group gives the label the same uppercase heading as every other settings field
+	// (e.g. Settings -> API Keys); the options sit in .sp-radio-row so they stay normal-case.
+	html += '<div class="sp-form-group" style="margin-bottom:22px;">';
+	html += '<label>' + esc(f.label) + '</label>';
+
+	if (f.type === 'choice') {
+		html += '<div class="sp-radio-row">';
+		Object.keys(f.choices || {}).forEach(key => {
+			const id = 'sp-store-set-' + f.key + '-' + key;
+			html += '<label class="sp-radio-inline" for="' + id + '">';
+			html += '<input type="radio" id="' + id + '" name="sp-store-set-' + esc(f.key) + '" value="' + esc(key) + '" data-key="' + esc(f.key) + '"' + (f.value === key ? ' checked' : '') + '>';
+			html += '<div>' + esc(f.choices[key]) + '</div>';
+			html += '</label>';
+		});
+		html += '</div>';
+	} else if (f.type === 'toggle') {
+		const id = 'sp-store-set-' + f.key;
+		html += '<div class="sp-radio-row">';
+		html += '<label class="sp-radio-inline" for="' + id + '">';
+		html += '<input type="checkbox" id="' + id + '" data-key="' + esc(f.key) + '" value="1"' + (f.value === '1' ? ' checked' : '') + '>';
+		html += '<div>Enabled</div>';
+		html += '</label>';
+		html += '</div>';
+	} else {
+		html += '<input type="text" class="sp-input" data-key="' + esc(f.key) + '" value="' + esc(f.value) + '" style="max-width:280px;">';
+	}
+
+	// Help text is authored server-side and may contain markup, so it is injected
+	// rather than escaped — it never carries user input.
+	if (f.help) html += '<div class="sp-help-text" style="margin-top:6px;">' + f.help + '</div>';
+	html += '</div>';
+	return html;
+}
+
+function spStoreBindSettings(wrap) {
 	// Touching a swatch is what turns an inherited colour into an override — there is no
 	// separate switch to find. Reset puts the row back to the inherited colour and marks
 	// it to be cleared on save.
@@ -8575,8 +8238,10 @@ function renderStoreAdmin(wrap, data) {
 		});
 	});
 
-	const saveBtn = $('#sp-store-save-settings', wrap);
-	saveBtn.addEventListener('click', async () => {
+	// Every card's button saves every card. The shipping table is excluded — it saves
+	// itself, and its inputs use data-f, not data-key.
+	const saveBtns = $$('.sp-store-save-settings', wrap);
+	saveBtns.forEach(saveBtn => saveBtn.addEventListener('click', async () => {
 		const settings = {};
 		$$('[data-key]', wrap).forEach(el => {
 			const key = el.dataset.key;
@@ -8588,8 +8253,9 @@ function renderStoreAdmin(wrap, data) {
 			else settings[key] = el.value;
 		});
 
-		saveBtn.disabled = true;
-		const note = $('#sp-store-settings-saved', wrap);
+		const note = $('.sp-store-settings-saved', saveBtn.parentNode);
+		$$('.sp-store-settings-saved', wrap).forEach(n => { n.textContent = ''; });
+		saveBtns.forEach(b => { b.disabled = true; });
 		if (note) note.textContent = 'Saving…';
 		try {
 			const res = await spAjax('site_pulse_store_save_settings', { settings });
@@ -8597,8 +8263,8 @@ function renderStoreAdmin(wrap, data) {
 		} catch (err) {
 			if (note) note.textContent = 'Could not save.';
 		}
-		saveBtn.disabled = false;
-	});
+		saveBtns.forEach(b => { b.disabled = false; });
+	}));
 }
 
 
@@ -8644,12 +8310,13 @@ function spShippingRow(r) {
 
 function renderStoreShipping(wrap, rates) {
 	let html = '<div class="sp-card sp-settings-card">';
-	html += '<h3 style="margin:0 0 4px;text-align:left;">Shipping rates</h3>';
-	html += '<div class="sp-help-text" style="margin:0 0 16px;">'
+	html += '<h3>Shipping Rates</h3>';
+	html += '<p class="sp-help-text">'
 		+ 'What a customer can choose from at checkout. <strong>With no active rates, nothing physical can be bought</strong> &mdash; there would be no way to charge for postage. '
 		+ 'Leave <em>Order $ from</em> and <em>to</em> blank to let a rate apply to any order; set <em>from</em> to 75 on a Free rate to get free shipping over $75. '
 		+ 'The first matching rate is not special &mdash; the customer sees every rate that matches and picks one.'
-		+ '</div>';
+		+ '</p>';
+	html += '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-ship-add">Add Rate</button></div>';
 
 	html += '<div style="overflow-x:auto;">';
 	html += '<table class="sp-table" style="min-width:860px;"><thead><tr>'
@@ -8666,10 +8333,9 @@ function renderStoreShipping(wrap, rates) {
 	(rates.length ? rates : []).forEach(r => { html += spShippingRow(r); });
 	html += '</tbody></table></div>';
 
-	html += '<div style="display:flex;align-items:center;gap:12px;margin-top:14px;">';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-ship-add">Add rate</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-ship-save">Save Shipping Rates</button>';
+	html += '<div class="sp-book-card-actions sp-book-card-actions-end" style="align-items:center;gap:12px;">';
 	html += '<span id="sp-ship-saved" class="sp-help-text"></span>';
+	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-ship-save">Save Shipping Rates</button>';
 	html += '</div></div>';
 
 	wrap.innerHTML = html;
@@ -9157,348 +8823,6 @@ async function saveReviewCategories() {
 	} catch (e) { if (status) status.textContent = 'Could not save.'; }
 }
 
-
-/* ---- Review Trends: per-store scorecard vs the company average ---- */
-let _spTrends = { data: null, series: null, lineHidden: {}, sortKey: 'stars', sortDir: -1, metric: 'stars', group: 'store', supervisor: '' };
-
-async function loadReviewTrends() {
-	const wrap = $('#sp-trends-content');
-	if (!wrap) return;
-	const rangeSel = $('#sp-trends-range'), brandSel = $('#sp-trends-brand');
-	const groupSel = $('#sp-trends-group'), supSel = $('#sp-trends-supervisor');
-	if (rangeSel && !rangeSel._wired) { rangeSel._wired = true; rangeSel.addEventListener('change', loadReviewTrends); }
-	if (brandSel && !brandSel._wired) { brandSel._wired = true; brandSel.addEventListener('change', loadReviewTrends); }
-	if (groupSel && !groupSel._wired) {
-		groupSel._wired = true;
-		groupSel.addEventListener('change', () => {
-			_spTrends.group = groupSel.value;
-			if (_spTrends.group === 'supervisor') { _spTrends.supervisor = ''; if (supSel) supSel.value = ''; } // ranking shows all
-			loadReviewTrends();
-		});
-	}
-	if (supSel && !supSel._wired) { supSel._wired = true; supSel.addEventListener('change', () => { _spTrends.supervisor = supSel.value; loadReviewTrends(); }); }
-	if (supSel) supSel.disabled = (_spTrends.group === 'supervisor'); // filter is moot when already ranking supervisors
-
-	wrap.innerHTML = '<div class="sp-loading"></div>';
-	try {
-		const params = {
-			range: rangeSel ? rangeSel.value : 'all',
-			brand: brandSel ? brandSel.value : '',
-			group: _spTrends.group,
-			supervisor: _spTrends.supervisor || ''
-		};
-		const [res, serRes] = await Promise.all([
-			spAjax('site_pulse_review_scorecard', params),
-			spAjax('site_pulse_review_trend_series', params)
-		]);
-		if (!res.success) { wrap.innerHTML = '<p class="sp-help-text">Could not load trends.</p>'; return; }
-		_spTrends.data = res.data;
-		_spTrends.series = (serRes && serRes.success) ? serRes.data : null;
-		// Fill the brand dropdown once from the returned brands.
-		if (brandSel && !brandSel._filled && Array.isArray(res.data.brands) && res.data.brands.length) {
-			brandSel._filled = true;
-			res.data.brands.forEach(b => { const o = document.createElement('option'); o.value = b; o.textContent = b; brandSel.appendChild(o); });
-		}
-		// (Re)build the supervisor dropdown, preserving the current selection.
-		if (supSel) {
-			const cur = _spTrends.supervisor || '';
-			supSel.innerHTML = '<option value="">All supervisors</option>' +
-				(res.data.supervisors || []).map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
-			supSel.value = cur;
-		}
-		renderReviewTrends();
-	} catch (e) { wrap.innerHTML = '<p class="sp-help-text">Could not load trends.</p>'; }
-}
-
-function renderReviewTrends() {
-	const wrap = $('#sp-trends-content');
-	const d = _spTrends.data;
-	if (!wrap || !d) return;
-	const cats = d.categories || [];
-	const company = d.company || { count: 0, stars: null, scores: {} };
-	const stores = (d.stores || []).slice();
-
-	if (!stores.length) { wrap.innerHTML = '<p class="sp-help-text">No reviews in this range yet.</p>'; return; }
-
-	// In supervisor mode rows represent supervisors and are click-to-drill into that supervisor's stores.
-	const isSup = _spTrends.group === 'supervisor';
-	const groupName = isSup ? 'supervisor' : 'store';
-	const drillAttr = (s) => (isSup && s.sup_id) ? ` data-sup="${s.sup_id}"` : '';
-	const drillCls  = (s) => (isSup && s.sup_id) ? ' sp-trend-drill' : '';
-
-	const sk = _spTrends.sortKey, dir = _spTrends.sortDir;
-	const valOf = (row) => {
-		if (sk === 'store') return (row.store || '').toLowerCase();
-		if (sk === 'count') return row.count || 0;
-		if (sk === 'stars') return (row.stars == null ? -1 : row.stars);
-		return (row.scores && row.scores[sk] != null) ? row.scores[sk] : -1;
-	};
-	stores.sort((a, b) => { const va = valOf(a), vb = valOf(b); return (va < vb ? -1 : (va > vb ? 1 : 0)) * dir; });
-
-	// One value cell with a colored gap-vs-company badge + a heatmap background tinted by the gap.
-	const cell = (val, base) => {
-		if (val == null) return '<td class="sp-trend-cell"><span class="unique sp-trend-na">—</span></td>';
-		const gap = (base == null) ? null : Math.round((val - base) * 10) / 10;
-		let delta = '', bg = '';
-		if (gap != null && gap !== 0) {
-			const cls = gap > 0 ? 'sp-trend-up' : 'sp-trend-down';
-			delta = ` <span class="unique ${cls}">${gap > 0 ? '▲' : '▼'}${Math.abs(gap).toFixed(1)}</span>`;
-			const a = (Math.min(Math.abs(gap) / 0.8, 1) * 0.20).toFixed(3); // alpha scales with the gap
-			bg = ` style="background:rgba(${gap > 0 ? '31,170,89' : '210,59,59'},${a})"`;
-		}
-		return `<td class="sp-trend-cell"${bg}>${Number(val).toFixed(1)}${delta}</td>`;
-	};
-
-	const arrow = (key) => (sk === key) ? (dir < 0 ? ' ▾' : ' ▴') : '';
-	const th = (key, label, extra) => `<th class="sp-trend-th${extra || ''}" data-sort="${esc(key)}" role="button">${esc(label)}${arrow(key)}</th>`;
-
-	// Ranked bar chart for the SELECTED metric (Overall or any category) — sorted best→worst
-	// (independent of table sort), bars green/red vs that metric's company average, axis zoomed to
-	// that metric's data so small differences pop (labelled, so it's honest).
-	if (_spTrends.metric !== 'stars' && cats.indexOf(_spTrends.metric) === -1) _spTrends.metric = 'stars';
-	const metric = _spTrends.metric;
-	const mVal = (row) => metric === 'stars' ? row.stars : (row.scores ? row.scores[metric] : null);
-	const coVal = metric === 'stars' ? company.stars : (company.scores ? company.scores[metric] : null);
-	const metricLabel = metric === 'stars' ? 'Overall rating' : metric;
-
-	let h = '';
-	const metricVals = stores.map(mVal).filter(v => v != null);
-	if (coVal != null && metricVals.length) {
-		const lo   = Math.min.apply(null, metricVals.concat([coVal]));
-		const dmin = Math.max(0, Math.floor((lo - 0.3) * 10) / 10);
-		const span = (5 - dmin) || 1;
-		const pct  = (v) => Math.max(0, Math.min(100, (v - dmin) / span * 100));
-		const avgPct = pct(coVal).toFixed(1);
-		const ranked = stores.filter(s => mVal(s) != null).slice().sort((a, b) => mVal(b) - mVal(a));
-		let rows = '';
-		ranked.forEach(s => {
-			const v = mVal(s);
-			const up = v >= coVal;
-			rows += `<div class="sp-trend-bar-row${drillCls(s)}"${drillAttr(s)}>` +
-				`<div class="sp-trend-bar-name" title="${esc(s.store)}">${esc(s.store)}</div>` +
-				'<div class="sp-trend-bar-track">' +
-					`<div class="sp-trend-bar-fill ${up ? 'sp-trend-bar-up' : 'sp-trend-bar-down'}" style="width:${pct(v).toFixed(1)}%"></div>` +
-					`<div class="sp-trend-avgline" style="left:${avgPct}%"></div>` +
-				'</div>' +
-				`<div class="sp-trend-bar-val">${Number(v).toFixed(1)}</div>` +
-			'</div>';
-		});
-		let opts = `<option value="stars"${metric === 'stars' ? ' selected' : ''}>Overall</option>`;
-		cats.forEach(c => { opts += `<option value="${esc(c)}"${metric === c ? ' selected' : ''}>${esc(c)}</option>`; });
-		h += '<div class="sp-card sp-trend-chart">' +
-			'<div class="sp-trend-chart-head">' +
-				`<strong>${esc(metricLabel)} by ${groupName}</strong> ` +
-				`<select id="sp-trends-metric" class="sp-select sp-trend-metric-sel">${opts}</select>` +
-				`<span class="unique sp-help-text"> · dashed line = company average (${Number(coVal).toFixed(1)}) · scale ${dmin.toFixed(1)}–5</span>` +
-			'</div>' +
-			`<div class="sp-trend-bars">${rows}</div>` +
-		'</div>';
-	}
-
-	h += '<div class="sp-card" style="padding:0;overflow-x:auto">';
-	h += '<table class="sp-table sp-trend-table"><thead><tr>';
-	h += th('store', isSup ? 'Supervisor' : 'Store', ' sp-trend-th-store');
-	h += th('count', 'Reviews');
-	h += th('stars', 'Overall');
-	cats.forEach(c => { h += th(c, c); });
-	h += '</tr></thead><tbody>';
-
-	// Company baseline row (the comparison line).
-	h += '<tr class="sp-trend-company">';
-	h += '<td class="sp-trend-th-store"><strong>Company average</strong></td>';
-	h += `<td>${esc(spComma(company.count || 0))}</td>`;
-	h += `<td>${company.stars != null ? Number(company.stars).toFixed(1) : '—'}</td>`;
-	cats.forEach(c => { const v = company.scores ? company.scores[c] : null; h += `<td>${v != null ? Number(v).toFixed(1) : '—'}</td>`; });
-	h += '</tr>';
-
-	stores.forEach(s => {
-		h += `<tr data-key="${esc(s.store)}"${drillAttr(s)} class="${drillCls(s).trim()}">`;
-		h += `<td class="sp-trend-th-store">${esc(s.store)}</td>`;
-		h += `<td>${esc(spComma(s.count || 0))}</td>`;
-		h += cell(s.stars, company.stars);
-		cats.forEach(c => { h += cell(s.scores ? s.scores[c] : null, company.scores ? company.scores[c] : null); });
-		h += '</tr>';
-	});
-
-	h += '</tbody></table></div>';
-	h += `<p class="sp-help-text" style="margin-top:10px">Each cell shows the ${groupName}’s average rating (1–5); the small number is the gap vs the company average. Click a column to sort.${isSup ? ' Click a supervisor to drill into their stores.' : ''}</p>`;
-
-	// Over-time line chart goes third — after the ranked bar chart and the scorecard table.
-	h += spTrendLineChartHtml();
-
-	wrap.innerHTML = h;
-
-	// Chart metric ↔ table sort are kept in lock-step so both always show the same metric.
-	const mSel = $('#sp-trends-metric', wrap);
-	if (mSel) mSel.addEventListener('change', () => {
-		const before = spTrendCaptureRects();
-		_spTrends.metric  = mSel.value;
-		_spTrends.sortKey = mSel.value;  // table follows the chart
-		_spTrends.sortDir = -1;          // best first
-		renderReviewTrends();
-		spTrendAnimate(before);
-	});
-
-	$$('.sp-trend-th', wrap).forEach(thEl => {
-		thEl.addEventListener('click', () => {
-			const before = spTrendCaptureRects();        // FLIP: measure current row positions
-			const k = thEl.dataset.sort;
-			if (_spTrends.sortKey === k) { _spTrends.sortDir *= -1; }
-			else { _spTrends.sortKey = k; _spTrends.sortDir = (k === 'store') ? 1 : -1; }
-			// Clicking a metric column (Overall / a category) drives the chart too; Store/Reviews don't.
-			if (k === 'stars' || cats.indexOf(k) !== -1) _spTrends.metric = k;
-			renderReviewTrends();                         // re-render in new order
-			spTrendAnimate(before);                       // slide each row from old → new spot
-		});
-	});
-
-	// Supervisor mode: click a supervisor (row or bar) to drill into just their stores.
-	$$('.sp-trend-drill', wrap).forEach(el => {
-		el.addEventListener('click', () => {
-			const sup = el.dataset.sup || '';
-			if (!sup) return;
-			_spTrends.group = 'store';
-			_spTrends.supervisor = sup;
-			const gSel = $('#sp-trends-group'), sSel = $('#sp-trends-supervisor');
-			if (gSel) gSel.value = 'store';
-			if (sSel) { sSel.disabled = false; sSel.value = sup; }
-			loadReviewTrends();
-		});
-	});
-
-	// Line-chart legend: click a store (or "Company avg") to toggle its line on/off.
-	$$('.sp-tl-legend-item', wrap).forEach(el => {
-		el.addEventListener('click', () => {
-			const k = el.dataset.skey;
-			_spTrends.lineHidden[k] = !_spTrends.lineHidden[k];
-			renderReviewTrends();
-		});
-	});
-}
-
-// Build the over-time line chart (SVG) for the selected metric from the fetched series. Returns '' when
-// there isn't enough data (need ≥2 monthly buckets).
-function spTrendLineChartHtml() {
-	const S = _spTrends.series;
-	const metric = _spTrends.metric;
-	if (!S || !S.metrics || !S.metrics[metric]) return '';
-	const md = S.metrics[metric];
-	const buckets = S.buckets || [];
-	const labels = S.bucket_labels || buckets;
-	const series = (md.series || []);
-	if (buckets.length < 2 || !series.length) return '';
-
-	const hidden = _spTrends.lineHidden || {};
-	const PALETTE = ['#2f6fed', '#1faa59', '#d23b3b', '#e08a1e', '#7d4fd6', '#1198a6', '#c43d8a', '#5a7d2a', '#444444', '#a05a2c', '#0f7b8a', '#b0357f'];
-
-	// Y domain zoomed to the visible data (labelled, like the bar chart).
-	let lo = Infinity, hi = -Infinity;
-	const consider = (v) => { if (v != null) { if (v < lo) lo = v; if (v > hi) hi = v; } };
-	series.forEach(s => { if (!hidden[s.key]) s.values.forEach(consider); });
-	if (!hidden['__company__']) (md.company || []).forEach(consider);
-	if (lo === Infinity) { lo = 0; hi = 5; }
-	let dmin = Math.max(0, Math.floor((lo - 0.2) * 10) / 10);
-	let dmax = Math.min(5, Math.ceil((hi + 0.2) * 10) / 10);
-	if (dmax <= dmin) dmax = Math.min(5, dmin + 1);
-
-	const W = 720, H = 300, padL = 38, padR = 12, padT = 12, padB = 40;
-	const plotW = W - padL - padR, plotH = H - padT - padB, n = buckets.length;
-	const xAt = (i) => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
-	const yAt = (v) => padT + plotH - ((v - dmin) / (dmax - dmin)) * plotH;
-
-	let svg = `<svg class="sp-trendline-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Stores over time">`;
-	const ticks = 4;
-	for (let t = 0; t <= ticks; t++) {
-		const val = dmin + (dmax - dmin) * t / ticks, y = yAt(val);
-		svg += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}" class="sp-tl-grid"/>`;
-		svg += `<text x="${padL - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" class="sp-tl-axis">${val.toFixed(1)}</text>`;
-	}
-	const xevery = Math.ceil(n / 8);
-	buckets.forEach((b, i) => {
-		if (i % xevery !== 0 && i !== n - 1) return;
-		svg += `<text x="${xAt(i).toFixed(1)}" y="${H - padB + 16}" text-anchor="middle" class="sp-tl-axis">${esc(labels[i] || '')}</text>`;
-	});
-	if (!hidden['__company__']) {
-		const p = spTrendLinePath(md.company || [], xAt, yAt);
-		if (p) svg += `<path d="${p}" fill="none" class="sp-tl-company sp-tl-line" pathLength="100"/>`;
-	}
-	series.forEach((s, i) => {
-		if (hidden[s.key]) return;
-		const color = PALETTE[i % PALETTE.length];
-		const p = spTrendLinePath(s.values, xAt, yAt);
-		if (p) svg += `<path d="${p}" fill="none" stroke="${color}" stroke-width="2" class="sp-tl-line" pathLength="100"/>`;
-		s.values.forEach((v, xi) => { if (v != null) svg += `<circle class="sp-tl-dot" cx="${xAt(xi).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="2.5" fill="${color}"/>`; });
-	});
-	svg += '</svg>';
-
-	let legend = '<div class="sp-tl-legend">';
-	series.forEach((s, i) => {
-		const color = PALETTE[i % PALETTE.length];
-		legend += `<button type="button" class="unique sp-tl-legend-item${hidden[s.key] ? ' sp-tl-legend-off' : ''}" data-skey="${esc(s.key)}"><span class="sp-tl-swatch" style="background:${color}"></span>${esc(s.key)}</button>`;
-	});
-	legend += `<button type="button" class="unique sp-tl-legend-item${hidden['__company__'] ? ' sp-tl-legend-off' : ''}" data-skey="__company__"><span class="sp-tl-swatch sp-tl-swatch-co"></span>Company avg</button>`;
-	legend += '</div>';
-
-	const groupName = (S.group === 'supervisor') ? 'supervisors' : 'stores';
-	return '<div class="sp-card sp-trendline-card">'
-		+ `<div class="sp-trend-chart-head"><strong>${esc(metricLabel())} over time</strong> <span class="unique sp-help-text">· monthly average by ${groupName} · scale ${dmin.toFixed(1)}–${dmax.toFixed(1)}</span></div>`
-		+ svg + legend + '</div>';
-
-	function metricLabel() { return metric === 'stars' ? 'Overall rating' : metric; }
-}
-
-// SVG path for a line, smoothed (Catmull-Rom → bezier so it eases through each dot) and broken at null
-// gaps (months with no data).
-function spTrendLinePath(values, xAt, yAt) {
-	const segs = [];
-	let cur = [];
-	values.forEach((v, i) => {
-		if (v == null) { if (cur.length) { segs.push(cur); cur = []; } return; }
-		cur.push({ x: +xAt(i), y: +yAt(v) });
-	});
-	if (cur.length) segs.push(cur);
-	return segs.map(spSmoothPath).join(' ').trim();
-}
-
-// Smooth path through pixel points using a Catmull-Rom spline expressed as cubic beziers.
-function spSmoothPath(pts) {
-	if (!pts.length) return '';
-	const f = (n) => n.toFixed(1);
-	if (pts.length === 1) return `M${f(pts[0].x)} ${f(pts[0].y)}`;
-	let d = `M${f(pts[0].x)} ${f(pts[0].y)}`;
-	for (let i = 0; i < pts.length - 1; i++) {
-		const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
-		const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-		const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-		d += ` C${f(c1x)} ${f(c1y)} ${f(c2x)} ${f(c2y)} ${f(p2.x)} ${f(p2.y)}`;
-	}
-	return d;
-}
-
-// FLIP helpers — capture each keyed row's top before re-render, then animate from the delta to zero.
-function spTrendCaptureRects() {
-	const wrap = $('#sp-trends-content'), map = {};
-	if (wrap) $$('tr[data-key]', wrap).forEach(tr => { map[tr.dataset.key] = tr.getBoundingClientRect().top; });
-	return map;
-}
-function spTrendAnimate(before) {
-	const wrap = $('#sp-trends-content');
-	if (!wrap || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-	const rows = $$('tr[data-key]', wrap);
-	rows.forEach(tr => {
-		const old = before[tr.dataset.key];
-		if (old == null) return;
-		const dy = old - tr.getBoundingClientRect().top;
-		if (!dy) return;
-		tr.style.transition = 'none';
-		tr.style.transform = `translateY(${dy}px)`;
-	});
-	void wrap.offsetHeight; // force reflow so the start transforms take effect
-	rows.forEach(tr => {
-		tr.style.transition = 'transform .35s ease';
-		tr.style.transform = '';
-	});
-}
 
 let spReportSchedule = {};
 // Which report cards are expanded in Settings → Reports. Persists across re-renders (add/edit/delete/
@@ -21609,6 +20933,7 @@ function spAskReset() {
 	const out = $('#sp-ask-output');
 	if (out) out.innerHTML = '';
 	$('#sp-ask-examples')?.removeAttribute('hidden');
+	$('#sp-ask-form')?.removeAttribute('hidden');
 	const input = $('#sp-ask-input');
 	if (input) { input.value = ''; input.focus(); }
 	spAskLoadHistory();
@@ -21628,13 +20953,23 @@ async function spAskStart(question) {
 }
 
 // Drive a run to completion one server step at a time, repainting the progress log after each.
-async function spAskFollow(runId, question) {
+// append: add this question under the conversation already on screen (a follow-up) instead of
+// starting the output over.
+async function spAskFollow(runId, question, append) {
 	const token = ++_spAsk.token;
 	_spAsk.runId = runId;
 	const out = $('#sp-ask-output');
 	if (!out) return;
 	$('#sp-ask-examples')?.setAttribute('hidden', '');
-	out.innerHTML = spAskShell(question);
+	// While a conversation is open, the box under it is where the next question goes.
+	$('#sp-ask-form')?.setAttribute('hidden', '');
+	if (append) {
+		const isFollow = !!out.querySelector('.sp-ask-run');
+		spAskSealCurrent(out);
+		out.insertAdjacentHTML('beforeend', spAskShell(question, isFollow));
+	} else {
+		out.innerHTML = spAskShell(question);
+	}
 	spAskRenderProgress(out, [{ kind: 'step', text: 'Starting…' }], '', runId, 'running');
 
 	let fails = 0;
@@ -21650,18 +20985,76 @@ async function spAskFollow(runId, question) {
 		fails = 0;
 		const d = res.data;
 		spAskRenderProgress(out, d.log, d.status === 'error' ? (d.error || 'Something went wrong.') : '', runId, d.status);
-		if (d.status === 'done') { spAskRenderReport(out, d.report); spAskLoadHistory(); return; }
+		if (d.status === 'done') { spAskRenderReport(out, d.report); spAskRenderComposer(out, runId); spAskLoadHistory(); return; }
 		if (d.status === 'error') { spAskLoadHistory(); return; }
 		await spAskSleep(300);
 	}
 }
 
-function spAskShell(question) {
-	return `<div class="sp-ask-run"><div class="sp-ask-question">${esc(question)}</div><div class="sp-ask-progress"></div><div class="sp-ask-report"></div></div>`;
+// One exchange: the question, its progress log and its report. Only the newest exchange is
+// .is-current — that is the one the progress and report renderers paint into.
+function spAskShell(question, followup, past) {
+	return `<div class="sp-ask-run${past ? '' : ' is-current'}"${followup ? ' data-followup="1"' : ''}>`
+		+ `<div class="sp-ask-question">${esc(question)}</div><div class="sp-ask-progress"></div><div class="sp-ask-report"></div></div>`;
+}
+
+function spAskCur(out) {
+	return out.querySelector('.sp-ask-run.is-current');
+}
+
+// Retire the current exchange before a follow-up is added below it: its progress log has done its
+// job, and the follow-up box moves down under the new question.
+function spAskSealCurrent(out) {
+	out.querySelector('.sp-ask-followup')?.remove();
+	const cur = spAskCur(out);
+	if (!cur) return;
+	cur.classList.remove('is-current');
+	const p = cur.querySelector('.sp-ask-progress');
+	if (p) p.innerHTML = '';
+}
+
+// Earlier exchanges of a conversation, redrawn when it is reopened from history.
+function spAskRenderThread(out, thread) {
+	(thread || []).forEach((x, i) => {
+		out.insertAdjacentHTML('beforeend', spAskShell(x.question, i > 0, true));
+		spAskFillReport(out.lastElementChild.querySelector('.sp-ask-report'), x.report);
+	});
+}
+
+// The follow-up box under the latest report. Follow-ups continue the same run server-side, so the
+// AI keeps everything it already looked up.
+function spAskRenderComposer(out, runId) {
+	out.querySelector('.sp-ask-followup')?.remove();
+	out.insertAdjacentHTML('beforeend', '<form class="sp-ask-composer sp-ask-followup">'
+		+ '<textarea class="sp-input sp-ask-input" rows="2" maxlength="1000" placeholder="Ask a follow-up question…"></textarea>'
+		+ '<button type="submit" class="unique sp-btn sp-btn-primary">Ask</button>'
+		+ '</form>');
+	const form = out.querySelector('.sp-ask-followup');
+	const ta   = form.querySelector('textarea');
+	form.addEventListener('submit', e => { e.preventDefault(); spAskFollowup(runId, ta.value, form.querySelector('button')); });
+	ta.addEventListener('keydown', e => {
+		if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); form.requestSubmit(); }
+	});
+}
+
+// replace: a failed follow-up being retried — its dead exchange is swapped for the new attempt.
+async function spAskFollowup(runId, question, btn, replace) {
+	const q = (question || '').trim();
+	if (q.length < 2) return;
+	const restore = btn ? spBtnBusy(btn, 'Asking…') : null;
+	const res = await spAjax('site_pulse_ask_followup', { run_id: runId, question: q }).catch(() => null);
+	if (restore) restore();
+	if (!res || !res.success) { alert(res?.data?.message || 'Could not send — please try again.'); return; }
+	const out = $('#sp-ask-output');
+	if (!out) return;
+	if (replace) spAskCur(out)?.remove();
+	spAskFollow(runId, q, true);
+	spAskLoadHistory();
 }
 
 function spAskRenderProgress(out, log, error, runId, status) {
-	const p = out.querySelector('.sp-ask-progress');
+	const cur = spAskCur(out);
+	const p = cur?.querySelector('.sp-ask-progress');
 	if (!p) return;
 	let h = '';
 	if (log && log.length) {
@@ -21677,14 +21070,24 @@ function spAskRenderProgress(out, log, error, runId, status) {
 	p.innerHTML = h;
 	p.classList.toggle('is-collapsed', status === 'done');
 	p.querySelector('.sp-ask-retry')?.addEventListener('click', () => {
-		const q = out.querySelector('.sp-ask-question')?.textContent || '';
-		// A failed run is final server-side, so "try again" asks afresh; a stalled connection just resumes.
-		if (status === 'error') spAskStart(q); else spAskFollow(runId, q);
+		const q = cur.querySelector('.sp-ask-question')?.textContent || '';
+		// A failed first question asks afresh; a failed follow-up re-sends into the same conversation;
+		// a stalled connection just resumes.
+		if (status === 'error') {
+			if (cur.dataset.followup) spAskFollowup(runId, q, null, true);
+			else spAskStart(q);
+		} else {
+			cur.remove();
+			spAskFollow(runId, q, true);
+		}
 	});
 }
 
 function spAskRenderReport(out, r) {
-	const host = out.querySelector('.sp-ask-report');
+	spAskFillReport(spAskCur(out)?.querySelector('.sp-ask-report'), r);
+}
+
+function spAskFillReport(host, r) {
 	if (!host || !r) return;
 	host.innerHTML = spAskReportHtml(r)
 		+ '<div class="sp-ask-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-ask-print">Download PDF</button></div>';
@@ -21696,9 +21099,11 @@ function spAskRenderReport(out, r) {
 function spAskReportHtml(r) {
 	const labels = r.labels || {};
 	let h = `<div class="sp-ask-doc"><h3 class="sp-ask-title">${esc(r.title || '')}</h3>`;
+	// The shared stat tiles (the same ones Mileage and the other modules use), with the number in
+	// the icon's spot on the left and the AI's (long) label beside it.
 	if (r.stats && r.stats.length) {
-		h += '<div class="sp-ask-stats">' + r.stats.map(s =>
-			`<div class="sp-ask-stat"><div class="sp-ask-stat-value">${esc(s.value)}</div><div class="sp-ask-stat-label">${esc(s.label)}</div></div>`
+		h += '<div class="sp-stat-grid sp-ask-stats">' + r.stats.map(s =>
+			`<div class="sp-tile sp-stat-tile sp-ask-tile"><div class="sp-tile-value sp-stat-value">${esc(s.value)}</div><div class="sp-tile-label sp-stat-label">${esc(s.label)}</div></div>`
 		).join('') + '</div>';
 	}
 	if (r.summary) h += `<div class="sp-ask-md">${spAskMd(r.summary)}</div>`;
@@ -21778,8 +21183,48 @@ function spAskChart(s) {
 	const legend = series.length > 1
 		? '<div class="sp-ask-legend">' + series.map((se, si) => `<div class="sp-ask-legend-item"><i class="sp-ask-swatch sp-ask-c${si}"></i>${esc(se.name)}</div>`).join('') + '</div>'
 		: '';
-	return `<div class="sp-ask-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(s.heading || 'Chart')}">${g}</svg>${legend}</div>`;
+	return `<div class="sp-ask-chart">`
+		+ `<button type="button" class="unique sp-ask-chart-zoom" aria-label="Expand chart" title="Expand chart">${ICON_EXPAND}</button>`
+		+ `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(s.heading || 'Chart')}">${g}</svg>${legend}</div>`;
 }
+
+// Charts draw to a fixed 680-wide viewBox, so on a phone the whole drawing — axis labels
+// included — scales down together until the labels collide. Expanding shows the SAME svg at
+// a width where the type is legible and lets the overlay scroll, rather than reflowing the
+// chart, which would just produce a second cramped layout to maintain.
+function spAskExpandChart(chart) {
+	const svg = chart && chart.querySelector('svg');
+	if (!svg) return;
+
+	const modal = document.createElement('div');
+	modal.className = 'sp-modal-backdrop sp-ask-chart-backdrop';
+	modal.innerHTML = '<div class="sp-modal sp-ask-chart-full">'
+		+ '<div class="sp-ask-chart-full-scroll"></div>'
+		+ '<div class="sp-modal-actions"><button type="button" class="unique sp-btn sp-btn-ghost" data-sp-close="1">Close</button></div>'
+		+ '</div>';
+
+	const scroll = modal.querySelector('.sp-ask-chart-full-scroll');
+	scroll.appendChild(svg.cloneNode(true));
+	const legend = chart.querySelector('.sp-ask-legend');
+	if (legend) scroll.appendChild(legend.cloneNode(true));
+
+	const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+	const close = () => { modal.remove(); document.removeEventListener('keydown', onKey); };
+
+	modal.addEventListener('click', (ev) => {
+		if (ev.target === modal || ev.target.closest('[data-sp-close]')) close();
+	});
+	document.addEventListener('keydown', onKey);
+
+	document.body.appendChild(modal);
+}
+
+// Delegated: charts are written into #sp-ask-output long after this runs, and the same
+// markup is reused on the printable report page.
+document.addEventListener('click', (e) => {
+	const btn = e.target.closest('.sp-ask-chart-zoom');
+	if (btn) spAskExpandChart(btn.closest('.sp-ask-chart'));
+});
 
 function spAskNiceMax(v) {
 	const p = Math.pow(10, Math.floor(Math.log10(v)));
@@ -21855,15 +21300,19 @@ async function spAskHistoryClick(e) {
 	const res = await spAjax('site_pulse_ask_get', { run_id: id }).catch(() => null);
 	if (!res || !res.success) return;
 	const d = res.data;
-	if (d.status === 'running') { spAskFollow(id, d.question); spAskLoadHistory(); return; }
-	_spAsk.token++;
-	_spAsk.runId = id;
+	const thread = d.thread || [];
 	const out = $('#sp-ask-output');
 	if (!out) return;
+	_spAsk.token++;
+	out.innerHTML = '';
+	spAskRenderThread(out, thread);
+	if (d.status === 'running') { spAskFollow(id, d.question, true); spAskLoadHistory(); return; }
+	_spAsk.runId = id;
 	$('#sp-ask-examples')?.setAttribute('hidden', '');
-	out.innerHTML = spAskShell(d.question);
+	$('#sp-ask-form')?.setAttribute('hidden', '');
+	out.insertAdjacentHTML('beforeend', spAskShell(d.question, thread.length > 0));
 	spAskRenderProgress(out, d.log, d.status === 'error' ? (d.error || 'Something went wrong.') : '', id, d.status);
-	if (d.status === 'done') spAskRenderReport(out, d.report);
+	if (d.status === 'done') { spAskRenderReport(out, d.report); spAskRenderComposer(out, id); }
 	spAskLoadHistory();
 }
 
@@ -21904,8 +21353,10 @@ function spAskPrint(r) {
 	const css = [
 		'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#222;margin:36px;font-size:13px;line-height:1.5}',
 		'.q{color:#666;margin:0 0 6px}h3{font-size:22px;margin:0 0 14px}h4{font-size:15px;margin:22px 0 8px}h5{font-size:13px;margin:12px 0 4px}',
-		'.sp-ask-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 16px}',
-		'.sp-ask-stat{border:1px solid #ddd;border-radius:8px;padding:10px 12px}.sp-ask-stat-value{font-size:22px;font-weight:700}.sp-ask-stat-label{color:#666;font-size:12px}',
+		'.sp-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px}',
+		'.sp-tile{border:1px solid #ccc;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;background:#f7f5f2}',
+		'.sp-ask-tile{gap:14px}.sp-ask-tile .sp-stat-value{flex:0 0 auto;max-width:45%;font-size:24px}.sp-ask-tile .sp-stat-label{flex:1 1 auto;min-width:0;border-left:1px solid #ccc;padding-left:16px}',
+		'.sp-stat-label{color:#666;font-size:11px;font-weight:700;text-transform:uppercase}.sp-stat-value{font-size:20px;font-weight:700}',
 		'table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #e3e3e3;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f4f4f4}',
 		'.sp-ask-scope{margin-top:20px;color:#555;font-size:12px;border-top:1px solid #ddd;padding-top:10px}',
 		'svg{width:100%;height:auto}.sp-ask-grid{stroke:#e5e5e5}.sp-ask-axis{font-size:11px;fill:#666}.sp-ask-line{fill:none;stroke-width:2.5}',

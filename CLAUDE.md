@@ -56,6 +56,8 @@ When a framework function is removed or renamed, grep every client `script-site.
 - Page content has NO comment syntax → `docs/css.md`
 - Every `:hover` rule must also style `.active` and `.tab-focus` (ADA) → `docs/css.md`
 - Headings are variable-driven — style by `--h-*`, and use the tag for OUTLINE, not for size → `docs/css.md`
+- Check what the framework already positions BEFORE adding grid/flex/position/line-height — header strips are already vertically centred (`.strip-elem`); never fake centring with `line-height` → `docs/css.md`
+- Font weight is `normal` or `bold` — never `400`/`500`/`600`/`700` → `docs/css.md`
 - Layout: default to `display: grid`, override to `flex` only with a reason → `docs/css.md`
 - Conversion tracking — name it `conversion-*` and it reports itself → `docs/shortcodes-content.md`
 

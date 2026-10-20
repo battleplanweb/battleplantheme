@@ -54,7 +54,7 @@ get_header(); ?>
 
 		// Testimonials
 			elseif ( get_post_type() === "testimonials" ) :
-				$archiveHeadline = "Testimonials";
+				$archiveHeadline = do_shortcode('[get-biz info="name-short"]') . " Reviews";
 				$facebookLink = do_shortcode('[get-biz info="facebook"]')."reviews/";
 				$facebookIcon = "Facebook-Like-Us-1";
 				$grid = "1";

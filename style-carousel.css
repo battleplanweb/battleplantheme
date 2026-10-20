@@ -392,6 +392,7 @@
 
 /* 2: Phones (landscape) + Tablets (portrait) */
 @media (max-width: 860px) {
+	/*
 	.carousel.slider-testimonials .block-button:nth-of-type(1) {
 		order:                                                    1;
 		width:                                                    calc(50% - var(--measure-small));
@@ -406,7 +407,7 @@
 		order:                                                    2;
 		width:                                                    calc(50% - var(--measure-small));
 	}
-
+*/
 	.carousel.mult-2 .carousel-inner .carousel-item .span-6,
 	.carousel.mult-3 .carousel-inner .carousel-item .span-4,
 	.carousel.mult-4 .carousel-inner .carousel-item .span-3 {

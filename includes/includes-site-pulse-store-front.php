@@ -19,6 +19,7 @@ Staff see a note saying why. Nothing needs to be turned on when phase 3 lands.
 ----------------------------------------------------------------
 # Assets
 # Product Card & Grid
+# Catalog Sorting
 # Single Product
 # Templates
 --------------------------------------------------------------*/
@@ -248,6 +249,160 @@ function sp_store_products_shortcode( $atts ): string {
 	$out .= '</div>';
 
 	wp_reset_postdata();
+	return $out;
+}
+
+
+/*--------------------------------------------------------------
+# Catalog Sorting
+--------------------------------------------------------------*/
+
+/**
+ * Every sort the shop offers, in the order they appear in the drop-down.
+ *
+ * `meta` sorts go through meta_value_num and always carry a title tie-break. Without
+ * one, products sharing a price come back in whatever order MySQL fancies, and that
+ * order is free to differ between page 1 and page 2 — which quietly shows one product
+ * twice and hides another entirely.
+ */
+function sp_store_sort_options(): array {
+	$flags = sp_store_sort_flags();
+
+	$options = [
+		'featured'   => [ 'label' => 'Featured',          'orderby' => 'menu_order title', 'order' => 'ASC' ],
+		'newest'     => [ 'label' => 'New Products',      'orderby' => 'date',             'order' => 'DESC' ],
+		'name'       => [ 'label' => 'Name (A–Z)',        'orderby' => 'title',            'order' => 'ASC' ],
+		'price-low'  => [ 'label' => 'Price Low to High', 'meta'    => '_sp_store_sort_price', 'order' => 'ASC' ],
+		'price-high' => [ 'label' => 'Price High to Low', 'meta'    => '_sp_store_sort_price', 'order' => 'DESC' ],
+	];
+
+	if ( $flags['sold'] ) {
+		$options['best-sellers'] = [ 'label' => 'Top Sellers', 'meta' => '_sp_store_sold', 'order' => 'DESC' ];
+	}
+	if ( $flags['savings'] ) {
+		$options['savings'] = [ 'label' => 'Savings High to Low', 'meta' => '_sp_store_sort_savings', 'order' => 'DESC' ];
+	}
+	if ( $flags['brand'] ) {
+		$options['brand'] = [ 'label' => 'Brand (A–Z)', 'meta' => '_sp_store_brand', 'numeric' => false, 'order' => 'ASC' ];
+	}
+
+	return apply_filters( 'sp_store_sort_options', $options );
+}
+
+/** How many products a page shows. Customers may pick from a fixed list; nothing else. */
+function sp_store_per_page_choices(): array {
+	return apply_filters( 'sp_store_per_page_choices', [ 12, 24, 48, 96 ] );
+}
+
+function sp_store_products_per_page(): int {
+	$default = max( 1, (int) sp_store_setting_value( 'products_per_page' ) );
+	$chosen  = isset( $_GET['per_page'] ) ? (int) $_GET['per_page'] : 0;
+
+	return in_array( $chosen, sp_store_per_page_choices(), true ) ? $chosen : $default;
+}
+
+/** The sort in force: the customer's pick if it is one we offer, else the shop default. */
+function sp_store_current_sort(): string {
+	$options = sp_store_sort_options();
+
+	$default = (string) sp_store_setting_value( 'default_sort' );
+	if ( ! isset( $options[ $default ] ) ) $default = 'featured';
+
+	$chosen = isset( $_GET['sort'] ) ? sanitize_key( wp_unslash( (string) $_GET['sort'] ) ) : '';
+
+	return isset( $options[ $chosen ] ) ? $chosen : $default;
+}
+
+/** True on the shop archive or a product category page. */
+function sp_store_is_catalog_query( WP_Query $query ): bool {
+	return $query->is_post_type_archive( SITE_PULSE_STORE_CPT ) || $query->is_tax( 'bp_product_cat' );
+}
+
+/**
+ * The archive runs on the main query, so per-page and ordering belong here rather than
+ * in the template. Set in the template they would arrive after the posts had already
+ * been fetched, and pagination would be counting against the wrong total.
+ */
+add_action( 'pre_get_posts', 'sp_store_catalog_query' );
+function sp_store_catalog_query( $query ): void {
+	if ( is_admin() || ! $query instanceof WP_Query || ! $query->is_main_query() ) return;
+	if ( ! sp_store_active() || ! sp_store_is_catalog_query( $query ) ) return;
+
+	$query->set( 'posts_per_page', sp_store_products_per_page() );
+
+	$options = sp_store_sort_options();
+	$def     = $options[ sp_store_current_sort() ];
+
+	if ( ! empty( $def['meta'] ) ) {
+		$by = ( $def['numeric'] ?? true ) ? 'meta_value_num' : 'meta_value';
+		$query->set( 'meta_key', $def['meta'] );
+		$query->set( 'orderby', [ $by => $def['order'], 'title' => 'ASC' ] );
+		return;
+	}
+
+	$query->set( 'orderby', $def['orderby'] );
+	$query->set( 'order', $def['order'] );
+}
+
+/**
+ * The sort and per-page controls above the grid.
+ *
+ * A plain GET form, so it works with JavaScript off and every result is a real URL a
+ * customer can bookmark or send to someone. Changing either control drops `paged`:
+ * re-sorting and landing on page 4 of the new order is never what was meant.
+ */
+function sp_store_catalog_toolbar(): string {
+	global $wp_query;
+
+	$total = (int) $wp_query->found_posts;
+	if ( $total < 1 ) return '';
+
+	$base = is_tax( 'bp_product_cat' )
+		? get_term_link( get_queried_object() )
+		: get_post_type_archive_link( SITE_PULSE_STORE_CPT );
+	if ( is_wp_error( $base ) || ! $base ) $base = sp_store_shop_url();
+
+	$per_page = sp_store_products_per_page();
+	$paged    = max( 1, (int) $wp_query->get( 'paged' ) );
+	$first    = ( ( $paged - 1 ) * $per_page ) + 1;
+	$last     = min( $total, $paged * $per_page );
+
+	$out = '<form class="store-toolbar" method="get" action="' . esc_url( $base ) . '">';
+
+	// Anything else already in the URL — a search term, a filter added later — has to
+	// survive the round trip, or sorting a search would silently drop the search.
+	foreach ( $_GET as $key => $value ) {
+		if ( in_array( $key, [ 'sort', 'per_page', 'paged' ], true ) || ! is_scalar( $value ) ) continue;
+		$out .= sprintf( '<input type="hidden" name="%s" value="%s">',
+			esc_attr( sanitize_key( $key ) ),
+			esc_attr( sanitize_text_field( wp_unslash( (string) $value ) ) )
+		);
+	}
+
+	$out .= '<p class="store-toolbar-count">Showing <strong>' . esc_html( (string) $first ) . '–' . esc_html( (string) $last )
+		. '</strong> of <strong>' . esc_html( (string) $total ) . '</strong></p>';
+
+	$out .= '<div class="store-toolbar-controls">';
+
+	$out .= '<label class="store-toolbar-field"><span>Show</span><select name="per_page">';
+	foreach ( sp_store_per_page_choices() as $choice ) {
+		$out .= sprintf( '<option value="%d"%s>%d</option>', $choice, selected( $per_page, $choice, false ), $choice );
+	}
+	$out .= '</select></label>';
+
+	$out .= '<label class="store-toolbar-field"><span>Sort by</span><select name="sort">';
+	$current = sp_store_current_sort();
+	foreach ( sp_store_sort_options() as $key => $def ) {
+		$out .= sprintf( '<option value="%s"%s>%s</option>',
+			esc_attr( $key ), selected( $current, $key, false ), esc_html( $def['label'] ) );
+	}
+	$out .= '</select></label>';
+
+	// Submits on change where there is JS, and stays a working button where there is not.
+	$out .= '<button type="submit" class="store-toolbar-go">Go</button>';
+
+	$out .= '</div></form>';
+
 	return $out;
 }
 

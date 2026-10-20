@@ -7,6 +7,7 @@
 ### [get-biz] — Pull business info from customer_info
 ```
 [get-biz info="name"]
+[get-biz info="name-short"]     → name minus a trailing ", LLC" / " Inc." / " PLLC" — use in headlines
 [get-biz info="phone"]          → clickable tracked phone link
 [get-biz info="phone-notrack"]  → plain phone link
 [get-biz info="area"]
@@ -229,6 +230,7 @@ Don't hand-build `<a href="tel:…">[get-icon type="phone"] [get-biz info="area-
 - `active="true"` → open by default
 - `multiple="false"` → collapse others when one opens
 - Body class `accordion-box` styles the accordion container
+- **FAQPage schema is automatic:** on the page with slug `faq`, every accordion whose title ends in `?` becomes a Question/Answer in a footer JSON-LD block (answer = rendered body, tags stripped). Other pages opt in with `add_filter('bp_faq_schema', fn($on) => $on || is_page('slug'))`.
 
 ### [widget] — Sidebar widget
 ```

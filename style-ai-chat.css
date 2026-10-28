@@ -103,6 +103,7 @@ button.bp-chat-launcher:focus-visible {
 	flex-direction:                                            column;
 	width:                                                     min(calc(100vw - 2em), 500px);
 	height:                                                    min(calc(100vh - 2.5em), 700px);
+	height:                                                    min(calc(100dvh - 2.5em), 700px);
 	border-radius:                                             var(--chatbot-radius);
 	overflow:                                                  hidden;
 	box-shadow:                                                var(--chatbot-shadow);
@@ -341,6 +342,7 @@ button.bp-chat-close.tab-focus {
 		bottom:                                                   0;
 		width:                                                    100vw;
 		height:                                                   calc(100vh - 120px);
+		height:                                                   calc(100dvh - 120px);
 		border-radius:                                            0;
 	}
 }

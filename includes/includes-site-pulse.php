@@ -20,6 +20,8 @@ require_once get_template_directory() . '/includes/includes-site-pulse-emails.ph
 require_once get_template_directory() . '/includes/includes-site-pulse-customer-messages.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-booking.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-jobsites.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-schedules.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
 
@@ -49,12 +51,6 @@ define( 'SITE_PULSE_DB_VERSION', '1.65' );
 
 function site_pulse_table( string $name ): string {
 	return $GLOBALS['wpdb']->prefix . 'site_pulse_' . $name;
-}
-
-function site_pulse_config( string $key = '' ) {
-	$config = get_option( 'site_pulse', [] );
-	if ( $key === '' ) return $config;
-	return $config[$key] ?? '';
 }
 
 function site_pulse_effective_user_id(): int {
@@ -450,6 +446,7 @@ function site_pulse_install_db(): void {
 		view_role_slugs text DEFAULT NULL,
 		view_user_ids text DEFAULT NULL,
 		show_header tinyint(1) NOT NULL DEFAULT 1,
+		header_items text DEFAULT NULL,
 		is_active tinyint(1) NOT NULL DEFAULT 1,
 		display_order tinyint(3) NOT NULL DEFAULT 0,
 		created_at datetime NOT NULL,
@@ -1060,6 +1057,19 @@ add_action( 'init', function() {
 			) );
 			if ( ! $has ) $wpdb->query( "ALTER TABLE $tbl ADD COLUMN show_header TINYINT(1) NOT NULL DEFAULT 1" );
 			else update_option( 'site_pulse_report_show_header_col', '1' );
+		}
+
+		// report_templates.header_items — WHICH header items a report shows (CSV of keys: each header
+		// field's calc, plus date / location / author). NULL = all of them (every report saved before this).
+		if ( ! get_option( 'site_pulse_report_header_items_col' ) ) {
+			global $wpdb;
+			$tbl = site_pulse_table( 'report_templates' );
+			$has = $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = 'header_items'",
+				$tbl
+			) );
+			if ( ! $has ) $wpdb->query( "ALTER TABLE $tbl ADD COLUMN header_items TEXT DEFAULT NULL" );
+			else update_option( 'site_pulse_report_header_items_col', '1' );
 		}
 	}
 
@@ -1746,6 +1756,60 @@ function site_pulse_seed_roles(): void {
 	}
 }
 
+/*--------------------------------------------------------------
+# Technical settings — God / System Admin only, on EVERY install
+--------------------------------------------------------------*/
+
+/**
+ * The "technical contact" caps: Users, Roles, Home Bases, AI Prompts, Forms (repositories), API Keys.
+ * Every Site Pulse install is a client site (Rovin included), and these belong only to God — who holds
+ * every cap — and the System Admin tier: the site's future technical contact, which God can assign.
+ * Still ordinary capabilities (never a hard is_god gate), so God can tick any of them onto a tier later.
+ */
+function site_pulse_technical_caps(): array {
+	return [ 'manage_users', 'manage_roles', 'manage_locations', 'manage_ai_prompts', 'manage_form_repositories', 'manage_api_keys' ];
+}
+
+/**
+ * One-time, every install: take the technical caps off every tier except God + System Admin (System Admin
+ * is given them, ready for a technical contact), and drop any per-person override that grants one to
+ * someone outside those tiers. AI Prompts / Forms / Roles used to ride on manage_settings; they now have
+ * their own caps, which this hands only to System Admin. Runs after the role + module seeds.
+ */
+add_action( 'init', 'site_pulse_migrate_technical_caps', 30 );
+function site_pulse_migrate_technical_caps(): void {
+	if ( get_option( 'site_pulse_technical_caps_migrated_v2' ) ) return;
+	if ( ! get_option( 'site_pulse_modules_seeded' ) ) return;              // first load not finished yet
+	global $wpdb;
+	$t    = site_pulse_table( 'roles' );
+	$tech = site_pulse_technical_caps();
+
+	$keep_roles = [];                                                    // role ids allowed the technical caps
+	foreach ( (array) $wpdb->get_results( "SELECT id, slug, capabilities FROM $t", ARRAY_A ) as $role ) {
+		if ( $role['slug'] === 'god' ) { $keep_roles[] = (int) $role['id']; continue; }   // force-synced by the seed
+		$have = json_decode( (string) $role['capabilities'], true ) ?: [];
+		if ( $role['slug'] === 'system-admin' ) {
+			$keep_roles[] = (int) $role['id'];
+			$caps = array_values( array_unique( array_merge( $have, $tech ) ) );
+		} else {
+			$caps = array_values( array_diff( $have, $tech ) );
+		}
+		if ( $caps !== $have ) $wpdb->update( $t, [ 'capabilities' => wp_json_encode( $caps ) ], [ 'id' => (int) $role['id'] ] );
+	}
+
+	// Per-person overrides: an individual grant (true) of a technical cap outside God/System Admin goes.
+	$pt = site_pulse_table( 'user_profiles' );
+	foreach ( (array) $wpdb->get_results( "SELECT user_id, role_id, capability_overrides FROM $pt WHERE capability_overrides IS NOT NULL AND capability_overrides <> ''", ARRAY_A ) as $p ) {
+		if ( in_array( (int) $p['role_id'], $keep_roles, true ) ) continue;
+		$ov = json_decode( (string) $p['capability_overrides'], true );
+		if ( ! is_array( $ov ) ) continue;
+		$new = $ov;
+		foreach ( $tech as $cap ) if ( ! empty( $new[ $cap ] ) ) unset( $new[ $cap ] );
+		if ( $new !== $ov ) $wpdb->update( $pt, [ 'capability_overrides' => $new ? wp_json_encode( $new ) : '' ], [ 'user_id' => (int) $p['user_id'] ] );
+	}
+	update_option( 'site_pulse_technical_caps_migrated_v2', '1' );
+}
+
 // One-time (existing installs, no version bump): ensure the System Admin (full-access) + generic User
 // roles exist. Insert-only — never touches roles an admin already has. New installs get these via the seed.
 add_action( 'init', 'site_pulse_seed_extra_roles' );
@@ -2002,8 +2066,9 @@ function site_pulse_enqueue_assets(): void {
 
 	$sp_config          = get_option( 'site_pulse', [] );
 	$header_fields      = $sp_config['report_header_fields'] ?? [];
-	// Per-user remembered Action Items sort order (importance | duedate | custom). On the real user.
-	$action_sort        = get_user_meta( $real_user_id, '_sp_action_sort', true );
+	// Per-user remembered Action Items sort order (importance | duedate | custom). Read from the EFFECTIVE
+	// user, like every other per-user preference here, so "view as" shows exactly what that person sees.
+	$action_sort        = get_user_meta( $eff_user_id, '_sp_action_sort', true );
 	$action_sort        = in_array( $action_sort, [ 'importance', 'duedate', 'custom' ], true ) ? $action_sort : 'importance';
 	$location_name      = '';
 	if ( $profile && $profile['location_id'] ) {
@@ -2038,11 +2103,14 @@ function site_pulse_enqueue_assets(): void {
 		// God or a System Admin — the only people who see the per-page Grant/Restrict bar.
 		'isSystemAdmin'      => site_pulse_is_system_admin( $eff_user_id ),
 		'impersonating'      => site_pulse_is_impersonating(),
-		// Whether the REAL user has ever opened the installed (home-screen) app — used to stop
-		// nagging installers with the dashboard install card.
-		'appInstalled'       => (bool) get_user_meta( $real_user_id, '_sp_app_installed', true ),
-		// Per-user chart style for the distribution graphs (bar | pie). Remembered on the real user.
-		'chartStyle'         => get_user_meta( $real_user_id, '_sp_chart_style', true ) === 'pie' ? 'pie' : 'bar',
+		// Whether this user has ever opened the installed (home-screen) app — used to stop nagging
+		// installers with the dashboard install card. Effective user, so "view as" matches their card.
+		'appInstalled'       => (bool) get_user_meta( $eff_user_id, '_sp_app_installed', true ),
+		// Per-user chart style for the distribution graphs (bar | pie). Effective user.
+		'chartStyle'         => get_user_meta( $eff_user_id, '_sp_chart_style', true ) === 'pie' ? 'pie' : 'bar',
+		// Whether a Claude API key is saved. Without one the bar's Ask button is shown disabled: its screen
+		// finder and Ask AI both need Claude.
+		'hasClaude'          => site_pulse_get_api_key() !== '',
 		// Per-user remembered Action Items sort order (importance | duedate | custom).
 		'actionSort'         => $action_sort,
 		// Google Maps JS key for the (client-side) mileage/toll maps. Browser keys ONLY — see
@@ -2079,6 +2147,9 @@ function site_pulse_enqueue_assets(): void {
 // the client reads as "your login itself expired".
 add_action( 'wp_ajax_site_pulse_refresh_nonce', 'site_pulse_ajax_refresh_nonce' );
 function site_pulse_ajax_refresh_nonce(): void {
+	// Store MEMBERS are logged in too, but they are customers, not staff — a member
+	// must never be handed the nonce every Site Pulse endpoint trusts.
+	if ( function_exists( 'sp_member_only' ) && sp_member_only() ) wp_send_json_error( [ 'message' => 'Not a Site Pulse account.' ], 403 );
 	wp_send_json_success( [ 'nonce' => wp_create_nonce( 'site_pulse_nonce' ) ] );
 }
 
@@ -2090,11 +2161,6 @@ function site_pulse_ajax_refresh_nonce(): void {
 function site_pulse_register_wp_roles(): void {
 	add_role( 'site_pulse_user', 'Site Pulse User', [ 'read' => true ] );
 	add_role( 'site_pulse_admin', 'Site Pulse Admin', [ 'read' => true, 'manage_site_pulse' => true ] );
-}
-
-function site_pulse_remove_wp_roles(): void {
-	remove_role( 'site_pulse_user' );
-	remove_role( 'site_pulse_admin' );
 }
 
 add_action( 'admin_init', function() {
@@ -2230,6 +2296,9 @@ function site_pulse_capability_catalog_all(): array {
 		'view_bookings'          => 'View all bookings',
 		'view_orders'            => 'View orders',
 		'view_own_bookings'      => 'View own bookings only',
+		'use_shift_scheduling'   => 'Use shift scheduling (my schedule, claim OT, PDO, coverage)',
+		'view_jobsites'          => 'View jobsites',
+		'add_jobsites'           => 'Add jobsites (and edit their own)',
 		'see_superadmin'    => 'See protected admin in lists',
 		'view_activity_log' => 'View the activity log',
 		'submit_mileage'    => 'Submit mileage',
@@ -2250,6 +2319,8 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_roles'         => 'Manage roles',
 		'manage_locations'     => 'Manage home bases',
 		'manage_templates'     => 'Manage reports',
+		'manage_ai_prompts'    => 'Manage AI prompts',
+		'manage_form_repositories' => 'Manage form repositories',
 		'manage_mileage'       => 'Manage mileage settings',
 		'upload_forms'         => 'Manage forms',
 		'manage_settings'      => 'Manage site defaults',
@@ -2273,6 +2344,9 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_products'          => 'Manage products, variants &amp; inventory',
 		'manage_store_payments'    => 'Refund orders &amp; view payment records',
 		'manage_store_settings'    => 'Manage store settings',
+		'manage_jobsites'          => 'Edit &amp; delete everyone\'s jobsites',
+		'manage_shift_schedules'   => 'Supervise shift scheduling (members, approvals, duty, logs)',
+		'manage_shift_settings'    => 'Manage shift scheduling settings (shifts, agency, disciplines)',
 	] );
 }
 
@@ -2379,14 +2453,6 @@ function site_pulse_preference_caps(): array {
 
 function site_pulse_user_can( int $user_id, string $capability ): bool {
 	return in_array( $capability, site_pulse_effective_caps( $user_id ), true );
-}
-
-function site_pulse_user_hierarchy( int $user_id ): int {
-	$profile = site_pulse_get_user_profile( $user_id );
-	if ( ! $profile ) return 0;
-
-	$role = site_pulse_get_role( $profile['role_id'] );
-	return $role ? (int) $role['hierarchy_level'] : 0;
 }
 
 function site_pulse_get_team_user_ids( int $supervisor_id ): array {
@@ -2502,6 +2568,21 @@ function site_pulse_get_setting( string $key, string $default = '' ): string {
 	if ( isset( $option[ $key ] ) ) return $option[ $key ];
 
 	return $default;
+}
+
+/**
+ * The site's own logo, for the sidebar/mobile header when no header_logo_url is configured — so a
+ * client install shows its company logo (white box + "Powered by Battle Plan Site Pulse") with no
+ * per-site setup. Same lookup as the rest of the framework: customer_info['logo'], then the
+ * uploads-folder logo.webp → .png → .jpg. '' if none.
+ */
+function site_pulse_default_logo(): string {
+	$ci = function_exists( 'customer_info' ) ? customer_info() : [];
+	if ( ! empty( $ci['logo'] ) ) return is_array( $ci['logo'] ) ? (string) ( $ci['logo']['url'] ?? '' ) : (string) $ci['logo'];
+	foreach ( [ 'logo.webp', 'logo.png', 'logo.jpg' ] as $f ) {
+		if ( is_file( WP_CONTENT_DIR . '/uploads/' . $f ) ) return content_url( '/uploads/' . $f );
+	}
+	return '';
 }
 
 function site_pulse_set_setting( string $key, string $value ): void {
@@ -2641,9 +2722,6 @@ function site_pulse_get_all_report_templates( bool $active_only = true ): array 
 function site_pulse_report_submit_cap( string $slug ): string { return 'submit_report_' . $slug; }
 function site_pulse_report_view_cap( string $slug ): string { return 'view_report_' . $slug; }
 
-// The legacy capability that historically governed this template (backward-compat during/after the
-// unification migration): manager→GM report caps, supervisor→Supervisor report caps.
-function site_pulse_report_legacy_submit_cap(): string { return 'submit_reports'; }
 function site_pulse_report_legacy_view_cap( array $tpl ): string {
 	$r = (string) ( $tpl['required_role_slug'] ?? '' );
 	if ( 'supervisor' === $r ) return 'view_supervisor_reports';
@@ -2838,7 +2916,9 @@ function site_pulse_save_answer( int $report_id, int $field_id, string $field_ke
 	$wpdb->replace( site_pulse_table('report_answers'), $data );
 }
 
-function site_pulse_submit_report( int $report_id ): bool {
+// Mark a report submitted. $notify = false skips the log + "Report submitted" notifications so a caller can
+// run them after replying (site_pulse_ajax_save_report does — notifications may email/push, which is slow).
+function site_pulse_submit_report( int $report_id, bool $notify = true ): bool {
 	global $wpdb;
 	$now = current_time( 'mysql' );
 	$updated = $wpdb->update(
@@ -2849,29 +2929,59 @@ function site_pulse_submit_report( int $report_id ): bool {
 		[ '%d' ]
 	);
 
-	if ( $updated ) {
-		$report = site_pulse_get_report( $report_id );
-		if ( $report ) {
-			$user    = get_userdata( $report['user_id'] );
-			$loc     = site_pulse_get_location( $report['location_id'] );
-			$profile = site_pulse_get_user_profile( $report['user_id'] );
-			$msg     = sprintf( '%s submitted a report for %s (%s – %s)',
-				$user ? $user->display_name : 'Unknown',
-				$loc ? $loc['name'] : 'Unknown Location',
-				$report['report_period_start'],
-				$report['report_period_end']
-			);
-
-			site_pulse_log( 'report_submitted', $msg, [ 'report_id' => $report_id ] );
-
-			// One "Report submitted" event for every report type. The contextual recipients adapt to
-			// who submitted: User = the submitter, User's Supervisor = their direct supervisor — so a
-			// GM's report notifies their Supervisor, a Supervisor's report notifies their Owner, etc.
-			site_pulse_dispatch_notification( 'report_submitted', (int) $report['user_id'], $msg, $report_id, 'report' );
-		}
-	}
+	if ( $updated && $notify ) site_pulse_report_submitted_notify( $report_id );
 
 	return (bool) $updated;
+}
+
+function site_pulse_report_submitted_notify( int $report_id ): void {
+	$report = site_pulse_get_report( $report_id );
+	if ( ! $report ) return;
+	$user = get_userdata( $report['user_id'] );
+	$loc  = site_pulse_get_location( $report['location_id'] );
+	$msg  = sprintf( '%s submitted a report for %s (%s – %s)',
+		$user ? $user->display_name : 'Unknown',
+		$loc ? $loc['name'] : 'Unknown Location',
+		$report['report_period_start'],
+		$report['report_period_end']
+	);
+
+	site_pulse_log( 'report_submitted', $msg, [ 'report_id' => $report_id ] );
+
+	// One "Report submitted" event for every report type. The contextual recipients adapt to
+	// who submitted: User = the submitter, User's Supervisor = their direct supervisor — so a
+	// GM's report notifies their Supervisor, a Supervisor's report notifies their Owner, etc.
+	site_pulse_dispatch_notification( 'report_submitted', (int) $report['user_id'], $msg, $report_id, 'report' );
+}
+
+/**
+ * Send the JSON success reply NOW, then run $after with the connection already closed — so slow follow-up
+ * work (the AI action-item pass, email, push) never holds the phone past WP Engine's ~60s gateway limit,
+ * which showed managers "Error saving report" on a report that had actually saved. Needs PHP-FPM
+ * (fastcgi_finish_request — WP Engine has it). Without it, $after runs inline first (the old behavior) and
+ * its int result, if any, lands in $data['pending_count'].
+ */
+function site_pulse_reply_then( array $data, callable $after ): void {
+	if ( ! function_exists( 'fastcgi_finish_request' ) ) {
+		$n = $after();
+		if ( is_int( $n ) ) $data['pending_count'] = $n;
+		wp_send_json_success( $data );
+	}
+	ignore_user_abort( true );
+	@set_time_limit( 300 );
+	status_header( 200 );
+	header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+	echo wp_json_encode( [ 'success' => true, 'data' => $data ] );
+	// Flush every output buffer first (functions.php opens one for its final-HTML search & replace) — the
+	// connection only closes on what has actually left PHP, or the reply would wait for $after after all.
+	while ( ob_get_level() > 0 ) ob_end_flush();
+	fastcgi_finish_request();
+	try {
+		$after();
+	} catch ( \Throwable $e ) {
+		error_log( 'site_pulse_reply_then: ' . $e->getMessage() );
+	}
+	exit;
 }
 
 function site_pulse_get_report( int $id ): ?array {
@@ -2980,7 +3090,7 @@ function site_pulse_get_reports( array $args = [] ): array {
 	$limit    = isset( $args['limit'] ) ? (int) $args['limit'] : 50;
 	$offset   = isset( $args['offset'] ) ? (int) $args['offset'] : 0;
 
-	$sql = "SELECT r.*, l.name AS location_name, u.display_name AS author_name, t.required_role_slug AS template_role
+	$sql = "SELECT r.*, l.name AS location_name, u.display_name AS author_name, t.required_role_slug AS template_role, t.name AS template_name
 			FROM " . site_pulse_table('reports') . " r
 			LEFT JOIN " . site_pulse_table('locations') . " l ON l.id = r.location_id
 			LEFT JOIN {$wpdb->users} u ON u.ID = r.user_id
@@ -3125,26 +3235,27 @@ function site_pulse_ajax_record_app_open(): void {
 	wp_send_json_success();
 }
 
-// Remember a user's chart style (bar | pie) for the distribution graphs. Stored on the REAL user so
-// a god impersonating someone doesn't overwrite that person's preference.
+// Remember a user's chart style (bar | pie) for the distribution graphs. Preferences are READ from the
+// effective user (so "view as" shows exactly their view); while a god is viewing-as, a toggle is
+// on-screen only and saved to nobody — it neither overwrites that person's choice nor the god's own.
 add_action( 'wp_ajax_site_pulse_set_chart_style', 'site_pulse_ajax_set_chart_style' );
 function site_pulse_ajax_set_chart_style(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$uid = get_current_user_id();
 	if ( ! $uid ) wp_send_json_error();
 	$style = ( ( $_POST['style'] ?? '' ) === 'pie' ) ? 'pie' : 'bar';
-	update_user_meta( $uid, '_sp_chart_style', $style );
+	if ( ! site_pulse_is_impersonating() ) update_user_meta( $uid, '_sp_chart_style', $style );
 	wp_send_json_success( [ 'style' => $style ] );
 }
 
-// Remember the user's Action Items sort order so it loads that way next time.
+// Remember the user's Action Items sort order so it loads that way next time (same view-as rule).
 add_action( 'wp_ajax_site_pulse_set_action_sort', 'site_pulse_ajax_set_action_sort' );
 function site_pulse_ajax_set_action_sort(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$uid = get_current_user_id();
 	if ( ! $uid ) wp_send_json_error();
 	$sort = in_array( $_POST['sort'] ?? '', [ 'importance', 'duedate', 'custom' ], true ) ? $_POST['sort'] : 'importance';
-	update_user_meta( $uid, '_sp_action_sort', $sort );
+	if ( ! site_pulse_is_impersonating() ) update_user_meta( $uid, '_sp_action_sort', $sort );
 	wp_send_json_success( [ 'sort' => $sort ] );
 }
 
@@ -3361,6 +3472,17 @@ function site_pulse_ajax_save_report(): void {
 		wp_send_json_error( [ 'message' => 'User profile not found.' ] );
 	}
 
+	// Retry protection: the form sends one token per report form. If an earlier request with this token already
+	// created the report (its reply was lost — a timeout on a bad connection), reuse that report instead of
+	// creating a duplicate. A new report form always has a new token, so two genuine reports still save apart.
+	$token     = substr( preg_replace( '/[^a-z0-9]/', '', strtolower( (string) ( $_POST['submit_token'] ?? '' ) ) ), 0, 40 );
+	$token_key = $token ? 'sp_report_tok_' . md5( $user_id . '|' . $token ) : '';
+	$is_retry  = false;
+	if ( ! $report_id && $token_key ) {
+		$prev = (int) get_transient( $token_key );
+		if ( $prev ) { $report_id = $prev; $is_retry = true; }
+	}
+
 	if ( ! $report_id ) {
 		$period_start = sanitize_text_field( $_POST['period_start'] ?? '' );
 		$period_end   = sanitize_text_field( $_POST['period_end'] ?? '' );
@@ -3370,6 +3492,7 @@ function site_pulse_ajax_save_report(): void {
 		}
 
 		$report_id = site_pulse_create_report( $template_id, $user_id, (int) $profile['location_id'], $period_start, $period_end );
+		if ( $report_id && $token_key ) set_transient( $token_key, $report_id, DAY_IN_SECONDS );
 	}
 
 	if ( ! $report_id ) {
@@ -3377,9 +3500,12 @@ function site_pulse_ajax_save_report(): void {
 	}
 
 	$report = site_pulse_get_report( $report_id );
-	if ( (int) $report['user_id'] !== $user_id ) {
+	if ( ! $report || (int) $report['user_id'] !== $user_id ) {
 		wp_send_json_error( [ 'message' => 'You cannot edit this report.' ] );
 	}
+	// A retry of a submit that already went through: answers are re-saved below, but the submit work
+	// (status, notifications, action items / email) is NOT run a second time.
+	$already_submitted = $is_retry && ( $report['status'] ?? '' ) === 'submitted';
 
 	$fields = site_pulse_get_template_fields( $template_id );
 	$field_map = [];
@@ -3394,18 +3520,24 @@ function site_pulse_ajax_save_report(): void {
 		}
 	}
 
-	$pending_count = 0;
-	if ( $action_type === 'submit' ) {
-		site_pulse_submit_report( $report_id );
+	// Submit: the status flips now (so the list shows it submitted the moment the phone hears back); the slow
+	// follow-ups — the "Report submitted" notifications, then the AI action-item pass or the email-on-submit
+	// — run AFTER the reply (site_pulse_reply_then), so they can never time the phone out.
+	$after = null;
+	if ( $action_type === 'submit' && ! $already_submitted ) {
+		site_pulse_submit_report( $report_id, false );
 		// A report with an "email on submit" recipient (set per-report in Settings → Reports) is a lean
 		// data report: email it and skip the AI action-item pass. Otherwise generate action items as usual.
 		$tpl      = $submit_tpl ?: site_pulse_get_template( $template_id );
 		$email_to = $tpl ? trim( (string) ( $tpl['email_on_submit'] ?? '' ) ) : '';
-		if ( '' !== $email_to ) {
-			site_pulse_email_report_on_submit( $report_id, $email_to );
-		} else {
-			$pending_count = site_pulse_create_action_items_from_report( $report_id );
-		}
+		$after    = function () use ( $report_id, $email_to ) {
+			site_pulse_report_submitted_notify( $report_id );
+			if ( '' !== $email_to ) {
+				site_pulse_email_report_on_submit( $report_id, $email_to );
+				return 0;
+			}
+			return site_pulse_create_action_items_from_report( $report_id );
+		};
 	}
 
 	global $wpdb;
@@ -3425,12 +3557,14 @@ function site_pulse_ajax_save_report(): void {
 		) );
 	}
 
-	wp_send_json_success( [
+	$reply = [
 		'report_id'     => $report_id,
 		'status'        => $action_type === 'submit' ? 'submitted' : 'draft',
 		'message'       => $action_type === 'submit' ? 'Report submitted successfully.' : 'Report saved as draft.',
-		'pending_count' => $pending_count,
-	] );
+		'pending_count' => 0,   // action items now arrive just after (with their "need your review" notification)
+	];
+	if ( $after ) site_pulse_reply_then( $reply, $after );
+	wp_send_json_success( $reply );
 }
 
 add_action( 'wp_ajax_site_pulse_get_reports', 'site_pulse_ajax_get_reports' );
@@ -4007,6 +4141,7 @@ function site_pulse_ajax_admin_save_template(): void {
 	$submit_users = site_pulse_parse_user_id_csv( $_POST['submit_user_ids'] ?? '' );
 	$view_roles   = site_pulse_parse_slug_csv( $_POST['view_role_slugs'] ?? '' );
 	$view_users   = site_pulse_parse_user_id_csv( $_POST['view_user_ids'] ?? '' );
+	$header_items = implode( ',', array_filter( array_map( 'sanitize_key', explode( ',', (string) wp_unslash( $_POST['header_items'] ?? '' ) ) ) ) );
 
 	$data = [
 		'name'               => $name,
@@ -4020,7 +4155,9 @@ function site_pulse_ajax_admin_save_template(): void {
 		'submit_user_ids'    => ( $submit_users ? implode( ',', $submit_users ) : null ),
 		'view_role_slugs'    => ( $view_roles ? implode( ',', $view_roles ) : null ),
 		'view_user_ids'      => ( $view_users ? implode( ',', $view_users ) : null ),
-		'show_header'        => ! empty( $_POST['show_header'] ) ? 1 : 0,
+		// Which header items show (the checkboxes); none ticked = no header at all.
+		'header_items'       => $header_items,
+		'show_header'        => $header_items !== '' ? 1 : 0,
 		'is_active'          => isset( $_POST['is_active'] ) ? (int) $_POST['is_active'] : 1,
 		'updated_at'         => $now,
 	];
@@ -4256,7 +4393,7 @@ function site_pulse_ajax_get_template_fields(): void {
 add_action( 'wp_ajax_site_pulse_admin_get_roles', 'site_pulse_ajax_admin_get_roles' );
 function site_pulse_ajax_admin_get_roles(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_roles' ) ) return;
 
 	global $wpdb;
 	$counts = [];
@@ -4277,7 +4414,7 @@ function site_pulse_ajax_admin_get_roles(): void {
 add_action( 'wp_ajax_site_pulse_admin_save_role', 'site_pulse_ajax_admin_save_role' );
 function site_pulse_ajax_admin_save_role(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_roles' ) ) return;
 
 	global $wpdb;
 	$id    = (int) ( $_POST['id'] ?? 0 );
@@ -4333,7 +4470,7 @@ function site_pulse_ajax_admin_save_role(): void {
 add_action( 'wp_ajax_site_pulse_admin_delete_role', 'site_pulse_ajax_admin_delete_role' );
 function site_pulse_ajax_admin_delete_role(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_roles' ) ) return;
 
 	global $wpdb;
 	$id   = (int) ( $_POST['id'] ?? 0 );
@@ -4357,7 +4494,7 @@ function site_pulse_ajax_admin_delete_role(): void {
 add_action( 'wp_ajax_site_pulse_admin_reorder_roles', 'site_pulse_ajax_admin_reorder_roles' );
 function site_pulse_ajax_admin_reorder_roles(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_roles' ) ) return;
 
 	global $wpdb;
 	$order = $_POST['order'] ?? []; // role IDs, most-senior first (God excluded)
@@ -4413,16 +4550,17 @@ function site_pulse_page_access_map(): array {
 		'fleet'               => [ 'view_fleet', 'manage_fleet' ],
 		'forms'               => [ 'view_forms', 'upload_forms' ],
 		'forms-all'           => [ 'view_forms', 'upload_forms' ],
+		'jobsites'            => [ 'view_jobsites', 'add_jobsites', 'manage_jobsites' ],
 		'ai-assistant'        => 'use_ai_assistant',
 		// Settings sub-pages.
 		'admin-users'         => 'manage_users',
 		'admin-tiers'         => 'manage_roles',
 		'admin-locations'     => 'manage_locations',
 		'admin-templates'     => 'manage_templates',
-		'admin-ai-prompts'    => 'manage_settings',
+		'admin-ai-prompts'    => 'manage_ai_prompts',
 		'review-settings'     => 'manage_reviews',
 		'admin-mileage'       => 'manage_mileage',
-		'admin-forms'         => 'manage_settings',
+		'admin-forms'         => 'manage_form_repositories',
 		'admin-settings'      => 'manage_settings',
 		'admin-notifications' => 'manage_notifications',
 		'admin-apikeys'       => 'manage_api_keys',
@@ -5329,6 +5467,40 @@ function site_pulse_call_claude_vision( string $image_b64, string $media_type, s
 
 
 /*--------------------------------------------------------------
+# Ask (bottom bar) — "how do I…" → the screen that does it
+#
+# The browser matches the question against the user's own menu first; when that
+# isn't confident it sends the question plus that same numbered list of screens
+# here, and Claude picks one. The list comes from the menu the user can already
+# see, so Ask can only ever point at a screen they have access to.
+--------------------------------------------------------------*/
+
+add_action( 'wp_ajax_site_pulse_ask_nav', 'site_pulse_ajax_ask_nav' );
+function site_pulse_ajax_ask_nav(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! is_user_logged_in() ) wp_send_json_error( [ 'message' => 'Please sign in again.' ] );
+
+	$question = sanitize_text_field( wp_unslash( $_POST['question'] ?? '' ) );
+	$list     = json_decode( wp_unslash( (string) ( $_POST['destinations'] ?? '[]' ) ), true );
+	if ( $question === '' || ! is_array( $list ) || ! $list ) wp_send_json_error( [ 'message' => 'Type what you want to do.' ] );
+
+	$lines = [];
+	foreach ( array_slice( $list, 0, 200 ) as $d ) {
+		$id   = (int) ( $d['id'] ?? 0 );
+		$path = sanitize_text_field( (string) ( $d['path'] ?? '' ) );
+		if ( $id > 0 && $path !== '' ) $lines[] = "{$id}: {$path}";
+	}
+	$system = 'You route questions in a business web app to the one screen where the user can do or find what they ask about. '
+	        . 'Reply with only the number of the best screen from the list, or 0 if none fits. No other text.';
+	$reply  = site_pulse_call_claude( "Question: {$question}\n\nScreens:\n" . implode( "\n", $lines ), $system,
+		[ 'model' => 'claude-haiku-4-5', 'max_tokens' => 10, 'timeout' => 15, 'retries' => 1 ], $debug );
+	if ( $reply === null ) wp_send_json_error( [ 'message' => $debug ?: 'Ask is unavailable right now.' ] );
+
+	wp_send_json_success( [ 'id' => (int) preg_replace( '/\D+/', '', $reply ) ] );
+}
+
+
+/*--------------------------------------------------------------
 # AI Assistant — company-voiced chat (role + brand voice → tailored output)
 --------------------------------------------------------------*/
 
@@ -5650,7 +5822,9 @@ function site_pulse_ajax_save_dashboard_layout(): void {
 	$uid = site_pulse_effective_user_id();
 	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Not signed in.' ] );
 
-	$known  = [ 'alerts', 'chat', 'actions', 'reports', 'mileage', 'feedback', 'directory' ];
+	// Every dashboard section id (the $sp_widgets registry in page-site-pulse-dashboard.php). A missing id
+	// here is silently dropped on save, so the section reverts to its default on the next load.
+	$known  = [ 'alerts', 'chat', 'actions', 'reports', 'pastdue', 'mileage', 'feedback', 'directory' ];
 	$order  = array_values( array_intersect( array_map( 'sanitize_text_field', (array) ( $_POST['order'] ?? [] ) ), $known ) );
 	$hidden = array_values( array_intersect( array_map( 'sanitize_text_field', (array) ( $_POST['hidden'] ?? [] ) ), $known ) );
 
@@ -5762,11 +5936,18 @@ function site_pulse_get_action_items( array $args = [] ): array {
 			if ( ! isset( $group_members[ $g ][ $uid ] ) ) $group_members[ $g ][ $uid ] = [ 'id' => $uid, 'name' => $n ];
 		}
 	}
+	// Each person's directory photo too (the same one chat shows), so the avatars can be faces.
+	// site_pulse_user_photo() caches per request, so a person on many items is looked up once.
+	$with_photo = function ( array $p ): array {
+		$p['photo'] = function_exists( 'site_pulse_user_photo' ) ? site_pulse_user_photo( (int) $p['id'] ) : '';
+		return $p;
+	};
 	foreach ( $rows as &$r ) {
 		$g = (string) ( $r['group_id'] ?? '' );
-		$r['visible_to'] = ( '' !== $g && ! empty( $group_members[ $g ] ) )
+		$people = ( '' !== $g && ! empty( $group_members[ $g ] ) )
 			? array_values( $group_members[ $g ] )
 			: [ [ 'id' => (int) ( $r['user_id'] ?? 0 ), 'name' => (string) ( $r['user_name'] ?? '' ) ] ];
+		$r['visible_to'] = array_map( $with_photo, $people );
 	}
 	unset( $r );
 
@@ -6267,9 +6448,14 @@ function site_pulse_ajax_add_action_note(): void {
 	if ( ! $notes ) $notes[] = (string) $item['description']; // seed list with the original item
 	// Stamp with a short M/D date — today, or the back-dated day the person picked — then re-sort so a
 	// late entry sits in date order.
-	$notes[] = gmdate( 'n/j', strtotime( $note_date ) ) . ' — ' . $note;
+	$stamped = gmdate( 'n/j', strtotime( $note_date ) ) . ' — ' . $note;
+	$notes[] = $stamped;
 	$notes   = sp_action_notes_sort( $notes );
 	$meta['notes'] = $notes;
+	// Who wrote each note, keyed by the note's text (the notes stay plain strings for everything that
+	// reads them; this map rides alongside). Notes from before it existed simply have no author.
+	if ( ! isset( $meta['note_authors'] ) || ! is_array( $meta['note_authors'] ) ) $meta['note_authors'] = [];
+	$meta['note_authors'][ $stamped ] = $me;
 
 	// Rewrite the item from the original + all notes, and let the AI extend the due date when the
 	// notes imply a new timeframe (falls back to the existing text/date if AI is off or unparseable).
@@ -6348,6 +6534,11 @@ function site_pulse_ajax_set_action_note_date(): void {
 	$body = preg_replace( '#^\d{1,2}/\d{1,2} — #u', '', $text );
 	$notes[ $index ] = gmdate( 'n/j', strtotime( $date ) ) . ' — ' . $body;
 	$meta['notes']   = sp_action_notes_sort( $notes );
+	// The note's text changed (new date), so its author entry moves with it.
+	if ( isset( $meta['note_authors'][ $text ] ) ) {
+		$meta['note_authors'][ $notes[ $index ] ] = $meta['note_authors'][ $text ];
+		if ( $notes[ $index ] !== $text ) unset( $meta['note_authors'][ $text ] );
+	}
 
 	$fields = [ 'meta' => wp_json_encode( $meta ), 'updated_at' => current_time( 'mysql' ) ];
 	$group  = (string) ( $item['group_id'] ?? '' );
@@ -6778,11 +6969,12 @@ function site_pulse_ajax_reorder_action_items(): void {
 	}
 
 	global $wpdb;
+	$me = site_pulse_effective_user_id();
 	foreach ( $order as $position => $item_id ) {
 		$wpdb->update(
 			site_pulse_table('action_items'),
 			[ 'display_order' => (int) $position, 'updated_at' => current_time( 'mysql' ) ],
-			[ 'id' => (int) $item_id ]
+			[ 'id' => (int) $item_id, 'user_id' => $me ]   // only the caller's own list
 		);
 	}
 
@@ -6892,24 +7084,6 @@ function site_pulse_ajax_admin_get_settings(): void {
 # Color Scheme — per-install theming of the CSS variables
 --------------------------------------------------------------*/
 
-/**
- * The curated set of "company colors" a site admin can change. Each role is ONE base color
- * the user picks; saving it derives every dependent CSS variable (hover/light/glow/contrast),
- * so the app stays readable without the user hand-picking 20 shades. Mirrored in
- * script-site-pulse.js (spColorRoleVars) for instant live preview before save.
- */
-function site_pulse_color_roles(): array {
-	return [
-		'primary' => [ 'label' => 'Brand / Accent', 'desc' => 'Buttons, the active menu item, links and highlights throughout the app.', 'default' => '#ec9a3c' ],
-		'sidebar' => [ 'label' => 'Navigation Bar', 'desc' => 'The side menu and mobile top-bar background.', 'default' => '#474c54' ],
-		'bg'      => [ 'label' => 'Page Background', 'desc' => 'The canvas behind cards and content.', 'default' => '#f4eee3' ],
-		'text'    => [ 'label' => 'Body Text', 'desc' => 'Primary text color for headings and copy.', 'default' => '#2c2a27' ],
-		'success' => [ 'label' => 'Success', 'desc' => 'Positive states — resolved items, confirmations, "Active" badges.', 'default' => '#2f8f57' ],
-		'warning' => [ 'label' => 'Warning', 'desc' => 'Caution states — medium priority, pending notices.', 'default' => '#c77d18' ],
-		'danger'  => [ 'label' => 'Danger', 'desc' => 'Errors, deletions, high-priority / urgent items.', 'default' => '#d0432f' ],
-	];
-}
-
 function site_pulse_sanitize_hex( string $val ): string {
 	$val = trim( $val );
 	if ( preg_match( '/^#?([0-9a-fA-F]{6})$/', $val, $m ) ) return '#' . strtolower( $m[1] );
@@ -6920,19 +7094,6 @@ function site_pulse_sanitize_hex( string $val ): string {
 	return '';
 }
 
-/** Stored base for a role, or null if the admin has never set it (so the stylesheet default stands). */
-function site_pulse_color_role_raw( string $key ): ?string {
-	global $wpdb;
-	$val = $wpdb->get_var( $wpdb->prepare(
-		"SELECT config_value FROM " . site_pulse_table('config') . " WHERE config_key = %s",
-		'color_' . $key
-	) );
-	if ( $val !== null && $val !== '' ) return $val;
-	$option = get_option( 'site_pulse', [] );
-	if ( isset( $option[ 'color_' . $key ] ) && $option[ 'color_' . $key ] !== '' ) return $option[ 'color_' . $key ];
-	return null;
-}
-
 function site_pulse_hex_to_rgb( string $hex ): array {
 	$hex = ltrim( site_pulse_sanitize_hex( $hex ) ?: '#000000', '#' );
 	return [ hexdec( substr( $hex, 0, 2 ) ), hexdec( substr( $hex, 2, 2 ) ), hexdec( substr( $hex, 4, 2 ) ) ];
@@ -6940,11 +7101,6 @@ function site_pulse_hex_to_rgb( string $hex ): array {
 function site_pulse_rgb_to_hex( int $r, int $g, int $b ): string {
 	$clamp = fn( $n ) => max( 0, min( 255, (int) round( $n ) ) );
 	return sprintf( '#%02x%02x%02x', $clamp( $r ), $clamp( $g ), $clamp( $b ) );
-}
-function site_pulse_color_darken( string $hex, float $pct ): string {
-	[ $r, $g, $b ] = site_pulse_hex_to_rgb( $hex );
-	$f = 1 - ( $pct / 100 );
-	return site_pulse_rgb_to_hex( $r * $f, $g * $f, $b * $f );
 }
 function site_pulse_color_mix_white( string $hex, float $w ): string {
 	[ $r, $g, $b ] = site_pulse_hex_to_rgb( $hex );
@@ -6954,17 +7110,6 @@ function site_pulse_color_rgba( string $hex, float $a ): string {
 	[ $r, $g, $b ] = site_pulse_hex_to_rgb( $hex );
 	return "rgba($r,$g,$b,$a)";
 }
-function site_pulse_color_is_dark( string $hex ): bool {
-	[ $r, $g, $b ] = site_pulse_hex_to_rgb( $hex );
-	return ( ( 0.299 * $r + 0.587 * $g + 0.114 * $b ) / 255 ) < 0.6;
-}
-function site_pulse_color_contrast( string $hex ): string {
-	return site_pulse_color_is_dark( $hex ) ? '#ffffff' : '#1f2430';
-}
-function site_pulse_color_contrast_muted( string $hex ): string {
-	return site_pulse_color_is_dark( $hex ) ? '#c8ccd3' : '#4b5563';
-}
-
 /** WCAG relative luminance (0–1) of a hex color. */
 function site_pulse_luminance( string $hex ): float {
 	[ $r, $g, $b ] = site_pulse_hex_to_rgb( $hex );
@@ -6978,11 +7123,9 @@ function site_pulse_luminance( string $hex ): float {
 /*--------------------------------------------------------------
 # OKLCH color engine — perceptual, luminance-locked brand ramps
 #
-# The scheme is built deterministically from the company colors (no AI): the
-# provided colors are sorted and assigned to three roles by their perceptual
-# properties, then each role gets a 5-step ramp whose LIGHTNESS is locked to
-# fixed targets — only the hue/chroma comes from the brand color. That makes
-# the role tokens reliable no matter what colors are entered:
+# The scheme is built deterministically from three anchors (no AI) — a preset's,
+# or a preset tuned toward the company colors (see "Color presets" below). Each
+# anchor becomes the base of a 5-step family, so the role tokens are reliable:
 #   --sp-primary-*   = the DARK family   (primary-color is always dark → safe as a dark surface / dark text; -light/-lightest are guaranteed lighter)
 #   --sp-secondary-* = the LIGHT family  (secondary-color is always light → safe as a light background; -dark/-darkest are guaranteed dark foregrounds)
 #   --sp-accent-*    = the VIVID family  (kept saturated → buttons, active states, links, highlights)
@@ -7044,159 +7187,75 @@ function site_pulse_oklch_to_hex( float $L, float $C, float $H ): string {
 }
 
 /**
- * Build one role ramp: the lightness of every rung is FIXED (so the role token
- * is predictable), the hue is the brand color's, the chroma is the brand color's
- * (capped, optionally floored to guarantee vividness) scaled per-rung so the
- * pale/deep ends don't go neon. $rungs = [ name => [ L_target, chroma_factor ] ].
- */
-function site_pulse_oklch_ramp( string $srcHex, array $rungs, float $chromaCap, float $chromaFloor = 0.0 ): array {
-	[ , $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	$C0 = min( $C0, $chromaCap );
-	$C0 = max( $C0, $chromaFloor );
-	$out = [];
-	foreach ( $rungs as $name => $spec ) {
-		[ $L, $cf ] = $spec;
-		$out[ $name ] = site_pulse_oklch_to_hex( $L, $C0 * $cf, $H );
-	}
-	return $out;
-}
-
-/**
- * Assign the provided company colors to the three roles, by ENTRY ORDER:
- *   - the 3rd color entered is the ACCENT (people pick their tertiary/accent color last);
- *   - of the first two, the darker is primary and the lighter is secondary.
- * With 2 colors there's no accent slot, so darker=primary, lighter=secondary, accent=more saturated.
- * With 1, all three reuse it. Order is preserved (no dedupe) so the slots stay meaningful.
- * Returns [ 'primary'=>hex, 'secondary'=>hex, 'accent'=>hex ] or [] if none.
- */
-function site_pulse_assign_brand_roles( array $colors ): array {
-	$cols = [];
-	foreach ( $colors as $c ) {
-		$h = site_pulse_sanitize_hex( (string) $c );
-		if ( $h !== '' ) $cols[] = $h;   // keep entry order — slot 3 is the accent
-	}
-	$cols = array_slice( $cols, 0, 3 );
-	if ( ! $cols ) return [];
-
-	$n = count( $cols );
-	if ( $n === 1 ) {
-		return [ 'primary' => $cols[0], 'secondary' => $cols[0], 'accent' => $cols[0] ];
-	}
-
-	if ( $n === 2 ) {
-		$La = site_pulse_hex_to_oklch( $cols[0] )[0]; $Lb = site_pulse_hex_to_oklch( $cols[1] )[0];
-		$Ca = site_pulse_hex_to_oklch( $cols[0] )[1]; $Cb = site_pulse_hex_to_oklch( $cols[1] )[1];
-		return [
-			'primary'   => $La <= $Lb ? $cols[0] : $cols[1],
-			'secondary' => $La <= $Lb ? $cols[1] : $cols[0],
-			'accent'    => $Ca >= $Cb ? $cols[0] : $cols[1],
-		];
-	}
-
-	// 3 colors: slot 3 is the accent; the darker of the first two is primary, the lighter secondary.
-	$L0 = site_pulse_hex_to_oklch( $cols[0] )[0];
-	$L1 = site_pulse_hex_to_oklch( $cols[1] )[0];
-	return [
-		'primary'   => $L0 <= $L1 ? $cols[0] : $cols[1],
-		'secondary' => $L0 <= $L1 ? $cols[1] : $cols[0],
-		'accent'    => $cols[2],
-	];
-}
-
-/**
- * The primary (DARK) ramp. primary-color tracks the brand color's OWN lightness so it's as dark as
- * what the admin picked — only capped to a ceiling so a medium pick still darkens enough to stay a
- * legible dark surface/text (and floored so pure black still has a little life). The light rungs are
- * fixed up high for tints/hover-fills; the deep rungs sit below the color.
+ * The primary (DARK) family, from the brand anchor. primary-color IS the anchor (presets and the
+ * matcher already guarantee white text reads on it); the pale rungs are fixed high for tints and the
+ * deep rungs sit below it at full chroma.
  */
 function site_pulse_oklch_primary_ramp( string $srcHex ): array {
 	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	// primary-color = the picked color VERBATIM when it's already a usable dark tone — no lightening,
-	// no desaturating (reducing chroma was making dark reds read as a washed, lighter maroon). Only a
-	// genuinely light pick is darkened to OKLCH L 0.42 to serve as the dark UI tone. Deep rungs sit
-	// below the color at full chroma; only the pale tints ease the chroma so they aren't neon.
-	if ( $L0 <= 0.45 ) {
-		$color = $srcHex; $Lc = $L0; $Cc = $C0;
-	} else {
-		$Lc = 0.42; $Cc = $C0; $color = site_pulse_oklch_to_hex( $Lc, $Cc, $H );
-	}
 	$tintC = min( $C0, 0.10 );
 	return [
 		'lightest' => site_pulse_oklch_to_hex( 0.965, $tintC * 0.45, $H ),
 		'light'    => site_pulse_oklch_to_hex( 0.880, $tintC * 0.80, $H ),
-		'color'    => $color,
-		'dark'     => site_pulse_oklch_to_hex( max( 0.12, $Lc - 0.09 ), $Cc, $H ),
-		'darkest'  => site_pulse_oklch_to_hex( max( 0.08, $Lc - 0.17 ), $Cc, $H ),
+		'color'    => $srcHex,
+		'dark'     => site_pulse_oklch_to_hex( max( 0.12, $L0 - 0.09 ), $C0, $H ),
+		'darkest'  => site_pulse_oklch_to_hex( max( 0.08, $L0 - 0.17 ), $C0, $H ),
 	];
 }
 
 /**
- * The secondary (LIGHT) ramp. secondary-color tracks the brand color's own lightness so it's as light
- * as what the admin picked — floored so a mid pick still lightens enough to be a usable light
- * background. Chroma is kept low (muted). The deep rungs are fixed low for dark foregrounds on it.
+ * The secondary (LIGHT) family, from the page-tint anchor. secondary-lightest IS the tint (the page
+ * background); the rungs above it step a little deeper for surfaces that sit on the tint, and the deep
+ * rungs are fixed low for dark text on them.
  */
 function site_pulse_oklch_secondary_ramp( string $srcHex ): array {
 	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
-	// secondary-color = the picked color VERBATIM when it's already light enough to be a background;
-	// only a darker pick is lightened to OKLCH L 0.88 to serve as the light surface. Deep rungs are
-	// fixed low for dark foregrounds on it. Chroma kept muted on the synthesized tones.
-	if ( $L0 >= 0.82 ) {
-		$color = $srcHex; $Lc = $L0; $Cc = $C0;
-	} else {
-		$Lc = 0.88; $Cc = min( $C0, 0.05 ); $color = site_pulse_oklch_to_hex( $Lc, $Cc, $H );
-	}
+	$Cs = min( max( $C0 * 1.6, 0.012 ), 0.05 );
 	return [
-		'lightest' => site_pulse_oklch_to_hex( min( 0.995, $Lc + 0.05 ), min( $C0, 0.04 ) * 0.6, $H ),
-		'light'    => site_pulse_oklch_to_hex( min( 0.985, $Lc + 0.025 ), min( $C0, 0.05 ) * 0.8, $H ),
-		'color'    => $color,
-		'dark'     => site_pulse_oklch_to_hex( 0.45, min( $C0, 0.06 ), $H ),
-		'darkest'  => site_pulse_oklch_to_hex( 0.30, min( $C0, 0.06 ), $H ),
+		'lightest' => $srcHex,
+		'light'    => site_pulse_oklch_to_hex( $L0 - 0.025, $Cs * 0.8, $H ),
+		'color'    => site_pulse_oklch_to_hex( $L0 - 0.06, $Cs, $H ),
+		'dark'     => site_pulse_oklch_to_hex( 0.45, min( $C0 * 3, 0.06 ), $H ),
+		'darkest'  => site_pulse_oklch_to_hex( 0.30, min( $C0 * 3, 0.06 ), $H ),
 	];
 }
 
 /**
- * The accent (vivid) ramp keeps the brand pop's OWN lightness for accent-color (clamped to a vivid
- * band) so buttons stay on-brand; the other rungs are offset around it. Chroma is floored so the
- * accent stays lively even from a muted input. (Unlike primary/secondary, the accent's lightness is
- * NOT locked — accent is used as a fill with computed-contrast text, so its lightness can be free.)
+ * The accent (vivid) family, from the accent anchor. accent-color IS the anchor (used as a fill with
+ * computed-contrast text, so its lightness is free); the other rungs are offset around it.
  */
 function site_pulse_oklch_accent_ramp( string $srcHex ): array {
 	[ $L0, $C0, $H ] = site_pulse_hex_to_oklch( $srcHex );
 	// A near-achromatic input (silver/grey/black/white) has no real hue — atan2() on the sRGB→OKLab
-	// matrix's floating-point residue invents one (pure grey lands near hue 90° = GOLD). So only floor
-	// chroma up to "vivid" for colors that genuinely have some; a neutral accent stays neutral (silver
-	// stays a silver pop, not gold). Threshold 0.02 in OKLCH chroma ≈ visually colorless.
-	if ( $C0 < 0.02 ) {
-		$H  = 0.0;                       // hue is meaningless at ~0 chroma; pin it so it isn't noise
-		$C0 = min( $C0, 0.02 );          // keep it a true neutral
-	} else {
-		$C0 = min( max( $C0, 0.10 ), 0.45 );
-	}
-	$Lc = max( 0.50, min( 0.76, $L0 ) );
+	// matrix's floating-point residue invents one (pure grey lands near hue 90° = GOLD). Pin it so the
+	// tints stay a true neutral instead of drifting gold.
+	if ( $C0 < 0.02 ) $H = 0.0;
 	return [
 		'lightest' => site_pulse_oklch_to_hex( 0.95, $C0 * 0.35, $H ),
-		'light'    => site_pulse_oklch_to_hex( min( 0.88, $Lc + 0.16 ), $C0 * 0.70, $H ),
-		'color'    => site_pulse_oklch_to_hex( $Lc, $C0, $H ),
-		'dark'     => site_pulse_oklch_to_hex( max( 0.34, $Lc - 0.14 ), $C0, $H ),
-		'darkest'  => site_pulse_oklch_to_hex( max( 0.26, $Lc - 0.26 ), $C0 * 0.95, $H ),
+		'light'    => site_pulse_oklch_to_hex( min( 0.90, $L0 + 0.12 ), $C0 * 0.70, $H ),
+		'color'    => $srcHex,
+		'dark'     => site_pulse_oklch_to_hex( max( 0.30, $L0 - 0.14 ), $C0, $H ),
+		'darkest'  => site_pulse_oklch_to_hex( max( 0.22, $L0 - 0.26 ), $C0 * 0.95, $H ),
 	];
 }
 
 /**
- * The complete CSS-variable map for a scheme built from the company colors.
- * Emits the three locked-lightness families (+ each one's best-contrast text),
- * lightly-branded neutrals, and fixed semantic colors, then runs the WCAG
- * contrast guard. Deterministic — same colors in, same scheme out.
+ * The complete CSS-variable map for a scheme's anchors (see site_pulse_color_presets()): the three
+ * families (+ each one's best-contrast text), lightly-branded neutrals and the semantic colors, then
+ * the WCAG contrast guard. Deterministic — same anchors in, same scheme out.
  */
-function site_pulse_build_color_scheme( array $colors ): array {
-	$roles = site_pulse_assign_brand_roles( $colors );
-	if ( ! $roles ) return [];
+function site_pulse_build_color_scheme( array $anchors ): array {
+	$brand  = site_pulse_sanitize_hex( (string) ( $anchors['brand'] ?? '' ) );
+	$canvas = site_pulse_sanitize_hex( (string) ( $anchors['canvas'] ?? '' ) );
+	$accent = site_pulse_sanitize_hex( (string) ( $anchors['accent'] ?? '' ) );
+	$danger = site_pulse_sanitize_hex( (string) ( $anchors['danger'] ?? '' ) ) ?: '#d0432f';
+	if ( $brand === '' || $canvas === '' || $accent === '' ) return [];
+	$roles = [ 'primary' => $brand, 'secondary' => $canvas ];
 
-	// [ rung => [ locked OKLCH lightness, chroma scale ] ]
 	$ramps = [
-		'primary'   => site_pulse_oklch_primary_ramp( $roles['primary'] ),
-		'secondary' => site_pulse_oklch_secondary_ramp( $roles['secondary'] ),
-		'accent'    => site_pulse_oklch_accent_ramp( $roles['accent'] ),
+		'primary'   => site_pulse_oklch_primary_ramp( $brand ),
+		'secondary' => site_pulse_oklch_secondary_ramp( $canvas ),
+		'accent'    => site_pulse_oklch_accent_ramp( $accent ),
 	];
 
 	$vars = [];
@@ -7228,8 +7287,8 @@ function site_pulse_build_color_scheme( array $colors ): array {
 	$vars['--sp-success-light'] = site_pulse_color_mix_white( '#2f8f57', 0.90 );
 	$vars['--sp-warning']       = '#c77d18';
 	$vars['--sp-warning-light'] = site_pulse_color_mix_white( '#c77d18', 0.90 );
-	$vars['--sp-danger']        = '#d0432f';
-	$vars['--sp-danger-light']  = site_pulse_color_mix_white( '#d0432f', 0.90 );
+	$vars['--sp-danger']        = $danger;
+	$vars['--sp-danger-light']  = site_pulse_color_mix_white( $danger, 0.90 );
 
 	// Element-level tokens — each defaults to a generated family value, but is individually
 	// overridable in Settings → Site Defaults (the override rows). The CSS reads them as
@@ -7270,90 +7329,6 @@ function site_pulse_build_color_scheme( array $colors ): array {
 	$vars['--sp-tile-label']          = $vars['--sp-secondary-darkest'];
 
 	return site_pulse_enforce_contrast( $vars );
-}
-
-/**
- * AI-tuned scheme: Claude evaluates the company colors and returns the three families + neutrals +
- * semantics, which we lay over the deterministic build (so any field the model omits still has a
- * sane value), derive the dependent tokens, and run the WCAG guard. Returns
- * [ 'vars'=>map, 'rationale'=>string ] or NULL if AI is unavailable/failed (caller falls back to the
- * deterministic build). Same token model as build_color_scheme() — the CSS is unchanged.
- */
-function site_pulse_ai_build_color_scheme( array $brand, &$debug = null ): ?array {
-	$base = site_pulse_build_color_scheme( $brand );
-	if ( ! $base ) { $debug = 'no-colors'; return null; }
-	if ( ! site_pulse_get_api_key() ) { $debug = 'no-api-key'; return null; }
-
-	$roles   = site_pulse_assign_brand_roles( $brand );   // slot 3 = accent; darker of 1&2 = primary
-	$assign  = "- primary family base (the dark UI tone): {$roles['primary']}\n";
-	$assign .= "- secondary family base (the light backgrounds): {$roles['secondary']}\n";
-	$assign .= "- accent family base (the pop): {$roles['accent']}\n";
-
-	$shape = '{'
-		. '"primary":{"lightest":"#rrggbb","light":"#rrggbb","color":"#rrggbb","dark":"#rrggbb","darkest":"#rrggbb"},'
-		. '"secondary":{"lightest":"#rrggbb","light":"#rrggbb","color":"#rrggbb","dark":"#rrggbb","darkest":"#rrggbb"},'
-		. '"accent":{"lightest":"#rrggbb","light":"#rrggbb","color":"#rrggbb","dark":"#rrggbb","darkest":"#rrggbb"},'
-		. '"neutral":{"text":"#rrggbb","text_secondary":"#rrggbb","text_light":"#rrggbb","bg":"#rrggbb","border":"#rrggbb"},'
-		. '"semantic":{"success":"#rrggbb","warning":"#rrggbb","danger":"#rrggbb"},'
-		. '"rationale":"one short sentence"}';
-
-	$system = 'You are a senior brand and UI designer building an accessible color scheme for a web-app dashboard. Reply with ONLY one JSON object — no prose, no markdown fences.';
-
-	$prompt  = "Build a complete, WCAG-AA color scheme for an internal web-app dashboard. The role of each company color is ALREADY decided — use these exact base colors, do NOT reassign or swap them:\n{$assign}\n";
-	$prompt .= "For each family, use the assigned base color VERBATIM as its \"color\" tone (keep it rich and recognizable — do NOT wash it out, desaturate it, or shift its hue) and build the other four tones around it:\n";
-	$prompt .= "- \"primary\" = the DARK family: navigation sidebar background, headings, dark text. Build lighter tints above the base and deeper shades below it. White text must read on primary.color — if the assigned base is too light for that, deepen it just enough.\n";
-	$prompt .= "- \"secondary\" = the LIGHT family: light card/panel backgrounds. Dark text must read on secondary.color — if the assigned base is too dark, lighten it just enough.\n";
-	$prompt .= "- \"accent\" = the VIVID family: buttons, links, the active menu item, highlights.\n";
-	$prompt .= "Give each family 5 tones strictly ordered lightest > light > color > dark > darkest, each clearly distinct.\n";
-	$prompt .= "Also: \"neutral\" — text (near-black body text), text_secondary, text_light, bg (very light page tint), border (subtle light divider); and \"semantic\" — success (green), warning (amber), danger (red).\n";
-	$prompt .= "Every text/background pair must be clearly legible; favor light backgrounds with dark text. Use #rrggbb hex for every value.\n";
-	$prompt .= "Return ONLY this JSON shape:\n{$shape}";
-
-	$resp = site_pulse_call_claude( $prompt, $system, [ 'max_tokens' => 1200, 'timeout' => 45 ], $debug );
-	if ( $resp === null ) return null;
-
-	$json = trim( $resp );
-	if ( preg_match( '/\{.*\}/s', $json, $m ) ) $json = $m[0];
-	$p = json_decode( $json, true );
-	if ( ! is_array( $p ) ) { $debug = 'unparseable AI response'; return null; }
-
-	$vars = $base;
-	$applyFam = function ( $key, $obj ) use ( &$vars ) {
-		if ( ! is_array( $obj ) ) return;
-		foreach ( [ 'lightest', 'light', 'color', 'dark', 'darkest' ] as $t ) {
-			$h = site_pulse_sanitize_hex( (string) ( $obj[ $t ] ?? '' ) );
-			if ( $h !== '' ) $vars[ "--sp-{$key}-{$t}" ] = $h;
-		}
-	};
-	$applyFam( 'primary',   $p['primary']   ?? null );
-	$applyFam( 'secondary', $p['secondary'] ?? null );
-	$applyFam( 'accent',    $p['accent']    ?? null );
-
-	if ( is_array( $p['neutral'] ?? null ) ) {
-		$nmap = [ 'text' => '--sp-text', 'text_secondary' => '--sp-text-secondary', 'text_light' => '--sp-text-light', 'bg' => '--sp-bg', 'border' => '--sp-border' ];
-		foreach ( $nmap as $k => $var ) {
-			$h = site_pulse_sanitize_hex( (string) ( $p['neutral'][ $k ] ?? '' ) );
-			if ( $h !== '' ) $vars[ $var ] = $h;
-		}
-	}
-	if ( is_array( $p['semantic'] ?? null ) ) {
-		foreach ( [ 'success', 'warning', 'danger' ] as $k ) {
-			$h = site_pulse_sanitize_hex( (string) ( $p['semantic'][ $k ] ?? '' ) );
-			if ( $h !== '' ) { $vars[ "--sp-{$k}" ] = $h; $vars[ "--sp-{$k}-light" ] = site_pulse_color_mix_white( $h, 0.90 ); }
-		}
-	}
-
-	// Dependent tokens derived from the (possibly AI-chosen) family colors.
-	$vars['--sp-primary-contrast']   = site_pulse_best_foreground( [ $vars['--sp-primary-color'] ] );
-	$vars['--sp-secondary-contrast'] = site_pulse_best_foreground( [ $vars['--sp-secondary-color'] ] );
-	$vars['--sp-accent-contrast']    = site_pulse_best_foreground( [ $vars['--sp-accent-color'] ] );
-	$vars['--sp-accent-hover']       = $vars['--sp-accent-dark'];
-	$vars['--sp-accent-glow']        = site_pulse_color_rgba( $vars['--sp-accent-color'], 0.18 );
-	$vars['--sp-border-focus']       = $vars['--sp-accent-light'];
-	$vars['--sp-bg-white']           = '#ffffff';
-
-	$rationale = isset( $p['rationale'] ) ? sanitize_text_field( (string) $p['rationale'] ) : '';
-	return [ 'vars' => site_pulse_enforce_contrast( $vars ), 'rationale' => $rationale ];
 }
 
 /** WCAG contrast ratio (1–21) between two hex colors. */
@@ -7414,109 +7389,6 @@ function site_pulse_enforce_contrast( array $v ): array {
 	return $v;
 }
 
-/** All CSS vars a single role drives. Keep in lock-step with spColorRoleVars() in the JS. */
-function site_pulse_color_role_vars( string $key, string $base ): array {
-	switch ( $key ) {
-		case 'primary': return [
-			'--sp-primary'              => $base,
-			'--sp-primary-hover'        => site_pulse_color_darken( $base, 12 ),
-			'--sp-primary-light'        => site_pulse_color_mix_white( $base, 0.88 ),
-			'--sp-primary-contrast'     => site_pulse_color_contrast( $base ),
-			'--sp-sidebar-bg-active'    => $base,
-			'--sp-sidebar-accent'       => $base,
-			'--sp-sidebar-accent-glow'  => site_pulse_color_rgba( $base, 0.18 ),
-			'--sp-sidebar-text-active'  => site_pulse_color_contrast( $base ),
-			'--sp-border-focus'         => site_pulse_color_mix_white( $base, 0.45 ),
-		];
-		case 'sidebar': return [
-			'--sp-sidebar-bg'          => $base,
-			'--sp-sidebar-bg-hover'    => site_pulse_color_is_dark( $base ) ? site_pulse_color_mix_white( $base, 0.10 ) : site_pulse_color_darken( $base, 8 ),
-			'--sp-sidebar-text'        => site_pulse_color_contrast_muted( $base ),
-			'--sp-sidebar-text-hover'  => site_pulse_color_contrast( $base ),
-			'--sp-sidebar-border'      => site_pulse_color_rgba( site_pulse_color_is_dark( $base ) ? '#ffffff' : '#000000', 0.08 ),
-		];
-		case 'bg':   return [ '--sp-bg' => $base ];
-		case 'text': return [
-			'--sp-text'           => $base,
-			'--sp-text-secondary' => site_pulse_color_mix_white( $base, 0.35 ),
-			'--sp-text-light'     => site_pulse_color_mix_white( $base, 0.58 ),
-		];
-		case 'success': return [ '--sp-success' => $base, '--sp-success-light' => site_pulse_color_mix_white( $base, 0.90 ) ];
-		case 'warning': return [ '--sp-warning' => $base, '--sp-warning-light' => site_pulse_color_mix_white( $base, 0.90 ) ];
-		case 'danger':  return [ '--sp-danger'  => $base, '--sp-danger-light'  => site_pulse_color_mix_white( $base, 0.90 ) ];
-	}
-	return [];
-}
-
-/**
- * The full set of themeable UI colors. AI returns a hex for EACH of these keys directly —
- * every navigation state, text level, button, border — so legibility is decided by the model,
- * not by lossy derivation. `default` mirrors the stylesheet's stock scheme (also used as the
- * AI reference example). site_pulse_color_ai_to_vars() maps these to the actual CSS variables.
- */
-function site_pulse_ai_color_fields(): array {
-	return [
-		'primary'             => [ 'desc' => 'Main action color — primary buttons, links, key highlights.', 'default' => '#ec9a3c' ],
-		'primary_hover'       => [ 'desc' => 'A slightly darker primary, shown when hovering a primary button.', 'default' => '#db8927' ],
-		'primary_contrast'    => [ 'desc' => 'Text/icon color shown ON primary buttons — must be highly legible on "primary".', 'default' => '#ffffff' ],
-		'accent'              => [ 'desc' => 'Small accent details: the active menu edge-bar and menu icons (often equals primary).', 'default' => '#ec9a3c' ],
-		'sidebar_bg'          => [ 'desc' => 'Navigation sidebar (and mobile top bar) background.', 'default' => '#474c54' ],
-		'sidebar_text'        => [ 'desc' => 'Default menu-item text — legible on sidebar_bg, slightly muted.', 'default' => '#c8ccd3' ],
-		'sidebar_text_hover'  => [ 'desc' => 'Menu-item text on hover — legible on sidebar_bg_hover.', 'default' => '#ffffff' ],
-		'sidebar_bg_hover'    => [ 'desc' => 'Background of a hovered menu item AND of the active SUB-item.', 'default' => '#545a64' ],
-		'sidebar_active_bg'   => [ 'desc' => 'Background of the active TOP-LEVEL menu item.', 'default' => '#ec9a3c' ],
-		'sidebar_active_text' => [ 'desc' => 'Text of the active menu item — MUST be clearly legible on BOTH sidebar_active_bg AND sidebar_bg_hover.', 'default' => '#ffffff' ],
-		'bg'                  => [ 'desc' => 'A SUBTLE ACCENT TINT used for table headers, input fills and hover rows (the page itself is white). Keep it a very light, low-saturation tint that dark text reads on.', 'default' => '#f4eee3' ],
-		'surface'             => [ 'desc' => 'The main app + card background. Keep this white or very near-white for a clean interface; body text must be legible on it.', 'default' => '#ffffff' ],
-		'text'                => [ 'desc' => 'Primary body text — legible on both bg and surface.', 'default' => '#2c2a27' ],
-		'text_secondary'      => [ 'desc' => 'Muted secondary text (descriptions, meta).', 'default' => '#6e6a63' ],
-		'text_light'          => [ 'desc' => 'Faint tertiary text and placeholders.', 'default' => '#a39c90' ],
-		'border'              => [ 'desc' => 'Subtle borders and dividers on light surfaces.', 'default' => '#e7ded0' ],
-		'border_focus'        => [ 'desc' => 'Input border when focused — usually a primary tint.', 'default' => '#eebb78' ],
-		'success'             => [ 'desc' => 'Positive/confirmation color — recognizably green.', 'default' => '#2f8f57' ],
-		'warning'             => [ 'desc' => 'Caution color — recognizably amber/orange.', 'default' => '#c77d18' ],
-		'danger'              => [ 'desc' => 'Error/destructive color — recognizably red.', 'default' => '#d0432f' ],
-	];
-}
-
-/** Map the AI's field set to the actual CSS variables, deriving the few pure tints/alphas. */
-function site_pulse_color_ai_to_vars( array $ai ): array {
-	$fields = site_pulse_ai_color_fields();
-	$v = [];
-	foreach ( $fields as $key => $f ) {
-		$hex = site_pulse_sanitize_hex( (string) ( $ai[ $key ] ?? '' ) );
-		$v[ $key ] = $hex !== '' ? $hex : $f['default'];
-	}
-	return [
-		'--sp-sidebar-bg'          => $v['sidebar_bg'],
-		'--sp-sidebar-bg-hover'    => $v['sidebar_bg_hover'],
-		'--sp-sidebar-bg-active'   => $v['sidebar_active_bg'],
-		'--sp-sidebar-text'        => $v['sidebar_text'],
-		'--sp-sidebar-text-hover'  => $v['sidebar_text_hover'],
-		'--sp-sidebar-text-active' => $v['sidebar_active_text'],
-		'--sp-sidebar-accent'      => $v['accent'],
-		'--sp-sidebar-accent-glow' => site_pulse_color_rgba( $v['accent'], 0.18 ),
-		'--sp-sidebar-border'      => site_pulse_color_rgba( $v['sidebar_text'], 0.14 ),
-		'--sp-primary'             => $v['primary'],
-		'--sp-primary-hover'       => $v['primary_hover'],
-		'--sp-primary-light'       => site_pulse_color_mix_white( $v['primary'], 0.88 ),
-		'--sp-primary-contrast'    => $v['primary_contrast'],
-		'--sp-text'                => $v['text'],
-		'--sp-text-secondary'      => $v['text_secondary'],
-		'--sp-text-light'          => $v['text_light'],
-		'--sp-bg'                  => $v['bg'],
-		'--sp-bg-white'            => $v['surface'],
-		'--sp-border'              => $v['border'],
-		'--sp-border-focus'        => $v['border_focus'],
-		'--sp-success'             => $v['success'],
-		'--sp-success-light'       => site_pulse_color_mix_white( $v['success'], 0.90 ),
-		'--sp-warning'             => $v['warning'],
-		'--sp-warning-light'       => site_pulse_color_mix_white( $v['warning'], 0.90 ),
-		'--sp-danger'              => $v['danger'],
-		'--sp-danger-light'        => site_pulse_color_mix_white( $v['danger'], 0.90 ),
-	];
-}
-
 /** Accept a #hex or rgb()/rgba() string for inline output; '' if it isn't a safe color literal. */
 function site_pulse_sanitize_css_color( string $v ): string {
 	$v = trim( $v );
@@ -7525,43 +7397,149 @@ function site_pulse_sanitize_css_color( string $v ): string {
 	return '';
 }
 
-/** The three brand-color slots, in order. Each maps to --sp-{slot}-color + the variants below. */
-function site_pulse_brand_slots(): array {
-	return [ 'dominant', 'secondary', 'accent' ];
+/*--------------------------------------------------------------
+# Color presets — curated schemes the company colors are matched to
+#
+# A scheme is three anchors: a deep BRAND color (header, bottom bar, primary
+# buttons — white text on it passes WCAG AA), a pale page TINT, and an ACCENT
+# (second-level buttons, the Ask button). The admin either picks a preset by
+# hand, or enters the company colors and the closest preset is tuned toward
+# them: each logo color takes the preset role nearest in hue, darkness and
+# saturation; the preset's own darkness and calm saturation act as a CEILING,
+# so a loud logo color is toned down while a darker or calmer one is kept;
+# the hue is always the logo's. Contrast is re-checked after tuning. Pure math,
+# so the same colors always give the same scheme.
+--------------------------------------------------------------*/
+
+/** The curated presets. `danger` moves the "overdue" red toward orange where the brand itself is red. */
+function site_pulse_color_presets(): array {
+	return [
+		'navy-gold'           => [ 'name' => 'Navy & Gold',          'brand' => '#1b2a4a', 'canvas' => '#f1f3f7', 'accent' => '#c9a84c', 'fits' => 'navy, dark blue' ],
+		'royal-coral'         => [ 'name' => 'Royal & Coral',        'brand' => '#1f4bb5', 'canvas' => '#eef3fc', 'accent' => '#f0715f', 'fits' => 'royal or medium blue' ],
+		'ocean-amber'         => [ 'name' => 'Ocean & Amber',        'brand' => '#0b4f6c', 'canvas' => '#ecf5f8', 'accent' => '#f4a259', 'fits' => 'sky blue, steel blue' ],
+		'teal-apricot'        => [ 'name' => 'Teal & Apricot',       'brand' => '#00504b', 'canvas' => '#edf5f2', 'accent' => '#f9bc60', 'fits' => 'teal, turquoise' ],
+		'forest-mustard'      => [ 'name' => 'Forest & Mustard',     'brand' => '#1f4d3a', 'canvas' => '#f0f4ee', 'accent' => '#d9a441', 'fits' => 'green, lime' ],
+		'crimson-gold'        => [ 'name' => 'Crimson & Gold',       'brand' => '#b0182b', 'canvas' => '#f8f2ef', 'accent' => '#e8b04a', 'fits' => 'bright red', 'danger' => '#c2410c' ],
+		'burgundy-champagne'  => [ 'name' => 'Burgundy & Champagne', 'brand' => '#7a0c25', 'canvas' => '#f6f1e9', 'accent' => '#c9a15b', 'fits' => 'maroon, wine' ],
+		'burnt-orange-teal'   => [ 'name' => 'Burnt Orange & Teal',  'brand' => '#b8480f', 'canvas' => '#fbf3ec', 'accent' => '#5cc2b7', 'fits' => 'orange, rust' ],
+		'charcoal-yellow'     => [ 'name' => 'Charcoal & Yellow',    'brand' => '#22252b', 'canvas' => '#f8f6ec', 'accent' => '#f2c230', 'fits' => 'yellow, black and yellow' ],
+		'plum-peach'          => [ 'name' => 'Plum & Peach',         'brand' => '#4b2a6b', 'canvas' => '#f5f1f8', 'accent' => '#f2a65a', 'fits' => 'purple, violet' ],
+		'charcoal-blue'       => [ 'name' => 'Charcoal & Blue',      'brand' => '#23262d', 'canvas' => '#f2f4f7', 'accent' => '#5ba3f2', 'fits' => 'black, gray' ],
+		'raspberry-gold'      => [ 'name' => 'Raspberry & Gold',     'brand' => '#9e1a57', 'canvas' => '#fbf1f5', 'accent' => '#f0b342', 'fits' => 'pink, magenta', 'danger' => '#c2410c' ],
+		'espresso-copper'     => [ 'name' => 'Espresso & Copper',    'brand' => '#4a2f22', 'canvas' => '#f7f1ea', 'accent' => '#d27f35', 'fits' => 'brown, tan' ],
+	];
 }
 
-/** The four tonal variants every brand slot exposes, lightest → darkest. */
-function site_pulse_brand_variants(): array {
-	return [ 'lightest', 'light', 'dark', 'darkest' ];
+/** A preset's anchors, exactly as curated. */
+function site_pulse_preset_anchors( string $slug ): array {
+	$p = site_pulse_color_presets()[ $slug ];
+	return [ 'slug' => $slug, 'name' => $p['name'], 'brand' => $p['brand'], 'canvas' => $p['canvas'], 'accent' => $p['accent'], 'danger' => $p['danger'] ?? '#d0432f' ];
+}
+
+/** Hex → OKLCH with the hue in DEGREES (the engine helpers work in radians). */
+function site_pulse_oklch_deg( string $hex ): array {
+	[ $L, $C, $H ] = site_pulse_hex_to_oklch( $hex );
+	return [ 'L' => $L, 'C' => $C, 'H' => fmod( rad2deg( $H ) + 360, 360 ) ];
+}
+
+function site_pulse_hue_gap( float $a, float $b ): float {
+	$d = fmod( abs( $a - $b ), 360 );
+	return min( $d, 360 - $d );
+}
+
+/** OKLCH (hue in degrees) → hex, easing the saturation down until the color fits sRGB, so the hue holds. */
+function site_pulse_oklch_fit_hex( array $c ): string {
+	$h = deg2rad( $c['H'] );
+	for ( $C = $c['C']; $C > 0; $C -= 0.004 ) {
+		$A = $C * cos( $h ); $B = $C * sin( $h );
+		$l = ( $c['L'] + 0.3963377774 * $A + 0.2158037573 * $B ) ** 3;
+		$m = ( $c['L'] - 0.1055613458 * $A - 0.0638541728 * $B ) ** 3;
+		$s = ( $c['L'] - 0.0894841775 * $A - 1.2914855480 * $B ) ** 3;
+		$rgb = [
+			 4.0767416621 * $l - 3.3077115913 * $m + 0.2309699292 * $s,
+			-1.2684380046 * $l + 2.6097574011 * $m - 0.3413193965 * $s,
+			-0.0041960863 * $l - 0.7034186147 * $m + 1.7076147010 * $s,
+		];
+		if ( min( $rgb ) >= -0.001 && max( $rgb ) <= 1.001 ) return site_pulse_oklch_to_hex( $c['L'], $C, $h );
+	}
+	return site_pulse_oklch_to_hex( $c['L'], 0, $h );
 }
 
 /**
- * Brand palette: for each company color the admin enters (up to 3), expose the base color plus
- * FOUR tonal variants — --sp-{slot}-lightest / -light / -dark / -darkest — giving a real range:
- *   lightest = very pale tint (card / panel backgrounds; dark text reads on it)
- *   light    = light highlight (hover fills, highlight borders)
- *   dark     = shadow tone (borders, dividers, shadows)
- *   darkest  = deepest tone (strong borders, deep fills; light text reads on it)
- *
- * This is the COMPUTED FALLBACK only, and uses fixed mix/darken amounts that won't suit every
- * color. When a scheme is generated, the AI TUNES all four variants per color (see
- * site_pulse_ajax_admin_ai_color_scheme) and those stored values override these.
+ * Match company colors to the closest preset and tune it toward them (see the section note above).
+ * One color takes the brand role and the preset keeps its accent; with two or three, every pairing is
+ * tried and the closest wins. Returns the anchors plus the chosen preset's slug and name, or [] if none.
  */
-function site_pulse_brand_palette( array $brand ): array {
-	$slots = site_pulse_brand_slots();
-	$vars  = [];
-	foreach ( array_values( $brand ) as $i => $raw ) {
-		if ( $i > 2 ) break;
-		$hex = site_pulse_sanitize_hex( (string) $raw );
-		if ( $hex === '' ) continue;
-		$slot = $slots[ $i ];
-		$vars[ "--sp-{$slot}-color" ]    = $hex;
-		$vars[ "--sp-{$slot}-lightest" ] = site_pulse_color_mix_white( $hex, 0.86 ); // pale tint
-		$vars[ "--sp-{$slot}-light" ]    = site_pulse_color_mix_white( $hex, 0.42 ); // highlight
-		$vars[ "--sp-{$slot}-dark" ]     = site_pulse_color_darken( $hex, 28 );      // shadow
-		$vars[ "--sp-{$slot}-darkest" ]  = site_pulse_color_darken( $hex, 52 );      // deepest
+function site_pulse_preset_match( array $colors ): array {
+	$neutral = 0.045;   // OKLCH chroma below this reads as black/gray/white: hue is meaningless
+	$cols = [];
+	foreach ( $colors as $c ) { $h = site_pulse_sanitize_hex( (string) $c ); if ( $h !== '' ) $cols[] = $h; }
+	$cols = array_slice( array_values( array_unique( $cols ) ), 0, 3 );
+	if ( ! $cols ) return [];
+
+	// Hue first, then darkness and saturation: a dark maroon shares crimson's hue but belongs with burgundy.
+	$cost = static function ( array $logo, array $target ) use ( $neutral ): float {
+		$shade = abs( $logo['L'] - $target['L'] ) * 160 + abs( $logo['C'] - $target['C'] ) * 120;
+		$ln = $logo['C'] < $neutral; $tn = $target['C'] < $neutral;
+		if ( $ln && $tn ) return $shade;
+		if ( $ln || $tn ) return 140 + $shade;
+		return site_pulse_hue_gap( $logo['H'], $target['H'] ) + $shade;
+	};
+	$pairs = [];
+	foreach ( $cols as $i => $b ) {
+		if ( count( $cols ) === 1 ) $pairs[] = [ $b, null ];
+		foreach ( $cols as $j => $a ) if ( $i !== $j ) $pairs[] = [ $b, $a ];
 	}
-	return $vars;
+	$best = null;
+	foreach ( site_pulse_color_presets() as $slug => $p ) {
+		$pb = site_pulse_oklch_deg( $p['brand'] );
+		$pa = site_pulse_oklch_deg( $p['accent'] );
+		foreach ( $pairs as [ $b, $a ] ) {
+			$c = $cost( site_pulse_oklch_deg( $b ), $pb ) * 1.2 + ( $a ? $cost( site_pulse_oklch_deg( $a ), $pa ) : 0 );
+			if ( ! $best || $c < $best['cost'] ) $best = [ 'cost' => $c, 'slug' => $slug, 'b' => $b, 'a' => $a ];
+		}
+	}
+
+	$p  = site_pulse_color_presets()[ $best['slug'] ];
+	$pb = site_pulse_oklch_deg( $p['brand'] );
+	$pa = site_pulse_oklch_deg( $p['accent'] );
+	$pc = site_pulse_oklch_deg( $p['canvas'] );
+	// The preset is a ceiling: lightness is clamped to its band, saturation never exceeds its own (plus a
+	// little), and only the hue is taken from the logo outright.
+	$tune = static function ( array $pre, ?string $hex, float $lo, float $hi ) use ( $neutral ): array {
+		if ( ! $hex ) return $pre;
+		$l = site_pulse_oklch_deg( $hex );
+		$L = max( $lo, min( $hi, $l['L'] ) );
+		if ( $l['C'] < $neutral ) return [ 'L' => $L, 'C' => $l['C'], 'H' => $pre['H'] ];
+		return [ 'L' => $L, 'C' => min( $l['C'], $pre['C'] * 1.15 + 0.01 ), 'H' => $l['H'] ];
+	};
+	$brand  = $tune( $pb, $best['b'], 0.24, $pb['L'] + 0.03 );
+	$accent = $tune( $pa, $best['a'], $pa['L'] - 0.10, $pa['L'] + 0.10 );
+
+	$brandHex = site_pulse_oklch_fit_hex( $brand );
+	while ( site_pulse_contrast_ratio( $brandHex, '#ffffff' ) < 4.5 && $brand['L'] > 0.15 ) {
+		$brand['L'] -= 0.02;
+		$brandHex = site_pulse_oklch_fit_hex( $brand );
+	}
+	$accentOk  = static fn( string $h ): bool => max( site_pulse_contrast_ratio( $h, '#ffffff' ), site_pulse_contrast_ratio( $h, '#16181d' ) ) >= 4.5;
+	$accentHex = site_pulse_oklch_fit_hex( $accent );
+	while ( ! $accentOk( $accentHex ) && $accent['L'] > 0.1 && $accent['L'] < 0.97 ) {
+		$accent['L'] += $accent['L'] >= 0.6 ? 0.02 : -0.02;
+		$accentHex = site_pulse_oklch_fit_hex( $accent );
+	}
+	// The tint turns by as much as the brand turned, so an exact preset match keeps the preset's own tint.
+	$turn      = ( $brand['C'] < $neutral || $pb['C'] < $neutral ) ? 0 : $brand['H'] - $pb['H'];
+	$canvasHex = site_pulse_oklch_fit_hex( [ 'L' => $pc['L'], 'C' => $pc['C'], 'H' => fmod( $pc['H'] + $turn + 360, 360 ) ] );
+	$nearRed   = static fn( array $c ): bool => $c['C'] >= $neutral && site_pulse_hue_gap( $c['H'], 27 ) < 22;
+
+	return [
+		'slug'   => $best['slug'],
+		'name'   => $p['name'],
+		'brand'  => $brandHex,
+		'canvas' => $canvasHex,
+		'accent' => $accentHex,
+		'danger' => ( $nearRed( $brand ) || $nearRed( $accent ) ) ? '#c2410c' : ( $p['danger'] ?? '#d0432f' ),
+	];
 }
 
 /** The saved company-color inputs (sanitized hex, max 3). */
@@ -7577,161 +7555,21 @@ function site_pulse_saved_brand_colors(): array {
 	return array_slice( $out, 0, 3 );
 }
 
-/**
- * The scheme map BEFORE per-element overrides: the saved scheme (AI-tuned map, stored at Save time
- * because AI can't run on every load), else the deterministic build from the company colors, else
- * none (stylesheet :root defaults stand). This is the "generated" baseline the override rows reset to.
- */
-function site_pulse_color_base_vars(): array {
-	$raw = (string) site_pulse_get_setting( 'color_vars', '' );
-	$vars = [];
-	if ( $raw !== '' ) {
-		$decoded = json_decode( $raw, true );
-		if ( is_array( $decoded ) && $decoded ) $vars = $decoded;
-	}
-	if ( ! $vars ) {
-		$brand = site_pulse_saved_brand_colors();
-		$vars  = $brand ? site_pulse_build_color_scheme( $brand ) : [];
-	}
-	return $vars ? site_pulse_enforce_contrast( $vars ) : [];
+/** Anchors from a posted or saved choice: a preset picked by hand wins, else the company colors matched. */
+function site_pulse_color_anchors_for( string $slug, array $brand ): array {
+	if ( isset( site_pulse_color_presets()[ $slug ] ) ) return site_pulse_preset_anchors( $slug );
+	return site_pulse_preset_match( $brand );
 }
 
-/** The tokens the per-element override UI is allowed to set (element tokens + a few surfaces). */
-function site_pulse_color_override_tokens(): array {
-	return [
-		'--sp-sidebar-bg', '--sp-sidebar-text', '--sp-sidebar-active-bg', '--sp-sidebar-active-text', '--sp-nav-hover-bg', '--sp-nav-hover-text',
-		'--sp-btn-bg', '--sp-btn-border', '--sp-btn-text', '--sp-btn-bg-hover', '--sp-btn-border-hover', '--sp-btn-text-hover',
-		'--sp-btn2-bg', '--sp-btn2-border', '--sp-btn2-text', '--sp-btn2-bg-hover', '--sp-btn2-border-hover', '--sp-btn2-text-hover',
-		'--sp-btn-ghost-text', '--sp-btn-ghost-bg-hover', '--sp-btn-ghost-text-hover',
-		'--sp-accent-color', '--sp-bg', '--sp-bg-white', '--sp-text', '--sp-border', '--sp-card-band', '--sp-card-border',
-		'--sp-card-text', '--sp-card-band-text',
-		'--sp-tile-bg', '--sp-tile-border', '--sp-tile-value', '--sp-tile-label',
-	];
+/** The saved scheme's anchors, or [] when nothing is set (the stylesheet :root defaults stand). */
+function site_pulse_color_anchors(): array {
+	return site_pulse_color_anchors_for( (string) site_pulse_get_setting( 'color_preset', '' ), site_pulse_saved_brand_colors() );
 }
 
-/** The saved per-element overrides (token => hex), validated against the allow-list. */
-function site_pulse_color_overrides(): array {
-	$raw = (string) site_pulse_get_setting( 'color_overrides', '' );
-	$map = $raw !== '' ? json_decode( $raw, true ) : [];
-	if ( ! is_array( $map ) ) return [];
-	$allowed = site_pulse_color_override_tokens();
-	$out = [];
-	foreach ( $map as $k => $v ) {
-		if ( ! in_array( (string) $k, $allowed, true ) ) continue;
-		$hex = site_pulse_sanitize_hex( (string) $v );
-		if ( $hex !== '' ) $out[ (string) $k ] = $hex;
-	}
-	return $out;
-}
-
-/** The active CSS-variable map = the generated base with the per-element overrides layered LAST. */
+/** The active CSS-variable map. */
 function site_pulse_color_active_vars(): array {
-	$vars = site_pulse_color_base_vars();
-	if ( ! $vars ) return [];
-	// Overrides win over the generated scheme AND the auto-contrast guard — a manual pick is final.
-	foreach ( site_pulse_color_overrides() as $k => $v ) {
-		$vars[ $k ] = $v;
-	}
-	return $vars;
-}
-
-/** Each override token's GENERATED value (for the swatch + reset), using family fallbacks for the
- *  element tokens so it works even on schemes saved before those tokens existed. */
-function site_pulse_color_override_base(): array {
-	$base = site_pulse_color_base_vars();
-	if ( ! $base ) return [];
-	$fallback = [
-		'--sp-btn-bg' => '--sp-primary-color', '--sp-btn-border' => '--sp-primary-color', '--sp-btn-text' => '--sp-primary-contrast',
-		'--sp-btn-bg-hover' => '--sp-primary-light', '--sp-btn-border-hover' => '--sp-primary-darkest', '--sp-btn-text-hover' => '--sp-primary-contrast',
-		'--sp-sidebar-bg' => '--sp-primary-color', '--sp-sidebar-text' => '--sp-primary-contrast',
-		'--sp-sidebar-active-bg' => '--sp-accent-color', '--sp-sidebar-active-text' => '--sp-accent-contrast',
-		'--sp-nav-hover-bg' => '--sp-primary-dark', '--sp-nav-hover-text' => '--sp-primary-contrast',
-		'--sp-btn2-bg' => '--sp-accent-lightest', '--sp-btn2-border' => '--sp-accent-light', '--sp-btn2-text' => '--sp-accent-color',
-		'--sp-btn2-bg-hover' => '--sp-accent-lightest', '--sp-btn2-border-hover' => '--sp-accent-light', '--sp-btn2-text-hover' => '--sp-accent-darkest',
-		'--sp-btn-ghost-text' => '--sp-accent-color', '--sp-btn-ghost-bg-hover' => '--sp-accent-lightest', '--sp-btn-ghost-text-hover' => '--sp-accent-dark',
-		'--sp-card-band' => '--sp-secondary-lightest', '--sp-card-border' => '--sp-secondary-color',
-		'--sp-card-text' => '--sp-text', '--sp-card-band-text' => '--sp-secondary-darkest',
-		'--sp-tile-bg' => '--sp-secondary-lightest', '--sp-tile-border' => '--sp-secondary-dark',
-		'--sp-tile-value' => '--sp-secondary-darkest', '--sp-tile-label' => '--sp-secondary-darkest',
-	];
-	$out = [];
-	foreach ( site_pulse_color_override_tokens() as $tok ) {
-		if ( isset( $base[ $tok ] ) )                                          $out[ $tok ] = $base[ $tok ];
-		elseif ( isset( $fallback[ $tok ], $base[ $fallback[ $tok ] ] ) )      $out[ $tok ] = $base[ $fallback[ $tok ] ];
-	}
-	return $out;
-}
-
-/**
- * The "theme colors" swatch list for the override picker = the company's chosen colors (always,
- * first) PLUS every colour CURRENTLY IN USE on a fine-tunable element. "In use" = the effective
- * value (generated, or the admin's override) of each override-eligible token — so a custom colour
- * appears here for reuse the moment it's assigned to any element, and drops off once nothing uses
- * it. The JS mirrors this live in the browser; this is the persisted/initial-load source of truth.
- *
- * NOTE: the fixed status colors (--sp-success/-warning/-danger) are deliberately excluded — they're
- * semantic, not brand, so they're never offered as "theme colors" to pick from.
- */
-function site_pulse_color_palette(): array {
-	$out  = [];
-	$seen = [];
-	$push = static function( $hex, $label ) use ( &$out, &$seen ) {
-		$hex = strtolower( site_pulse_sanitize_hex( (string) $hex ) );
-		if ( $hex === '' || isset( $seen[ $hex ] ) ) return;
-		$seen[ $hex ] = true;
-		$out[] = [ 'label' => $label, 'hex' => $hex ];
-	};
-
-	// 1) The company's chosen colors — always present, first, even if no element currently uses them.
-	$brandLabels = [ 'Main color 1', 'Main color 2', 'Accent color' ];
-	foreach ( site_pulse_saved_brand_colors() as $bi => $bhex ) {
-		$push( $bhex, $brandLabels[ $bi ] ?? 'Company color ' . ( $bi + 1 ) );
-	}
-
-	// 2) Every colour currently applied to an element = the effective value of each override token.
-	$active = site_pulse_color_active_vars();
-	$base   = site_pulse_color_override_base();
-	if ( $active || $base ) {
-		// Friendly names for colours that match a generated family shade (so an in-use colour reads
-		// "Primary dark" instead of a bare hex); anything else is a bespoke pick → "Custom".
-		$b     = site_pulse_color_base_vars();
-		$named = [];
-		foreach ( [
-			'--sp-primary-color' => 'Primary', '--sp-primary-light' => 'Primary light', '--sp-primary-lightest' => 'Primary lightest', '--sp-primary-dark' => 'Primary dark', '--sp-primary-darkest' => 'Primary darkest',
-			'--sp-secondary-color' => 'Secondary', '--sp-secondary-light' => 'Secondary light', '--sp-secondary-lightest' => 'Secondary lightest', '--sp-secondary-dark' => 'Secondary dark', '--sp-secondary-darkest' => 'Secondary darkest',
-			'--sp-accent-color' => 'Accent', '--sp-accent-light' => 'Accent light', '--sp-accent-lightest' => 'Accent lightest', '--sp-accent-dark' => 'Accent dark', '--sp-accent-darkest' => 'Accent darkest',
-			'--sp-text' => 'Body text', '--sp-bg' => 'Page background', '--sp-bg-white' => 'White', '--sp-border' => 'Border',
-		] as $tok => $lab ) {
-			$hx = strtolower( site_pulse_sanitize_hex( (string) ( $b[ $tok ] ?? '' ) ) );
-			if ( $hx !== '' && ! isset( $named[ $hx ] ) ) $named[ $hx ] = $lab;
-		}
-		foreach ( site_pulse_color_override_tokens() as $tok ) {
-			$hex = strtolower( site_pulse_sanitize_hex( (string) ( $active[ $tok ] ?? $base[ $tok ] ?? '' ) ) );
-			if ( $hex === '' ) continue;
-			$push( $hex, $named[ $hex ] ?? 'Custom' );
-		}
-	}
-	return $out;
-}
-
-add_action( 'wp_ajax_site_pulse_admin_save_color_overrides', 'site_pulse_ajax_admin_save_color_overrides' );
-function site_pulse_ajax_admin_save_color_overrides(): void {
-	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
-
-	$raw = $_POST['overrides'] ?? '';
-	$map = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
-	if ( ! is_array( $map ) ) $map = [];
-	$allowed = site_pulse_color_override_tokens();
-	$clean = [];
-	foreach ( $map as $k => $v ) {
-		if ( ! in_array( (string) $k, $allowed, true ) ) continue;
-		$hex = site_pulse_sanitize_hex( (string) $v );
-		if ( $hex !== '' ) $clean[ (string) $k ] = $hex;
-	}
-	site_pulse_set_setting( 'color_overrides', wp_json_encode( $clean ) );
-	site_pulse_log( 'color_overrides_saved', 'Updated per-element color overrides (' . count( $clean ) . ').' );
-	wp_send_json_success( [ 'message' => 'Saved.', 'overrides' => $clean ] );
+	$a = site_pulse_color_anchors();
+	return $a ? site_pulse_build_color_scheme( $a ) : [];
 }
 
 /**
@@ -7758,27 +7596,45 @@ function site_pulse_color_scheme_css( string $id = 'sp-color-scheme' ): string {
 	return '<style id="' . esc_attr( $id ) . '">' . $css . '</style>';
 }
 
+/** Posted company colors (JSON list), sanitized, max 3, entry order kept. */
+function site_pulse_posted_brand_colors(): array {
+	$raw  = $_POST['brand_colors'] ?? '';
+	$list = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
+	$out  = [];
+	if ( is_array( $list ) ) foreach ( $list as $c ) { $h = site_pulse_sanitize_hex( (string) $c ); if ( $h !== '' ) $out[] = $h; }
+	return array_slice( $out, 0, 3 );
+}
+
 add_action( 'wp_ajax_site_pulse_admin_get_color_scheme', 'site_pulse_ajax_admin_get_color_scheme' );
 function site_pulse_ajax_admin_get_color_scheme(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
 
-	$brandRaw = (string) site_pulse_get_setting( 'color_brand', '' );
-	$brand    = $brandRaw !== '' ? json_decode( $brandRaw, true ) : [];
-	if ( ! is_array( $brand ) ) $brand = [];
-	$brand = array_values( array_filter( array_map( fn( $c ) => site_pulse_sanitize_hex( (string) $c ), $brand ) ) );
-
+	$presets = [];
+	foreach ( site_pulse_color_presets() as $slug => $p ) {
+		$presets[] = [ 'slug' => $slug, 'name' => $p['name'], 'brand' => $p['brand'], 'canvas' => $p['canvas'], 'accent' => $p['accent'], 'fits' => $p['fits'] ];
+	}
 	wp_send_json_success( [
-		'brand'          => $brand,
-		'active'         => (bool) site_pulse_color_active_vars(),
+		'brand'          => site_pulse_saved_brand_colors(),
+		'preset'         => (string) site_pulse_get_setting( 'color_preset', '' ),
+		'presets'        => $presets,
+		'anchors'        => (object) site_pulse_color_anchors(),
 		'alert_keywords' => (string) site_pulse_get_setting( 'dashboard_alert_keywords', '' ),
 		'news_enabled'   => (string) site_pulse_get_setting( 'dashboard_news_enabled', '1' ),
 		'app_icon'       => site_pulse_pwa_icon_setting_url(),
 		'app_icon_built' => function_exists( 'site_pulse_pwa_preview_url' ) ? site_pulse_pwa_preview_url() : '',
-		'overrides'      => (object) site_pulse_color_overrides(),
-		'override_base'  => (object) site_pulse_color_override_base(),
-		'palette'        => site_pulse_color_palette(),
 	] );
+}
+
+/** Live preview (not saved): the scheme a preset or a set of company colors would produce. */
+add_action( 'wp_ajax_site_pulse_admin_preview_color_scheme', 'site_pulse_ajax_admin_preview_color_scheme' );
+function site_pulse_ajax_admin_preview_color_scheme(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+
+	$anchors = site_pulse_color_anchors_for( sanitize_key( $_POST['preset'] ?? '' ), site_pulse_posted_brand_colors() );
+	if ( ! $anchors ) wp_send_json_error( [ 'message' => 'Pick a preset or enter at least one company color.' ] );
+	wp_send_json_success( [ 'anchors' => $anchors, 'vars' => site_pulse_build_color_scheme( $anchors ) ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_save_color_scheme', 'site_pulse_ajax_admin_save_color_scheme' );
@@ -7786,36 +7642,17 @@ function site_pulse_ajax_admin_save_color_scheme(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
 
-	// Persist BOTH the company colors (to repopulate the form) AND the previewed scheme map (the
-	// AI-tuned result the admin just approved) — AI can't run on every render, so the chosen map is
-	// what active_vars emits. Order preserved (slot 3 = accent).
-	$brandRaw = $_POST['brand_colors'] ?? '';
-	$blist    = is_string( $brandRaw ) ? json_decode( wp_unslash( $brandRaw ), true ) : ( is_array( $brandRaw ) ? $brandRaw : [] );
-	if ( ! is_array( $blist ) ) $blist = [];
-	$bclean = [];
-	foreach ( $blist as $c ) { $h = site_pulse_sanitize_hex( (string) $c ); if ( $h !== '' ) $bclean[] = $h; }
-	$bclean = array_slice( $bclean, 0, 3 );
-	if ( ! $bclean ) wp_send_json_error( [ 'message' => 'Enter at least one company color.' ] );
+	$slug  = sanitize_key( $_POST['preset'] ?? '' );
+	$slug  = isset( site_pulse_color_presets()[ $slug ] ) ? $slug : '';
+	$brand = site_pulse_posted_brand_colors();
+	if ( $slug === '' && ! $brand ) wp_send_json_error( [ 'message' => 'Pick a preset or enter at least one company color.' ] );
 
-	$raw  = $_POST['vars'] ?? '';
-	$vars = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
-	$allowed = array_keys( site_pulse_build_color_scheme( [ '#888888' ] ) ); // canonical token set
-	$clean = [];
-	if ( is_array( $vars ) ) {
-		foreach ( $vars as $k => $v ) {
-			if ( ! in_array( $k, $allowed, true ) ) continue;
-			$val = site_pulse_sanitize_css_color( (string) $v );
-			if ( $val !== '' ) $clean[ $k ] = $val;
-		}
-	}
-	if ( ! $clean ) $clean = site_pulse_build_color_scheme( $bclean ); // nothing usable sent → fresh build
+	site_pulse_set_setting( 'color_preset', $slug );
+	site_pulse_set_setting( 'color_brand', wp_json_encode( $brand ) );
+	global $wpdb;   // retired: the AI-generated map and the per-element overrides
+	foreach ( [ 'color_vars', 'color_overrides', 'color_mood' ] as $k ) $wpdb->delete( site_pulse_table( 'config' ), [ 'config_key' => $k ] );
 
-	site_pulse_set_setting( 'color_brand', wp_json_encode( $bclean ) );
-	site_pulse_set_setting( 'color_vars', wp_json_encode( $clean ) );
-	global $wpdb;
-	$wpdb->delete( site_pulse_table( 'config' ), [ 'config_key' => 'color_mood' ] );
-
-	wp_send_json_success( [ 'message' => 'Color scheme saved.' ] );
+	wp_send_json_success( [ 'message' => 'Color scheme saved.', 'anchors' => site_pulse_color_anchors() ] );
 }
 
 add_action( 'wp_ajax_site_pulse_admin_reset_color_scheme', 'site_pulse_ajax_admin_reset_color_scheme' );
@@ -7825,44 +7662,10 @@ function site_pulse_ajax_admin_reset_color_scheme(): void {
 
 	global $wpdb;
 	$t = site_pulse_table( 'config' );
-	foreach ( [ 'color_vars', 'color_brand', 'color_mood' ] as $k ) $wpdb->delete( $t, [ 'config_key' => $k ] );
-	foreach ( array_keys( site_pulse_color_roles() ) as $key ) $wpdb->delete( $t, [ 'config_key' => 'color_' . $key ] ); // legacy keys
+	$keys = [ 'color_preset', 'color_brand', 'color_vars', 'color_overrides', 'color_mood',
+		'color_primary', 'color_sidebar', 'color_bg', 'color_text', 'color_success', 'color_warning', 'color_danger' ];   // last row: pre-engine per-role keys
+	foreach ( $keys as $k ) $wpdb->delete( $t, [ 'config_key' => $k ] );
 	wp_send_json_success( [ 'message' => 'Colors reset to defaults.' ] );
-}
-
-/**
- * Scheme generator (live preview, NOT saved until Save): Claude evaluates the company colors and
- * returns the three-family scheme. If AI is unavailable (no key / failure) it falls back to the
- * deterministic OKLCH build so the button always works. Same token model either way.
- */
-add_action( 'wp_ajax_site_pulse_admin_generate_color_scheme', 'site_pulse_ajax_admin_generate_color_scheme' );
-function site_pulse_ajax_admin_generate_color_scheme(): void {
-	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
-
-	$raw   = $_POST['brand_colors'] ?? '';
-	$list  = is_string( $raw ) ? json_decode( wp_unslash( $raw ), true ) : ( is_array( $raw ) ? $raw : [] );
-	$brand = [];
-	if ( is_array( $list ) ) {
-		foreach ( $list as $c ) {
-			$hex = site_pulse_sanitize_hex( (string) $c );
-			if ( $hex !== '' ) $brand[] = $hex;   // keep entry order — slot 3 is the accent
-		}
-	}
-	$brand = array_slice( $brand, 0, 3 );
-	if ( ! $brand ) wp_send_json_error( [ 'message' => 'Enter at least one company color.' ] );
-
-	$debug = null;
-	$ai    = site_pulse_ai_build_color_scheme( $brand, $debug );
-	if ( $ai ) {
-		wp_send_json_success( [ 'vars' => $ai['vars'], 'rationale' => ( $ai['rationale'] ?: 'AI-tuned from your colors.' ) ] );
-	}
-
-	// Fallback: deterministic build so the scheme still works without a key / on AI failure.
-	$note = ( $debug === 'no-api-key' )
-		? 'Built locally — add a Claude API key under Settings → API Keys for AI tuning.'
-		: 'Built locally (AI unavailable' . ( $debug ? ": $debug" : '' ) . ').';
-	wp_send_json_success( [ 'vars' => site_pulse_build_color_scheme( $brand ), 'rationale' => $note ] );
 }
 
 
@@ -7959,6 +7762,27 @@ function site_pulse_ajax_god_delete_report(): void {
 
 	site_pulse_log( 'god_delete', sprintf( 'GOD deleted report #%d (and its answers + action items)', $id ) );
 	wp_send_json_success( [ 'message' => 'Report deleted.' ] );
+}
+
+// Throw away your own DRAFT (the trash button beside Save draft / Submit). Only the author, and only
+// while it's still a draft — a submitted report has no delete path here (god's delete above is separate).
+add_action( 'wp_ajax_site_pulse_delete_draft_report', 'site_pulse_ajax_delete_draft_report' );
+function site_pulse_ajax_delete_draft_report(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$me = site_pulse_effective_user_id();
+	$id = (int) ( $_POST['report_id'] ?? 0 );
+	if ( ! $id ) wp_send_json_error( [ 'message' => 'Invalid report.' ] );
+
+	global $wpdb;
+	$r = $wpdb->get_row( $wpdb->prepare( "SELECT user_id, status FROM " . site_pulse_table('reports') . " WHERE id = %d", $id ), ARRAY_A );
+	if ( ! $r ) wp_send_json_error( [ 'message' => 'Report not found.' ] );
+	if ( (int) $r['user_id'] !== $me ) wp_send_json_error( [ 'message' => 'Only the person who started this draft can delete it.' ] );
+	if ( $r['status'] !== 'draft' ) wp_send_json_error( [ 'message' => 'Only drafts can be deleted.' ] );
+
+	$wpdb->delete( site_pulse_table('report_answers'), [ 'report_id' => $id ] );
+	$wpdb->delete( site_pulse_table('action_items'),   [ 'report_id' => $id ] );
+	$wpdb->delete( site_pulse_table('reports'),        [ 'id' => $id ] );
+	wp_send_json_success( [ 'message' => 'Draft deleted.' ] );
 }
 
 // GOD only: the option lists for the Reassign dialog — every active Site Pulse user (so god can pick
@@ -8303,9 +8127,10 @@ function site_pulse_ajax_god_revoke(): void {
 --------------------------------------------------------------*/
 
 function site_pulse_admin_check( string $capability ): bool {
-	$user_id = get_current_user_id();
-	$is_wp_admin = in_array( 'administrator', (array) wp_get_current_user()->roles, true );
-	if ( $is_wp_admin ) return true;
+	// While a god views as someone, the check is THAT person's caps and nothing else — no WP-admin
+	// pass-through — so "view as" can neither see nor do more than they can.
+	$user_id = site_pulse_effective_user_id();
+	if ( ! site_pulse_is_impersonating() && in_array( 'administrator', (array) wp_get_current_user()->roles, true ) ) return true;
 	if ( site_pulse_user_can( $user_id, $capability ) ) return true;
 	wp_send_json_error( [ 'message' => 'You do not have permission to perform this action.' ] );
 	return false;
@@ -10480,7 +10305,7 @@ function site_pulse_ajax_get_mileage_report(): void {
 	// it when the caller is authorized for that person (their supervisor, a mileage admin, or archive viewer).
 	$target = (int) ( $_POST['report_user'] ?? 0 );
 	if ( $target && $target !== $user_id ) {
-		$cur  = get_current_user_id();
+		$cur  = $user_id;                                         // effective — impersonation sees only what they could
 		$prof = site_pulse_get_user_profile( $target );
 		$ok   = site_pulse_god_can_override()
 			|| site_pulse_user_can( $cur, 'manage_mileage' )
@@ -10801,19 +10626,6 @@ function site_pulse_expense_accounts(): array {
 	usort( $out, fn( $a, $b ) => strnatcasecmp( $a['number'], $b['number'] ) );
 	$cache = $out;
 	return $out;
-}
-
-/** "91200 Office Supplies" for a GL number, or just the number if it's not in the chart. */
-function site_pulse_expense_account_label( string $number ): string {
-	$number = trim( $number );
-	if ( $number === '' ) return '';
-	foreach ( site_pulse_expense_accounts() as $a ) {
-		if ( $a['number'] === $number ) {
-			$name = $a['category'] !== '' ? $a['category'] : $a['description'];
-			return $name !== '' ? $number . ' - ' . $name : $number;
-		}
-	}
-	return $number;
 }
 
 /** Which GL accounts mileage (Section A) posts to, for the dynamic Summary. Defaults all to 91310. */
@@ -12061,7 +11873,7 @@ function site_pulse_ajax_download_forms(): void {
 add_action( 'wp_ajax_site_pulse_get_form_settings', 'site_pulse_ajax_get_form_settings' );
 function site_pulse_ajax_get_form_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_form_repositories' ) ) return;
 
 	global $wpdb;
 	$counts = [];
@@ -12083,7 +11895,7 @@ function site_pulse_ajax_get_form_settings(): void {
 add_action( 'wp_ajax_site_pulse_save_form_categories', 'site_pulse_ajax_save_form_categories' );
 function site_pulse_ajax_save_form_categories(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_form_repositories' ) ) return;
 
 	$raw = json_decode( (string) wp_unslash( $_POST['categories'] ?? '' ), true );
 	if ( ! is_array( $raw ) ) wp_send_json_error( [ 'message' => 'Invalid data.' ] );
@@ -12676,10 +12488,10 @@ function site_pulse_ajax_email_mileage_log(): void {
 --------------------------------------------------------------*/
 
 function site_pulse_mileage_admin_check(): bool {
-	$uid = get_current_user_id();
-	if ( in_array( 'administrator', (array) wp_get_current_user()->roles, true ) ) return true;
+	$uid = site_pulse_effective_user_id();                     // impersonation: the viewed person's caps only
+	if ( ! site_pulse_is_impersonating() && in_array( 'administrator', (array) wp_get_current_user()->roles, true ) ) return true;
 	if ( site_pulse_user_can( $uid, 'manage_mileage' ) ) return true;
-	if ( site_pulse_is_god( $uid ) ) return true;
+	if ( site_pulse_god_can_override() ) return true;
 	wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	return false;
 }
@@ -13699,8 +13511,8 @@ function site_pulse_ajax_admin_test_mileage_api(): void {
 add_action( 'wp_ajax_site_pulse_get_pending_mileage_count', 'site_pulse_ajax_get_pending_mileage_count' );
 function site_pulse_ajax_get_pending_mileage_count(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	$uid = get_current_user_id();
-	if ( ! site_pulse_user_can( $uid, 'manage_mileage' ) && ! site_pulse_is_god( $uid ) ) {
+	$uid = site_pulse_effective_user_id();
+	if ( ! site_pulse_user_can( $uid, 'manage_mileage' ) && ! site_pulse_god_can_override() ) {
 		wp_send_json_success( [ 'count' => 0 ] );
 		return;
 	}

@@ -312,6 +312,16 @@ function bp_mr_process($attach_id) {
 		$target_path = $dir . $new_name;
 	}
 
+	// --- Stage the upload beside its target FIRST, so a failed save never leaves the
+	//     attachment with its old files already deleted and no new one. ---
+	$staged = $target_path . '.bp-mr-' . time();
+	if (!@move_uploaded_file($tmp, $staged)) {
+		if (!@copy($tmp, $staged)) {
+			return new WP_Error('bp_mr_move', __('Could not save the uploaded file to the uploads folder.', 'battleplan'));
+		}
+		@unlink($tmp);
+	}
+
 	// --- Delete every existing file: thumbnails, -scaled, original, backups. ---
 	$backup_sizes = get_post_meta($attach_id, '_wp_attachment_backup_sizes', true);
 	if (function_exists('wp_delete_attachment_files')) {
@@ -322,11 +332,9 @@ function bp_mr_process($attach_id) {
 	if (file_exists($source_path)) @unlink($source_path);            // the untouched original
 
 	// --- Put the new file in place. ---
-	if (!@move_uploaded_file($tmp, $target_path)) {
-		if (!@copy($tmp, $target_path)) {
-			return new WP_Error('bp_mr_move', __('Could not save the uploaded file to the uploads folder.', 'battleplan'));
-		}
-		@unlink($tmp);
+	if (!@rename($staged, $target_path)) {
+		@unlink($staged);
+		return new WP_Error('bp_mr_move', __('Could not save the uploaded file to the uploads folder.', 'battleplan'));
 	}
 	@chmod($target_path, $source_perms ? $source_perms : 0644);
 

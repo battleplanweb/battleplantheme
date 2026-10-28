@@ -375,9 +375,9 @@ After a successful submission the browser navigates to a thank-you page. Default
 - **Per-page override:** drop a `[bp-hidden name="bp_redirect" value="/survey-received/"]` inside the form body on a specific page. Hidden inputs added in the body appear *after* the framework's auto-emitted `bp_redirect` field, so the later value wins on submit. Useful when the same form on different pages should redirect to different thank-you pages
 - **Disable redirect** (just show success message inline): `[bp-form id="..." redirect=""]`
 
-### Standard HVAC employment form — `[bp-employment-form]`
+### Standard employment form — `[bp-employment-form]`
 
-For HVAC sites only (loaded via `includes/includes-hvac.php`). Drop `[bp-employment-form]` on a page and it renders a full employment application: Name/Email/Phone, Years of Experience + checkbox grid of types (HVAC, Plumbing, Electrical, Other), three Yes/No screening questions (criminal history, driver's license, manual labor), positions of interest checkboxes, and an open message field. Submit goes to `customer_info['email']` by default with subject `Employment Application · {user-name}`, prefixed with `< QUALIFIED >` or `< unqualified >` based on the screening answers.
+Available on every site type (lives in `functions-forms.php`). Drop `[bp-employment-form]` on a page and it renders a full employment application: Name/Email/Phone, Years of Experience + checkbox grid of types (HVAC, Plumbing, Electrical, Other), three Yes/No screening questions (criminal history, driver's license, manual labor), positions of interest checkboxes, and an open message field. Submit goes to `customer_info['email']` by default with subject `Employment Application · {user-name}`, prefixed with `< QUALIFIED >` or `< unqualified >` based on the screening answers.
 
 **Per-site customization** — every piece is filter-overridable:
 
@@ -404,7 +404,7 @@ add_filter('bp_employment_screening_questions', function($q) {
     return $q;
 });
 
-// Customize position options
+// Customize position options ('' drops the question from the form and email)
 add_filter('bp_employment_position_options', fn() => 'Service Tech|Install Tech|Office');
 
 // Customize experience type options

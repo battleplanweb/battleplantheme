@@ -368,6 +368,20 @@
     # Toast Notifications
     --------------------------------------------------------------*/
 
+    // Where floating UI (toasts, the print clone) attaches. Standalone pages: <body>. Inside the Site Pulse
+    // "Shift Scheduling" panel: a <body>-level #sp-schedules-float, which the panel-scoped stylesheet
+    // also targets — appended straight to <body> it would fall outside the scope and lose its styles.
+    function floatHost() {
+        if (!document.getElementById('sp-panel-schedules')) return document.body;
+        var host = document.getElementById('sp-schedules-float');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'sp-schedules-float';
+            document.body.appendChild(host);
+        }
+        return host;
+    }
+
     function showToast(message, type) {
         type = type || 'info';
 
@@ -377,7 +391,7 @@
             container.id = 'schedules-toast-container';
             container.setAttribute('aria-live', 'polite');
             container.setAttribute('aria-atomic', 'false');
-            document.body.appendChild(container);
+            floatHost().appendChild(container);
         }
 
         var toast = document.createElement('div');
@@ -455,7 +469,7 @@
             clone.insertBefore(headerEl, clone.firstChild);
         }
 
-        document.body.appendChild(clone);
+        floatHost().appendChild(clone);
         document.body.classList.add('schedules-printing');
 
         function cleanup() {
@@ -2356,6 +2370,19 @@
             }
         }
     }
+
+    // Site Pulse hook: the "Shift Scheduling" sidebar children call this (script-site-pulse.js →
+    // spSchedulesShowView) instead of the app's own tab bars, which are hidden there. Shows the view, keeps
+    // the "Acting as" picker's bar only on the Schedule-group views (as the tabs did), and remembers the
+    // view like a tab click would so the app's own restore agrees with Site Pulse's after a reload.
+    window.schedulesShowView = function (view) {
+        activateSupTab(view);
+        var scheduleGroup = ['schedule', 'pdo', 'calendar', 'sicktime'].indexOf(view) !== -1;
+        document.querySelectorAll('.schedules-supervisor-nav-sub').forEach(function (s) {
+            s.hidden = !(scheduleGroup && s.id === 'sup-sub-schedule');
+        });
+        try { sessionStorage.setItem('schedules_sup_tab', view); } catch (e) {}
+    };
 
     // Group tab (e.g. Schedule, Reports) — toggles sub-nav, auto-activates first/last sub-tab
     document.addEventListener('click', function (e) {

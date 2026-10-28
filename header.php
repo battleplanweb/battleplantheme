@@ -166,6 +166,8 @@
 if ( has_nav_menu( 'header-menu', 'battleplan' ) ) $mainMenuLoc = 'header-menu';
 if ( has_nav_menu( 'top-menu', 'battleplan' ) ) $mainMenuLoc = 'top-menu';
 if ( has_nav_menu( 'widget-menu', 'battleplan' ) ) $mainMenuLoc = 'widget-menu';
+// Sites that place their nav with [get-menu] only assign Manual Menu.
+if ( $mainMenuLoc === '' && has_nav_menu( 'manual-menu', 'battleplan' ) ) $mainMenuLoc = 'manual-menu';
 
 wp_nav_menu( array(
 	'container'       => 'nav',

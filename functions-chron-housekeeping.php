@@ -60,7 +60,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	// on the domain list or if it simply defines BP_BREVO_ROVIN_KEY — the constant is the
 	// authoritative signal, so a Rovin install we forget to list (or that moves domain)
 	// still routes correctly the moment its wp-config.php has the key.
-	$rovin         = defined('BP_BREVO_ROVIN_KEY') || in_array($site, ["babeschicken.com","babescatering.com","babeschicken.tv","sweetiepiesribeyes.com","bubbascookscountry.com","rovindirectory.com","rovininc.com","rovin.work"], true);
+	$rovin         = defined('BP_BREVO_ROVIN_KEY') || in_array($site, bp_rovin_domains(), true);
 	$bp_handles_mail = ($site !== "asairconditioning.com");
 
 /*--------------------------------------------------------------
@@ -69,7 +69,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 
 	if ($bp_handles_mail === true) {
 		if (is_plugin_active('wp-mail-smtp/wp_mail_smtp.php')) {
-			$wpMailSettings = get_option('wp_mail_smtp');
+			$wpMailSettings = get_option('wp_mail_smtp') ?: [];
 			if ($rovin === true) {
 				$wpMailSettings['mail']['from_email']    = 'customer@website.' . $site;
 				$wpMailSettings['sendinblue']['domain']  = 'website.' . $site;
@@ -77,7 +77,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 				$wpMailSettings['mail']['from_email']    = 'email@admin.' . $site;
 				$wpMailSettings['sendinblue']['domain']  = 'admin.' . $site;
 			}
-			$wpMailSettings['mail']['from_name']        = strip_tags('Website · ' . str_replace(',', '', $customer_info['name']));
+			$wpMailSettings['mail']['from_name']        = strip_tags('Website · ' . str_replace(',', '', $customer_info['name'] ?? ''));
 			$wpMailSettings['mail']['mailer']            = 'sendinblue';
 			$wpMailSettings['mail']['from_email_force']  = '1';
 			$wpMailSettings['mail']['from_name_force']   = '1';
@@ -157,12 +157,8 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
-	update_option('blogname', $customer_info['name']);
-	$blogDesc = '';
-	if ($customer_info['city'] != '')       $blogDesc .= $customer_info['city'];
-	if ($customer_info['city'] != '' && $customer_info['state-abbr'] != '') $blogDesc .= ', ';
-	if ($customer_info['state-abbr'] != '') $blogDesc .= $customer_info['state-abbr'];
-	update_option('blogdescription', $blogDesc);
+	update_option('blogname', $customer_info['name'] ?? '');
+	update_option('blogdescription', implode(', ', array_filter([$customer_info['city'] ?? '', $customer_info['state-abbr'] ?? ''], fn($v) => $v != '')));
 	update_option('admin_email', 'info@bp-webdev.com');
 	update_option('admin_email_lifespan', '9999999999999');
 	update_option('default_comment_status', 'closed');
@@ -174,11 +170,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	update_option('auto_update_core_minor', 'enabled');
 	update_option('auto_update_core_major', 'enabled');
 
-	battleplan_delete_prefixed_options('ac_cache_data_');
-	battleplan_delete_prefixed_options('ac_cache_expires_');
-	battleplan_delete_prefixed_options('ac_api_request_');
-	battleplan_delete_prefixed_options('ac_sorting_');
-	battleplan_delete_prefixed_options('client_');
+	foreach (['ac_cache_data_', 'ac_cache_expires_', 'ac_api_request_', 'ac_sorting_', 'client_'] as $prefix) battleplan_delete_prefixed_options($prefix);
 
 	battleplan_fetch_background_image(true);
 	battleplan_fetch_site_icon(true);
@@ -193,33 +185,34 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	foreach (get_taxonomies(['public' => true], 'names') as $taxonomy) {
 		if (in_array($taxonomy, $attachment_taxonomies, true)) continue;
 
-		foreach (get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false]) as $term) {
+		$terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false]);
+		if (is_wp_error($terms)) continue;
+
+		foreach ($terms as $term) {
 			if ($term->count === 0 || $term->slug === 'service-area---') {
 				wp_delete_term($term->term_id, $taxonomy);
 			}
 		}
 	}
 
+	// Attachment terms: an attachment's post_status is 'inherit', which the term count doesn't
+	// include, so check for an actual tagged attachment instead.
 	foreach ($attachment_taxonomies as $taxonomy) {
-		$terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false, 'fields' => 'all']);
+		$terms = get_terms(['taxonomy' => $taxonomy, 'hide_empty' => false]);
 		if (is_wp_error($terms) || empty($terms)) continue;
 
 		foreach ($terms as $term) {
-			$term_id = (int)$term->term_id;
-			$slug    = (string)$term->slug;
-
-			$query = new WP_Query([
+			$inUse = get_posts([
 				'post_type'      => 'attachment',
 				'post_status'    => 'inherit',
 				'posts_per_page' => 1,
-				'tax_query'      => [['taxonomy' => $taxonomy, 'field' => 'term_id', 'terms' => $term_id]],
+				'fields'         => 'ids',
+				'tax_query'      => [['taxonomy' => $taxonomy, 'field' => 'term_id', 'terms' => (int)$term->term_id]],
 			]);
 
-			if ($query->found_posts === 0 || $slug === 'service-area---') {
-				wp_delete_term($term_id, $taxonomy);
+			if (!$inUse || $term->slug === 'service-area---') {
+				wp_delete_term((int)$term->term_id, $taxonomy);
 			}
-
-			wp_reset_postdata();
 		}
 	}
 
@@ -294,15 +287,8 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	$siteBrands = is_array($siteBrand) ? array_map(fn($b) => strtolower(trim($b)), $siteBrand) : [strtolower(trim((string)$siteBrand))];
 
 	foreach ($hvacBrands as $brand => $page) {
-		$hasBrand = $isHvac && in_array($brand, $siteBrands, true);
-		if ($hasBrand) {
-			if (is_null(get_page_by_path($page['slug'], OBJECT, 'universal'))) {
-				wp_insert_post(['post_title' => $page['title'], 'post_content' => '[get-universal-page slug="' . $page['shortcode'] . '"]', 'post_status' => 'publish', 'post_type' => 'universal']);
-			}
-		} else {
-			$getPage = get_page_by_path($page['slug'], OBJECT, 'universal');
-			if ($getPage) wp_delete_post($getPage->ID, true);
-		}
+		if ($isHvac && in_array($brand, $siteBrands, true)) bp_universal_page_ensure($page['slug'], $page['title'], '[get-universal-page slug="' . $page['shortcode'] . '"]');
+		else bp_universal_page_delete($page['slug']);
 	}
 
 	$hvacOnlyPages = [
@@ -312,24 +298,16 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 	];
 
 	foreach ($hvacOnlyPages as $page) {
-		if ($isHvac) {
-			if (is_null(get_page_by_path($page['slug'], OBJECT, 'universal'))) {
-				wp_insert_post(['post_title' => $page['title'], 'post_content' => '[get-universal-page slug="' . $page['shortcode'] . '"]', 'post_status' => 'publish', 'post_type' => 'universal']);
-			}
-		} else {
-			$getPage = get_page_by_path($page['slug'], OBJECT, 'universal');
-			if ($getPage) wp_delete_post($getPage->ID, true);
-		}
+		if ($isHvac) bp_universal_page_ensure($page['slug'], $page['title'], '[get-universal-page slug="' . $page['shortcode'] . '"]');
+		else bp_universal_page_delete($page['slug']);
 	}
 
 	// Requires jobsite_geo as well as service-areas: the page's whole job is to give crawlers
 	// a path to the /service/{service--city-st}/ pages. Without the module those pages don't
 	// exist, so the page rendered blank and the footer linked to it from every page. Sites in
 	// that state get it cleaned up by the else branch below.
-	if (!empty($customer_info['service-areas']) && is_array($customer_info['service-areas']) && bp_module_on(get_option('jobsite_geo'))) {
-		if (is_null(get_page_by_path('areas-we-serve', OBJECT, 'universal'))) {
-			wp_insert_post(['post_title' => 'Areas We Serve', 'post_content' => '[get-service-areas]', 'post_status' => 'publish', 'post_type' => 'universal']);
-		}
+	if (!empty($customer_info['service-areas']) && is_array($customer_info['service-areas']) && bp_module_on($jobsite)) {
+		bp_universal_page_ensure('areas-we-serve', 'Areas We Serve', '[get-service-areas]');
 	} else {
 		// Unpublish rather than force-delete. The old wp_delete_post($id, true) skipped the
 		// trash entirely — fine when the page is our auto-generated [get-service-areas] stub,
@@ -344,53 +322,56 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
-	$eventCalendar = get_option('event_calendar');
-	if ( bp_module_on($eventCalendar) ) {
-		if (is_null(get_page_by_path('calendar', OBJECT, 'universal'))) {
-			wp_insert_post(['post_title' => 'Calendar', 'post_content' => '[get-event-calendar]', 'post_status' => 'publish', 'post_type' => 'universal']);
-		}
+	if ( bp_module_on(get_option('event_calendar')) ) {
+		bp_universal_page_ensure('calendar', 'Calendar', '[get-event-calendar]');
 		// Roll recurring events' generated dates forward (rolling horizon) + prune past.
 		if (function_exists('bp_event_topup_recurrences')) bp_event_topup_recurrences();
 	} else {
-		$getPage = get_page_by_path('calendar', OBJECT, 'universal');
-		if ($getPage) wp_delete_post($getPage->ID, true);
+		bp_universal_page_delete('calendar');
 	}
 
-	$sitePulse = get_option('site_pulse');
-	if ( bp_module_on($sitePulse) ) {
-		$sitePulsePages = [
-			['slug' => 'site-pulse-login',     'title' => 'Site Pulse Login',     'shortcode' => 'page-site-pulse-login'],
-			['slug' => 'site-pulse-dashboard', 'title' => 'Site Pulse Dashboard', 'shortcode' => 'page-site-pulse-dashboard'],
-		];
-		foreach ($sitePulsePages as $page) {
-			if (is_null(get_page_by_path($page['slug'], OBJECT, 'universal'))) {
-				wp_insert_post(['post_title' => $page['title'], 'post_name' => $page['slug'], 'post_content' => '[get-universal-page slug="' . $page['shortcode'] . '"]', 'post_status' => 'publish', 'post_type' => 'universal']);
-			}
-		}
-	} else {
-		foreach (['site-pulse-login', 'site-pulse-dashboard'] as $slug) {
-			$getPage = get_page_by_path($slug, OBJECT, 'universal');
-			if ($getPage) wp_delete_post($getPage->ID, true);
-		}
+	$sitePulsePages = [
+		'site-pulse-login'     => 'Site Pulse Login',
+		'site-pulse-dashboard' => 'Site Pulse Dashboard',
+	];
+	foreach ($sitePulsePages as $slug => $title) {
+		if ( bp_module_on(get_option('site_pulse')) ) bp_universal_page_ensure($slug, $title, '[get-universal-page slug="page-' . $slug . '"]');
+		else bp_universal_page_delete($slug);
 	}
 
-	if (is_null(get_page_by_path('debug', OBJECT, 'universal'))) {
-		wp_insert_post(['post_title' => 'BP Debug Log', 'post_name' => 'debug', 'post_content' => '[show_debug_log]', 'post_status' => 'publish', 'post_type' => 'universal']);
-	}
+	bp_universal_page_ensure('debug', 'BP Debug Log', '[show_debug_log]');
 
-	if (is_null(get_page_by_path('privacy-policy',      OBJECT, 'universal'))) wp_insert_post(['post_title' => 'Privacy Policy',      'post_content' => '[get-universal-page slug="page-privacy-policy"]',      'post_status' => 'publish', 'post_type' => 'universal']);
-	if (is_null(get_page_by_path('accessibility-policy', OBJECT, 'universal'))) wp_insert_post(['post_title' => 'Accessibility Policy', 'post_content' => '[get-universal-page slug="page-accessibility-policy"]', 'post_status' => 'publish', 'post_type' => 'universal']);
-	if (is_null(get_page_by_path('terms-conditions',    OBJECT, 'universal'))) wp_insert_post(['post_title' => 'Terms & Conditions',   'post_content' => '[get-universal-page slug="page-terms-conditions"]',    'post_status' => 'publish', 'post_type' => 'universal']);
-	if (is_null(get_page_by_path('review',              OBJECT, 'universal'))) wp_insert_post(['post_title' => 'Review',               'post_content' => '[get-universal-page slug="page-review"]',               'post_status' => 'publish', 'post_type' => 'universal']);
-	if (is_null(get_page_by_path('email-received',      OBJECT, 'universal'))) wp_insert_post(['post_title' => 'Email Received',       'post_content' => '[get-universal-page slug="page-email-received"]',       'post_status' => 'publish', 'post_type' => 'universal']);
-
-
+	$alwaysPages = [
+		'privacy-policy'       => 'Privacy Policy',
+		'accessibility-policy' => 'Accessibility Policy',
+		'terms-conditions'     => 'Terms & Conditions',
+		'review'               => 'Review',
+		'email-received'       => 'Email Received',
+	];
+	foreach ($alwaysPages as $slug => $title) bp_universal_page_ensure($slug, $title, '[get-universal-page slug="page-' . $slug . '"]');
 }
 
 
 /*--------------------------------------------------------------
 # Helpers (used by housekeeping)
 --------------------------------------------------------------*/
+
+/** Publish a universal page at $slug unless one already exists there. */
+function bp_universal_page_ensure(string $slug, string $title, string $content): void {
+	if (get_page_by_path($slug, OBJECT, 'universal')) return;
+	wp_insert_post(['post_title' => $title, 'post_name' => $slug, 'post_content' => $content, 'post_status' => 'publish', 'post_type' => 'universal']);
+}
+
+/** Permanently delete the universal page at $slug, if there is one. */
+function bp_universal_page_delete(string $slug): void {
+	$page = get_page_by_path($slug, OBJECT, 'universal');
+	if ($page) wp_delete_post($page->ID, true);
+}
+
+/** Hosts that belong to Rovin, which sends mail on its own Brevo account. */
+function bp_rovin_domains(): array {
+	return ["babeschicken.com","babescatering.com","babeschicken.tv","sweetiepiesribeyes.com","bubbascookscountry.com","rovindirectory.com","rovininc.com","rovin.work"];
+}
 
 function bp_check_for_post_updates(): void {
 	$excluded_user = get_user_by('login', 'battleplanweb');
@@ -417,9 +398,9 @@ function bp_check_for_post_updates(): void {
 		if (!$url) continue;
 		$author_id = (int)$p->post_author;
 		$author    = get_the_author_meta('display_name', $author_id);
-		$item      = '<li><a href="' . $url . '">' . $p->post_title . '</a> <em>(by ' . $author . ')</em></li>';
-		$is_other  = $excluded_id ? $author_id !== $excluded_id : true;
-		$is_other ? $other .= $item : $mine .= $item;
+		$item      = '<li><a href="' . esc_url($url) . '">' . esc_html($p->post_title) . '</a> <em>(by ' . esc_html($author) . ')</em></li>';
+		if ($excluded_id && $author_id === $excluded_id) $mine .= $item;
+		else $other .= $item;
 	}
 
 	$body = '';
@@ -450,7 +431,7 @@ function bp_brevo_key_alert(string $site, array $wpMailSettings, array $customer
 	$from       = $wpMailSettings['mail']['from_email'] ?? '(unset)';
 	$from_name  = $wpMailSettings['mail']['from_name'] ?? '(unset)';
 	$brevo_dom  = $wpMailSettings['sendinblue']['domain'] ?? '(unset)';
-	$listed     = in_array($site, ["babeschicken.com","babescatering.com","babeschicken.tv","sweetiepiesribeyes.com","bubbascookscountry.com","rovindirectory.com","rovininc.com","rovin.work"], true);
+	$listed     = in_array($site, bp_rovin_domains(), true);
 	$key_tail   = _BREVO_API !== '' ? '…' . substr(_BREVO_API, -6) : '(BP_BREVO_KEY is not defined either!)';
 
 	// WP Engine install name — the folder to SSH/SFTP into to edit wp-config.php.

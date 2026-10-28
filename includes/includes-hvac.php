@@ -26,8 +26,6 @@
 	- Wells Fargo
 # Shortcodes
 # Basic Theme Set Up
-# Employment Application
-# Mass Product Update
 
 --------------------------------------------------------------*/
 
@@ -45,7 +43,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 		if (strpos($type, $brand) !== false) $file = str_replace( ' ', '-', $brand );
 	endforeach;
 
-	include('wp-content/themes/battleplantheme/elements/element-product-overview-'.$file.'.php');
+	include(get_template_directory().'/elements/element-product-overview-'.$file.'.php');
 
 	if (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.webp' ) ) : $pic = $pic.".webp";
 	elseif (is_file( $_SERVER['DOCUMENT_ROOT'].'/wp-content/uploads/'.$pic.'.jpg' ) ) : $pic = $pic.".jpg";
@@ -69,9 +67,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'american-standard-customer-care', 'battleplan_american_standard_customer_care' );
 function battleplan_american_standard_customer_care( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-customer-care-dealer.php";
+	return include get_template_directory()."/pages/page-hvac-customer-care-dealer.php";
 }
 
 /*--------------------------------------------------------------
@@ -79,9 +75,7 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'rheem-pro-partner', 'battleplan_rheem_pro_partner' );
 function battleplan_rheem_pro_partner( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-rheem-pro-partner.php";
+	return include get_template_directory()."/pages/page-hvac-rheem-pro-partner.php";
 }
 
 /*--------------------------------------------------------------
@@ -89,9 +83,7 @@ function battleplan_rheem_pro_partner( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'ruud-pro-partner', 'battleplan_ruud_pro_partner' );
 function battleplan_ruud_pro_partner( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-ruud-pro-partner.php";
+	return include get_template_directory()."/pages/page-hvac-ruud-pro-partner.php";
 }
 
 /*--------------------------------------------------------------
@@ -99,9 +91,7 @@ function battleplan_ruud_pro_partner( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'comfortmaker-elite-dealer', 'battleplan_comfortmaker_elite_dealer' );
 function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-comfortmaker-elite-dealer.php";
+	return include get_template_directory()."/pages/page-hvac-comfortmaker-elite-dealer.php";
 }
 
 /*--------------------------------------------------------------
@@ -109,9 +99,7 @@ function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'york-cert-comfort-expert', 'battleplan_york_cert_comfort_expert' );
 function battleplan_york_cert_comfort_expert( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-york-cert-comfort-expert.php";
+	return include get_template_directory()."/pages/page-hvac-york-cert-comfort-expert.php";
 }
 
 /*--------------------------------------------------------------
@@ -119,9 +107,7 @@ function battleplan_york_cert_comfort_expert( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'tempstar-elite-dealer', 'battleplan_tempstar_elite_dealer' );
 function battleplan_tempstar_elite_dealer( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-tempstar-elite-dealer.php";
+	return include get_template_directory()."/pages/page-hvac-tempstar-elite-dealer.php";
 }
 
 /*--------------------------------------------------------------
@@ -150,7 +136,7 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 	else: $img = "/wp-content/uploads/".$img;
 	endif;
 
-	return include "wp-content/themes/battleplantheme/elements/element-why-choose-".$brand.".php";
+	return include get_template_directory()."/elements/element-why-choose-".$brand.".php";
 }
 
 /*--------------------------------------------------------------
@@ -158,10 +144,8 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'hvac-maintenance-tips', 'battleplan_hvac_maintenance_tips' );
 function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'type'=>'', ), $atts );
-	$type = esc_attr($a['type']);
 
-	return include "wp-content/themes/battleplantheme/pages/page-hvac-maintenance-tips.php";
+	return include get_template_directory()."/pages/page-hvac-maintenance-tips.php";
 }
 
 /*--------------------------------------------------------------
@@ -169,7 +153,7 @@ function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'hvac-tip-of-the-month', 'battleplan_hvac_tip_of_the_month' );
 function battleplan_hvac_tip_of_the_month( $atts, $content = null ) {
-	return include "wp-content/themes/battleplantheme/elements/element-hvac-tip-of-the-month.php";
+	return include get_template_directory()."/elements/element-hvac-tip-of-the-month.php";
 }
 
 /*--------------------------------------------------------------
@@ -336,7 +320,7 @@ function battleplan_getFinancing($atts, $content = null) {
 
 	if ( $link != "" ) $buildFinancing .= '<a href="'.$link.'" title="Click here to apply for financing for AC repair at '.$bank.'" target="_blank">';
 	if ( $text != "" && $loc == "above" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
-	$buildFinancing .= '<img class="financing-img tracking'.$class.'" data-track="financing"" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.webp" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" >';
+	$buildFinancing .= '<img class="financing-img tracking'.$class.'" data-track="financing" src="/wp-content/themes/battleplantheme/common/financing/'.$img.'.webp" loading="lazy" alt="Apply for financing for your HVAC needs at '.$bank.'" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" >';
 	if ( $text != "" && $loc == "below" ) $buildFinancing .= '<span class="link-text">'.$text.'</span>';
 	if ( $link != "" ) $buildFinancing .= '</a>';
 
@@ -432,227 +416,6 @@ function battleplan_override_main_query_with_hvac( $query ) {
 			$query->set( 'orderby','menu_order');
 			$query->set( 'order','asc');
 		endif;
-	endif;
-}
-
-/*--------------------------------------------------------------
-# Employment Application Form
-#
-# Drop [bp-employment-form] on a page to render the standard HVAC
-# employment application. Per-site customization via filters below.
---------------------------------------------------------------*/
-
-// Default screening Yes/No questions (criminal history, driver's license, manual labor)
-function bp_employment_default_screening() {
-	return [
-		'criminal-history' => ['label' => 'Criminal History',                    'options' => 'Yes|No'],
-		'driver-license'   => ['label' => "Driver's License",                    'options' => 'Yes|No'],
-		'manual-labor'     => ['label' => 'Have You Done Manual Labor Before?', 'options' => 'Yes|No'],
-	];
-}
-
-// The form shortcode
-add_shortcode('bp-employment-form', function($atts) {
-	$a = shortcode_atts(['submit' => 'Submit'], $atts);
-
-	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
-	$positions = apply_filters('bp_employment_position_options', 'Installation Technician|Service Technician|Duct Team|Office|Management|Internship');
-	$types     = apply_filters('bp_employment_type_options',     'HVAC|Plumbing|Electrical|Other');
-
-	// Build the screening row — one [col] per question
-	$screening_cols = '';
-	foreach ($screening as $name => $cfg) {
-		$label = $cfg['label']   ?? ucwords(str_replace(['-', '_'], ' ', $name));
-		$opts  = $cfg['options'] ?? 'Yes|No';
-		$screening_cols .= '[col][seek label="' . esc_attr($label) . '" id="' . esc_attr($name) . '" req="true"][bp-radio name="' . esc_attr($name) . '" options="' . esc_attr($opts) . '" required="true"][/seek][/col]';
-	}
-
-	// Pick a sensible grid for the screening row based on how many questions there are
-	$count = count($screening);
-	$grid  = match (true) {
-		$count <= 1 => '1',
-		$count === 2 => '1-1',
-		$count === 3 => '1-1-2',
-		$count === 4 => '1-1-1-1',
-		default      => '1',
-	};
-
-	return do_shortcode('[bp-form id="employment" subject="Employment Application" class="application"]
-		[layout grid="3-3-2"]
-			[col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
-			[col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
-			[col][seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek][/col]
-		[/layout]
-
-		[layout grid="200px 1fr" class="form-stacked"]
-			[col][seek label="Years of Exp." id="years-exp" req="true" max-w="180px"][bp-text name="years-exp" required="true" pattern="\d+"][/seek][/col]
-			[col][seek label="Type(s) of Experience" id="type-exp" req="true"][bp-checkboxes name="type-exp" options="' . esc_attr($types) . '"][/seek][/col]
-		[/layout]
-
-		[layout grid="' . $grid . '" class="form-stacked break-2"]
-			' . $screening_cols . '
-		[/layout]
-
-		[layout grid="1" class="form-stacked"]
-			[col][seek label="Position(s) Interested In" id="pos-interest" req="true"][bp-checkboxes name="pos-interest" options="' . esc_attr($positions) . '"][/seek][/col]
-		[/layout]
-
-		[seek label="Tell us a little about yourself." id="user-message" width="full"][bp-textarea name="user-message"][/seek]
-
-		[seek label="button"][bp-submit]' . esc_html($a['submit']) . '[/bp-submit][/seek]
-	[/bp-form]');
-});
-
-// Default field labels — matches the email body template below
-add_filter('bp_field_labels', function($labels, $form_id) {
-	if ($form_id !== 'employment') return $labels;
-
-	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
-	foreach ($screening as $name => $cfg) {
-		$labels[$name] = $cfg['label'] ?? ucwords(str_replace(['-', '_'], ' ', $name));
-	}
-
-	return array_merge($labels, [
-		'years-exp'    => 'Years Exp',
-		'type-exp'     => 'Type Exp',
-		'pos-interest' => 'Positions',
-		'user-message' => 'Additional Info',
-	]);
-}, 10, 2);
-
-// Default email body template (matches the legacy CF7 layout exactly)
-add_filter('bp_form_email_template', function($template, $form_id, $ctx) {
-	if ($form_id !== 'employment') return $template;
-
-	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
-	$screening_lines = '';
-	foreach ($screening as $name => $cfg) {
-		$label = $cfg['label'] ?? ucwords(str_replace(['-', '_'], ' ', $name));
-		$screening_lines .= "$label: [$name]\n";
-	}
-
-	return "Name: [user-name]\nEmail: [user-email]\nPhone: [user-phone]\n\n"
-		 . "Years Exp: [years-exp]\nType Exp: [type-exp]\n\n"
-		 . trim($screening_lines) . "\n\n"
-		 . "Positions: [pos-interest]\n\n"
-		 . "Additional Info:\n[user-message]";
-}, 10, 3);
-
-// Set recipient(s). Default: customer_info['email']. Sites add via bp_employment_recipients.
-add_filter('bp_form_before_send', function($email, $ctx) {
-	if (($ctx['form_id'] ?? '') !== 'employment') return $email;
-
-	$default_emails = [];
-	$business_email = $ctx['customer']['email'] ?? '';
-	if ($business_email) $default_emails[] = $business_email;
-
-	$emails = apply_filters('bp_employment_recipients', $default_emails, $ctx);
-	$emails = array_filter(array_map('sanitize_email', (array)$emails));
-	if (!empty($emails)) $email['to'] = implode(', ', $emails);
-
-	return $email;
-}, 11, 2);
-
-// Qualification check + subject prefix. Sites can override the qualification logic
-// via bp_employment_qualified if their screening questions differ.
-add_filter('bp_form_before_send', 'battleplan_handleEmploymentApp', 10, 2);
-function battleplan_handleEmploymentApp($email, $ctx) {
-	if (($ctx['form_id'] ?? '') !== 'employment') return $email;
-
-	$qualified = apply_filters('bp_employment_qualified', bp_employment_default_qualified_check($ctx), $ctx);
-
-	$email['subject'] = ($qualified ? '< QUALIFIED >' : '< unqualified >') . ' ' . $email['subject'];
-
-	$GLOBALS['bp_employment_qualified'] = $qualified;
-	return $email;
-}
-
-// Default qualification: criminal=No, license=Yes, background-chk-or-manual-labor=Yes.
-// Missing fields are treated as "pass" so removing a screening question doesn't auto-fail anyone.
-function bp_employment_default_qualified_check($ctx) {
-	$fields = $ctx['fields'] ?? [];
-	$norm   = fn($v) => is_array($v) ? ($v[0] ?? null) : $v;
-
-	$criminal   = $norm($fields['criminal-history'] ?? null);
-	$license    = $norm($fields['driver-license']   ?? null);
-	$background = $norm($fields['background-chk'] ?? $fields['manual-labor'] ?? null);
-
-	return ($criminal == null   || str_contains((string)$criminal,   'No'))
-		&& ($license == null    || str_contains((string)$license,    'Yes'))
-		&& ($background == null || str_contains((string)$background, 'Yes'));
-}
-
-// Auto-reply with PDF — fires only when a PDF path is configured AND candidate qualified.
-// Test-mode aware: messages starting with "test" reroute the auto-reply to the dev mailbox too.
-add_action('bp_form_after_send', function($email, $ctx, $sent) {
-	if (!$sent) return;
-	if (($ctx['form_id'] ?? '') !== 'employment') return;
-	if (empty($GLOBALS['bp_employment_qualified'])) return;
-
-	$pdf_path = apply_filters('bp_employment_autoreply_pdf', '', $ctx);
-	if (empty($pdf_path)) return;
-
-	$applicant_email = $ctx['fields']['user-email'] ?? '';
-	if (!is_email($applicant_email)) return;
-
-	// Reroute auto-reply during test submissions so we don't email real people
-	if (function_exists('bp_is_test_submission') && bp_is_test_submission($ctx['fields'])) {
-		$applicant_email = apply_filters('bp_form_test_recipient', 'glendon@bp-webdev.com');
-	}
-
-	$autoreply = apply_filters('bp_employment_autoreply', bp_employment_default_autoreply($ctx), $ctx);
-
-	$pdf_full = (strpos($pdf_path, ABSPATH) === 0) ? $pdf_path : ABSPATH . ltrim($pdf_path, '/');
-	$attachments = file_exists($pdf_full) ? [$pdf_full] : [];
-
-	$business_name = bp_decode_text( $ctx['customer']['name'] ?? get_bloginfo('name') );
-	$from_email    = 'email@admin.' . preg_replace('#https?://#', '', get_bloginfo('url'));
-	$headers = [
-		'Content-Type: text/html; charset=UTF-8',
-		'From: ' . $business_name . ' <' . $from_email . '>',
-	];
-
-	wp_mail(
-		$applicant_email,
-		$autoreply['subject'] ?? 'Thank you for your employment application.',
-		$autoreply['body']    ?? '',
-		$headers,
-		$attachments
-	);
-}, 10, 3);
-
-function bp_employment_default_autoreply($ctx) {
-	$business_name = bp_decode_text( $ctx['customer']['name'] ?? get_bloginfo('name') );
-	$applicant     = $ctx['fields']['user-name'] ?? '';
-
-	$body  = '<p>' . esc_html($applicant) . ', thank you for your interest in employment with ' . esc_html($business_name) . '.</p>';
-	$body .= '<p>Based on your initial responses on our website, we feel you may be a qualified candidate for employment.</p>';
-	$body .= '<p>Attached is a PDF of our full employment application. Please fill out this application and return it to us in person or by email.</p>';
-	$body .= '<p>Once we receive your application, a member of our management team will review it and be in contact as soon as possible.</p>';
-	$body .= '<p>Thank you!<br>' . esc_html($business_name) . ' Management</p>';
-
-	return [
-		'subject' => 'Thank you for your employment application.',
-		'body'    => $body,
-	];
-}
-
-/*--------------------------------------------------------------
-# Mass Product Update
---------------------------------------------------------------*/
-//add_action( 'init', 'battleplan_mass_product_update' );
-function battleplan_mass_product_update() {
-	$customer_info = customer_info();
-
-	$msBrand = $customer_info['site-brand'] ?? '';
-	$msBrands = is_array($msBrand) ? array_map(fn($b) => strtolower(trim($b)), $msBrand) : [strtolower(trim((string)$msBrand))];
-	if ( in_array('american standard', $msBrands, true) ) :
-
-		if ( get_option( 'product-update-may-2022' ) != 'completed' ) :
-			require_once get_template_directory() . '/includes/includes-mass-site-update.php';
-			update_option( 'product-update-may-2022', 'completed' );
-		endif;
-
 	endif;
 }
 ?>

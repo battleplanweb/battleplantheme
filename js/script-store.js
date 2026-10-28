@@ -587,11 +587,11 @@ endpoint, so the cart layer can subscribe without this file changing.
 	function renderCart( cart ) {
 		cartState = cart;
 
-		var countEl = document.querySelector( '[data-store-count]' );
-		if ( countEl ) {
+		// Every cart button on the page (e.g. the header's and the mobile bar's), not just the first.
+		document.querySelectorAll( '[data-store-count]' ).forEach( function ( countEl ) {
 			countEl.textContent = cart.count;
 			countEl.hidden = ! cart.count;
-		}
+		} );
 
 		var body = document.querySelector( '[data-store-cart-body]' );
 		var foot = document.querySelector( '[data-store-cart-foot]' );
@@ -791,13 +791,22 @@ endpoint, so the cart layer can subscribe without this file changing.
 		/* ---- re-pricing ---- */
 
 		var quoting = false;
+		var again   = false;   // a change arrived mid-quote: price once more when this one lands
 
 		function requote() {
-			if ( quoting ) return;
+			if ( quoting ) { again = true; return; }
 			quoting = true;
+			again   = false;
 			if ( summary ) summary.classList.add( 'is-busy' );
 
-			ajax( 'sp_store_quote', { shipping_rate_id: chosenRate() } ).then( function ( res ) {
+			// The address travels too: with shipping by distance it is part of the price.
+			ajax( 'sp_store_quote', {
+				shipping_rate_id: chosenRate(),
+				'address[address1]': field( 'sp-co-address1' ),
+				'address[city]': field( 'sp-co-city' ),
+				'address[state]': field( 'sp-co-state' ),
+				'address[zip]': field( 'sp-co-zip' )
+			} ).then( function ( res ) {
 				if ( res && res.success ) {
 					var totals = summary && summary.querySelector( '.store-summary-totals' );
 					if ( totals ) totals.innerHTML = res.data.totals;
@@ -819,6 +828,7 @@ endpoint, so the cart layer can subscribe without this file changing.
 			} ).then( function () {
 				quoting = false;
 				if ( summary ) summary.classList.remove( 'is-busy' );
+				if ( again ) requote();
 			} );
 		}
 
@@ -829,6 +839,18 @@ endpoint, so the cart layer can subscribe without this file changing.
 				opt.classList.toggle( 'is-active', !! ( input && input.checked ) );
 			} );
 		}
+
+		// Re-price when the address settles — on leaving a field, not on every keystroke,
+		// because a distance price is a call to Google and the ZIP is typed a digit at a time.
+		var addrTimer = null;
+		[ 'sp-co-address1', 'sp-co-city', 'sp-co-state', 'sp-co-zip' ].forEach( function ( id ) {
+			var el = document.getElementById( id );
+			if ( ! el ) return;
+			el.addEventListener( 'change', function () {
+				clearTimeout( addrTimer );
+				addrTimer = setTimeout( requote, 250 );
+			} );
+		} );
 
 		// Delegated: the rate list is replaced wholesale on every re-quote, so a
 		// listener bound to the inputs themselves would die on the first change.
@@ -890,19 +912,44 @@ endpoint, so the cart layer can subscribe without this file changing.
 				var missing = firstEmpty();
 				if ( missing ) { showError( missing ); return; }
 
+				// Agreements (when the basket needs any). Checked here only to point at the
+				// box; the server decides which are required and checks again.
+				var agreeBoxes = root.querySelectorAll( 'input[name="sp_agree"]' );
+				var agreed = [];
+				for ( var a = 0; a < agreeBoxes.length; a++ ) {
+					if ( ! agreeBoxes[ a ].checked ) {
+						agreeBoxes[ a ].focus();
+						showError( 'Please read and accept each agreement to continue.' );
+						return;
+					}
+					agreed.push( agreeBoxes[ a ].value );
+				}
+				var signEl = document.getElementById( 'sp-co-sign' );
+				if ( signEl && signEl.value.trim().length < 2 ) {
+					signEl.focus();
+					showError( 'Please type your full name as your signature.' );
+					return;
+				}
+
 				placeBtn.disabled = true;
 				placeBtn.classList.add( 'is-busy' );
 
-				ajax( 'sp_store_place_order', {
+				var payload = {
 					email: field( 'sp-co-email' ),
 					shipping_rate_id: chosenRate(),
+					sign_name: field( 'sp-co-sign' ),
+					note: field( 'sp-co-note' ),
 					'address[name]': field( 'sp-co-name' ),
 					'address[address1]': field( 'sp-co-address1' ),
 					'address[address2]': field( 'sp-co-address2' ),
 					'address[city]': field( 'sp-co-city' ),
 					'address[state]': field( 'sp-co-state' ),
 					'address[zip]': field( 'sp-co-zip' )
-				} ).then( function ( res ) {
+				};
+				// One agree[n] key per accepted agreement, which PHP reads back as an array.
+				agreed.forEach( function ( id, i ) { payload[ 'agree[' + i + ']' ] = id; } );
+
+				ajax( 'sp_store_place_order', payload ).then( function ( res ) {
 					if ( res && res.success ) {
 						mountPayment( res.data );
 						return;

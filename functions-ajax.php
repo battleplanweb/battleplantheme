@@ -5,27 +5,30 @@
 # AJAX Functions
 --------------------------------------------------------------*/
 
-// Change site option, post meta or user meta with javaScript
+// Save a site option or user meta from JavaScript.
+//
+// This used to be open to ANYONE (wp_ajax_nopriv_) with no nonce or capability check, and wrote
+// whatever option/meta key it was handed — an anonymous POST could overwrite any wp_option (e.g.
+// users_can_register + default_role) or delete them with clear=true. It now does only what its one
+// caller needs:
+//   script-admin.js          type=site, key bp_admin_*      (admins: dashboard button choices)
+// type=user writes the logged-in user's OWN meta, but only for keys a site allows with the
+// bp_update_meta_user_keys filter (none by default).
 add_action( 'wp_ajax_update_meta', 'battleplan_update_meta_ajax' );
-add_action( 'wp_ajax_nopriv_update_meta', 'battleplan_update_meta_ajax' );
 function battleplan_update_meta_ajax() {
-	$type = $_POST['type'];	
-	$key = $_POST['key'];	
-	$value = $_POST['value'];
-	$clear = $_POST['clear'];
-	$keyArray = explode(", ", $key);	
-	
-	if ( $clear == "true" ) :
-		foreach ($keyArray as $key) delete_option( $key );
-		$response = array( 'dashboard' => 'Content tracking cleared'  );	
-	else:	
-		if ( $type == "site" ) updateOption( $key, $value );
-		if ( $type == "user" ) update_user_meta( wp_get_current_user()->ID, $key, $value, false );
-		if ( $type == "post" || $type == "page" ) updateMeta( get_the_ID(), $key, $value );	
+	$type  = sanitize_key( $_POST['type'] ?? '' );
+	$key   = sanitize_text_field( wp_unslash( $_POST['key'] ?? '' ) );
+	$value = sanitize_text_field( wp_unslash( $_POST['value'] ?? '' ) );
 
-		$response = array( 'dashboard' => 'Updated {'.$key.'} to new value {'.$value.'}' );
-	endif;
-	wp_send_json( $response );
+	if ( $type === 'site' && strpos( $key, 'bp_admin_' ) === 0 && current_user_can( 'manage_options' ) ) {
+		updateOption( $key, $value );
+	} elseif ( $type === 'user' && in_array( $key, (array) apply_filters( 'bp_update_meta_user_keys', [] ), true ) ) {
+		update_user_meta( get_current_user_id(), $key, $value );
+	} else {
+		wp_send_json_error( array( 'dashboard' => 'Not allowed' ), 403 );
+	}
+
+	wp_send_json( array( 'dashboard' => 'Updated {'.$key.'} to new value {'.$value.'}' ) );
 }
 
 

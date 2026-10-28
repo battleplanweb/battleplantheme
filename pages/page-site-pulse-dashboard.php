@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /* Battle Plan Web Design - Site Pulse Dashboard */
 
 if ( ! is_user_logged_in() ) {
@@ -40,8 +40,11 @@ if ( $is_god && ! $impersonating ) {
 	$caps = array_merge( $caps, array_values( array_intersect( site_pulse_effective_caps( $user_id ), site_pulse_preference_caps() ) ) );
 	$caps[] = 'god_mode';
 	$role_label = 'Odinson';
-} elseif ( $is_wp_admin && ! $role ) {
-	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_notes', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports' ];
+} elseif ( $is_wp_admin && ! $role && ! $impersonating ) {   // the REAL user's WP-admin fallback never applies to someone being viewed-as
+	$caps = [ 'view_gm_reports', 'view_supervisor_reports', 'manage_locations', 'manage_users', 'manage_templates', 'manage_roles', 'manage_settings', 'manage_notifications', 'manage_api_keys', 'use_ai_assistant', 'view_forms', 'upload_forms', 'submit_reports', 'view_chat', 'view_action_items', 'view_notes', 'view_gm_action_items', 'view_supervisor_action_items', 'manage_mileage', 'submit_mileage', 'view_tolls', 'view_vehicle_expenses', 'view_business_meals', 'view_competitive_shopping', 'view_other_expenses', 'view_travel_expenses', 'view_expense_overview', 'approve_expense_reports', 'view_approved_expense_reports', 'manage_ai_prompts', 'manage_form_repositories' ];
+	// The technical settings are God / System Admin only — a WP admin account with no Site Pulse tier
+	// doesn't get them through this fallback either.
+	$caps = array_values( array_diff( $caps, site_pulse_technical_caps() ) );
 	$role_label = 'Administrator';
 } else {
 	// Effective caps = the role's capabilities with this user's per-user overrides applied, so an
@@ -61,7 +64,7 @@ if ( ! $eff_is_god ) {
 $app_name     = site_pulse_get_setting( 'app_name', 'Site Pulse' );
 $company_name = site_pulse_get_setting( 'company_name', '' );
 $logo_url     = site_pulse_get_setting( 'login_logo_url', '' );
-$header_logo  = site_pulse_get_setting( 'header_logo_url', '' );
+$header_logo  = site_pulse_get_setting( 'header_logo_url', '' ) ?: site_pulse_default_logo();
 $full_name    = $user ? trim( $user->first_name . ' ' . $user->last_name ) : '';
 // The superadmin (battleplanweb) can be shown under a friendly alias without changing its WP display_name.
 $sp_alias     = ( $user && site_pulse_is_superadmin( (int) $user->ID ) ) ? (string) apply_filters( 'site_pulse_superadmin_alias', '' ) : '';
@@ -101,6 +104,8 @@ $icons = [
 	'logout'    => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
 	'user'      => '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
 	'chevron'   => '<polyline points="6 9 12 15 18 9"/>',
+	'chevron-right' => '<polyline points="9 6 15 12 9 18"/>',
+	'plus'      => '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
 	'menu'      => '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
 	'x'         => '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
 	'pulse'     => '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
@@ -265,6 +270,29 @@ $cap_directory        = in_array( 'view_directory', $caps, true ) || in_array( '
 $cap_directory_manage = in_array( 'manage_directory', $caps, true );
 $nav[] = [ 'slug' => 'directory', 'label' => 'Directory', 'icon' => 'users', 'show' => $cap_directory, 'modules' => [ 'directory' ] ];
 
+// Jobsites — Jobsite GEO entries (the jobs that build the /service/ pages), added/edited here instead of
+// wp-admin. Only where Jobsite GEO itself is installed; caps decide view / add-own / manage-all.
+$cap_jobsites_ready  = function_exists( 'sp_jobsites_ready' ) && sp_jobsites_ready();
+$cap_jobsites        = $cap_jobsites_ready && ( in_array( 'view_jobsites', $caps, true ) || in_array( 'add_jobsites', $caps, true ) || in_array( 'manage_jobsites', $caps, true ) );
+$cap_jobsites_add    = $cap_jobsites && ( in_array( 'add_jobsites', $caps, true ) || in_array( 'manage_jobsites', $caps, true ) );
+$nav[] = [ 'slug' => 'jobsites', 'label' => 'Jobsite GEO', 'icon' => 'mappin', 'show' => $cap_jobsites, 'modules' => [ 'jobsites' ] ];
+
+// Shift Scheduling — the scheduling app hosted in one panel (module off by default; access by the
+// use_shift_scheduling / manage_shift_* caps — see includes-site-pulse-schedules.php). Each child opens
+// the same panel on one of the app's views (slug schedules-{view}); members and supervisors get different
+// child lists.
+$cap_schedules = function_exists( 'sp_schedules_visible' ) && sp_schedules_visible();
+$nav[] = [
+	'slug'     => 'schedules',
+	'label'    => 'Shift Scheduling',
+	'icon'     => 'calendar',
+	'show'     => $cap_schedules,
+	'modules'  => [ 'schedules' ],
+	'children' => $cap_schedules ? array_map( function ( $view, $label ) {
+		return [ 'slug' => 'schedules-' . $view, 'label' => $label, 'show' => true ];
+	}, array_keys( sp_schedules_nav_views() ), sp_schedules_nav_views() ) : [],
+];
+
 // Site Fleet — every Battle Plan site's nightly snapshot on one screen. Hub-only (this install
 // receives the fleet's pushes) and agency-only, exactly like Client Reviews above: a client install
 // with the module switched on still sees nothing, because it isn't the hub.
@@ -314,10 +342,11 @@ $nav[] = [
 	],
 ];
 
-// Store — the staff side of the store. Products are edited in WordPress (the bp_product post
-// type) so they keep the SEO module, the media library and the block editor; what lives here is
-// what WordPress is bad at — orders, fulfillment, and a stock number that has to be right.
-// Store settings (Stripe, tax, shipping rates) live under Settings, not here.
+// Store — the staff side of the store, so a client runs it from their Site Pulse login without
+// ever seeing wp-admin. Products here are the same bp_product posts wp-admin edits, saved through
+// the same function (sp_store_save_product_data), so they keep the SEO module, the sitemap and the
+// media library whichever screen they were edited on. Store settings (Stripe, tax, shipping
+// rates, emails) live under Settings, not here.
 $cap_store_orders   = in_array( 'view_orders', $caps, true ) || in_array( 'manage_orders', $caps, true );
 $cap_store_manage   = in_array( 'manage_orders', $caps, true );
 $cap_store_products = in_array( 'manage_products', $caps, true );
@@ -332,6 +361,8 @@ $nav[] = [
 	'show'  => $cap_store_area,
 	'children' => [
 		[ 'slug' => 'store-orders',    'label' => 'Orders',    'show' => $cap_store_orders ],
+		[ 'slug' => 'store-customers', 'label' => 'Customers', 'show' => $cap_store_orders ],
+		[ 'slug' => 'store-products',  'label' => 'Products',  'show' => $cap_store_products ],
 		[ 'slug' => 'store-inventory', 'label' => 'Inventory', 'show' => $cap_store_products ],
 	],
 ];
@@ -390,16 +421,16 @@ $nav[] = [
 	'slug'  => 'admin',
 	'label' => 'Settings',
 	'icon'  => 'settings',
-	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ) || $cap_book_services || in_array( 'manage_booking_settings', $caps ) || $cap_store_settings || $cap_store_products,
+	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_roles', $caps ) || in_array( 'manage_ai_prompts', $caps ) || in_array( 'manage_form_repositories', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ) || $cap_book_services || in_array( 'manage_booking_settings', $caps ) || $cap_store_settings || $cap_store_products,
 	'children' => [
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
-		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
 		[ 'slug' => 'admin-templates', 'label' => 'Reports',        'icon' => 'file',    'show' => in_array( 'manage_templates', $caps ), 'modules' => [ 'reports' ] ],
 		[ 'slug' => 'review-settings', 'label' => 'Reviews',        'icon' => 'star',    'show' => in_array( 'manage_reviews', $caps ) && ! $is_review_hub, 'modules' => [ 'reviews' ] ],
-		[ 'slug' => 'admin-ai-prompts','label' => 'AI Prompts',     'icon' => 'chat',    'show' => in_array( 'manage_settings', $caps ) ],
+		[ 'slug' => 'admin-ai-prompts','label' => 'AI Prompts',     'icon' => 'chat',    'show' => in_array( 'manage_ai_prompts', $caps ) ],
 		[ 'slug' => 'admin-mileage',   'label' => 'Expense Reports', 'icon' => 'car',     'show' => in_array( 'manage_mileage', $caps ), 'modules' => [ 'mileage' ] ],
-		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_settings', $caps ), 'modules' => [ 'forms' ] ],
+		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_form_repositories', $caps ), 'modules' => [ 'forms' ] ],
 		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ), 'modules' => [ 'customer_connect' ] ],
 		[ 'slug' => 'admin-booking',   'label' => 'Booking',        'icon' => 'calendar', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ), 'modules' => [ 'booking' ] ],
 		[ 'slug' => 'admin-store',     'label' => 'Store',          'icon' => 'store',    'show' => $cap_store_settings || $cap_store_products, 'modules' => [ 'store' ] ],
@@ -415,7 +446,7 @@ $nav[] = [
 $printPage  = '';
 $printPage .= $nonce_field;
 $printPage .= site_pulse_color_scheme_css();
-$printPage .= '<div id="sp-app">';
+$printPage .= '<div id="sp-app" class="sp-app">';
 
 // God Mode — Impersonation Bar
 if ( $is_god ) {
@@ -674,56 +705,94 @@ $printPage .= '</div>';
 // Breadcrumb panel title: a small parent-section eyebrow stacked ABOVE the main page headline,
 // each on its own line, with a rule above the headline (CSS) separating them. Top-level pages with
 // no parent section keep a plain <h2>. Mirrors the .sp-crumb CSS.
+// A bar-only button: shows in the bottom bar (never on the page). $order sets its place among the
+// screen's buttons; $does is what it does — 'nav:mileage' (open a screen), 'action:new-report' (open a
+// form), 'focus:#sp-x-search' (put the cursor in a field), or 'nav:other-expenses click:#sp-oexp-add-btn'.
+// A real on-page button joins the bar instead with just data-sp-bar="N" (it then leaves the page).
+$sp_bar_btn = function ( $order, $icon, $label, $does ) {
+	$attrs = '';
+	foreach ( preg_split( '/\s+/', trim( $does ) ) as $part ) {
+		[ $k, $v ] = array_pad( explode( ':', $part, 2 ), 2, '' );
+		if ( in_array( $k, [ 'nav', 'action', 'focus', 'click' ], true ) ) $attrs .= ' data-sp-' . $k . '="' . esc_attr( $v ) . '"';
+	}
+	return '<button type="button" class="unique" hidden data-sp-bar="' . (int) $order . '" data-sp-extra data-sp-icon="' . esc_attr( $icon ) . '"' . $attrs . '>' . esc_html( $label ) . '</button>';
+};
+
 $sp_crumb = function ( $parent, $current ) {
 	return '<div class="sp-crumb"><div class="sp-crumb-parent">' . esc_html( $parent )
 		. '</div><h2 class="sp-crumb-current">' . esc_html( $current ) . '</h2></div>';
 };
 
-// Dashboard Panel
-$printPage .= '<section class="sp-panel active" id="sp-panel-dashboard">';
-$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Dashboard</h2></div>';
+// Dashboard Panel — "Your day": a summary (next up, counts, shortcuts) above the user's sections.
+// The sections are user-customizable under "Customize your Dashboard" (show/hide + order). The per-user
+// layout (order + hidden) lives in user meta; new sections we add later appear automatically.
+$printPage .= '<section class="sp-panel active" id="sp-panel-dashboard"><div class="sp-page">';
+$printPage .=   '<div class="sp-page-head" data-sp-title="Dashboard"><div class="sp-page-head__row sp-page-head__row--top">'
+	.             '<div><div class="sp-page-head__eyebrow">' . esc_html( wp_date( 'l, F j' ) ) . '</div>'
+	.             '<h1 class="sp-page-head__title sp-page-head__title--display">Your day, in focus.</h1></div>'
+	.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-link" data-sp-customize aria-label="Customize your Dashboard">' . $svg( $icons['settings'] ) . '<span class="sp-page-head__action-text">Customize your Dashboard</span></button></div>'
+	.           '</div></div>';
+// Bottom bar for this screen (each shows only if this person has that screen).
+$printPage .= $sp_bar_btn( 1, 'doc', 'New report', 'action:new-report' )
+	. $sp_bar_btn( 2, 'car', 'Log mileage', 'action:mileage-add' )
+	. $sp_bar_btn( 3, 'chat', 'Chat', 'nav:messages' );
+
+// The summary block (install reminder, messages, next up, counts, shortcuts). It's the first item in
+// #sp-dashboard-widgets, so on wide screens it heads the first of the two columns the sections flow
+// into. It isn't an .sp-section, so Customize never moves or hides it.
+$sp_dash_lead = '';
 
 // "Install the app" reminder card — filled + shown by JS only when NOT running as the installed app
 // and the user hasn't installed it yet. (Separate from the floating install banner, which stays.)
-$printPage .=   '<div class="sp-card sp-install-card" id="sp-install-card" hidden></div>';
+$sp_dash_lead .= '<div class="sp-card sp-install-card" id="sp-install-card" hidden></div>';
 
 // Important-message banners — notifications flagged "Dashboard" in the Notifications matrix, shown
-// at the top until the user X's them. Styled like the In-the-News bar.
+// at the top until the user dismisses them.
 $sp_dash_msgs = site_pulse_get_dashboard_messages( site_pulse_effective_user_id() );
 if ( $sp_dash_msgs ) {
-	$printPage .= '<div class="sp-dash-messages" id="sp-dash-messages">';
+	$sp_dash_lead .= '<div class="sp-stack sp-stack--sm" id="sp-dash-messages">';
 	foreach ( $sp_dash_msgs as $sp_m ) {
-		$printPage .= '<div class="sp-dash-message" data-id="' . (int) $sp_m['id'] . '">';
-		$printPage .=   '<span class="sp-dash-message-text">' . esc_html( $sp_m['message'] ) . '</span>';
-		$printPage .=   '<button type="button" class="unique sp-dash-message-close" data-id="' . (int) $sp_m['id'] . '" aria-label="Acknowledge and dismiss">&times;</button>';
-		$printPage .= '</div>';
+		$sp_dash_lead .= '<div class="sp-notice sp-notice--warning" data-sp-dash-message="' . (int) $sp_m['id'] . '">';
+		$sp_dash_lead .=   '<span class="sp-notice__text">' . esc_html( $sp_m['message'] ) . '</span>';
+		$sp_dash_lead .=   '<button type="button" class="unique sp-sheet__close" data-sp-dismiss="' . (int) $sp_m['id'] . '" aria-label="Acknowledge and dismiss">' . $svg( $icons['x'] ) . '</button>';
+		$sp_dash_lead .= '</div>';
 	}
-	$printPage .= '</div>';
+	$sp_dash_lead .= '</div>';
 }
 
-// ---- Dashboard widgets — user-customizable: drag to reorder, remove, add back via the picker. The
-// per-user layout (order + hidden) lives in user meta; new widgets we add later appear automatically.
+// The summary: filled by JS from the user's open action items and their reports. Order: next up, the
+// shortcuts, then the counts — last, so "Due today / Overdue" sits right above the items they count.
+$sp_dash_lead .= '<div class="sp-stack" data-sp-day-hero hidden></div>';
+$sp_dash_stats = '<div class="sp-stats" data-sp-day-stats hidden>'
+	.             '<button type="button" class="unique sp-stat" data-nav="action-items"><span class="sp-stat__value" data-sp-stat="today">0</span><span class="sp-stat__label">Due today</span></button>'
+	.             '<button type="button" class="unique sp-stat sp-stat--danger" data-nav="action-items"><span class="sp-stat__value" data-sp-stat="overdue">0</span><span class="sp-stat__label">Overdue</span></button>'
+	.             ( $sp_can_submit_any ? '<button type="button" class="unique sp-stat sp-stat--warning" data-nav="reports-my"><span class="sp-stat__value" data-sp-stat="drafts">0</span><span class="sp-stat__label">Drafts</span></button>' : '' )
+	.           '</div>';
+
+$sp_dash_shortcuts = '';
+if ( $sp_can_submit_any ) {
+	$sp_dash_shortcuts .= '<button type="button" class="unique sp-shortcut" data-sp-action="new-report">' . $svg( $icons['file'] )
+		. '<span class="sp-shortcut__main"><span class="sp-shortcut__title">New report</span><span class="sp-shortcut__sub">Start a report</span></span>' . $svg( $icons['chevron-right'] ) . '</button>';
+}
+if ( in_array( 'submit_mileage', $caps, true ) ) {
+	$sp_dash_shortcuts .= '<button type="button" class="unique sp-shortcut" data-sp-action="mileage-add">' . $svg( $icons['car'] )
+		. '<span class="sp-shortcut__main"><span class="sp-shortcut__title">Log mileage</span><span class="sp-shortcut__sub">Add today\'s stops</span></span>' . $svg( $icons['chevron-right'] ) . '</button>';
+}
+if ( $sp_dash_shortcuts ) $sp_dash_lead .= '<div class="sp-grid">' . $sp_dash_shortcuts . '</div>';
+$sp_dash_lead .= $sp_dash_stats;
+
 $sp_dash_uid = site_pulse_effective_user_id();
 $sp_layout   = json_decode( (string) get_user_meta( $sp_dash_uid, '_sp_dashboard_layout', true ), true );
 $sp_l_order  = ( is_array( $sp_layout ) && ! empty( $sp_layout['order'] ) )  ? array_map( 'strval', (array) $sp_layout['order'] )  : [];
 $sp_l_hidden = ( is_array( $sp_layout ) && ! empty( $sp_layout['hidden'] ) ) ? array_map( 'strval', (array) $sp_layout['hidden'] ) : [];
 
-// Shared widget header: drag handle + title + optional "View All" + remove button.
-$sp_widget_head = function ( $title, $link_btn, $id, $icon = '' ) use ( $svg, $icons ) {
-	$icon_html = ( $icon && isset( $icons[ $icon ] ) ) ? $svg( $icons[ $icon ] ) : '';
-	return '<div class="sp-card-header sp-widget-header">'
-		. '<span class="sp-card-drag sp-widget-drag" title="Drag to reorder" aria-label="Drag to reorder">&#9776;</span>'
-		. '<h3>' . $icon_html . esc_html( $title ) . '</h3>'
-		. '<div class="sp-widget-head-actions">'
-		. $link_btn
-		. '<button type="button" class="unique sp-widget-remove" data-widget="' . esc_attr( $id ) . '" title="Remove from dashboard" aria-label="Remove from dashboard">&times;</button>'
-		. '</div></div>';
-};
+// id => [ title, nav (its "View all" screen), flush (body is a list), default_hidden, body ] in default
+// order. Each section's gate mirrors its nav tab, so a user can never add one for an area they can't
+// access. Keep the ids in step with $known in site_pulse_ajax_save_dashboard_layout().
+$sp_widgets = [];
+$sp_loading = '<div class="sp-row"><span class="sp-row__main"><span class="sp-skeleton"></span><span class="sp-skeleton"></span></span></div>';
 
-$sp_widgets = []; // id => [ title, full?, default_hidden?, html ] in default order. Each widget's gate
-                  // mirrors its nav tab, so a user can never add a widget for an area they can't access.
-
-// News Feed Widget (full width) — Google Alerts feed; only when switched on + keywords configured.
+// News Feed — Google Alerts feed; only when switched on + keywords configured.
 $sp_alert_kw = trim( (string) site_pulse_get_setting( 'dashboard_alert_keywords', '' ) );
 $sp_news_on  = (string) site_pulse_get_setting( 'dashboard_news_enabled', '1' ) !== '0';
 if ( $sp_news_on && $sp_alert_kw !== '' ) {
@@ -731,151 +800,128 @@ if ( $sp_news_on && $sp_alert_kw !== '' ) {
 		$sp_alert_kw_safe = str_replace( [ '"', ']' ], '', $sp_alert_kw );
 		$sp_alert_body = do_shortcode( '[get-google-alerts keywords="' . $sp_alert_kw_safe . '" max="8"]' );
 	} else {
-		$sp_alert_body = '<p class="sp-widget-empty">The “get-google-alerts” feature isn’t available on this site yet.</p>';
+		$sp_alert_body = '<p class="sp-meta"><span>The “get-google-alerts” feature isn’t available on this site yet.</span></p>';
 	}
-	$sp_widgets['alerts'] = [
-		'title' => 'In the News',
-		'full'  => true,
-		'html'  => $sp_widget_head( 'In the News', '', 'alerts', 'chart' )
-			. '<div class="sp-card-body sp-widget-body sp-alert-feed-body">' . $sp_alert_body . '</div>',
-	];
+	$sp_widgets['alerts'] = [ 'title' => 'In the News', 'body' => '<div class="sp-alert-feed-body">' . $sp_alert_body . '</div>' ];
 }
 
-// Chat — 5 most recent threads + unread badges. Always (matches the Chat tab, shown to everyone).
-$sp_widgets['chat'] = [
-	'title' => 'Chat',
-	'html'  => $sp_widget_head( 'Chat', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="messages">View All &rarr;</button>', 'chat', 'chat' )
-		. '<div class="sp-card-body sp-widget-body" id="sp-widget-chat-body"><div class="sp-loading"></div></div>',
-];
+// Needs your attention — the viewer's own OPEN action items. Always (matches the Action Items tab).
+$sp_widgets['actions'] = [ 'title' => 'Needs your attention', 'nav' => 'action-items', 'flush' => true ];
 
-// My Action Items — the viewer's own OPEN items. Always (matches the Action Items tab, shown to everyone).
-$sp_widgets['actions'] = [
-	'title' => 'My Action Items',
-	'html'  => $sp_widget_head( 'My Action Items', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="action-items">View All &rarr;</button>', 'actions', 'tasks' )
-		. '<div class="sp-card-body sp-widget-body" id="sp-widget-actions-body"><div class="sp-loading"></div></div>',
-];
+// Chat — most recent threads + unread counts. Always (matches the Chat tab).
+$sp_widgets['chat'] = [ 'title' => 'Chat', 'nav' => 'messages', 'flush' => true ];
 
-// My Recent Reports — the viewer's own reports. Needs reports access; off by default for anyone who
-// can't submit reports (they have no own reports), but still addable from the picker.
+// My Recent Reports — off by default for anyone who can't submit reports (they have no own reports).
 if ( $cap_reports_access ) {
-	$sp_widgets['reports'] = [
-		'title'          => 'My Recent Reports',
-		'default_hidden' => ! $sp_can_submit_any,
-		'html'           => $sp_widget_head( 'My Recent Reports', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="reports-my">View All &rarr;</button>', 'reports', 'file' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-reports-body"><div class="sp-loading"></div></div>',
-	];
+	$sp_widgets['reports'] = [ 'title' => 'Recent reports', 'nav' => 'reports-my', 'flush' => true, 'default_hidden' => ! $sp_can_submit_any ];
 }
 
-// Past-Due Reports — GMs/Supervisors overdue on their reports (last submission older than their
-// frequency, or never submitted). Visibility is set in Settings → Notifications ("Reports past due"
-// row, role-group columns). Default-hidden so it starts in the Add-widget picker.
-if ( site_pulse_user_sees_pastdue_widget( site_pulse_effective_user_id() ) ) {
-	$sp_widgets['pastdue'] = [
-		'title'          => 'Past-Due Reports',
-		'default_hidden' => true,
-		'html'           => $sp_widget_head( 'Past-Due Reports', '', 'pastdue', 'clipboard' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-pastdue-body"><div class="sp-loading"></div></div>',
-	];
+// Past-Due Reports — GMs/Supervisors overdue on their reports. Visibility is set in Settings →
+// Notifications ("Reports past due" row, role-group columns).
+if ( site_pulse_user_sees_pastdue_widget( $sp_dash_uid ) ) {
+	$sp_widgets['pastdue'] = [ 'title' => 'Past-due reports', 'flush' => true, 'default_hidden' => true ];
 }
 
-// My Mileage This Month — needs mileage access. (Expense-report rebuild with per-category lines pending.)
+// Mileage this month — needs mileage access.
 if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
-	$sp_widgets['mileage'] = [
-		'title' => 'My Mileage This Month',
-		'html'  => $sp_widget_head( 'My Mileage This Month', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="mileage">View All &rarr;</button>', 'mileage', 'car' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-mileage-body"><div class="sp-loading"></div></div>',
-	];
+	$sp_widgets['mileage'] = [ 'title' => 'Mileage this month', 'nav' => 'mileage' ];
 }
 
-// Customer Feedback — a graphical per-channel summary (counts) for every feedback area the user can
-// access; each tile opens that panel. Off by default; available whenever the user has ANY feedback area.
+// Customer Feedback — a count per feedback area the user can access; each opens that area.
 if ( $cap_reviews_area || $cap_surveys_area || $cap_cm_area || $cap_emails_area ) {
-	$sp_widgets['feedback'] = [
-		'title'          => 'Customer Feedback',
-		'default_hidden' => true,
-		'html'           => $sp_widget_head( 'Customer Feedback', '', 'feedback', 'star' )
-			. '<div class="sp-card-body sp-widget-body" id="sp-widget-feedback-body"><div class="sp-loading"></div></div>',
-	];
+	$sp_widgets['feedback'] = [ 'title' => 'Customer feedback', 'default_hidden' => true ];
 }
 
-// Company Directory — the directory's own filters + search; using any of them opens the filtered
-// directory panel. Needs directory access. Off by default; addable from the picker.
+// Company Directory — the directory's own filters + search; using any of them opens the filtered directory.
 if ( $cap_directory ) {
 	$sp_widgets['directory'] = [
-		'title'          => 'Company Directory',
+		'title'          => 'Company directory',
+		'nav'            => 'directory',
 		'default_hidden' => true,
-		'html'           => $sp_widget_head( 'Company Directory', '<button type="button" class="unique sp-btn sp-btn-ghost sp-widget-link" data-nav="directory">Open &rarr;</button>', 'directory', 'users' )
-			. '<div class="sp-card-body sp-widget-body">'
-			.   '<div class="sp-widgetdir-filters">'
-			.     '<select id="sp-dashw-dir-brand" class="sp-select"><option value="">All brands</option></select>'
-			.     '<select id="sp-dashw-dir-location" class="sp-select"><option value="">All locations</option></select>'
-			.     '<select id="sp-dashw-dir-position" class="sp-select"><option value="">All positions</option></select>'
-			.     '<select id="sp-dashw-dir-status" class="sp-select"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select>'
-			.   '</div>'
-			.   '<div class="sp-widgetdir-searchrow">'
-			.     '<input type="search" id="sp-dashw-dir-search" class="sp-input sp-widgetdir-search" placeholder="Search name, email, or phone…">'
-			.     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-dashw-dir-clear">Clear</button>'
-			.   '</div>'
-			. '</div>',
+		'body'           => '<div class="sp-grid">'
+			. '<select id="sp-dashw-dir-brand" class="sp-select"><option value="">All brands</option></select>'
+			. '<select id="sp-dashw-dir-location" class="sp-select"><option value="">All locations</option></select>'
+			. '<select id="sp-dashw-dir-position" class="sp-select"><option value="">All positions</option></select>'
+			. '<select id="sp-dashw-dir-status" class="sp-select"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select>'
+			. '</div>'
+			. '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-dashw-dir-search" class="sp-input" placeholder="Search name, email, or phone"></div>',
 	];
 }
 
-// Display order: saved order first (available widgets only), then any new ones appended.
+// Display order: saved order first (available sections only), then any new ones appended.
 $sp_order = [];
 foreach ( $sp_l_order as $id ) if ( isset( $sp_widgets[ $id ] ) && ! in_array( $id, $sp_order, true ) ) $sp_order[] = $id;
 foreach ( array_keys( $sp_widgets ) as $id ) if ( ! in_array( $id, $sp_order, true ) ) $sp_order[] = $id;
 
-$sp_titles = [];
-foreach ( $sp_widgets as $id => $w ) $sp_titles[ $id ] = $w['title'];
-
-// "Add widget" toolbar — JS fills the dropdown with whatever is currently hidden (and hides the bar when nothing to add).
-$printPage .= '<div class="sp-dashboard-toolbar" id="sp-dashboard-toolbar" style="display:none">';
-$printPage .=   '<select id="sp-dash-add" class="sp-select" aria-label="Add a widget"><option value="">+ Add widget…</option></select>';
-$printPage .= '</div>';
-
-$printPage .= '<div class="sp-dashboard-widgets" id="sp-dashboard-widgets" data-widgets="' . esc_attr( wp_json_encode( $sp_titles ) ) . '">';
+$printPage .= '<div class="sp-stack sp-stack--lg sp-cols" id="sp-dashboard-widgets">';
+$printPage .=   '<div class="sp-stack">' . $sp_dash_lead . '</div>';
 foreach ( $sp_order as $id ) {
-	$w         = $sp_widgets[ $id ];
-	$is_full   = ! empty( $w['full'] );
-	// Hidden if the user hid it, OR it's default-hidden and they've never placed it (so default-off
-	// widgets — and future ones — start in the "Add" picker rather than on the dashboard).
+	$w = $sp_widgets[ $id ];
+	// Hidden if the user hid it, OR it's default-hidden and they've never placed it.
 	$is_hidden = in_array( $id, $sp_l_hidden, true )
 		|| ( ! empty( $w['default_hidden'] ) && ! in_array( $id, $sp_l_order, true ) );
-	$printPage .= '<div class="sp-card sp-widget' . ( $is_full ? ' sp-widget-full' : '' ) . '" id="sp-widget-' . esc_attr( $id ) . '" data-widget="' . esc_attr( $id ) . '"' . ( $is_hidden ? ' hidden' : '' ) . '>';
-	$printPage .=   $w['html'];
-	$printPage .= '</div>';
+	$printPage .= '<section class="sp-section" id="sp-widget-' . esc_attr( $id ) . '" data-widget="' . esc_attr( $id ) . '" data-sp-title="' . esc_attr( $w['title'] ) . '"' . ( $is_hidden ? ' hidden' : '' ) . '>';
+	$printPage .=   '<div class="sp-section__head"><h2 class="sp-section__title">' . esc_html( $w['title'] ) . '</h2>'
+		.             ( ! empty( $w['nav'] ) ? '<button type="button" class="unique sp-link" data-nav="' . esc_attr( $w['nav'] ) . '">View all &rarr;</button>' : '' )
+		.           '</div>';
+	$printPage .=   '<div class="sp-card' . ( ! empty( $w['flush'] ) ? ' sp-card--flush' : '' ) . '" id="sp-widget-' . esc_attr( $id ) . '-body">' . ( $w['body'] ?? $sp_loading ) . '</div>';
+	$printPage .= '</section>';
 }
 $printPage .= '</div>';
-$printPage .= '</section>';
+$printPage .= '</div></section>';
 
 // Messages Panel — direct messages between users. Two-pane: conversation list + active thread.
 if ( in_array( 'view_chat', $caps, true ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-messages">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Chat</h2>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-btn">+ New Message</button>';
-	$printPage .=   '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-messages"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Chat"><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Chat</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-msg-new-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' New Chat</button></div>'
+		.           '</div></div>'
+		.           $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-msg-list-search' )
+		.           $sp_bar_btn( 3, 'tasks', 'Action items', 'nav:action-items' )
+		.           $sp_bar_btn( 4, 'home', 'Dashboard', 'nav:dashboard' );
+	// Filters the conversation list by name or last message (client-side).
+	$printPage .=   '<div class="sp-control sp-control--lead sp-msg-list-search"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-msg-list-search" class="sp-input" placeholder="Search chats" autocomplete="off"></div>';
 	$printPage .=   '<div class="sp-messenger" id="sp-messenger">';
-	$printPage .=     '<div class="sp-card sp-msg-list" id="sp-msg-list"></div>';
-	$printPage .=     '<div class="sp-card sp-msg-thread" id="sp-msg-thread"></div>';
+	$printPage .=     '<div class="sp-msg-list" id="sp-msg-list"></div>';
+	$printPage .=     '<div class="sp-msg-thread" id="sp-msg-thread"></div>';
 	$printPage .=   '</div>';
-	$printPage .= '</section>';
+	$printPage .= '</div></section>';
 }
 
 // My Reports Panel
 if ( $sp_can_submit_any ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-my">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Reports', 'My Reports' );
-	$printPage .= '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-new-report-btn">+ New Report</button>';
+	// The list view (hidden as a whole while a report form or detail is open).
+	$printPage .= '<div class="sp-page" data-sp-list-view>';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="My reports"><div class="sp-page-head__eyebrow">Reports</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">My reports</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-new-report-btn" data-sp-bar="2" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Report</button></div>'
+		.           '</div></div>'
+		.           $sp_bar_btn( 1, 'doc', 'View Reports', 'nav:reports-all' )
+		.           $sp_bar_btn( 3, 'search', 'Search', 'focus:#sp-report-search' )
+		.           $sp_bar_btn( 4, 'home', 'Dashboard', 'nav:dashboard' );
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-report-search" class="sp-input" placeholder="Search reports" autocomplete="off"></div>';
+	// Search, then tabs, then Filter: the same order as every other list screen.
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-report-tab="all">All</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-report-tab="draft">Drafts <span class="sp-count sp-count--quiet" data-sp-draft-count hidden></span></button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-report-tab="done">Submitted</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-report-filter>' . $svg( $icons['sliders'] ) . ' <span data-sp-report-filter-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-report-filters">';
-	$printPage .=     '<select id="sp-filter-template" class="sp-select"><option value="">All Report Types</option></select>';
-	$printPage .=     '<div class="sp-date-range"><input type="date" id="sp-filter-date-start" class="sp-input" placeholder="From">';
-	$printPage .=     '<input type="date" id="sp-filter-date-end" class="sp-input" placeholder="To"></div>';
+	// Report type + dates. Not shown on the page: the filter button opens them in a sheet.
+	$printPage .=   '<div hidden data-sp-report-filters>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Report type</span><select id="sp-filter-template" class="sp-select"><option value="">All reports</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">From</span><input type="date" id="sp-filter-date-start" class="sp-input"></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">To</span><input type="date" id="sp-filter-date-end" class="sp-input"></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-reports-list" id="sp-reports-list"></div>';
-	$printPage .=   '<div class="sp-card sp-report-form-wrap" id="sp-report-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-card sp-report-detail-wrap" id="sp-report-detail-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-stack" data-sp-draft-hero hidden></div>';
+	$printPage .=   '<div class="sp-stack" id="sp-reports-list"></div>';
+	$printPage .= '</div>';
+	$printPage .=   '<div class="sp-page" id="sp-report-form-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-stack sp-report-detail-wrap" id="sp-report-detail-wrap" hidden></div>';
 	$printPage .= '</section>';
 }
 
@@ -883,81 +929,111 @@ if ( $sp_can_submit_any ) {
 if ( $cap_view_other_reports ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-reports-review">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><div class="sp-crumb"><div class="sp-crumb-parent">Reports</div><h2 class="sp-crumb-current" id="sp-review-title">GM Reports</h2></div></div>';
-	$printPage .=   '<div class="sp-report-filters">';
-	$printPage .= '<select id="sp-review-filter-location" class="sp-select"><option value="">All Locations</option></select>';
-	$printPage .=     '<div class="sp-date-range"><input type="date" id="sp-review-filter-start" class="sp-input" placeholder="From">';
-	$printPage .=     '<input type="date" id="sp-review-filter-end" class="sp-input" placeholder="To"></div>';
+	// One Filter button (location + dates in its sheet), like every other screen. The row hides with the
+	// list while a report is open (.sp-report-filters).
+	$printPage .=   '<div class="sp-toolbar sp-report-filters"><button type="button" class="unique sp-filter" data-sp-review-list-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-review-list-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
+	$printPage .=   '<div hidden data-sp-review-list-filter-holder>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Location</span><select id="sp-review-filter-location" class="sp-select"><option value="">All Locations</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">From</span><input type="date" id="sp-review-filter-start" class="sp-input"></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">To</span><input type="date" id="sp-review-filter-end" class="sp-input"></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-reports-list" id="sp-review-list"></div>';
-	$printPage .=   '<div class="sp-card sp-report-detail-wrap" id="sp-review-detail-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-stack sp-reports-list" id="sp-review-list"></div>';
+	$printPage .=   '<div class="sp-stack sp-report-detail-wrap" id="sp-review-detail-wrap" hidden></div>';
 	$printPage .= '</section>';
+
+	// View Reports — every report type this person can view (the same list as the menu's report
+	// children), one row each; a row opens that type's list. Reached from the bottom bar.
+	$printPage .= '<section class="sp-panel" id="sp-panel-reports-all"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="View reports"><div class="sp-page-head__eyebrow">Reports</div><h1 class="sp-page-head__title">View reports</h1></div>';
+	$printPage .=   '<div class="sp-card sp-card--flush"><div class="sp-list">';
+	foreach ( $sp_report_children as $sp_rc ) {
+		$printPage .= '<button type="button" class="unique sp-row" data-sp-view-template="' . (int) $sp_rc['template_id'] . '">'
+			.           '<span class="sp-row__lead">' . $svg( $icons['file'] ) . '</span>'
+			.           '<span class="sp-row__main"><span class="sp-row__title">' . esc_html( $sp_rc['label'] ) . '</span></span>'
+			.           '<span class="sp-row__trail">' . $svg( $icons['chevron-right'] ?? '<path d="M9 6l6 6-6 6"/>' ) . '</span>'
+			.         '</button>';
+	}
+	$printPage .=   '</div></div>';
+	$printPage .= '</div></section>';
 }
 
 // Action Items Panel — gated by view_action_items (granted to everyone by default).
 if ( in_array( 'view_action_items', $caps, true ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-action-items">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Action Items</h2>';
-	$printPage .=     '<div class="sp-panel-header-actions">';
-	// Summarize needs the Claude key — hide it rather than offer a button that can only fail.
+	$printPage .= '<section class="sp-panel" id="sp-panel-action-items"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Action items"><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Action items</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-add-action-item-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Item</button></div>'
+		.           '</div></div>'
+		.           $sp_bar_btn( 3, 'search', 'Search', 'focus:#sp-action-search' );
+	// Summarize needs the Claude key — left out rather than offered as a button that can only fail. It's
+	// pressed from the bottom bar's Summarize shortcut, so it isn't shown on the page itself.
 	if ( site_pulse_get_api_key() ) {
-		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-summarize-actions-btn">Summarize</button>';
+		$printPage .= '<button type="button" class="unique" id="sp-summarize-actions-btn" hidden data-sp-bar="2" data-sp-extra data-sp-icon="sparkle">Summarize</button>';
 	}
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-action-item-btn">+ Add Action Item</button>';
-	$printPage .=     '</div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-action-search" class="sp-input" placeholder="Search items and notes" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-status="open">Open <span class="sp-count" data-sp-open-count hidden></span></button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-status="resolved">Completed</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar">'
+		.               '<button type="button" class="unique sp-filter" data-sp-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>'
+		// One column or two — desktop only (hidden below 1280px), remembered on this device.
+		.               '<div class="sp-seg sp-seg--end" role="group" aria-label="Layout" data-sp-cols="action-items">'
+		.                 '<button type="button" class="unique sp-seg__btn" data-n="1" title="One column" aria-label="One column">' . $svg( '<rect x="5" y="4" width="14" height="16" rx="2"/>' ) . '</button>'
+		.                 '<button type="button" class="unique sp-seg__btn" data-n="2" title="Two columns: overdue beside current" aria-label="Two columns">' . $svg( '<rect x="3" y="4" width="7.5" height="16" rx="2"/><rect x="13.5" y="4" width="7.5" height="16" rx="2"/>' ) . '</button>'
+		.                 '<button type="button" class="unique sp-seg__btn" data-n="cards" title="Cards" aria-label="Cards">' . $svg( '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>' ) . '</button>'
+		.               '</div>'
+		.             '</div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-report-filters">';
-	$printPage .=     '<input type="search" id="sp-action-search" class="sp-input sp-action-search" placeholder="Search items &amp; notes…" autocomplete="off">';
+	// The filter controls. Not shown on the page: the one Filter button opens them all in a sheet. The
+	// tabs drive the status select.
+	$printPage .=   '<div hidden data-sp-action-filters>';
 	if ( $cap_view_other_actions ) {
-		$printPage .= '<select id="sp-action-filter-location" class="sp-select"><option value="mine">My Action Items</option></select>';
+		$printPage .= '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Whose items</span><select id="sp-action-filter-location" class="sp-select"><option value="mine">Assigned to me</option></select></label>';
 	}
-	$printPage .=     '<select id="sp-action-filter-status" class="sp-select">';
-	$printPage .=       '<option value="open">Open</option>';
-	$printPage .=       '<option value="">All</option>';
-	$printPage .=       '<option value="resolved">Completed</option>';
-	$printPage .=     '</select>';
-	$printPage .=     '<select id="sp-action-filter-category" class="sp-select"><option value="">All labels</option></select>';
-	// Due-date filter — "Due" is anything still dated ahead, "Past Due" anything already overdue.
-	$printPage .=     '<select id="sp-action-filter-due" class="sp-select">';
-	$printPage .=       '<option value="">Any due date</option>';
-	$printPage .=       '<option value="due">Due</option>';
-	$printPage .=       '<option value="overdue">Past Due</option>';
-	$printPage .=     '</select>';
-	$printPage .=     '<select id="sp-action-sort" class="sp-select">';
-	$printPage .=       '<option value="importance">Order by Importance</option>';
-	$printPage .=       '<option value="duedate">Order by Due Date</option>';
-	$printPage .=       '<option value="custom">Order by Custom</option>';
-	$printPage .=     '</select>';
+	$printPage .=     '<select id="sp-action-filter-status" class="sp-select"><option value="open">Open</option><option value="">All</option><option value="resolved">Completed</option></select>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Label</span><select id="sp-action-filter-category" class="sp-select"><option value="">All labels</option></select></label>';
+	// "Due" is anything still dated ahead, "Past due" anything already overdue.
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Due date</span><select id="sp-action-filter-due" class="sp-select"><option value="">Any due date</option><option value="due">Due</option><option value="overdue">Past due</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-action-sort" class="sp-select"><option value="importance">By importance</option><option value="duedate">By due date</option><option value="custom">My own order (drag to arrange)</option></select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-action-items-list" id="sp-action-items-list"></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-action-items-list"></div>';
+	$printPage .= '</div></section>';
 }
 
 // Notes Panel — ongoing notepads. The list, filters and the note editor are all built client-side
-// (initNotes / loadNotes in script-site-pulse.js); the cards reuse the Action Items card styling.
+// (initNotes / loadNotes in script-site-pulse.js).
 if ( in_array( 'view_notes', $caps, true ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-notes">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Notes</h2>';
-	$printPage .=     '<div class="sp-panel-header-actions">';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-note-btn">+ New Note</button>';
-	$printPage .=     '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-notes"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Notes"><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Notes</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-add-note-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Note</button></div>'
+		.           '</div></div>'
+		.           $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-notes-search' )
+		.           $sp_bar_btn( 3, 'tasks', 'Action items', 'nav:action-items' );
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-notes-search" class="sp-input" placeholder="Search notes and log entries" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-note-show="">All</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-note-show="personal">Just me</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-note-show="shared">Shared</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-note-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-note-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-report-filters">';
-	$printPage .=     '<input type="search" id="sp-notes-search" class="sp-input sp-action-search" placeholder="Search notes &amp; log entries…" autocomplete="off">';
-	$printPage .=     '<select id="sp-notes-filter-show" class="sp-select">';
-	$printPage .=       '<option value="">All notes</option>';
-	$printPage .=       '<option value="personal">Just me</option>';
-	$printPage .=       '<option value="shared">Shared</option>';
-	$printPage .=     '</select>';
-	$printPage .=     '<select id="sp-notes-filter-label" class="sp-select"><option value="">All labels</option></select>';
-	$printPage .=     '<select id="sp-notes-sort" class="sp-select">';
-	$printPage .=       '<option value="edited">Order by Last Edited</option>';
-	$printPage .=       '<option value="created">Order by Newest</option>';
-	$printPage .=       '<option value="title">Order by Title</option>';
-	$printPage .=       '<option value="custom">Order by Custom</option>';
-	$printPage .=     '</select>';
+	// The filter controls. Not shown on the page: the tabs drive the show select, Filter opens the rest in a sheet.
+	$printPage .=   '<div hidden data-sp-notes-filter-holder>';
+	$printPage .=     '<select id="sp-notes-filter-show" class="sp-select"><option value="">All notes</option><option value="personal">Just me</option><option value="shared">Shared</option></select>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Label</span><select id="sp-notes-filter-label" class="sp-select"><option value="">All labels</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-notes-sort" class="sp-select">'
+		.               '<option value="edited">Last edited</option>'
+		.               '<option value="created">Newest</option>'
+		.               '<option value="title">Title</option>'
+		.               '<option value="custom">My own order (drag to arrange)</option>'
+		.             '</select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-action-items-list sp-notes-list" id="sp-notes-list"></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-notes-list"></div>';
+	$printPage .= '</div></section>';
 }
 
 // AI Assistant Panel — company-voiced AI chat (role + brand voice). Loads lazily on first open.
@@ -1047,45 +1123,41 @@ if ( $cap_import_cards ) {
 // Expense Report cover page — composes Sections A–F into one report with the Summary of
 // Expenses (totals by GL account) and Total Due to Employee. Data loads lazily on activation.
 if ( $cap_x_overview ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-expense-report">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Overview' ) . '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-rep-intro">Everything from every section, totalled for the period — the same layout as your printed expense report. Use the period filter to pick a pay period, then export to PDF.</div></div>';
-	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-rep-toolbar-wrap"></div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-expense-report"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Expense report"><div class="sp-page-head__eyebrow">Expense report</div><h1 class="sp-page-head__title">Overview</h1>'
+		.           '<p class="sp-page-head__lead">Everything from every section, totalled for the period, in the same layout as your printed expense report. Pick a pay period, then export to PDF.</p></div>'
+		.           $sp_bar_btn( 1, 'car', 'Mileage', 'nav:mileage' )
+		.           $sp_bar_btn( 2, 'meal', 'Meal', 'nav:business-meals click:#sp-meal-add-btn' )
+		.           $sp_bar_btn( 3, 'receipt', 'Receipt', 'nav:other-expenses click:#sp-oexp-add-btn' );
+	$printPage .=   '<div id="sp-rep-toolbar-wrap"></div>';
 	$printPage .=   '<div class="sp-rep-content" id="sp-rep-content"></div>';
-	$printPage .= '</section>';
+	$printPage .= '</div></section>';
 }
 
 // Mileage Panel
 if ( $cap_x_mileage ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Expense Report','Mileage' );
+	// The list view (hidden as a whole while the Add/Edit-a-day form is open).
+	$printPage .= '<div class="sp-page" data-sp-list-view>';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Mileage"><div class="sp-page-head__eyebrow">Expense report</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Mileage</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-mileage-add-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Day</button></div>'
+		.           '</div></div>'
+		.           $sp_bar_btn( 2, 'receipt', 'Receipt', 'nav:other-expenses click:#sp-oexp-add-btn' )
+		.           $sp_bar_btn( 3, 'meal', 'Meal', 'nav:business-meals click:#sp-meal-add-btn' );
+	// Listed under More rather than shown on the page.
+	$printPage .=   '<button type="button" class="unique" id="sp-mileage-pdf-btn" hidden data-sp-more-action data-sp-icon="doc" data-sp-sub="A PDF of the days in this period">Export PDF</button>';
+	$printPage .=   '<button type="button" class="unique" id="sp-mileage-map-btn" hidden data-sp-more-action data-sp-icon="pin" data-sp-sub="Your routes on a map">Route map</button>';
+	$printPage .=   '<button type="button" class="unique sp-filter sp-filter--block" data-sp-period>' . $svg( $icons['calendar'] ) . ' <span data-sp-period-label>This period</span> ' . $svg( $icons['chevron'] ) . '</button>';
+	// Custom dates, shown in the period sheet. loadMileageEntries() reads these.
+	$printPage .=   '<div hidden data-sp-mileage-dates>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">From</span><input type="date" id="sp-mileage-filter-start" class="sp-input"></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">To</span><input type="date" id="sp-mileage-filter-end" class="sp-input"></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-mileage-summary" id="sp-mileage-summary"></div>';
-	$printPage .=   '<div class="sp-toolbar sp-period-toolbar" id="sp-mileage-toolbar">';
-	$printPage .=     '<div class="sp-mileage-period-controls">';
-	$printPage .=       '<div class="sp-toolbar-group sp-mileage-quickranges">';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-range" data-range="period" id="sp-mileage-range-period">This Period</button>';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-range" data-range="ytd">Year to Date</button>';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-range" data-range="last30">Last 30 Days</button>';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-secondary sp-mileage-range" data-range="last90">Last 90 Days</button>';
-	$printPage .=       '</div>';
-	$printPage .=       '<div class="sp-toolbar-group">';
-	$printPage .=         '<select id="sp-mileage-month-picker" class="sp-select sp-mileage-month-picker"></select>';
-	$printPage .=         '<input type="date" id="sp-mileage-filter-start" class="sp-input" placeholder="From">';
-	$printPage .=         '<input type="date" id="sp-mileage-filter-end" class="sp-input" placeholder="To">';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-filter-clear">Clear</button>';
-	$printPage .=       '</div>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-mileage-actions sp-toolbar-actions">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-pdf-btn">' . $svg( $icons['file'] ) . 'PDF</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-map-btn">' . $svg( $icons['mappin'] ) . 'Map</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-btn">+ Add a Day</button>';
-	$printPage .=     '</div>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-mileage-intro">Log each day\'s business trips — your route &amp; miles are calculated for you. These feed Section A of your expense report.</div></div>';
-	$printPage .=   '<div class="sp-mileage-list" id="sp-mileage-list"></div>';
-	$printPage .=   '<div class="sp-card sp-mileage-form-wrap" id="sp-mileage-form-wrap" hidden></div>';
+	$printPage .=   '<div class="sp-stack" id="sp-mileage-summary"></div>';
+	$printPage .=   '<section class="sp-section"><h2 class="sp-section__title">Days</h2><div class="sp-stack" id="sp-mileage-list"></div></section>';
+	$printPage .= '</div>';
+	$printPage .=   '<div class="sp-page" id="sp-mileage-form-wrap" hidden></div>';
 	$printPage .= '</section>';
 }
 
@@ -1125,79 +1197,39 @@ if ( $cap_x_mileage ) {
 	$printPage .= '</section>';
 }
 
-// Vehicle Expenses Panel (Section B of the expense report). Data loads lazily on activation.
+// The expense-entry panels (Sections B–F) share one layout: page head with Add, period toolbar,
+// summary, the add/edit form (shown in place of the list) and the list. The toolbar, lists and forms
+// are built client-side; data loads lazily on activation.
+$sp_expense_panel = function ( $panel, $prefix, $title, $add_label, $intro, $bar = '' ) use ( $svg, $icons ) {
+	return '<section class="sp-panel" id="sp-panel-' . $panel . '"><div class="sp-page">'
+		. '<div class="sp-page-head" id="sp-' . $prefix . '-head" data-sp-title="' . esc_attr( $title ) . '"><div class="sp-page-head__eyebrow">Expense report</div><div class="sp-page-head__row">'
+		.   '<h1 class="sp-page-head__title">' . esc_html( $title ) . '</h1>'
+		.   '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-' . $prefix . '-add-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' ' . esc_html( ucwords( $add_label ) ) . '</button></div>'
+		. '</div><p class="sp-page-head__lead">' . $intro . '</p></div>' . $bar
+		. '<div id="sp-' . $prefix . '-toolbar-wrap"></div>'
+		. '<div class="sp-stack" id="sp-' . $prefix . '-summary"></div>'
+		. '<div id="sp-' . $prefix . '-form-wrap" hidden></div>'
+		. '<div class="sp-stack" id="sp-' . $prefix . '-content"></div>'
+		. '</div></section>';
+};
+// Bar shortcuts shared by the expense screens (each shows only if this person has that screen).
+$sp_mil  = $sp_bar_btn( 2, 'car', 'Mileage', 'nav:mileage' );
+$sp_rcpt = $sp_bar_btn( 3, 'receipt', 'Receipt', 'nav:other-expenses click:#sp-oexp-add-btn' );
+$sp_meal = $sp_bar_btn( 3, 'meal', 'Meal', 'nav:business-meals click:#sp-meal-add-btn' );
 if ( $cap_x_vehicle ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-vehicle-expenses">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Expense Report','Vehicle Expenses' );
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-vexp-add-btn">+ Add Expense</button>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-vexp-summary" id="sp-vexp-summary"></div>';
-	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-vexp-toolbar-wrap"></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-vexp-intro">Company-driven fuel, washes, parking and repairs, plus personal tolls &amp; trailer costs. These feed Section B of your expense report.</div></div>';
-	$printPage .=   '<div class="sp-vexp-form-wrap" id="sp-vexp-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-vexp-content" id="sp-vexp-content"></div>';
-	$printPage .= '</section>';
+	$printPage .= $sp_expense_panel( 'vehicle-expenses', 'vexp', 'Vehicle expenses', 'Add expense', 'Company-driven fuel, washes, parking and repairs, plus personal tolls &amp; trailer costs. These feed Section B of your expense report.', $sp_mil . $sp_rcpt );
 }
-
-// Business Meals Panel (Section C of the expense report). Data loads lazily on activation.
 if ( $cap_x_meals ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-business-meals">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Expense Report','Business Meals' );
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-meal-add-btn">+ Add Meal</button>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-meal-summary" id="sp-meal-summary"></div>';
-	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-meal-toolbar-wrap"></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-meal-intro">Business meals, entertainment and meeting expenses. Note where you were, the business purpose, and who attended. These feed Section C of your expense report.</div></div>';
-	$printPage .=   '<div class="sp-meal-form-wrap" id="sp-meal-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-meal-content" id="sp-meal-content"></div>';
-	$printPage .= '</section>';
+	$printPage .= $sp_expense_panel( 'business-meals', 'meal', 'Business meals', 'Add meal', 'Business meals, entertainment and meeting expenses. Note where you were, the business purpose, and who attended. These feed Section C of your expense report.', $sp_mil . $sp_rcpt );
 }
-
-// Competitive Shopping Panel (Section D of the expense report). Data loads lazily on activation.
 if ( $cap_x_shop ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-competitive-shopping">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Expense Report','Competitive Shopping' );
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-shop-add-btn">+ Add Visit</button>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-shop-summary" id="sp-shop-summary"></div>';
-	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-shop-toolbar-wrap"></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-shop-intro">Competitive shopping visits — meals bought at other restaurants for research. Note where you went, the business purpose, and the store you shopped for. These feed Section D of your expense report.</div></div>';
-	$printPage .=   '<div class="sp-shop-form-wrap" id="sp-shop-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-shop-content" id="sp-shop-content"></div>';
-	$printPage .= '</section>';
+	$printPage .= $sp_expense_panel( 'competitive-shopping', 'shop', 'Competitive shopping', 'Add visit', 'Meals bought at other restaurants for research. Note where you went, the business purpose, and the store you shopped for. These feed Section D of your expense report.', $sp_mil . $sp_rcpt );
 }
-
-// Other Expenses Panel (Section E of the expense report). Data loads lazily on activation.
 if ( $cap_x_other ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-other-expenses">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Expense Report','Other Expenses' );
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-oexp-add-btn">+ Add Expense</button>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-oexp-summary" id="sp-oexp-summary"></div>';
-	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-oexp-toolbar-wrap"></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-oexp-intro">Anything that doesn\'t fit the other sections — food R&amp;D, home office, postage and the like. Enter the GL account for each line. These feed Section E of your expense report.</div></div>';
-	$printPage .=   '<div class="sp-oexp-form-wrap" id="sp-oexp-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-oexp-content" id="sp-oexp-content"></div>';
-	$printPage .= '</section>';
+	$printPage .= $sp_expense_panel( 'other-expenses', 'oexp', 'Other expenses', 'Add expense', 'Anything that doesn\'t fit the other sections: food R&amp;D, home office, postage and the like. Enter the GL account for each line. These feed Section E of your expense report.', $sp_mil . $sp_meal );
 }
-
-// Travel Expenses Panel (Section F of the expense report). Data loads lazily on activation.
 if ( $cap_x_travel ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-travel-expenses">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     $sp_crumb( 'Expense Report','Travel Expenses' );
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-trav-add-btn">+ Add Expense</button>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-trav-summary" id="sp-trav-summary"></div>';
-	$printPage .=   '<div class="sp-period-toolbar-wrap" id="sp-trav-toolbar-wrap"></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-trav-intro">Airfare, hotels, rental cars and taxis, and meals while traveling. These feed Section F of your expense report.</div></div>';
-	$printPage .=   '<div class="sp-trav-form-wrap" id="sp-trav-form-wrap" hidden></div>';
-	$printPage .=   '<div class="sp-trav-content" id="sp-trav-content"></div>';
-	$printPage .= '</section>';
+	$printPage .= $sp_expense_panel( 'travel-expenses', 'trav', 'Travel expenses', 'Add expense', 'Airfare, hotels, rental cars and taxis, and meals while traveling. These feed Section F of your expense report.', $sp_mil . $sp_meal );
 }
 
 // Approve Reports queue (supervisors) — submitted expense reports routed to this approver. Data lazy-loads.
@@ -1238,79 +1270,64 @@ if ( in_array( 'manage_reviews', $caps ) && ! $is_review_hub ) {
 
 // Reviews Panel (Google Business Profile). Data loads lazily on first activation.
 if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-reviews">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     '<h2>Reviews</h2>';
-	$printPage .=     '<div class="sp-reviews-actions">';
-	$printPage .=       '<span class="sp-reviews-analyze-status" id="sp-reviews-analyze-status"></span>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-reviews"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Reviews"><div class="sp-page-head__eyebrow">Customer feedback</div><h1 class="sp-page-head__title">Reviews</h1>'
+		.           '<p class="sp-page-head__lead" id="sp-reviews-analyze-status" aria-live="polite"></p></div>';
+	// Listed under More rather than shown on the page.
 	if ( in_array( 'manage_reviews', $caps ) || $eff_is_god ) {
-		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-analyze-btn">Analyze reviews</button>';
+		$printPage .= '<button type="button" class="unique" id="sp-reviews-analyze-btn" hidden data-sp-bar="3" data-sp-extra data-sp-icon="sparkle" data-sp-sub="Tag new reviews with topics and sentiment">Analyze reviews</button>';
 	}
 	// God-only CSV of the stored history (every platform, reply, AI topic and internal note) for
 	// offline analysis. Exports whatever the current filters match — All time + no filters = everything.
 	if ( site_pulse_god_can_override() ) {
-		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-export-btn" title="Download the reviews matching your current filters as a CSV">Export CSV</button>';
+		$printPage .= '<button type="button" class="unique" id="sp-reviews-export-btn" hidden data-sp-bar="2" data-sp-extra data-sp-icon="doc" data-sp-sub="A CSV of the reviews these filters match">Export CSV</button>';
 	}
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-reviews-refresh-btn">Refresh</button>';
-	$printPage .=     '</div>';
+	$printPage .=   '<button type="button" class="unique" id="sp-reviews-refresh-btn" hidden data-sp-bar="1" data-sp-extra data-sp-icon="bolt" data-sp-sub="Pull the newest reviews now">Find New Reviews</button>';
+
+	// One Filter sheet holds everything — time range, restaurant, brand, rating, platform; the tabs drive
+	// the reply filter. They drive the stat tiles and the list.
+	$printPage .=   '<div class="sp-toolbar">'
+		.             '<button type="button" class="unique sp-filter" data-sp-review-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-review-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>'
+		.           '</div>';
+	$printPage .=   '<div hidden data-sp-review-filter-holder>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Time range</span><select id="sp-reviews-stat-range" class="sp-select">'
+		.               '<option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option><option value="ytd">Year to date</option><option value="all">All time</option>'
+		.             '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Restaurant</span><select id="sp-reviews-stat-restaurant" class="sp-select"><option value="">All restaurants</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Brand</span><select id="sp-reviews-stat-brand" class="sp-select"><option value="">All brands</option></select></label>';
+	$printPage .=     '<select id="sp-reviews-filter-reply" class="sp-select"><option value="">All reviews</option><option value="unreplied">Needs reply</option><option value="replied">Replied</option></select>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Rating</span><select id="sp-reviews-filter-stars" class="sp-select">'
+		.               '<option value="">All ratings</option><option value="5">5 stars</option><option value="4">4 stars</option><option value="3">3 stars</option><option value="2">2 stars</option><option value="1">1 star</option>'
+		.             '</select></label>';
+	// Platforms filter — narrow the list to one source (e.g. only Facebook recommendations). Options come
+	// from the platforms actually present in the reviews table (sp_review_sources()). Guarded: if a partial
+	// deploy / stale OPcache leaves the reviews include out of sync, fall back to a single option instead
+	// of fataling the whole dashboard.
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Platform</span><select id="sp-reviews-filter-platform" class="sp-select">'
+		.               ( function_exists( 'sp_review_source_options_html' ) ? sp_review_source_options_html() : '<option value="">All platforms</option>' )
+		.             '</select></label>';
 	$printPage .=   '</div>';
-	// Analytics scope: restaurant / brand / time range. Drives the sentiment stat cards (and the list).
-	$printPage .=   '<div class="sp-reviews-statbar" id="sp-reviews-statbar">';
-	$printPage .=     '<select id="sp-reviews-stat-restaurant" class="sp-select"><option value="">All restaurants</option></select>';
-	$printPage .=     '<select id="sp-reviews-stat-brand" class="sp-select"><option value="">All brands</option></select>';
-	$printPage .=     '<select id="sp-reviews-stat-range" class="sp-select">';
-	$printPage .=       '<option value="30" selected>Last 30 days</option>';
-	$printPage .=       '<option value="90">Last 90 days</option>';
-	$printPage .=       '<option value="365">Last 12 months</option>';
-	$printPage .=       '<option value="ytd">Year to date</option>';
-	$printPage .=       '<option value="all">All time</option>';
-	$printPage .=     '</select>';
-	$printPage .=   '</div>';
+
 	$printPage .=   '<div class="sp-reviews-stats" id="sp-reviews-stats"></div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-reviews-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<select id="sp-reviews-filter-stars" class="sp-select">';
-	$printPage .=         '<option value="">All ratings</option>';
-	$printPage .=         '<option value="5">5 stars</option>';
-	$printPage .=         '<option value="4">4 stars</option>';
-	$printPage .=         '<option value="3">3 stars</option>';
-	$printPage .=         '<option value="2">2 stars</option>';
-	$printPage .=         '<option value="1">1 star</option>';
-	$printPage .=       '</select>';
-	$printPage .=       '<select id="sp-reviews-filter-reply" class="sp-select">';
-	$printPage .=         '<option value="">All reviews</option>';
-	$printPage .=         '<option value="unreplied">Needs reply</option>';
-	$printPage .=         '<option value="replied">Replied</option>';
-	$printPage .=       '</select>';
-	// Platforms filter — narrow the list to one source (e.g. only Facebook recommendations).
-	// Options come from the platforms actually present in the reviews table (sp_review_sources()),
-	// so an install pulling only Google + Facebook shows exactly those two and nothing appears
-	// until real rows from another platform land.
-	$printPage .=       '<select id="sp-reviews-filter-platform" class="sp-select">';
-	// Guarded: if a partial deploy / stale OPcache leaves the reviews include out of sync, fall back to a
-	// single option instead of fataling the whole dashboard.
-	$printPage .=         ( function_exists( 'sp_review_source_options_html' ) ? sp_review_source_options_html() : '<option value="">All platforms</option>' );
-	$printPage .=       '</select>';
-	$printPage .=     '</div>';
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-reviews-list" id="sp-reviews-list"><div class="sp-loading"></div></div>';
+	$printPage .=   '<div class="sp-tabs" role="tablist">'
+		.             '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-review-reply="">All</button>'
+		.             '<button type="button" class="unique sp-tab" role="tab" data-sp-review-reply="unreplied">Needs reply</button>'
+		.             '<button type="button" class="unique sp-tab" role="tab" data-sp-review-reply="replied">Replied</button>'
+		.           '</div>';
+	$printPage .=   '<div class="sp-stack sp-reviews-list" id="sp-reviews-list"></div>';
 	$printPage .=   '<div class="sp-reviews-more">';
-	$printPage .=     '<div class="sp-reviews-count" id="sp-reviews-count" hidden></div>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-reviews-load-older" hidden>Load older reviews</button>';
+	$printPage .=     '<p class="sp-meta" id="sp-reviews-count" hidden></p>';
+	$printPage .=     '<button type="button" class="unique sp-btn" id="sp-reviews-load-older" hidden>Load older reviews</button>';
 	$printPage .=   '</div>';
-	$printPage .= '</section>';
+	$printPage .= '</div></section>';
 }
 
 // Client Reviews Panel (agency / hub only). Every mapped client's Google reviews grouped by
 // client, with reply + one-click push of a review to that client's site as a Testimonial CPT.
 if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_god || in_array( 'manage_reviews', $caps ) ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-agency-reviews">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     '<h2>Client Reviews</h2>';
-	$printPage .=     '<div class="sp-reviews-actions">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-agency-reviews-refresh-btn">Refresh</button>';
-	$printPage .=     '</div>';
-	$printPage .=   '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-agency-reviews"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Client reviews"><div class="sp-page-head__eyebrow">Agency</div><h1 class="sp-page-head__title">Client reviews</h1></div>';
+	$printPage .=   '<button type="button" class="unique" id="sp-agency-reviews-refresh-btn" hidden data-sp-more-action data-sp-icon="bolt" data-sp-sub="Pull every client\'s newest reviews">Refresh reviews</button>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-agency-reviews-toolbar">';
 	$printPage .=     '<div class="sp-toolbar-group">';
 	$printPage .=       '<input type="search" id="sp-agency-client-search" class="sp-input" list="sp-agency-client-list" placeholder="Search company…" autocomplete="off">';
@@ -1340,131 +1357,118 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .=       '</select>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-reviews-list" id="sp-agency-reviews-list"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack sp-reviews-list" id="sp-agency-reviews-list"><div class="sp-loading"></div></div>';
+	$printPage .= '</div></section>';
 }
 
 // Site Fleet Panel (agency / hub only). Every Battle Plan site's nightly snapshot in one sortable
 // list, problem sites first. Same double gate as the nav item: hub install + agency capability.
 if ( function_exists( 'sp_fleet_is_hub' ) && sp_fleet_is_hub()
 	&& ( $eff_is_god || in_array( 'view_fleet', $caps, true ) || in_array( 'manage_fleet', $caps, true ) ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-fleet">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     '<h2>Site Fleet</h2>';
-	$printPage .=     '<div class="sp-reviews-actions">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-fleet-refresh-btn">Refresh</button>';
-	$printPage .=     '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-fleet"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Site fleet"><div class="sp-page-head__eyebrow">Agency</div><h1 class="sp-page-head__title">Site fleet</h1></div>';
+	$printPage .=   '<button type="button" class="unique" id="sp-fleet-refresh-btn" hidden data-sp-more-action data-sp-icon="bolt" data-sp-sub="Reload every site\'s latest snapshot">Refresh fleet</button>';
+	$printPage .=   '<div class="sp-stack" id="sp-fleet-stats"></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-fleet-search" class="sp-input" placeholder="Search sites" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-fleet-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-fleet-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-stat-grid" id="sp-fleet-stats"></div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-fleet-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="search" id="sp-fleet-search" class="sp-input" placeholder="Search site…" autocomplete="off">';
-	$printPage .=       '<select id="sp-fleet-filter" class="sp-select">';
-	$printPage .=         '<option value="">All sites</option>';
-	$printPage .=         '<option value="alerts">Needs attention</option>';
-	$printPage .=         '<option value="silent">Not reporting</option>';
-	$printPage .=         '<option value="audit">Audit due</option>';
-	$printPage .=       '</select>';
-	$printPage .=       '<select id="sp-fleet-sort" class="sp-select">';
-	$printPage .=         '<option value="severity" selected>Problems first</option>';
-	$printPage .=         '<option value="name">Name</option>';
-	$printPage .=         '<option value="traffic">Traffic</option>';
-	$printPage .=         '<option value="change">Biggest change</option>';
-	$printPage .=         '<option value="audit">Oldest audit</option>';
-	$printPage .=       '</select>';
-	$printPage .=       '<select id="sp-fleet-sort-dir" class="sp-select" aria-label="Sort direction">';
-	$printPage .=         '<option value="" selected>Normal order</option>';
-	$printPage .=         '<option value="reverse">Reverse order</option>';
-	$printPage .=       '</select>';
-	$printPage .=     '</div>';
+	// Show / order / direction, shown in the Filter sheet.
+	$printPage .=   '<div hidden data-sp-fleet-filter-holder>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Show</span><select id="sp-fleet-filter" class="sp-select">'
+		.               '<option value="">All sites</option><option value="alerts">Needs attention</option><option value="silent">Not reporting</option><option value="audit">Audit due</option>'
+		.             '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-fleet-sort" class="sp-select">'
+		.               '<option value="severity" selected>Problems first</option><option value="name">Name</option><option value="traffic">Traffic</option><option value="change">Biggest change</option><option value="audit">Oldest audit</option>'
+		.             '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Direction</span><select id="sp-fleet-sort-dir" class="sp-select"><option value="" selected>Normal order</option><option value="reverse">Reverse order</option></select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-fleet-list" id="sp-fleet-list"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-fleet-list"></div>';
+	$printPage .= '</div></section>';
 }
 
 // Customer Surveys Panel — submissions forwarded in from the public restaurant sites.
 // Sibling tab of Reviews; gated on the surveys module's caps (independent of Google reviews).
 if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-surveys">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     '<h2>Comment Cards</h2>';
-	$printPage .=     '<div class="sp-reviews-actions">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-archive-toggle">View Archived Comment Cards</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-survey-refresh-btn">Refresh</button>';
-	$printPage .=     '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-surveys"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Comment cards"><div class="sp-page-head__eyebrow">Customer feedback</div><h1 class="sp-page-head__title">Comment cards</h1></div>';
+	$printPage .=   '<button type="button" class="unique" id="sp-survey-refresh-btn" hidden data-sp-bar="1" data-sp-extra data-sp-icon="bolt" data-sp-sub="Load the newest comment cards">Find New Comment Cards</button>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-survey-search" class="sp-input" placeholder="Search name, phone or address" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-survey-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-survey-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-survey-summary" id="sp-survey-summary"></div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-survey-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="search" id="sp-survey-search" class="sp-input sp-survey-search" placeholder="Search name, phone, or address…">';
-	$printPage .=       '<select id="sp-survey-filter-location" class="sp-select"><option value="">All locations</option></select>';
-	$printPage .=       '<select id="sp-survey-filter-range" class="sp-select">';
-	$printPage .=         '<option value="">All time</option>';
-	$printPage .=         '<option value="30">Last 30 days</option>';
-	$printPage .=         '<option value="90">Last 90 days</option>';
-	$printPage .=         '<option value="365">Last 12 months</option>';
-	$printPage .=         '<option value="ytd">Year to date</option>';
-	$printPage .=       '</select>';
-	$printPage .=       '<select id="sp-survey-filter-source" class="sp-select">';
-	$printPage .=         '<option value="">All sources</option>';
-	$printPage .=         '<option value="web">Web</option>';
-	$printPage .=         '<option value="imported">Imported</option>';
-	$printPage .=       '</select>';
-	$printPage .=     '</div>';
+	// Location, time range and source, shown in the Filter sheet.
+	$printPage .=   '<div hidden data-sp-survey-filter-holder>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Location</span><select id="sp-survey-filter-location" class="sp-select"><option value="">All locations</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Time range</span><select id="sp-survey-filter-range" class="sp-select">'
+		.               '<option value="">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last 12 months</option><option value="ytd">Year to date</option>'
+		.             '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Source</span><select id="sp-survey-filter-source" class="sp-select"><option value="">All sources</option><option value="web">Web</option><option value="imported">Imported</option></select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-survey-list" id="sp-survey-list"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-reviews-stats" id="sp-survey-summary"></div>';
+	// Active / Archived: which list you're on (the Archived tab carries the count).
+	$printPage .=   '<div class="sp-tabs" role="tablist">'
+		.             '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-survey-view="active">Active</button>'
+		.             '<button type="button" class="unique sp-tab" role="tab" data-sp-survey-view="archived">Archived <span class="sp-count sp-count--quiet" data-sp-survey-archived-count hidden></span></button>'
+		.           '</div>';
+	$printPage .=   '<div class="sp-stack sp-survey-list" id="sp-survey-list"></div>';
+	$printPage .= '</div></section>';
 }
+
+// New / Handled / All tabs, shared by both email panels (they drive each panel's status select).
+$sp_email_tabs = '<div class="sp-tabs" role="tablist">'
+	. '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-email-status="new">New</button>'
+	. '<button type="button" class="unique sp-tab" role="tab" data-sp-email-status="handled">Handled</button>'
+	. '<button type="button" class="unique sp-tab" role="tab" data-sp-email-status="all">All</button>'
+	. '</div>';
 
 // Customer Emails Panel — flagged customer-service emails forwarded in from the public sites. List of
 // message cards with status / type / brand / location filters + search; mark-handled + delete for managers.
 if ( $cap_emails_area ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-emails">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Emails' ) . '</div>';
-	$printPage .=   '<div class="sp-toolbar sp-emails-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<select id="sp-emails-filter-status" class="sp-select"><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
-	$printPage .=       '<select id="sp-emails-filter-category" class="sp-select"><option value="">All types</option></select>';
-	$printPage .=       '<select id="sp-emails-filter-brand" class="sp-select"><option value="">All brands</option></select>';
-	$printPage .=       '<select id="sp-emails-filter-location" class="sp-select"><option value="">All locations</option></select>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group sp-emails-search-group">';
-	$printPage .=       '<input type="search" id="sp-emails-search" class="sp-input" placeholder="Search name, email, phone, or message…">';
-	$printPage .=     '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-emails"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Emails"><div class="sp-page-head__eyebrow">Customer feedback</div><h1 class="sp-page-head__title">Emails</h1></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-emails-search" class="sp-input" placeholder="Search name, email, phone or message" autocomplete="off"></div>';
+	$printPage .=     $sp_email_tabs;
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-emails-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-emails-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="sp-emails-count"></span></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-emails-count" id="sp-emails-count"></div>';
-	$printPage .=   '<div class="sp-emails-list" id="sp-emails-list"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	// Type / brand / location, shown in the Filter sheet; the tabs drive the status select.
+	$printPage .=   '<div hidden data-sp-emails-filter-holder>';
+	$printPage .=     '<select id="sp-emails-filter-status" class="sp-select"><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Type</span><select id="sp-emails-filter-category" class="sp-select"><option value="">All types</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Brand</span><select id="sp-emails-filter-brand" class="sp-select"><option value="">All brands</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Location</span><select id="sp-emails-filter-location" class="sp-select"><option value="">All locations</option></select></label>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stack" id="sp-emails-list"></div>';
+	$printPage .= '</div></section>';
 }
 
 // Routed Emails Panel — a generic retention center for forwarded emails addressed to a specific person.
 // A viewer sees only the ones addressed to their account email; a manager (manage_routed_emails) sees all.
 if ( in_array( 'view_routed_emails', $caps, true ) || in_array( 'manage_routed_emails', $caps, true ) ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-emails-routed">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Routed Emails' ) . '</div>';
-	$printPage .=   '<div class="sp-toolbar sp-emails-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<select id="sp-remails-filter-status" class="sp-select"><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group sp-emails-search-group">';
-	$printPage .=       '<input type="search" id="sp-remails-search" class="sp-input" placeholder="Search subject, sender, or message…">';
-	$printPage .=     '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-emails-routed"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Routed emails"><div class="sp-page-head__eyebrow">Customer feedback</div><h1 class="sp-page-head__title">Routed emails</h1></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-remails-search" class="sp-input" placeholder="Search subject, sender or message" autocomplete="off"></div>';
+	$printPage .=     $sp_email_tabs;
+	$printPage .=     '<p class="sp-meta" id="sp-remails-count"></p>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-emails-count" id="sp-remails-count"></div>';
-	$printPage .=   '<div class="sp-emails-list" id="sp-remails-list"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<select id="sp-remails-filter-status" class="sp-select" hidden><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
+	$printPage .=   '<div class="sp-stack" id="sp-remails-list"></div>';
+	$printPage .= '</div></section>';
 }
 
 // Customer Messages Panel — Facebook / Instagram DMs. Two-pane inbox reusing the Messages styling
 // (conversation list + thread). Inbound arrives via the hub relay; replies go back out through the hub.
 if ( $cap_cm_area ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-customer-messages">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Customer Feedback', 'Direct Messages' ) . '</div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-customer-messages"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Direct messages"><div class="sp-page-head__eyebrow">Customer feedback</div><h1 class="sp-page-head__title">Direct messages</h1>'
+		.           '<p class="sp-page-head__lead">Facebook and Instagram messages from customers.</p></div>';
 	$printPage .=   '<div class="sp-messenger" id="sp-cm-messenger">';
-	$printPage .=     '<div class="sp-card sp-msg-list" id="sp-cm-list"><div class="sp-loading"></div></div>';
-	$printPage .=     '<div class="sp-card sp-msg-thread" id="sp-cm-thread"></div>';
+	$printPage .=     '<div class="sp-msg-list" id="sp-cm-list"><div class="sp-msg-empty">Loading…</div></div>';
+	$printPage .=     '<div class="sp-msg-thread" id="sp-cm-thread"></div>';
 	$printPage .=   '</div>';
-	$printPage .= '</section>';
+	$printPage .= '</div></section>';
 }
 
 // Company Directory Panel — list of employee cards with search + brand/location/position/status
@@ -1480,27 +1484,65 @@ if ( $cap_directory ) {
 		return $html;
 	};
 
-	$printPage .= '<section class="sp-panel" id="sp-panel-directory">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">';
-	$printPage .=     '<h2>Directory</h2>';
-	if ( $cap_directory_manage ) {
-		$printPage .=   '<div class="sp-reviews-actions">';
-		$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dir-add-btn">+ Add Employee</button>';
-		$printPage .=   '</div>';
-	}
+	$printPage .= '<section class="sp-panel" id="sp-panel-directory"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Directory"><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Directory</h1>'
+		.             ( $cap_directory_manage ? '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-dir-add-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Employee</button></div>' : '' )
+		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-dir-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-dir-search" class="sp-input" placeholder="Search name, email or phone" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-dir-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-dir-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="sp-dir-count"></span></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-dir-filters">';
-	$printPage .=     '<select id="sp-dir-filter-brand" class="sp-select"><option value="">All brands</option>' . $dir_select_opts( $dir_opts['brands'] ) . '</select>';
-	$printPage .=     '<select id="sp-dir-filter-location" class="sp-select"><option value="">All locations</option>' . $dir_select_opts( $dir_opts['locations'] ) . '</select>';
-	$printPage .=     '<select id="sp-dir-filter-position" class="sp-select"><option value="">All positions</option>' . $dir_select_opts( $dir_opts['positions'] ) . '</select>';
-	$printPage .=     '<select id="sp-dir-filter-status" class="sp-select"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select>';
+	// Brand / location / position / status, shown in the Filter sheet. The dashboard's Directory section
+	// copies these option lists and writes back into them.
+	$printPage .=   '<div hidden data-sp-dir-filter-holder>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Brand</span><select id="sp-dir-filter-brand" class="sp-select"><option value="">All brands</option>' . $dir_select_opts( $dir_opts['brands'] ) . '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Location</span><select id="sp-dir-filter-location" class="sp-select"><option value="">All locations</option>' . $dir_select_opts( $dir_opts['locations'] ) . '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Position</span><select id="sp-dir-filter-position" class="sp-select"><option value="">All positions</option>' . $dir_select_opts( $dir_opts['positions'] ) . '</select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Status</span><select id="sp-dir-filter-status" class="sp-select"><option value="active">Active</option><option value="inactive">Inactive</option><option value="all">All</option></select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-dir-searchrow">';
-	$printPage .=     '<input type="search" id="sp-dir-search" class="sp-input sp-dir-search" placeholder="Search name, email, or phone…">';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-dir-clear">Clear</button>';
+	$printPage .=   '<div class="sp-stack" id="sp-directory-grid"></div>';
+	$printPage .= '</div></section>';
+}
+
+// Jobsites Panel — list of jobs (thumb, address, live/draft, its /service/ page) with search + status
+// filters. Add/edit happens in a JS modal (photos, address w/ "Use my location", description).
+if ( $cap_jobsites ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-jobsites"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Jobsites"><div class="sp-page-head__eyebrow">Website</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Jobsites</h1>'
+		.             ( $cap_jobsites_add ? '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-job-add-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Jobsite</button></div>' : '' )
+		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-job-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-job-search" class="sp-input" placeholder="Search customer, address or description" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-job-status="all">All</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-job-status="publish">Live</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-job-status="draft">Drafts</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-job-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-job-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="sp-job-count"></span></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-dir-count" id="sp-dir-count"></div>';
-	$printPage .=   '<div class="sp-directory-grid" id="sp-directory-grid"><div class="sp-loading"></div></div>';
+	// Added by + order, shown in the Filter sheet; the tabs drive the status select.
+	$printPage .=   '<div hidden data-sp-job-filter-holder>';
+	$printPage .=     '<select id="sp-job-filter-status" class="sp-select"><option value="all">All statuses</option><option value="publish">Live</option><option value="draft">Drafts</option></select>';
+	// Filled by JS from the list response: All, then the current user, then everyone else who added jobs.
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Added by</span><select id="sp-job-filter-author" class="sp-select"><option value="0">All users</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-job-sort" class="sp-select"><option value="date">Newest first</option><option value="date_asc">Oldest first</option><option value="az">A–Z</option><option value="za">Z–A</option></select></label>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stack" id="sp-job-list"></div>';
+	$printPage .=   '<div class="sp-reviews-more" id="sp-job-more"></div>';
+	$printPage .= '</div></section>';
+}
+
+// Shift Scheduling Panel — the hosted scheduling app (supervisor or member view, as the effective user).
+// The sidebar children switch its views; its own header/tab bars are hidden in style-site-pulse.css.
+if ( $cap_schedules ) {
+	// Standard group breadcrumb; the current-view label (.sp-crumb-current) is swapped by JS per child.
+	$printPage .= '<section class="sp-panel" id="sp-panel-schedules">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Shift Scheduling', 'Claim OT' ) . '</div>';
+	$printPage .=   sp_schedules_panel_html();
 	$printPage .= '</section>';
 }
 
@@ -1571,57 +1613,127 @@ $sp_book_tripwire .= '</div>';
 # endpoints land. Slugs match the nav children above. Reuses the booking
 # JS tripwire above, which is about the shared script file, not about booking.
 --------------------------------------------------------------*/
+// A search box with its icon, shared by the four Store lists.
+$sp_store_search = function ( $id, $placeholder ) use ( $svg, $icons ) {
+	return '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span>'
+		. '<input type="search" id="' . esc_attr( $id ) . '" class="sp-input" placeholder="' . esc_attr( $placeholder ) . '" autocomplete="off"></div>';
+};
+// A screen's one Filter button: "Filter · N", the applied choices under it, and the count.
+$sp_store_filter = function ( $key, $count_id ) use ( $svg, $icons ) {
+	return '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-' . $key . '-filters>' . $svg( $icons['sliders'] )
+		. ' <span data-sp-' . $key . '-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="' . esc_attr( $count_id ) . '"></span></div>';
+};
 if ( $cap_store_orders ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-store-orders">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Store', 'Orders' );
-	if ( $cap_store_manage ) {
-		$printPage .= '<div class="sp-panel-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-store-order-new">New Order</button></div>';
+	// No "New Order" button yet: entering an order by hand needs a product picker, and a button
+	// that does nothing is worse than no button.
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-orders"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Orders"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Orders</h1>'
+		.             $sp_bar_btn( 1, 'search', 'Search', 'focus:#sp-store-order-search' )
+		.             '<button type="button" class="unique" hidden data-sp-bar="2" data-sp-extra data-sp-icon="truck" id="sp-store-toship-btn">To ship</button>'
+		.           '</div></div>';
+	$printPage .=   '<div id="sp-store-order-summary"></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_store_search( 'sp-store-order-search', 'Search name, email or order number' );
+	// The tabs drive the status select below. Open leads: it's where the work is.
+	$sp_so_tabs = [ 'open' => 'Open' ] + sp_store_order_statuses() + [ '' => 'All' ];
+	$printPage .=     '<div class="sp-tabs" role="tablist">';
+	foreach ( $sp_so_tabs as $sp_so_status => $sp_so_label ) {
+		$printPage .=   '<button type="button" class="unique sp-tab' . ( 'open' === $sp_so_status ? ' is-active' : '' ) . '" role="tab" data-sp-store-order-status="' . esc_attr( $sp_so_status ) . '">' . esc_html( $sp_so_label ) . '</button>';
 	}
+	$printPage .=     '</div>';
+	$printPage .=     $sp_store_filter( 'store-order', 'sp-store-order-count' );
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-store-order-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="search" id="sp-store-order-search" class="sp-input" placeholder="Search name, email, or order number&hellip;">';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">Status</span>';
-	$printPage .=       '<select id="sp-store-order-status" class="sp-select">';
-	foreach ( sp_store_order_statuses() as $sp_so_status => $sp_so_label ) {
-		$printPage .=     '<option value="' . esc_attr( $sp_so_status ) . '"' . ( 'open' === $sp_so_status ? ' selected' : '' ) . '>' . esc_html( $sp_so_label ) . '</option>';
+	$printPage .=   '<div hidden data-sp-store-order-filter-holder>';
+	$printPage .=     '<select id="sp-store-order-status" class="sp-select">';
+	foreach ( $sp_so_tabs as $sp_so_status => $sp_so_label ) {
+		$printPage .=   '<option value="' . esc_attr( $sp_so_status ) . '"' . ( 'open' === $sp_so_status ? ' selected' : '' ) . '>' . esc_html( $sp_so_label ) . '</option>';
 	}
-	$printPage .=       '<option value="">All</option></select>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">Fulfillment</span>';
-	$printPage .=       '<select id="sp-store-order-fulfillment" class="sp-select"><option value="">Any</option>';
+	$printPage .=     '</select>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Shipping</span><select id="sp-store-order-fulfillment" class="sp-select"><option value="">Shipped or not</option>';
 	foreach ( sp_store_fulfillment_statuses() as $sp_sf_status => $sp_sf_label ) {
-		$printPage .=     '<option value="' . esc_attr( $sp_sf_status ) . '">' . esc_html( $sp_sf_label ) . '</option>';
+		$printPage .=   '<option value="' . esc_attr( $sp_sf_status ) . '">' . esc_html( $sp_sf_label ) . '</option>';
 	}
-	$printPage .=       '</select>';
-	$printPage .=     '</div>';
+	$printPage .=     '</select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   $sp_book_tripwire;
-	$printPage .=   '<div class="sp-table-card" id="sp-store-orders"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-store-orders"></div>';
+	$printPage .=   '<div id="sp-store-order-more"></div>';
+	$printPage .= '</div></section>';
+}
+if ( $cap_store_orders ) {
+	// Customers: everyone who has bought, with members folded in. The Everyone / Members tabs and
+	// the Give Membership button are shown by JS only while Memberships is switched on.
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-customers"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Customers"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Customers</h1>'
+		.             '<div class="sp-page-head__actions" id="sp-store-customer-actions"></div>'
+		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-store-customer-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_store_search( 'sp-store-customer-search', 'Search name or email' );
+	$printPage .=     '<div class="sp-tabs" role="tablist" id="sp-store-customer-tabs" hidden>'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-store-customer-show="">Everyone</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-store-customer-show="members">Members</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-store-customer-show="customers">Not members</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar"><span class="sp-meta" id="sp-store-customer-count"></span></div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<select id="sp-store-customer-filter" class="sp-select" hidden><option value="">Everyone</option><option value="members">Members</option><option value="customers">Not members</option></select>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack" id="sp-store-customers"></div>';
+	$printPage .=   '<div id="sp-store-customer-more"></div>';
+	$printPage .= '</div></section>';
 }
 if ( $cap_store_products ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-store-inventory">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Store', 'Inventory' ) . '</div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-store-inventory-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="search" id="sp-store-inventory-search" class="sp-input" placeholder="Search product or SKU&hellip;">';
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-products"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Products"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Products</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-store-product-new" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Product</button></div>'
+		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-store-product-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_store_search( 'sp-store-product-search', 'Search products' );
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-store-product-status="">All</button>';
+	foreach ( sp_store_product_statuses() as $sp_sp_status => $sp_sp_label ) {
+		$printPage .=   '<button type="button" class="unique sp-tab" role="tab" data-sp-store-product-status="' . esc_attr( $sp_sp_status ) . '">' . esc_html( 'draft' === $sp_sp_status ? 'Hidden' : $sp_sp_label ) . '</button>';
+	}
 	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">Show</span>';
-	$printPage .=       '<select id="sp-store-inventory-filter" class="sp-select">';
-	$printPage .=         '<option value="">All tracked items</option>';
-	$printPage .=         '<option value="low">Low stock</option>';
-	$printPage .=         '<option value="out">Out of stock</option>';
-	$printPage .=       '</select>';
-	$printPage .=     '</div>';
+	$printPage .=     $sp_store_filter( 'store-product', 'sp-store-product-count' );
+	$printPage .=   '</div>';
+	// Category in the Filter sheet; the tabs drive the status select.
+	$printPage .=   '<div hidden data-sp-store-product-filter-holder>';
+	$printPage .=     '<select id="sp-store-product-status" class="sp-select"><option value="">Everything</option>';
+	foreach ( sp_store_product_statuses() as $sp_sp_status => $sp_sp_label ) {
+		$printPage .=   '<option value="' . esc_attr( $sp_sp_status ) . '">' . esc_html( $sp_sp_label ) . '</option>';
+	}
+	$printPage .=     '</select>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Category</span><select id="sp-store-product-cat" class="sp-select"><option value="0">All categories</option></select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   $sp_book_tripwire;
-	$printPage .=   '<div class="sp-table-card" id="sp-store-inventory"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-store-products"></div>';
+	$printPage .=   '<div id="sp-store-product-more"></div>';
+	$printPage .= '</div></section>';
+
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-inventory"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Inventory"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Inventory</h1>'
+		.             $sp_bar_btn( 1, 'search', 'Search', 'focus:#sp-store-inventory-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_store_search( 'sp-store-inventory-search', 'Search product or SKU' );
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-store-inventory-show="">All</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-store-inventory-show="low">Low stock</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-store-inventory-show="out">Sold out</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar"><span class="sp-meta" id="sp-store-inventory-count"></span></div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<select id="sp-store-inventory-filter" class="sp-select" hidden><option value="">All tracked items</option><option value="low">Low stock</option><option value="out">Out of stock</option></select>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack" id="sp-store-inventory"></div>';
+	$printPage .= '</div></section>';
 }
 if ( $cap_store_settings || $cap_store_products ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-store">';
@@ -1907,7 +2019,7 @@ if ( $cap_forms_area ) {
 }
 
 // Settings → Forms — manage the repositories (add / rename / delete). Content built by JS.
-if ( in_array( 'manage_settings', $caps ) ) {
+if ( in_array( 'manage_form_repositories', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-forms">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Forms' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-forms-content"></div>';
@@ -1921,7 +2033,7 @@ if ( in_array( 'manage_users', $caps ) ) {
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-users-content"></div>';
 	$printPage .= '</section>';
 }
-if ( in_array( 'manage_roles', $caps ) || in_array( 'manage_settings', $caps ) ) {
+if ( in_array( 'manage_roles', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-tiers">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Roles' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-tiers-content"></div>';
@@ -1951,7 +2063,7 @@ if ( in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-customer-connect-content"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
-if ( in_array( 'manage_settings', $caps ) ) {
+if ( in_array( 'manage_ai_prompts', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-ai-prompts">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'AI Prompts' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-ai-prompts-content"></div>';
@@ -1991,6 +2103,8 @@ if ( in_array( 'manage_mileage', $caps ) ) {
 }
 
 $printPage .= '</main>';
+// Bottom bar: shortcuts for the current screen, Ask, and More. Filled by spRenderBar() per screen.
+$printPage .= '<nav class="sp-bar" id="sp-bar" aria-label="Shortcuts"><div class="sp-bar__inner" id="sp-bar-inner"></div></nav>';
 $printPage .= '</div>';
 
 return $printPage;

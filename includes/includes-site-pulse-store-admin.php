@@ -36,8 +36,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 /**
  * The storefront colours a client may change, as CSS-variable name => label + note.
  *
- * Same idea as site_pulse_color_roles() for the dashboard: a short curated list of the
- * colours that actually mean something, not every token in the stylesheet. An unset
+ * A short curated list of the colours that actually mean something, not every token
+ * in the stylesheet. An unset
  * value is left ALONE rather than written as a default — so the stylesheet keeps
  * inheriting the site's own palette until somebody deliberately overrides a colour,
  * and a site that never opens this screen looks exactly as it does today.
@@ -236,6 +236,38 @@ function sp_store_setting_defs(): array {
 			'default' => 'About This Item',
 			'help'    => 'Sits between the buy button and the product description, e.g. <code>About This Item</code>, <code>Details</code>, <code>Specifications</code>. Leave blank for no heading.',
 		],
+
+		// ---- Extras: features most stores never need. Each is OFF until switched on,
+		// and while off none of its fields appear anywhere — not on products, not at
+		// checkout, not in emails.
+		'feature_memberships' => [
+			'label'   => 'Memberships',
+			'type'    => 'toggle',
+			'default' => '',
+			'section' => 'Extras',
+			'help'    => 'For selling access rather than (or as well as) things: lessons, videos, member pages. Buying a product can give a membership, members get a login and a My Account page, and you choose which pages only members can see. Plans are set up in their own card once this is on.',
+		],
+		'feature_agreements' => [
+			'label'   => 'Purchase agreements',
+			'type'    => 'toggle',
+			'default' => '',
+			'section' => 'Extras',
+			'help'    => 'Terms a customer must accept at checkout before buying certain products, such as a waiver or a warranty agreement, with a typed signature if you want one. A copy of exactly what they agreed to is kept on the order. Agreements are written in their own card once this is on.',
+		],
+		'feature_downloads' => [
+			'label'   => 'Downloads',
+			'type'    => 'toggle',
+			'default' => '',
+			'section' => 'Extras',
+			'help'    => 'Files a buyer receives, such as a PDF, an e-book or an audio course. Attach them to a product in its Extras; buyers get private links in their receipt and on their account page, and a refund switches the links off. The files are kept out of the media library.',
+		],
+		'feature_distance_shipping' => [
+			'label'   => 'Shipping by distance',
+			'type'    => 'toggle',
+			'default' => '',
+			'section' => 'Extras',
+			'help'    => 'For freight and heavy items: shipping is priced from the driving distance to the customer&rsquo;s address, at a per-mile rate you set for each distance band, plus a handling fee. Replaces the shipping rates table while it is on. Needs the Google key under Settings &rarr; API Keys.',
+		],
 	];
 
 	// The processor list is BUILT from the registry, so the picker can never offer
@@ -388,6 +420,82 @@ function sp_store_ajax_save_settings(): void {
 
 
 /*--------------------------------------------------------------
+# Shipping by Distance
+--------------------------------------------------------------*/
+
+/** The distance settings for the editor, in dollars rather than cents. */
+add_action( 'wp_ajax_site_pulse_store_distance', 'sp_store_ajax_distance' );
+function sp_store_ajax_distance(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_store_settings' ) ) return;
+
+	$cfg = sp_store_distance_config();
+	wp_send_json_success( [
+		'on'       => sp_store_distance_on(),
+		'origin'   => $cfg['origin'],
+		'label'    => sp_store_get_setting( 'distance_label', '' ),
+		'handling' => number_format( $cfg['handling'] / 100, 2, '.', '' ),
+		'bands'    => array_map( static fn( $b ) => [
+			'from' => $b['from'] + 0, 'to' => $b['to'] + 0, 'rate' => rtrim( rtrim( number_format( $b['rate'] / 100, 4, '.', '' ), '0' ), '.' ),
+			'fee'  => $b['fee'] ? number_format( $b['fee'] / 100, 2, '.', '' ) : '',
+		], $cfg['bands'] ),
+		'has_key'  => function_exists( 'site_pulse_mileage_google_key' ) && site_pulse_mileage_google_key() !== '',
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_store_save_distance', 'sp_store_ajax_save_distance' );
+function sp_store_ajax_save_distance(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_store_settings' ) ) return;
+
+	$bands = [];
+	foreach ( (array) json_decode( wp_unslash( (string) ( $_POST['bands'] ?? '[]' ) ), true ) as $b ) {
+		$from = (float) preg_replace( '/[^0-9.]/', '', (string) ( $b['from'] ?? '' ) );
+		$to   = (float) preg_replace( '/[^0-9.]/', '', (string) ( $b['to'] ?? '' ) );
+		// Typed as dollars per mile (0.29); stored as cents per mile (29), fractions kept.
+		$rate = (float) preg_replace( '/[^0-9.]/', '', (string) ( $b['rate'] ?? '' ) ) * 100;
+		$fee  = sp_store_parse_money( (string) ( $b['fee'] ?? '' ) );
+		if ( $to <= 0 && $rate <= 0 && $fee <= 0 ) continue;
+		if ( $to < $from ) wp_send_json_error( [ 'message' => sprintf( 'A band from %s miles ends before it starts.', $from ) ] );
+		$bands[] = [ 'from' => $from, 'to' => $to, 'rate' => round( $rate, 4 ), 'fee' => $fee ];
+	}
+
+	sp_store_set_setting( 'distance_origin', sanitize_text_field( wp_unslash( (string) ( $_POST['origin'] ?? '' ) ) ) );
+	sp_store_set_setting( 'distance_label', sanitize_text_field( wp_unslash( (string) ( $_POST['label'] ?? '' ) ) ) );
+	sp_store_set_setting( 'distance_handling_cents', (string) sp_store_parse_money( wp_unslash( (string) ( $_POST['handling'] ?? '' ) ) ) );
+	sp_store_set_setting( 'distance_bands', wp_json_encode( $bands ) );
+
+	wp_send_json_success( [ 'message' => 'Distance shipping saved.' ] );
+}
+
+/**
+ * Price a test address with the SAVED settings — the way to check the setup against
+ * a real past order before a customer ever sees a figure.
+ */
+add_action( 'wp_ajax_site_pulse_store_distance_test', 'sp_store_ajax_distance_test' );
+function sp_store_ajax_distance_test(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_admin_check( 'manage_store_settings' ) ) return;
+
+	$a = sp_store_clean_address( wp_unslash( (array) ( $_POST['address'] ?? [] ) ) )['address'];
+	if ( ! sp_store_address_complete( $a ) ) wp_send_json_error( [ 'message' => 'Enter a street, city, state and 5-digit ZIP.' ] );
+	if ( sp_store_distance_config()['origin'] === '' ) wp_send_json_error( [ 'message' => 'Save a ship-from address first.' ] );
+
+	$miles = sp_store_distance_miles( $a );
+	if ( $miles === null ) {
+		$why = function_exists( 'site_pulse_mileage_api_error' ) ? site_pulse_mileage_api_error() : '';
+		wp_send_json_error( [ 'message' => 'Google could not find a driving route to that address.' . ( $why !== '' ? ' (' . $why . ')' : '' ) ] );
+	}
+	$cents = sp_store_distance_price( $miles );
+	wp_send_json_success( [
+		'miles' => number_format( $miles, 1 ),
+		'price' => $cents === null ? '' : html_entity_decode( sp_store_money( $cents ), ENT_QUOTES, 'UTF-8' ),
+		'note'  => $cents === null ? 'That is further than your last band, so checkout would not be able to offer shipping.' : '',
+	] );
+}
+
+
+/*--------------------------------------------------------------
 # Shipping Rates
 --------------------------------------------------------------*/
 
@@ -425,7 +533,7 @@ function sp_store_ajax_shipping_rates(): void {
 		];
 	}
 
-	wp_send_json_success( [ 'rates' => $rates ] );
+	wp_send_json_success( [ 'rates' => $rates, 'distance_on' => sp_store_distance_on() ] );
 }
 
 /** Cents to a plain dollar string for a text box. 0 shows as empty, not "0.00". */

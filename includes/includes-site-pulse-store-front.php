@@ -199,6 +199,7 @@ add_shortcode( 'store-products', 'sp_store_products_shortcode' );
 function sp_store_products_shortcode( $atts ): string {
 	if ( ! sp_store_active() ) return '';
 
+	$atts = bp_orderby_atts( $atts, 'orderby' );
 	$atts = shortcode_atts( [
 		'category' => '',
 		'limit'    => 12,
@@ -727,9 +728,13 @@ function sp_store_single_product( int $product_id ): string {
 	// excerpt by truncating the content when none is set, so on every product without a
 	// hand-written one the full description would print below and a chopped copy of the
 	// same text would print here. Which is exactly what it did.
+	//
+	// Allowed HTML (wp_kses_post), not escaped: a short description is often a bulleted
+	// list, and every shop migrated from WooCommerce arrives with HTML in it. Escaping it
+	// printed the tags themselves as text beside the buy button.
 	$excerpt = trim( (string) get_post_field( 'post_excerpt', $product_id ) );
 	if ( $excerpt !== '' ) {
-		$out .= '<div class="store-single-excerpt">' . wpautop( esc_html( $excerpt ) ) . '</div>';
+		$out .= '<div class="store-single-excerpt">' . wpautop( wp_kses_post( $excerpt ) ) . '</div>';
 	}
 
 	$out .= '</div></div>';
@@ -786,4 +791,57 @@ function sp_store_template_include( $template ) {
 
 	$parent = get_template_directory() . '/' . $wanted;
 	return file_exists( $parent ) ? $parent : $template;
+}
+
+
+/*--------------------------------------------------------------
+# Catalog as the Home Page
+--------------------------------------------------------------*/
+
+/**
+ * A shop-only site (the store on its own subdomain, the business's real site elsewhere)
+ * has no home page of its own: the catalog IS the home page. Opt in from the child theme:
+ *   add_filter( 'sp_store_catalog_is_home', '__return_true' );
+ * The site root then renders the product archive (sorting, paging and categories all
+ * work), every link to the archive points at the root, and /{slug}/ 301s there so the
+ * catalog has one address. Products stay at /{slug}/{product}.
+ */
+function sp_store_catalog_is_home(): bool {
+	return sp_store_active() && (bool) apply_filters( 'sp_store_catalog_is_home', false );
+}
+
+add_filter( 'request', 'sp_store_catalog_home_request' );
+function sp_store_catalog_home_request( array $vars ): array {
+	if ( is_admin() || ! sp_store_catalog_is_home() ) return $vars;
+
+	// Only the bare root, or its /page/N/ — anything else (search, feeds, previews) is left alone.
+	if ( $vars && array_keys( $vars ) !== [ 'paged' ] ) return $vars;
+
+	$GLOBALS['sp_store_catalog_at_root'] = true;
+	return $vars + [ 'post_type' => SITE_PULSE_STORE_CPT ];
+}
+
+add_filter( 'post_type_archive_link', 'sp_store_catalog_home_link', 10, 2 );
+function sp_store_catalog_home_link( $link, $post_type ) {
+	return $post_type === SITE_PULSE_STORE_CPT && sp_store_catalog_is_home() ? home_url( '/' ) : $link;
+}
+
+add_action( 'template_redirect', 'sp_store_catalog_home_redirect', 1 );
+function sp_store_catalog_home_redirect(): void {
+	if ( ! sp_store_catalog_is_home() || ! empty( $GLOBALS['sp_store_catalog_at_root'] ) ) return;
+	if ( ! is_post_type_archive( SITE_PULSE_STORE_CPT ) || is_tax() ) return;
+
+	$paged = (int) get_query_var( 'paged' );
+	$url   = $paged > 1 ? home_url( user_trailingslashit( 'page/' . $paged, 'paged' ) ) : home_url( '/' );
+	if ( ! empty( $_SERVER['QUERY_STRING'] ) ) $url .= '?' . $_SERVER['QUERY_STRING'];
+
+	wp_safe_redirect( $url, 301 );
+	exit;
+}
+
+// The root is the catalog, not a page, so WordPress's own canonical redirect must not
+// "correct" it to /{slug}/ or to the old static front page.
+add_filter( 'redirect_canonical', 'sp_store_catalog_home_canonical' );
+function sp_store_catalog_home_canonical( $redirect ) {
+	return empty( $GLOBALS['sp_store_catalog_at_root'] ) ? $redirect : false;
 }

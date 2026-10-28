@@ -1,8 +1,10 @@
 <?php
-/* Battle Plan Web Design Functions: Rovin specific websites
-/*--------------------------------------------------------------
-# Set Up Complaint Forwarder
---------------------------------------------------------------*/
+/* Battle Plan Web Design Functions: Rovin specific websites */
+
+// MyRovin's URL; override per-environment with define('BP_ROVIN_SURVEY_URL', '…') if needed.
+function bp_rovin_hub_url() {
+    return rtrim(defined('BP_ROVIN_SURVEY_URL') ? BP_ROVIN_SURVEY_URL : 'https://rovin.work', '/');
+}
 
 
 /*--------------------------------------------------------------
@@ -39,7 +41,7 @@ function bp_label_complaint_messages($email, $ctx) {
 // Pulse include). The receiver lives in includes-site-pulse-emails.php on MyRovin. These filters supply
 // Rovin's settings; another company would add its own forwarder + filters in its own sender file.
 add_filter('bp_feedback_forward_url', function () {
-    return (defined('BP_ROVIN_SURVEY_URL') ? BP_ROVIN_SURVEY_URL : 'https://rovin.work') . '/wp-json/site-pulse/v1/email';
+    return bp_rovin_hub_url() . '/wp-json/site-pulse/v1/email';
 });
 add_filter('bp_feedback_forward_secret', function () {
     return get_site_option('bp_rovin_survey_secret'); // shared rovin.work cross-site secret
@@ -63,9 +65,9 @@ add_filter('bp_feedback_brand', function ($brand, $ctx) {
 // my visit" still triggers), mirroring the old complaint detector. Signs the exact bytes it posts.
 add_action('bp_form_after_send', 'bp_feedback_forward_submission', 10, 3);
 function bp_feedback_forward_submission($email, $ctx, $sent) {
-    // Temporary diagnostics so we can see WHY a submission did/didn't forward. Disable with
-    // add_filter('bp_feedback_debug','__return_false'); once the pipeline is confirmed working.
-    $debug = (bool) apply_filters('bp_feedback_debug', true);
+    // Step-by-step diagnostics (why a submission did/didn't forward). Off by default; turn on with
+    // add_filter('bp_feedback_debug','__return_true'). Failed forwards are always logged.
+    $debug = (bool) apply_filters('bp_feedback_debug', false);
     $log   = function ($m) use ($debug) { if ($debug) error_log('[bp_feedback] ' . $m); };
 
     $endpoint = (string) apply_filters('bp_feedback_forward_url', '');
@@ -225,17 +227,14 @@ function bp_rovin_forward_survey($email, $ctx) {
             'ratings'    => $ratings,
             'comments'   => $f['user-comments']       ?? '',
             'extra'      => bp_rovin_survey_extras($f, (string) ($ctx['form_id'] ?? '')),
-            'ip'       => $ctx['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
+            'ip'         => $ctx['ip'] ?? ($_SERVER['REMOTE_ADDR'] ?? ''),
             'timestamp'  => time(),
         ];
 
         $raw = wp_json_encode($payload);
         $sig = hash_hmac('sha256', $raw, $secret);
 
-        // MyRovin's URL; override per-environment with define('BP_ROVIN_SURVEY_URL', '…') if needed.
-        $hub = defined('BP_ROVIN_SURVEY_URL') ? BP_ROVIN_SURVEY_URL : 'https://rovin.work';
-
-        $res = wp_remote_post(rtrim($hub, '/') . '/wp-json/site-pulse/v1/survey', [
+        $res = wp_remote_post(bp_rovin_hub_url() . '/wp-json/site-pulse/v1/survey', [
             'timeout'  => 15,
             'blocking' => true,
             'headers'  => [

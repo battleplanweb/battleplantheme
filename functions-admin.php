@@ -42,7 +42,7 @@ require_once get_template_directory() . '/functions-admin-columns.php';
 // Disable Gutenburg
 add_filter( 'use_block_editor_for_post', '__return_false' );
 add_filter( 'gutenberg_use_widgets_block_editor', '__return_false' );
-add_filter( 'wp_use_widgets_block_editor', '__return_false' );
+add_filter( 'use_widgets_block_editor', '__return_false' ); // core hook name (wp_use_widgets_block_editor() is the function, not the filter)
 
 // Force Text tab (disable Visual editor without killing the QuickTags toolbar)
 add_filter( 'wp_default_editor', function() { return 'html'; } );
@@ -127,17 +127,13 @@ function battleplan_admin_menu() {
 	$chronHouseTime     = get_option('bp_chron_b_time')      ? timeElapsed(get_option('bp_chron_b_time'),      1, 'all', 'full') . ' ago' : 'Never';
 	$chronAnalyticsTime = get_option('bp_chron_c_time')      ? timeElapsed(get_option('bp_chron_c_time'),      1, 'all', 'full') . ' ago' : 'Never';
 
-	$siteUpdated = str_replace('-', '', get_option( "site_updated" ));
-	//add_menu_page( __( 'Run Chron', 'battleplan' ), __( 'Run Chron', 'battleplan' ), 'manage_options', 'run-chron', 'battleplan_force_run_chron', 'dashicons-performance', 3 );
-
-// Menu registration — no separate Run buttons needed
+	// Menu registration — no separate Run buttons needed
 	if ( _USER_LOGIN === "battleplanweb" ) :
 		add_submenu_page( 'index.php', 	'Framework '._BP_VERSION, 	'Framework '._BP_VERSION, 											'manage_options', 	 'themes.php' );
 		add_submenu_page( 'index.php',	'Housekeeping', 			'Settings <div class="admin-note">'.$chronHouseTime.'</div>',	'manage_options', 	 'chron-house',     		 'battleplan_chron_housekeeping_status' );
 		add_submenu_page( 'index.php',	'GBP Sync',          		'GBP Sync <div class="admin-note">'.$chronGbpApiTime.'</div>',    	'manage_options', 	 'chron-gbp',       		 'battleplan_chron_gbp_status' );
 		add_submenu_page( 'index.php',	'Analytics',   				'Stats <div class="admin-note">'.$chronAnalyticsTime.'</div>',	'manage_options', 	 'chron-analytics', 		 'battleplan_chron_analytics_status' );
 		add_submenu_page( 'index.php',	'Site Audit',          		'Audit <div class="admin-note">'.$auditTime.'</div>',        	'manage_options', 	 'site-audit',      		 'battleplan_site_audit' );
-		// 'Run Audit' submenu removed — the audit page itself now carries the Run/Resume Audit button.
 	endif;
 
 	// Analytics dashboard — client-facing (stats viewers + admins), not just battleplanweb
@@ -149,11 +145,6 @@ function battleplan_admin_menu() {
 	if ( bp_module_on( get_option('site_pulse') ) ) {
 		add_menu_page( 'Site Pulse', 'Site Pulse', 'read', esc_url( home_url('/site-pulse-dashboard/') ), '', 'dashicons-chart-line', 3 );
 	}
-}
-
-// Menu registration
-function battleplan_addSitePage() {
-	echo '<h1>Admin Page</h1>';
 }
 
 
@@ -379,6 +370,109 @@ function bp_an_keywords_payload(): ?array {
 	] ], $grains );
 }
 
+/**
+ * Pages the index-coverage sampler WILL inspect, per group — mirrors bp_gsc_coverage_targets() (published
+ * pages/posts/landing/universal minus SEO-noindexed, plus non-empty /service/ terms). Used to show how many
+ * pages in a group haven't been checked yet. Returns [main|secondary|blog|jobsite => int].
+ */
+function bp_an_index_eligible_by_group(): array {
+	global $wpdb;
+	$out     = [ 'main' => 0, 'secondary' => 0, 'blog' => 0, 'jobsite' => 0 ];
+	$map     = [ 'page' => 'main', 'post' => 'blog', 'landing' => 'secondary', 'universal' => 'secondary' ];
+	$noindex = defined( 'BP_SEO_NOINDEX' )
+		? $wpdb->prepare( " AND NOT EXISTS (SELECT 1 FROM {$wpdb->postmeta} nx WHERE nx.post_id = p.ID AND nx.meta_key = %s AND nx.meta_value = '1')", BP_SEO_NOINDEX )
+		: '';
+	foreach ( (array) $wpdb->get_results( "SELECT p.post_type t, COUNT(*) c FROM {$wpdb->posts} p
+		WHERE p.post_status = 'publish' AND p.post_type IN ('page','post','landing','universal'){$noindex} GROUP BY p.post_type" ) as $r ) {
+		$out[ $map[ $r->t ] ] += (int) $r->c;
+	}
+	if ( taxonomy_exists( 'jobsite_geo-services' ) ) {
+		$n = wp_count_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => true ] );
+		if ( ! is_wp_error( $n ) ) $out['jobsite'] = (int) $n;
+	}
+	return $out;
+}
+
+/**
+ * Payload for the Pages Indexed card — one pill per page group (All / Main / Jobsite GEO / Blog / Secondary);
+ * each shows THAT group's indexed vs not-indexed over time + a donut of the ratio. Reads
+ * bp_gsc_coverage_history (weekly URL Inspection snapshots) rolled up per grain as "latest snapshot in the
+ * period". Snapshots taken before the per-group split existed carry only site totals, so a group's values
+ * there are null (a line gap). `current` = live per-URL stamps (+ eligible counts → "not checked yet").
+ * Always returns { status, groups, current, daily/weekly/monthly:{periods, series:{group:{indexed,not_indexed}}}|null }
+ * so the card shows even before the first snapshot — `status` explains why the lines are empty.
+ */
+function bp_an_index_coverage_payload(): ?array {
+	$hist = get_option( 'bp_gsc_coverage_history' );
+	if ( ! is_array( $hist ) ) $hist = [];
+	$groups  = [ 'main', 'secondary', 'blog', 'jobsite' ];
+	$metrics = [ 'indexed' => 'i', 'not_indexed' => 'n' ];
+	$weekKey = function ( $ymd ) { $ts = strtotime( $ymd ); $dow = (int) date( 'N', $ts ); return date( 'Ymd', strtotime( '-' . ( $dow - 1 ) . ' days', $ts ) ); };
+	$keyers  = [ 'daily' => function ( $p ) { return $p; }, 'weekly' => $weekKey, 'monthly' => function ( $p ) { return substr( $p, 0, 6 ); } ];
+	$limits  = [ 'daily' => 180, 'weekly' => 104, 'monthly' => 36 ];
+
+	$out = []; $any = false;
+	foreach ( $keyers as $g => $keyer ) {
+		$byPeriod = [];
+		foreach ( $hist as $ymd => $rec ) {
+			if ( strlen( (string) $ymd ) !== 8 || ! is_array( $rec ) ) continue;
+			$pk = $keyer( (string) $ymd );
+			if ( ! isset( $byPeriod[ $pk ] ) || (string) $ymd > $byPeriod[ $pk ]['d'] ) $byPeriod[ $pk ] = [ 'd' => (string) $ymd, 'v' => $rec ];
+		}
+		if ( ! $byPeriod ) { $out[ $g ] = null; continue; }
+		ksort( $byPeriod );
+		$periods = array_slice( array_keys( $byPeriod ), -$limits[ $g ] );
+		$series  = [];
+		foreach ( array_merge( [ 'all' ], $groups ) as $grp ) foreach ( $metrics as $m => $sub ) $series[ $grp ][ $m ] = [];
+		foreach ( $periods as $pk ) {
+			$rec = $byPeriod[ $pk ]['v'];
+			foreach ( $metrics as $m => $sub ) {
+				$series['all'][ $m ][] = (int) ( $rec[ $m ] ?? 0 );
+				foreach ( $groups as $grp ) {
+					$gv = $rec['groups'][ $grp ] ?? null;
+					$series[ $grp ][ $m ][] = is_array( $gv ) ? (int) ( $gv[ $sub ] ?? 0 ) : null;
+				}
+			}
+		}
+		$out[ $g ] = [ 'periods' => array_map( 'strval', $periods ), 'series' => $series ];
+		$any = true;
+	}
+
+	// Live status from the current per-URL stamps — the donut's fallback until a split snapshot exists — plus
+	// each group's eligible page count, so the card can say how many haven't been inspected yet.
+	$eligible = bp_an_index_eligible_by_group();
+	$current  = [ 'all' => [ 'indexed' => 0, 'not_indexed' => 0, 'eligible' => 0 ] ];
+	$stamped  = 0;
+	foreach ( bp_gsc_coverage_by_group() as $grp => $gv ) {
+		$current[ $grp ] = [ 'indexed' => $gv['i'], 'not_indexed' => $gv['n'], 'eligible' => (int) ( $eligible[ $grp ] ?? 0 ) ];
+		$current['all']['indexed']     += $gv['i'];
+		$current['all']['not_indexed'] += $gv['n'];
+		$current['all']['eligible']    += (int) ( $eligible[ $grp ] ?? 0 );
+		$stamped += $gv['i'] + $gv['n'];
+	}
+
+	// Why the card might be empty — the collector self-gates weekly, phase-shifted 0–6 days per site, so a
+	// site can go up to two weeks before its first snapshot. A 403 (service account not Owner) never stamps.
+	$next   = (int) get_option( 'bp_gsc_coverage_next', 0 );
+	$status = ! $any
+		? ( $stamped ? 'The trend lines start with the first saved weekly snapshot — the donut shows the current status.'
+		  : ( $next ? 'No pages checked yet — the first weekly check is scheduled for ' . wp_date( 'M j, Y', $next ) . '. If it stays empty after that, the Search Console service account likely needs Owner/Full access on the property.'
+		  : 'No pages checked yet — the weekly check gets scheduled on the next nightly stats run.' ) )
+		: '';
+
+	return array_merge( [
+		'status'  => $status,
+		'groups'  => [
+			[ 'key' => 'all',       'label' => 'All Pages' ],
+			[ 'key' => 'main',      'label' => 'Main Pages' ],
+			[ 'key' => 'jobsite',   'label' => 'Jobsite GEO' ],
+			[ 'key' => 'blog',      'label' => 'Blog Posts' ],
+			[ 'key' => 'secondary', 'label' => 'Secondary Pages' ],
+		],
+		'current' => $current,
+	], $out );
+}
+
 // "Send Check-in" test button (Analytics footer) — force-runs the customer check-in and emails it to
 // you now, bypassing the send throttle. The check-in file only loads during the analytics cron, so we
 // require it here.
@@ -412,6 +506,8 @@ function bp_analytics_page() {
 
 	echo '<div class="wrap bp-analytics">';
 	echo '<h1>Analytics <span class="bp-an-sub">Channel &amp; visitor trends</span></h1>';
+
+	if ( function_exists( 'bp_followups_card' ) ) bp_followups_card();   // "email me to check on this later" (battleplanweb only)
 
 	if ( ! is_array( $historyM ) || ! $historyM ) {
 		echo '<p>No channel history yet — it builds on the nightly analytics run, or '
@@ -1029,6 +1125,7 @@ function bp_analytics_page() {
 		'cwv'               => $cwvTimeline(),
 		'auditMetrics'      => bp_an_audit_metrics_payload(),
 		'keywords'          => bp_an_keywords_payload(),
+		'indexGroups'       => bp_an_index_coverage_payload(),
 		'home'              => $anHome,
 	];
 	$anPages   = ! empty( $payload['pages'] );
@@ -1199,6 +1296,20 @@ function bp_analytics_page() {
 		[ 'reviews',       'Reviews',        'Google <b>review count</b> &amp; average <b>star rating</b> over time.' ],
 		[ 'gbpPerf',       'Google Business Profile', 'GBP <b>impressions, call clicks, website clicks</b> &amp; <b>direction requests</b> per day, pulled via the GBP hub (refreshed every ~3 days). Google reports these with a ~3-day lag.' ],
 	] as $ac ) {
+		// Pages Indexed — one pill per page group; each shows that group's indexed vs not-indexed ratio.
+		if ( $ac[0] === 'indexCoverage' ) {
+			if ( empty( $payload['indexGroups'] ) ) continue;
+			echo '<div class="bp-an-card">';
+			echo   '<div class="bp-an-toolbar"><h2 class="bp-an-h2">' . esc_html( $ac[1] ) . '</h2><div class="bp-an-metric-btns">';
+			foreach ( $payload['indexGroups']['groups'] as $i => $gr ) {
+				echo '<a href="#" class="bp-an-ixbtn' . ( $i === 0 ? ' active' : '' ) . '" data-ixgroup="' . esc_attr( $gr['key'] ) . '">' . esc_html( $gr['label'] ) . '</a>';
+			}
+			echo   '</div></div>';
+			echo   '<div class="bp-an-cardnote">How many of each kind of page Google has <b>indexed vs not indexed</b> — pick a type. <b>Main Pages</b> = pages, <b>Jobsite GEO</b> = the /service/ pages, <b>Blog Posts</b> = posts, <b>Secondary Pages</b> = landing &amp; universal. From the URL Inspection API, checked weekly in oldest-first batches, so bigger sites take a few weeks to check every page. If pages are sitting in Not Indexed, request indexing for them in Search Console.</div>';
+			echo   '<div class="bp-an-chartrow"><div class="bp-analytics-index"></div><div class="bp-analytics-pie" data-pie="index"></div></div>';
+			echo '</div>';
+			continue;
+		}
 		if ( empty( $payload['auditMetrics'][ $ac[0] ] ) ) continue;
 		$card = $payload['auditMetrics'][ $ac[0] ];
 		echo '<div class="bp-an-card">';
@@ -1334,10 +1445,10 @@ function battleplan_admin_footer_text() {
 add_filter( 'admin_bar_menu', 'battleplan_replace_howdy', 9992 );
 function battleplan_replace_howdy( $wp_admin_bar ) {
 	$my_account = $wp_admin_bar->get_node('my-account');
-	$newtitle = str_replace('Howdy,', '', $my_account->title);
+	if ( ! $my_account ) return;
 	$wp_admin_bar->add_node( array(
 		'id'    => 'my-account',
-		'title' => $newtitle,
+		'title' => str_replace('Howdy,', '', $my_account->title),
 	));
 }
 
@@ -1397,9 +1508,6 @@ function battleplan_remove_junk_from_image( $html, $id, $caption, $title, $align
 function av_return_100(){ return 67; }
 add_filter('jpeg_quality', 'av_return_100', 9999);
 add_filter('wp_editor_set_quality', 'av_return_100', 9999);
-
-// Display custom fields in WordPress admin edit screen
-//add_filter('acf/settings/remove_wp_meta_box', '__return_false');
 
 // Add & Remove WP Admin Menu items
 add_action('admin_menu', 'battleplan_customize_admin_menus', PHP_INT_MAX);
@@ -1470,8 +1578,6 @@ function battleplan_customize_admin_menus() {
 	add_submenu_page( 'edit.php?post_type=elements', 'Comments', 'Comments', 'manage_options', 'edit-comments.php' );
 	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'edit.php?post_type=elements', 'Custom Fields', 'Custom Fields', 'manage_options', 'edit.php?post_type=acf-field-group' );
 	if ( _USER_LOGIN === "battleplanweb" ) add_submenu_page( 'options-general.php', 'Site Options', 'Site Options', 'manage_options', 'options.php' );
-	// Removed from Tools menu — WP Engine. Re-enable by uncommenting.
-	// add_submenu_page( 'tools.php', 'WP Engine', 'WP Engine', 'manage_options', 'options-general.php?page=wpengine-common' );
 
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'git-updater/git-updater.php' ) ) add_submenu_page( 'tools.php', 'Git Updater', 'Git Updater', 'manage_options', 'options-general.php?page=git-updater' );
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'admin-columns-pro/admin-columns-pro.php' ) ) add_submenu_page( 'tools.php', 'Admin Columns', 'Admin Columns', 'manage_options', 'options-general.php?page=codepress-admin-columns' );
@@ -1508,15 +1614,13 @@ function battleplan_customize_admin_menus() {
 	endif;
 
 	if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Settings', 'Yoast Settings', 'manage_options', 'admin.php?page=wpseo_page_settings' );
-	// Removed from Settings menu — Yoast Local (└ Local). Re-enable by uncommenting.
-	// if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wpseo-local/local-seo.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Local', '&nbsp;└&nbsp;Local', 'manage_options', 'admin.php?page=wpseo_local' );
-	// Removed from Settings menu — Yoast Redirects (└ Redirects). Re-enable by uncommenting.
-	// if ( _USER_LOGIN === "battleplanweb" && is_plugin_active( 'wordpress-seo-premium/wp-seo-premium.php' ) ) add_submenu_page( 'options-general.php', 'Yoast Redirects', '&nbsp;└&nbsp;Redirects', 'manage_options', 'admin.php?page=wpseo_redirects' );
 
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
-	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) add_submenu_page( 'options-general.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );
+	if ( in_array('administrator', _USER_ROLES) && is_plugin_active( 'post-to-google-my-business-premium/post-to-google-my-business.php' ) ) {
+		add_submenu_page( 'options-general.php', 'GBP Settings', 'GBP Settings', 'manage_options', 'admin.php?page=pgmb_settings' );
+		add_submenu_page( 'options-general.php', 'GBP Templates', '&nbsp;└&nbsp;Templates', 'manage_options', 'edit.php?post_type=pgmb_templates' );
+		add_submenu_page( 'options-general.php', 'GBP Calendar', '&nbsp;└&nbsp;Calendar', 'manage_options', 'admin.php?page=post_to_google_my_business' );
+		add_submenu_page( 'options-general.php', 'GBP Account', '&nbsp;└&nbsp;Account', 'manage_options', 'admin.php?page=post_to_google_my_business-account' );
+	}
 
 	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
 		add_submenu_page(
@@ -1622,10 +1726,9 @@ add_action('admin_menu', 'battleplan_custom_post_type_counts');
 function battleplan_custom_post_type_counts() {
 	$getCPT = array_diff( get_post_types(), array('elements', 'attachment', 'revision', 'nav_menu_item', 'custom_css', 'customize_changeset', 'oembed_cache', 'user_request', 'wp_block', 'acf-field-group', 'acf-field', 'user_request' ) );
 
+	global $menu;
 	foreach ($getCPT as $postType) :
-		$count_posts = wp_count_posts($postType);
-		$num_posts = $count_posts->publish > 0 ? $count_posts->publish : 0;
-		global $menu;
+		$num_posts = (int) ( wp_count_posts($postType)->publish ?? 0 );
 
 		foreach ($menu as $key => $value) :
 			if ( $menu[$key][2] === 'edit.php?post_type=' . $postType || ( $menu[$key][2] === 'edit.php' && $postType == 'post') ) :
@@ -1638,7 +1741,7 @@ function battleplan_custom_post_type_counts() {
 
 // The main Dashboard IS the graphic Analytics screen now. Bounce the bare dashboard (index.php with
 // no subpage) straight to the Analytics page for anyone who can view stats — the old numeric widgets
-// are retired (see battleplan_add_dashboard_widgets in functions-admin-stats.php). Escape hatch for the
+// are retired (removed from functions-admin-stats.php). Escape hatch for the
 // native WordPress dashboard (Site Health, At-a-Glance, etc.): add ?core=1 to the index.php URL.
 add_action('admin_init', 'bp_dashboard_to_analytics');
 function bp_dashboard_to_analytics() {
@@ -1655,31 +1758,22 @@ function bp_dashboard_to_analytics() {
 // Remove unwanted dashboard widgets
 add_action('wp_dashboard_setup', 'battleplan_remove_dashboard_widgets');
 function battleplan_remove_dashboard_widgets () {
-	/*
-	remove_action('welcome_panel','wp_welcome_panel'); 								//Welcome to WordPress!
-	remove_meta_box('wpe_dify_news_feed','dashboard','normal'); 					//WP Engine
-	remove_meta_box('wpe_dify_news_feed','dashboard','side'); 						//WP Engine
-	*/
-	remove_meta_box('dashboard_activity','dashboard','normal');						// Activity
-	remove_meta_box('dashboard_activity','dashboard','side');						// Activity
-	remove_meta_box('dashboard_right_now','dashboard','normal');					// At A Glance
-	remove_meta_box('dashboard_right_now','dashboard','side');						// At A Glance
-	remove_meta_box('dashboard_quick_press','dashboard','normal'); 					// Quick Draft
-	remove_meta_box('dashboard_quick_press','dashboard','side'); 					// Quick Draft
-	remove_meta_box('dashboard_site_health','dashboard','normal');					// Site Health
-	remove_meta_box('dashboard_site_health','dashboard','side');					// Site Health
-	remove_meta_box('woocommerce_dashboard_status','dashboard','normal');			// Woocommerce
-	remove_meta_box('woocommerce_dashboard_status','dashboard','side');				// Woocommerce
-	remove_meta_box('dashboard_primary','dashboard','normal'); 						// WordPress Events and News
-	remove_meta_box('dashboard_primary','dashboard','side'); 						// WordPress Events and News
-	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','normal');		// WP Mail SMTP
-	remove_meta_box('wp_mail_smtp_reports_widget_lite','dashboard','side');			// WP Mail SMTP
-	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','normal');		// WP Mail SMTP Pro
-	remove_meta_box('wp_mail_smtp_reports_widget_pro','dashboard','side');			// WP Mail SMTP Pro
-	remove_meta_box('wpseo-dashboard-overview','dashboard','normal');				// Yoast SEO Posts Overview
-	remove_meta_box('wpseo-dashboard-overview','dashboard','side');					// Yoast SEO Posts Overview
-	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','normal');		// Yoast SEO / Wincher Top Keyphrases
-	remove_meta_box('wpseo-wincher-dashboard-overview','dashboard','side');			// Yoast SEO / Wincher Top Keyphrases
+	$widgets = [
+		'dashboard_activity',                  // Activity
+		'dashboard_right_now',                 // At A Glance
+		'dashboard_quick_press',               // Quick Draft
+		'dashboard_site_health',               // Site Health
+		'woocommerce_dashboard_status',        // Woocommerce
+		'dashboard_primary',                   // WordPress Events and News
+		'wp_mail_smtp_reports_widget_lite',    // WP Mail SMTP
+		'wp_mail_smtp_reports_widget_pro',     // WP Mail SMTP Pro
+		'wpseo-dashboard-overview',            // Yoast SEO Posts Overview
+		'wpseo-wincher-dashboard-overview',    // Yoast SEO / Wincher Top Keyphrases
+	];
+	foreach ( $widgets as $widget ) {
+		remove_meta_box( $widget, 'dashboard', 'normal' );
+		remove_meta_box( $widget, 'dashboard', 'side' );
+	}
 }
 
 // Disable dashboard widget drag-and-drop (positions are controlled server-side)
@@ -1696,7 +1790,6 @@ add_action('admin_head', function() {
 
 	foreach ( [
 		'bp_keyword_rankings'      => [ 'column3', 'default' ],
-		'battleplan_queries_stats' => [ 'side',    'low'     ],
 	] as $id => [ $target_ctx, $target_pri ] ) {
 		foreach ( $wp_meta_boxes['dashboard'] as $ctx => $priorities ) {
 			foreach ( $priorities as $pri => $boxes ) {
@@ -1721,7 +1814,6 @@ add_action('admin_print_footer_scripts', function() {
 	jQuery(function($) {
 		// Reposition widgets into correct columns
 		$('#postbox-container-3 .meta-box-sortables').append($('#bp_keyword_rankings'));
-		$('#postbox-container-2 .meta-box-sortables').append($('#battleplan_queries_stats'));
 
 		// Disable sortable — only on containers where WP has already initialized it
 		$('.meta-box-sortables').filter(function() {
@@ -1747,12 +1839,10 @@ add_action('admin_print_footer_scripts', function() {
 	$screen = get_current_screen();
 	if ( ! $screen || $screen->id !== 'dashboard' ) return;
 
-	$customer_info = get_option('customer_info');
-	$clarity = is_array($customer_info)
-		? ( $customer_info['clarity-tags']['id'] ?? $customer_info['google-tags']['clarity'] ?? '' ) : '';
-	if ( ! $clarity ) return;
-
 	if ( _USER_LOGIN !== 'battleplanweb' ) return;   // Clarity link is battleplanweb-only
+
+	$customer_info = customer_info();
+	if ( ! ( $customer_info['clarity-tags']['id'] ?? $customer_info['google-tags']['clarity'] ?? '' ) ) return;
 
 	$url  = esc_url_raw( admin_url( 'admin.php?page=microsoft-clarity' ) );
 	$logo = esc_url_raw( get_template_directory_uri() . '/common/logos/microsoft-clarity.webp' );
@@ -1780,8 +1870,7 @@ add_action('admin_print_footer_scripts', function() {
 });
 
 // Load site stats if hooked to Google Analytics
-$customer_info = get_option('customer_info');
-$prop_id = (is_array($customer_info) && isset($customer_info['google-tags']['prop-id'])) ? (int)$customer_info['google-tags']['prop-id'] : 0;
+$prop_id = (int) ( customer_info()['google-tags']['prop-id'] ?? 0 );
 
 if ( $prop_id > 1 && is_admin() && (_USER_LOGIN === "battleplanweb" || in_array('bp_view_stats', _USER_ROLES)) ) {
 	require_once get_template_directory() . '/functions-admin-stats.php';
@@ -1795,24 +1884,7 @@ if ( is_admin() && (_USER_LOGIN === "battleplanweb" || in_array('bp_view_stats',
 // Adjust the number of of posts listed on admin pages
 add_filter( 'edit_posts_per_page', 'custom_posts_per_page_based_on_type_in_admin', 10, 2 );
 function custom_posts_per_page_based_on_type_in_admin( $per_page, $post_type ) {
-	/*
-		if ( _USER_LOGIN == 'battleplanweb' ) :
-			$last_logins = is_array(get_option('bp_last_login')) ? get_option('bp_last_login') : array();
-			define( '_LAST_LOGIN', $last_logins);
-			$last_logins[$post_type] = time();
-			update_option( 'bp_last_login', $last_logins, false);
-		endif;
-
-		if ( defined('_LAST_LOGIN') && _LAST_LOGIN[$post_type] < (time() - 30000) ) :
-			if( $post_type == 'post' || $post_type == 'page' || $post_type == 'landing' || $post_type == 'galleries' || $post_type == 'attachment' ) : return 30;
-			elseif( $post_type == 'testimonials' || $post_type == 'products' || $post_type == 'product' ) : return 30;
-			else : return 50;
-			endif;
-		endif;
-	*/
-
-	if ( $post_type == 'testimonials' || $post_type == 'attachment' )  return 30;
-    return $per_page;
+	return in_array( $post_type, ['testimonials', 'attachment'], true ) ? 30 : $per_page;
 }
 
 /*--------------------------------------------------------------
@@ -1852,72 +1924,64 @@ function battleplan_add_body_classes($classes) {
 add_action( 'page_attributes_misc_attributes', 'battleplan_remove_sidebar_checkbox', 10, 1 );
 function battleplan_remove_sidebar_checkbox($post) {
 	echo '<p class="post-attributes-label-wrapper">';
-	$getRemoveSidebar = get_post_meta($post->ID, "_bp_remove_sidebar", true);
+	$checked = get_post_meta($post->ID, "_bp_remove_sidebar", true) == "" ? '' : ' checked';
 
-	if ( $getRemoveSidebar == "" ) :
-		echo '<input name="remove_sidebar" type="checkbox" value="true">';
-	else:
-		echo '<input name="remove_sidebar" type="checkbox" value="true" checked>';
-	endif;
-
+	// The hidden marker tells the save handler this checkbox was on the page (an unchecked box posts nothing)
+	echo '<input type="hidden" name="remove_sidebar_present" value="1">';
+	echo '<input name="remove_sidebar" type="checkbox" value="true"' . $checked . '>';
 	echo '<label class="post-attributes-label" for="remove_sidebar">Remove Sidebar</label>';
 }
 
 add_action('save_post', 'battleplan_save_remove_sidebar', 10, 3);
 function battleplan_save_remove_sidebar($post_id, $post, $update) {
-	if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || ( defined('DOING_AJAX') && DOING_AJAX ) || !current_user_can('edit_post', $post_id) ) return;
+	if ( ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) || wp_doing_ajax() || !current_user_can('edit_post', $post_id) ) return;
 
-	$lastViewed = readMeta( $post_id, 'log-last-viewed' );
-	if ( !$lastViewed ) updateMeta( $post_id, 'log-last-viewed', strtotime("-2 days"));
+	if ( !readMeta( $post_id, 'log-last-viewed' ) ) updateMeta( $post_id, 'log-last-viewed', strtotime("-2 days"));
 
-    $updateRemoveSidebar = "";
-    if ( isset($_POST["remove_sidebar"]) ) $updateRemoveSidebar = $_POST["remove_sidebar"];
-    update_post_meta($post_id, "_bp_remove_sidebar", $updateRemoveSidebar);
+	// Only when the edit screen's checkbox was submitted - a programmatic save (the Publish/Draft
+	// row action, imports, wp_update_post) has no remove_sidebar field and used to wipe the setting
+	if ( isset($_POST['remove_sidebar_present']) ) {
+		update_post_meta($post_id, "_bp_remove_sidebar", isset($_POST["remove_sidebar"]) ? 'true' : '');
+	}
 
-	// check for duplicate before posting a new testimonial
-	if ( $post->post_type == 'testimonials') :
-		$new_post_title = $post->post_title;
-		$query = bp_WP_Query('testimonials', [
+	// check for duplicate before posting a new testimonial (matched by title, case-insensitive like the DB collation)
+	if ( $post->post_type == 'testimonials' && $post->post_title !== '' ) :
+		$existing = get_posts([
+			'post_type'      => 'testimonials',
 			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'post__not_in'   => [$post_id]
+			'title'          => $post->post_title,
+			'post__not_in'   => [$post_id],
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
 		]);
 
-		$found_duplicate = false;
-
-		if ($query->have_posts()) :	while ($query->have_posts()) : $query->the_post();
-				if ( strtolower(get_the_title()) == strtolower($new_post_title)) :
-					$found_duplicate = true;
-					$existing_post_id = get_the_ID();
-					break;
-				endif;
-			endwhile;
-		endif;
-
-		wp_reset_postdata();
-
-		if ($found_duplicate) :
+		if ( $existing ) :
 			wp_delete_post($post_id, true);
-			$edit_post_url = get_edit_post_link($existing_post_id, 'raw');
-			wp_redirect($edit_post_url);
+			wp_redirect(get_edit_post_link($existing[0], 'raw'));
 			exit;
 		endif;
 	endif;
 }
 
+// Fresh view-tracking meta for a new post or image. log-views starts as an EMPTY list of days —
+// the old flat ['date'=>…, 'views'=>0] seed wasn't a day row (see battleplan_countTease()).
+function bp_seed_view_meta( $post_id ) {
+	updateMeta( $post_id, 'log-last-viewed', strtotime("-2 days"));
+	foreach ( array( 'today', 'total-7day', 'total-30day', 'total-90day', 'total-365day' ) as $key ) updateMeta( $post_id, 'log-views-'.$key, '0' );
+	updateMeta( $post_id, 'log-views', array() );
+}
+
 // Add "duplicate post/page" function to WP core
 add_action( 'admin_action_battleplan_duplicate_post_as_draft', 'battleplan_duplicate_post_as_draft' );
 function battleplan_duplicate_post_as_draft(){
-	global $wpdb;
+	$post_id = absint( $_REQUEST['post'] ?? 0 );
+	if ( ! $post_id ) wp_die('No post to duplicate has been supplied!');
+	if ( !isset( $_GET['duplicate_nonce'] ) || !wp_verify_nonce( $_GET['duplicate_nonce'], basename( __FILE__ ) ) ) wp_die('This clone link has expired. Go back, refresh the list and try again.');
+	if ( ! current_user_can( 'edit_post', $post_id ) ) wp_die('You are not allowed to copy this.');
 
-	if (! ( isset( $_GET['post']) || isset( $_POST['post'])  || ( isset($_REQUEST['action']) && 'battleplan_duplicate_post_as_draft' == $_REQUEST['action'] ) ) ) wp_die('No post to duplicate has been supplied!');
-	if ( !isset( $_GET['duplicate_nonce'] ) || !wp_verify_nonce( $_GET['duplicate_nonce'], basename( __FILE__ ) ) )	return;
-
-	$post_id = (isset($_GET['post']) ? absint( $_GET['post'] ) : absint( $_POST['post'] ) );
 	$post = get_post( $post_id );
-	$current_user = wp_get_current_user();
-	$new_post_author = $current_user->ID;
-	if (isset( $post ) && $post != null) :
+	$new_post_author = get_current_user_id();
+	if ( $post ) :
 		$args = array(
 			'comment_status' => $post->comment_status,
 			'ping_status'    => $post->ping_status,
@@ -1940,26 +2004,14 @@ function battleplan_duplicate_post_as_draft(){
 			wp_set_object_terms($new_post_id, $post_terms, $taxonomy, false);
 		endforeach;
 
-		$post_meta_infos = $wpdb->get_results("SELECT meta_key, meta_value FROM $wpdb->postmeta WHERE post_id=$post_id");
-		if (count($post_meta_infos)!=0) :
-			$sql_query = "INSERT INTO $wpdb->postmeta (post_id, meta_key, meta_value) ";
-			foreach ($post_meta_infos as $meta_info) :
-				$meta_key = $meta_info->meta_key;
-				if( $meta_key == '_wp_old_slug' ) continue;
-				$meta_value = addslashes($meta_info->meta_value);
-				$sql_query_sel[]= "SELECT $new_post_id, '$meta_key', '$meta_value'";
-			endforeach;
-			$sql_query.= implode(" UNION ALL ", $sql_query_sel);
-			$wpdb->query($sql_query);
-		endif;
+		// Copy all meta through the meta API (get unserializes, add re-serializes; wp_slash because add unslashes).
+		// This replaced a hand-built INSERT … UNION ALL with addslashes() and unescaped meta keys.
+		foreach ( (array) get_post_custom_keys( $post_id ) as $meta_key ) :
+			if ( $meta_key === '_wp_old_slug' || strpos( $meta_key, 'log-' ) === 0 ) continue;   // view logs restart below
+			foreach ( get_post_meta( $post_id, $meta_key ) as $meta_value ) add_post_meta( $new_post_id, $meta_key, wp_slash( $meta_value ) );
+		endforeach;
 
-		updateMeta( $new_post_id, 'log-last-viewed', strtotime("-2 days"));
-		updateMeta( $new_post_id, 'log-views-today', '0' );
-		updateMeta( $new_post_id, 'log-views-total-7day', '0' );
-		updateMeta( $new_post_id, 'log-views-total-30day', '0' );
-		updateMeta( $new_post_id, 'log-views-total-90day', '0' );
-		updateMeta( $new_post_id, 'log-views-total-365day', '0' );
-		updateMeta( $new_post_id, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));
+		bp_seed_view_meta( $new_post_id );
 
 		wp_redirect( admin_url( 'post.php?action=edit&post=' . $new_post_id ) );
 		exit;
@@ -2090,53 +2142,29 @@ function battleplan_setImageMetaUponUpload( $post_ID ) {
 // Add 'log-views' fields to an image when it is uploaded
 add_action( 'add_attachment', 'battleplan_addWidgetPicViewsToImg' );
 function battleplan_addWidgetPicViewsToImg( $post_ID ) {
-	if ( wp_attachment_is_image( $post_ID ) ) :
-		updateMeta( $post_ID, 'log-last-viewed', strtotime("-2 days"));
-		updateMeta( $post_ID, 'log-views-today', '0' );
-		updateMeta( $post_ID, 'log-views-total-7day', '0' );
-		updateMeta( $post_ID, 'log-views-total-30day', '0' );
-		updateMeta( $post_ID, 'log-views-total-90day', '0' );
-		updateMeta( $post_ID, 'log-views-total-365day', '0' );
-		updateMeta( $post_ID, 'log-views', array( 'date'=> strtotime(date("F j, Y")), 'views' => 0 ));
-	endif;
+	if ( wp_attachment_is_image( $post_ID ) ) bp_seed_view_meta( $post_ID );
 }
 
 // Add 'image-category' to testimonials and jobsite geo posts
 add_action('add_attachment', 'battleplan_auto_add_image_category');
 function battleplan_auto_add_image_category($attachment_id) {
-    $parent_post_id = get_post($attachment_id)->post_parent;
-    $parent_post = get_post($parent_post_id);
+    $parent_post = get_post( wp_get_post_parent_id( $attachment_id ) );
+    $term = $parent_post ? ( [ 'jobsite_geo' => 'Jobsite GEO', 'testimonials' => 'Testimonials' ][ $parent_post->post_type ] ?? '' ) : '';
+    if ( $term === '' ) return;
 
-    if ($parent_post && $parent_post->post_type === 'jobsite_geo') {
-        $term = 'Jobsite GEO';
-        if (!term_exists($term, 'image-categories')) wp_insert_term($term, 'image-categories');
-        wp_set_object_terms($attachment_id, $term, 'image-categories', true);
-    }
-
-    if ($parent_post && $parent_post->post_type === 'testimonials') {
-        $term = 'Testimonials';
-        if (!term_exists($term, 'image-categories')) wp_insert_term($term, 'image-categories');
-        wp_set_object_terms($attachment_id, $term, 'image-categories', true);
-    }
+    if (!term_exists($term, 'image-categories')) wp_insert_term($term, 'image-categories');
+    wp_set_object_terms($attachment_id, $term, 'image-categories', true);
 }
 
-// The audit can't run inside a single request (crawl + PageSpeed renders + a Claude call blow the
-// gateway timeout — that was the 502). It's now driven step-by-step from the Site Audit screen, so
-// this action just sends you there; the Run Audit button on that page does the work.
-// Orphaned when the '└ Run Audit' submenu was removed (the Run/Resume button lives on the audit page
-// now). Kept commented for reference in case a direct redirect entry point is ever wanted again.
-// function battleplan_force_run_audit() {
-//     wp_safe_redirect(admin_url('index.php?page=site-audit'));
-//     exit;
-// }
-
+// The Dashboard → GBP Sync / Settings / Stats menu items run their chron when opened. They used to end with
+// wp_safe_redirect(), but a menu page has already printed the admin header by then, so that only ever
+// produced a "headers already sent" warning on a blank page — they now report done instead.
 function battleplan_chron_gbp_status() {
     update_option('bp_chron_a_time', time());
     update_option('bp_chron_a_next', bp_next_nightly_window());
     require_once get_template_directory() . '/functions-chron-gbp.php';
     bp_run_chron_gbp(true);
-    wp_safe_redirect(admin_url());
-    exit;
+    bp_site_op_done('GBP Sync');
 }
 
 function battleplan_chron_housekeeping_status() {
@@ -2144,8 +2172,7 @@ function battleplan_chron_housekeeping_status() {
     update_option('bp_chron_b_next', bp_next_nightly_window());
     require_once get_template_directory() . '/functions-chron-housekeeping.php';
     bp_run_chron_housekeeping(true);   // runs the dated one-off jobs too
-    wp_safe_redirect(admin_url());
-    exit;
+    bp_site_op_done('Housekeeping');
 }
 
 function battleplan_chron_analytics_status() {
@@ -2153,178 +2180,7 @@ function battleplan_chron_analytics_status() {
     update_option('bp_chron_c_next', bp_next_nightly_window());
     require_once get_template_directory() . '/functions-chron-analytics.php';
     bp_run_chron_analytics(true);
-    wp_safe_redirect(admin_url());
-    exit;
-}
-
-
-/*
- * TEMP diagnostic: per-channel monthly history readout (battleplanweb only).
- * Verifies the new bp_ga4_channel_history time series before the Analytics page
- * is built. Hidden unless the URL carries ?bp_ga4_channels=1. Remove once the
- * real Analytics page ships.
- */
-
-// TEMP diagnostic (battleplanweb + ?bp_audit=1): why aren't the audit-metric cards populating? Shows each
-// history's row count + the precondition behind each collector, and can force a run / test the GBP hub call.
-add_action('admin_notices', 'bp_audit_metrics_debug');
-function bp_audit_metrics_debug() {
-    if (!defined('_USER_LOGIN') || _USER_LOGIN !== 'battleplanweb' || empty($_GET['bp_audit'])) return;
-    $t = get_template_directory();
-    foreach (['functions-chron-helpers.php', 'functions-chron-analytics.php'] as $f) { if (file_exists("$t/$f")) require_once "$t/$f"; }
-
-    if (!empty($_GET['run'])) {
-        delete_option('bp_audit_metrics_next');
-        if (function_exists('bp_collect_audit_metrics')) bp_collect_audit_metrics();
-        echo '<div class="notice notice-info"><p>Ran audit-metrics collectors.</p></div>';
-    }
-
-    $cnt = function ($k) { $v = get_option($k); return is_array($v) ? count($v) : 0; };
-    $svc = defined('GA4_SERVICE_ACCOUNT_JSON') ? 'defined' : 'MISSING';
-    $tok = function_exists('bp_gsc_token') ? (bp_gsc_token() ? 'OK' : 'NULL') : 'fn-missing';
-    $ci  = function_exists('customer_info') ? customer_info() : [];
-    $pids = function_exists('ci_normalize_pids') ? ci_normalize_pids($ci['pid'] ?? []) : array_filter((array) ($ci['pid'] ?? []));
-    $gbpUpd = get_option('bp_gbp_update');
-    $revSum = 0; if (is_array($gbpUpd)) foreach ($pids as $p) $revSum += (int) ($gbpUpd[$p]['google-reviews'] ?? 0);
-    $hubCfg = function_exists('bpgbp_client_is_configured') ? (bpgbp_client_is_configured() ? 'yes' : 'no') : 'fn-missing';
-    $perf = '(click test)';
-    if (!empty($_GET['perf']) && function_exists('bpgbp_client_get')) {
-        $r = bpgbp_client_get('performance');
-        $perf = is_wp_error($r) ? ('ERROR: ' . $r->get_error_message())
-              : (empty($r['ok']) ? ('no-ok: ' . wp_json_encode($r)) : ('OK — days=' . (is_array($r['metrics'] ?? null) ? count($r['metrics']) : 0)));
-    }
-
-    echo '<div class="notice notice-warning"><p><b>Audit-metrics diagnostic</b><br>';
-    echo 'history rows — searchConsole: ' . $cnt('bp_gsc_totals_history') . ' &nbsp; backlinks: ' . $cnt('bp_gsc_links_history')
-       . ' &nbsp; content: ' . $cnt('bp_content_history') . ' &nbsp; reviews: ' . $cnt('bp_gbp_stats_history') . ' &nbsp; gbpPerf: ' . $cnt('bp_gbp_perf_history') . '<br>';
-    echo '<b>GSC</b>: service-account=' . $svc . ', token=' . $tok . '<br>';
-    echo '<b>Reviews</b>: pids=[' . esc_html(implode(', ', (array) $pids)) . '] &nbsp; bp_gbp_update entries=' . (is_array($gbpUpd) ? count($gbpUpd) : 0) . ' &nbsp; reviews sum=' . $revSum . '<br>';
-    echo '<b>GBP perf</b>: hub configured=' . $hubCfg . ' &nbsp; perf call=' . esc_html($perf) . '<br>';
-    echo '<a class="button" href="' . esc_url(add_query_arg(['bp_audit' => 1, 'run' => 1])) . '">▶ Run collectors now</a> &nbsp; ';
-    echo '<a class="button" href="' . esc_url(add_query_arg(['bp_audit' => 1, 'perf' => 1])) . '">Test GBP perf hub call</a>';
-    echo '</p></div>';
-}
-
-add_action('admin_notices', 'bp_ga4_channel_history_debug');
-function bp_ga4_channel_history_debug() {
-
-    if (!defined('_USER_LOGIN') || _USER_LOGIN !== 'battleplanweb') return;
-    if (!isset($_GET['bp_ga4_channels'])) return;
-
-    // Optional: run JUST the channel collector (faster than the full Stats re-collect).
-    if (isset($_GET['run']) && check_admin_referer('bp_ga4_channels_run')) {
-        require_once get_template_directory() . '/functions-chron-analytics.php';
-        $ga4 = function_exists('bp_ga4_client') ? bp_ga4_client() : null;
-        $ok  = $ga4 ? bp_ga4_collect_channel_history($ga4['client'], $ga4['property']) : false;
-        echo '<div class="notice notice-' . ($ok ? 'success' : 'error') . '"><p>Channel collection: '
-           . ($ok ? 'OK' : 'FAILED (no client or no data)') . '</p></div>';
-    }
-
-    $history = get_option('bp_ga4_channel_history');
-    $runUrl  = wp_nonce_url(add_query_arg(['bp_ga4_channels' => 1, 'run' => 1]), 'bp_ga4_channels_run');
-    $diagUrl = add_query_arg(['bp_ga4_channels' => 1, 'diag' => 1]);
-
-    echo '<div class="notice notice-info"><p><strong>GA4 Channel History (debug)</strong> &nbsp; '
-       . '<a class="button button-small" href="' . esc_url($runUrl) . '">Run channel collection now</a> &nbsp; '
-       . '<a class="button button-small" href="' . esc_url($diagUrl) . '">Diagnose (query matrix)</a></p>';
-
-    // Diagnostic matrix — pinpoints whether the channel dimension, yearMonth, or the
-    // geo filter is suppressing rows (and whether GA4 thresholding is the cause).
-    if (isset($_GET['diag'])) {
-        require_once get_template_directory() . '/functions-chron-analytics.php';
-        $diag = function_exists('bp_ga4_channel_diagnose') ? bp_ga4_channel_diagnose() : ['error' => 'fn missing'];
-        echo '<pre style="font-size:11px;background:#fff;border:1px solid #ccd;padding:8px;overflow:auto;max-height:420px">'
-           . esc_html(print_r($diag, true)) . '</pre>';
-    }
-
-    if (!is_array($history) || !$history) {
-        echo '<p>No channel history stored yet — click “Run channel collection now”, or Dashboard → Stats.</p></div>';
-        return;
-    }
-
-    // Channel columns ordered by total sessions across all months.
-    $totals = [];
-    foreach ($history as $channels) {
-        if (!is_array($channels)) continue;
-        foreach ($channels as $ch => $m) $totals[$ch] = ($totals[$ch] ?? 0) + (int)($m['sessions'] ?? 0);
-    }
-    arsort($totals);
-    $cols = array_keys($totals);
-
-    krsort($history);
-    $months = array_slice(array_keys($history), 0, 36);
-
-    $render = function ($metric, $title) use ($history, $cols, $months) {
-        echo '<p style="margin:10px 0 2px"><strong>' . esc_html($title) . '</strong></p>';
-        echo '<table class="widefat striped" style="max-width:100%;font-size:11px"><thead><tr><th>Month</th>';
-        foreach ($cols as $ch) echo '<th>' . esc_html($ch) . '</th>';
-        echo '</tr></thead><tbody>';
-        foreach ($months as $ym) {
-            echo '<tr><td>' . esc_html(substr($ym, 0, 4) . '-' . substr($ym, 4, 2)) . '</td>';
-            foreach ($cols as $ch) {
-                $v = $history[$ym][$ch][$metric] ?? 0;
-                echo '<td>' . ($v ? number_format((float)$v, $metric === 'conversions' ? 1 : 0) : '·') . '</td>';
-            }
-            echo '</tr>';
-        }
-        echo '</tbody></table>';
-    };
-
-    echo '<p style="margin:6px 0"><em>' . count($history) . ' months, ' . count($cols) . ' channels stored.</em></p>';
-
-    $meta = get_option('bp_ga4_channel_history_meta');
-    if (is_array($meta)) {
-        echo '<p style="margin:6px 0;font-size:11px;color:#666"><em>Last run — '
-           . 'years=' . esc_html((string)($meta['years'] ?? '?'))
-           . ', core rows=' . esc_html((string)($meta['core_rows'] ?? '?'))
-           . ', conv rows=' . esc_html((string)($meta['conv_rows'] ?? '?'))
-           . ' (' . esc_html((string)($meta['conv_metric'] ?? '—')) . ')'
-           . ', months built=' . esc_html((string)($meta['months'] ?? '?'))
-           . '<br>ranges: ' . esc_html(implode('   ', (array)($meta['ranges'] ?? [])))
-           . '</em></p>';
-    }
-
-    $render('sessions', 'Sessions by channel');
-    $render('conversions', 'Conversions (key events) by channel');
-
-    // Quality signals — is a Direct spike junk (bots / lost attribution: low engagement,
-    // high new%) or real ad-driven return traffic (normal engagement)? Computed from the
-    // already-stored history — no GA4 call. Compare Direct against clean channels.
-    $quality = function ($m) {
-        $s = (int) ($m['sessions'] ?? 0);
-        $u = (int) ($m['users'] ?? 0);
-        return [
-            's'   => $s,
-            'new' => $u ? round(((int) ($m['newUsers'] ?? 0)        / $u) * 100) : 0,
-            'eng' => $s ? round(((int) ($m['engagedSessions'] ?? 0) / $s) * 100) : 0,
-            'dur' => $s ? round((float) ($m['duration'] ?? 0)       / $s)        : 0,
-        ];
-    };
-
-    echo '<p style="margin:14px 0 2px"><strong>Quality signals — Direct vs clean channels</strong><br>'
-       . '<span style="font-size:11px;color:#666">Junk / bot / lost-attribution traffic = <b>low eng%</b> + <b>low avg&nbsp;s</b> + <b>high new%</b>. '
-       . 'Real return visits engage normally. Watch Direct during the ad months vs Organic Search / GBP.</span></p>';
-    echo '<table class="widefat striped" style="max-width:100%;font-size:11px"><thead><tr>'
-       . '<th>Month</th><th>Direct sess</th><th>Direct new%</th><th>Direct eng%</th><th>Direct avg&nbsp;s</th>'
-       . '<th>Organic eng%</th><th>Organic avg&nbsp;s</th><th>GBP eng%</th><th>GBP avg&nbsp;s</th></tr></thead><tbody>';
-    foreach ($months as $ym) {
-        $d = isset($history[$ym]['Direct'])         ? $quality($history[$ym]['Direct'])         : null;
-        $o = isset($history[$ym]['Organic Search']) ? $quality($history[$ym]['Organic Search']) : null;
-        $g = isset($history[$ym]['GBP'])            ? $quality($history[$ym]['GBP'])             : null;
-        echo '<tr><td>' . esc_html(substr($ym, 0, 4) . '-' . substr($ym, 4, 2)) . '</td>'
-           . '<td>' . ($d ? number_format($d['s']) : '·') . '</td>'
-           . '<td>' . ($d ? $d['new'] . '%' : '·') . '</td>'
-           . '<td>' . ($d ? $d['eng'] . '%' : '·') . '</td>'
-           . '<td>' . ($d ? $d['dur'] : '·') . '</td>'
-           . '<td>' . ($o ? $o['eng'] . '%' : '·') . '</td>'
-           . '<td>' . ($o ? $o['dur'] : '·') . '</td>'
-           . '<td>' . ($g ? $g['eng'] . '%' : '·') . '</td>'
-           . '<td>' . ($g ? $g['dur'] : '·') . '</td>'
-           . '</tr>';
-    }
-    echo '</tbody></table>';
-
-    echo '</div>';
+    bp_site_op_done('Stats');
 }
 
 
@@ -2554,12 +2410,34 @@ function battleplan_setupTextEditorDialogBoxes($hook) {
 
 
 
+// The ⚙️ site-ops pages used to run the moment the menu item was opened — no confirmation, no nonce — so a
+// stray click (or any page that got battleplanweb to load the URL) wiped the site. Each now shows a confirm
+// button first and only runs on that nonce-checked POST. Returns true when the action should run now.
+function bp_confirm_site_op( $slug, $title, $what ) {
+	if ( isset( $_POST['bp_site_op'] ) && check_admin_referer( 'bp_site_op_' . $slug ) ) return true;
+
+	echo '<div class="wrap"><h1>' . esc_html( $title ) . '</h1><p style="font-size:14px;max-width:760px;">' . esc_html( $what ) . '</p>';
+	echo '<form method="post">';
+	wp_nonce_field( 'bp_site_op_' . $slug );
+	echo '<input type="hidden" name="bp_site_op" value="1">';
+	echo '<button type="submit" class="button button-primary" onclick="return confirm(\'' . esc_js( $title ) . ' — this cannot be undone. Continue?\')">Yes, ' . esc_html( $title ) . '</button> ';
+	echo '<a class="button" href="' . esc_url( admin_url() ) . '">Cancel</a>';
+	echo '</form></div>';
+	return false;
+}
+
+function bp_site_op_done( $title ) {
+	echo '<div class="wrap"><h1>' . esc_html( $title ) . '</h1><div class="notice notice-success"><p>Done. <a href="' . esc_url( admin_url() ) . '">Back to the dashboard</a></p></div></div>';
+}
+
 // Set up brand new site
 function battleplan_clear_all() {
-	battleplan_clear_hvac(true);
+	if ( bp_confirm_site_op( 'clear-all', 'Clear ALL', 'Deletes every page except Home and Contact Us, every element except the site header and widgets, ALL posts of every other type (including the HVAC product library), every user except battleplanweb, untagged/stock images, and saved site audits.' ) ) battleplan_clear_hvac( true );
 }
 
 function battleplan_clear_hvac($all=false) {
+	if ( $all !== true && ! bp_confirm_site_op( 'clear-hvac', 'Clear HVAC', 'Deletes every page except Home, Contact Us and Product Overview, every element except the site header and widgets, all posts of every other type except the HVAC product library, every user except battleplanweb, untagged/stock images, and saved site audits.' ) ) return;
+
 	$deleteImgs = array ('testimonials', 'photos', 'graphics', 'logos', 'jobsite-geo');
 	$keepPages = array ('home', 'contact-us', 'product-overview');
 	$keepElements = array ('site-header', 'widgets');
@@ -2630,8 +2508,7 @@ function battleplan_clear_hvac($all=false) {
 	// Saved Site Audits (reports, notes, run state, screenshots) — so a copied site starts clean.
 	bp_clear_audit_data();
 
-	header("Location: /wp-admin/");
-	exit();
+	bp_site_op_done( $all === true ? 'Clear ALL' : 'Clear HVAC' );
 }
 
 // Wipe all saved Site-Audit data: the report history, last-run stamp, reviewer notes, any
@@ -2665,6 +2542,8 @@ function bp_clear_audit_data() {
 }
 
 function battleplan_launch_site() {
+	if ( ! bp_confirm_site_op( 'launch-site', 'Launch Site', 'Clears the stored Google Business data and any saved site audits carried over from the source site, resets the chron clock, and sets the launch date to today.' ) ) return;
+
 	delete_option('bp_gbp_update');
 
 	// Clear any audits carried over from the site this was copied from (also removes the legacy
@@ -2674,8 +2553,7 @@ function battleplan_launch_site() {
 	updateOption('bp_chron_time', 0);
 	updateOption('bp_launch_date', date('Y-m-d'));
 
-	header("Location: /wp-admin/");
-	exit();
+	bp_site_op_done( 'Launch Site' );
 }
 
 

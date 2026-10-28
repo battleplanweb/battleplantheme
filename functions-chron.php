@@ -4,13 +4,7 @@
 require_once get_template_directory() . '/functions-chron-helpers.php';
 
 
-$current_user = wp_get_current_user();
-$is_override  = ($current_user && $current_user->user_login === 'battleplanweb');
-
-if (get_transient('bp_chron_jobs_lock') && !$is_override) {
-    //error_log('BP Chron Jobs locked');
-    return;
-}
+if (get_transient('bp_chron_jobs_lock') && _USER_LOGIN !== 'battleplanweb') return;
 
 set_transient('bp_chron_jobs_lock', 1, 3);
 
@@ -29,64 +23,55 @@ require_once get_template_directory() . '/vendor/autoload.php';
  * 22 = 10pm (start of window); rand(0, 25200) adds up to 7 hours.
  */
 function bp_next_nightly_window(int $startHour = 22): int {
-    $tzString = get_option('timezone_string') ?: 'America/New_York';
-
     try {
-        $tz = new DateTimeZone($tzString);
+        $tz = new DateTimeZone(get_option('timezone_string') ?: 'America/New_York');
     } catch (Exception $e) {
-        // If the stored value is a UTC offset format rather than a named timezone,
-        // fall back to Eastern
+        // If the stored value is a UTC offset format rather than a named timezone, fall back to Eastern
         $tz = new DateTimeZone('America/New_York');
     }
 
     $now    = new DateTime('now', $tz);
-    $target = clone $now;
-    $target->setTime($startHour, 0, 0);
-
-    if ($target <= $now) {
-        $target->modify('+1 day');
-    }
+    $target = (clone $now)->setTime($startHour, 0, 0);
+    if ($target <= $now) $target->modify('+1 day');
 
     // Spread randomly across the full 7-hour window (10pm–5am = 25200 seconds)
     return $target->getTimestamp() + rand(0, 25200);
 }
 
+/**
+ * Should chron slot $slot (a-e) run on this request? Runs when forced (bp_force_chron_{slot}), or on a
+ * non-SERP bot hit when it has never run, its scheduled bp_chron_{slot}_next has arrived, or the last run
+ * is older than $staleAfter seconds. If it runs, the slot is stamped (time + next window, plus
+ * $nextOffset seconds) BEFORE the job starts and the force flag is returned; otherwise null.
+ */
+function bp_chron_claim(string $slot, int $staleAfter, int $nextOffset = 0): ?bool {
+    $force   = filter_var(get_option("bp_force_chron_$slot", false), FILTER_VALIDATE_BOOLEAN);
+    $lastRun = (int) get_option("bp_chron_{$slot}_time", 0);
+    $next    = (int) get_option("bp_chron_{$slot}_next", 0);
 
-require_once get_template_directory() . '/functions-chron-helpers.php';
+    if ($next <= 0) {
+        $next = bp_next_nightly_window();
+        update_option("bp_chron_{$slot}_next", $next);
+    }
 
-//battleplan_delete_prefixed_options('bp_setup_');
-//battleplan_delete_prefixed_options('bp_product_upload_');
+    $due = $lastRun === 0 || (time() - $lastRun) > $staleAfter || time() >= $next;
+    if (!$force && !(_IS_BOT && !_IS_SERP_BOT && $due)) return null;
+
+    delete_option("bp_force_chron_$slot");
+    update_option("bp_chron_{$slot}_time", time());
+    update_option("bp_chron_{$slot}_next", bp_next_nightly_window() + $nextOffset);
+    return $force;
+}
 
 
 /*--------------------------------------------------------------
 # Chron A — GBP + CI Sync
 --------------------------------------------------------------*/
 
-$forceA   = filter_var(get_option('bp_force_chron_a', false), FILTER_VALIDATE_BOOLEAN);
-$lastRunA = (int) get_option('bp_chron_a_time', 0);
-$nextA    = (int) get_option('bp_chron_a_next', 0);
-$neverA   = $lastRunA === 0;
+// Stale after 1.5x customer_info audit_delay (default 90 days)
+$auditInterval = (int) (customer_info()['audit_delay'] ?? 86400 * 90);
 
-// Interval from customer_info audit_delay, default 90 days
-$customerInfo  = customer_info();
-$auditInterval = isset($customerInfo['audit_delay'])
-    ? (int) $customerInfo['audit_delay']
-    : (86400 * 90);
-
-$staleA = !$neverA && (time() - $lastRunA) > ($auditInterval * 1.5);
-
-if ($nextA <= 0) {
-    $nextA = bp_next_nightly_window();
-    update_option('bp_chron_a_next', $nextA);
-}
-
-$dueA         = time() >= $nextA;
-$autoTriggerA = _IS_BOT && !_IS_SERP_BOT && ($neverA || $staleA || $dueA);
-
-if ($forceA || $autoTriggerA) {
-    delete_option('bp_force_chron_a');
-    update_option('bp_chron_a_time', time());
-    update_option('bp_chron_a_next', bp_next_nightly_window());
+if (($forceA = bp_chron_claim('a', (int) ($auditInterval * 1.5))) !== null) {
     require_once get_template_directory() . '/functions-chron-gbp.php';
     bp_run_chron_gbp($forceA);
 }
@@ -96,25 +81,7 @@ if ($forceA || $autoTriggerA) {
 # Chron B — Housekeeping
 --------------------------------------------------------------*/
 
-$forceB   = filter_var(get_option('bp_force_chron_b', false), FILTER_VALIDATE_BOOLEAN);
-$lastRunB = (int) get_option('bp_chron_b_time', 0);
-$nextB    = (int) get_option('bp_chron_b_next', 0);
-$neverB   = $lastRunB === 0;
-
-$staleB = !$neverB && (time() - $lastRunB) > (86400 * 1);
-
-if ($nextB <= 0) {
-    $nextB = bp_next_nightly_window();
-    update_option('bp_chron_b_next', $nextB);
-}
-
-$dueB         = time() >= $nextB;
-$autoTriggerB = _IS_BOT && !_IS_SERP_BOT && ($neverB || $staleB || $dueB);
-
-if ($forceB || $autoTriggerB) {
-    delete_option('bp_force_chron_b');
-    update_option('bp_chron_b_time', time());
-    update_option('bp_chron_b_next', bp_next_nightly_window());
+if (($forceB = bp_chron_claim('b', 86400)) !== null) {
     require_once get_template_directory() . '/functions-chron-housekeeping.php';
     bp_run_chron_housekeeping($forceB);   // runs the dated one-off jobs too
 }
@@ -124,25 +91,7 @@ if ($forceB || $autoTriggerB) {
 # Chron C — Analytics
 --------------------------------------------------------------*/
 
-$forceC   = filter_var(get_option('bp_force_chron_c', false), FILTER_VALIDATE_BOOLEAN);
-$lastRunC = (int) get_option('bp_chron_c_time', 0);
-$nextC    = (int) get_option('bp_chron_c_next', 0);
-$neverC   = $lastRunC === 0;
-
-$staleC = !$neverC && (time() - $lastRunC) > (86400 * 3);
-
-if ($nextC <= 0) {
-    $nextC = bp_next_nightly_window();
-    update_option('bp_chron_c_next', $nextC);
-}
-
-$dueC         = time() >= $nextC;
-$autoTriggerC = _IS_BOT && !_IS_SERP_BOT && ($neverC || $staleC || $dueC);
-
-if ($forceC || $autoTriggerC) {
-    delete_option('bp_force_chron_c');
-    update_option('bp_chron_c_time', time());
-    update_option('bp_chron_c_next', bp_next_nightly_window());
+if (($forceC = bp_chron_claim('c', 86400 * 3)) !== null) {
     require_once get_template_directory() . '/functions-chron-analytics.php';
     bp_run_chron_analytics($forceC);
 }
@@ -152,25 +101,7 @@ if ($forceC || $autoTriggerC) {
 # Chron D — Keyword Rankings
 --------------------------------------------------------------*/
 
-$forceD   = filter_var(get_option('bp_force_chron_d', false), FILTER_VALIDATE_BOOLEAN);
-$lastRunD = (int) get_option('bp_chron_d_time', 0);
-$nextD    = (int) get_option('bp_chron_d_next', 0);
-$neverD   = $lastRunD === 0;
-
-$staleD = !$neverD && (time() - $lastRunD) > (86400 * 7);
-
-if ($nextD <= 0) {
-    $nextD = bp_next_nightly_window();
-    update_option('bp_chron_d_next', $nextD);
-}
-
-$dueD         = time() >= $nextD;
-$autoTriggerD = _IS_BOT && !_IS_SERP_BOT && ($neverD || $staleD || $dueD);
-
-if ($forceD || $autoTriggerD) {
-    delete_option('bp_force_chron_d');
-    update_option('bp_chron_d_time', time());
-    update_option('bp_chron_d_next', bp_next_nightly_window() + (86400 * 6));
+if (($forceD = bp_chron_claim('d', 86400 * 7, 86400 * 6)) !== null) {
     require_once get_template_directory() . '/functions-keyword-rankings.php';
     bp_kw_run_chron($forceD);
 }
@@ -180,29 +111,10 @@ if ($forceD || $autoTriggerD) {
 # Chron E — Fleet Pulse
 --------------------------------------------------------------*/
 
-$forceE   = filter_var(get_option('bp_force_chron_e', false), FILTER_VALIDATE_BOOLEAN);
-$lastRunE = (int) get_option('bp_chron_e_time', 0);
-$nextE    = (int) get_option('bp_chron_e_next', 0);
-$neverE   = $lastRunE === 0;
-
-$staleE = !$neverE && (time() - $lastRunE) > (86400 * 1);
-
-if ($nextE <= 0) {
-    $nextE = bp_next_nightly_window();
-    update_option('bp_chron_e_next', $nextE);
-}
-
-$dueE         = time() >= $nextE;
-$autoTriggerE = _IS_BOT && !_IS_SERP_BOT && ($neverE || $staleE || $dueE);
-
 // Deliberately LAST in this file: A-D may have just run in this same request, and the
 // snapshot reads the options they write. Reporting before them would ship yesterday's
 // numbers and — worse — make every chron look a day staler than it is.
-if ($forceE || $autoTriggerE) {
-    delete_option('bp_force_chron_e');
-    update_option('bp_chron_e_time', time());
-    update_option('bp_chron_e_next', bp_next_nightly_window());
-
+if (bp_chron_claim('e', 86400) !== null) {
     // The hub can't sign a request to itself (bpgbp_client_autopair() skips it), so it
     // stores its own snapshot in-process instead of HTTP-looping back to localhost.
     if (function_exists('sp_fleet_is_hub') && sp_fleet_is_hub()) {
@@ -329,6 +241,5 @@ function bp_site_sells_brand(string $brand): bool {
 
 function battleplan_delete_prefixed_options(string $prefix): void {
     global $wpdb;
-    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '{$prefix}%'");
+    $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like($prefix) . '%'));
 }
-

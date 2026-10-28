@@ -702,6 +702,7 @@ function site_pulse_pwa_head(): void {
 				'box-shadow:0 8px 30px rgba(0,0,0,.18);font-family:inherit;max-width:460px;margin:0 auto;' +
 				'display:flex;flex-direction:column;gap:10px;animation:spIbUp .25s ease}' +
 				'@keyframes spIbUp{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}' +
+				'body:has(.sp-bar) #sp-install-banner{bottom:calc(76px + env(safe-area-inset-bottom,0px))}' +   // sit above the app's bottom bar
 				'#sp-install-banner .sp-ib-title{font-weight:700;font-size:15px;color:#1f2933}' +
 				'#sp-install-banner .sp-ib-text{font-size:13px;line-height:1.45;color:#52606d}' +
 				'#sp-install-banner .sp-ib-actions{display:flex;gap:8px;justify-content:flex-end}' +

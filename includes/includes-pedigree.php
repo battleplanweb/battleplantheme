@@ -7,9 +7,8 @@
 # Register Custom Post Types
 # Import Advanced Custom Fields
 # Basic Theme Set Up
-# AJAX Functions
 # Grid Set Up
-
+--------------------------------------------------------------*/
 
 /*--------------------------------------------------------------
 # Register Custom Post Types
@@ -57,7 +56,6 @@ function battleplan_registerPedigreePostTypes() {
 		'show_ui'=>true,
         'show_admin_column'=>true,
 	));
-	wp_insert_term( 'featured', 'dog-tags' );
 	register_post_type( 'litters', array (
 		'label'               => __( 'litters', 'battleplan' ),
 		'labels'              => array(
@@ -645,7 +643,7 @@ function battleplan_add_callname($archiveTitle, $archiveLink) {
 add_shortcode( 'bracket', 'battleplan_buildBracket' );
 function battleplan_buildBracket( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'a1'=>'', 'a2'=>'', 'b1'=>'', 'b2'=>'', 'b3'=>'', 'b4'=>'', 'c1'=>'', 'c2'=>'', 'c3'=>'', 'c4'=>'', 'c5'=>'', 'c6'=>'', 'c7'=>'', 'c8'=>'' ), $atts );
-	$a1 = esc_attr($a['a1']); $a2 = esc_attr($a['a2']); $b1 = esc_attr($a['b1']); $b2 = esc_attr($a['b2']); $b3 = esc_attr($a['b3']); $b4 = esc_attr($a['b4']); $c1 = esc_attr($a['c1']); $c2 = esc_attr($a['c2']); $c3 = esc_attr($a['c3']); $c4 = esc_attr($a['c4']); $c5 = esc_attr($a['c5']); $c6 = esc_attr($a['c6']); $c7 = esc_attr($a['c7']); $c8 = esc_attr($a['c8']);
+	extract( array_map( 'esc_attr', $a ) ); // $a1, $a2, $b1 … $c8
 
 	$buildBracket = '<section class="bracket-scroller"><table class="bracket-table">';
 	$buildBracket .= '<tr><td class="bracket-blank">&nbsp;</td><td class="bracket-blank">&nbsp;</td><td class="bracket-top">'.$c1.'</td></tr>';
@@ -668,8 +666,13 @@ function battleplan_buildBracket( $atts, $content = null ) {
 	return $buildBracket;
 }
 
-//Establish default thumbnail size
-update_option( 'thumbnail_size_w', 280 );
-update_option( 'thumbnail_size_h', 255 );
-update_option( 'thumbnail_crop', 1 );
+// One-time-ish setup, admin only (these used to run on every request): the featured dog tag
+// and the pedigree thumbnail size.
+add_action( 'admin_init', 'battleplan_pedigree_setup' );
+function battleplan_pedigree_setup() {
+	if ( ! term_exists( 'featured', 'dog-tags' ) ) wp_insert_term( 'featured', 'dog-tags' );
+	update_option( 'thumbnail_size_w', 280 );
+	update_option( 'thumbnail_size_h', 255 );
+	update_option( 'thumbnail_crop', 1 );
+}
 ?>

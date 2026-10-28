@@ -60,6 +60,20 @@ function schedules_log( string $action, string $description, array $meta = [], i
 	);
 }
 
+/**
+ * Every in-app notification goes through here. A host app can take it over via the
+ * `schedules_route_notification` filter (return true = handled) — the Site Pulse "Shift Scheduling" module
+ * sends them to the Site Pulse bell instead (includes-site-pulse-schedules.php). Otherwise it lands in the
+ * app's own table / bell. $row is the notifications-table row (user_id, type, related_id, related_type,
+ * message, …); $format is accepted for drop-in compatibility with the old $wpdb->insert calls.
+ */
+function schedules_insert_notification( array $row, $format = null ): void {
+	if ( apply_filters( 'schedules_route_notification', false, $row ) ) return;
+	global $wpdb;
+	$row += [ 'is_read' => 0, 'created_at' => current_time( 'mysql' ) ];
+	$wpdb->insert( schedules_table( 'notifications' ), $row );
+}
+
 function schedules_unread_count( int $user_id ): int {
 	global $wpdb;
 	return (int) $wpdb->get_var( $wpdb->prepare(
@@ -881,6 +895,12 @@ function schedules_enqueue_assets(): void {
 		filemtime( get_template_directory() . '/style-schedules.css' )
 	);
 
+	schedules_enqueue_app_script();
+}
+
+// The app JS + its localized schedulesData. Shared by the standalone schedules pages (above) and the
+// Site Pulse "Shift Scheduling" panel (includes-site-pulse-schedules.php), which brings its own CSS.
+function schedules_enqueue_app_script(): void {
 	wp_enqueue_script(
 		'schedules-script',
 		get_template_directory_uri() . '/js/script-schedules.js',
@@ -889,7 +909,7 @@ function schedules_enqueue_assets(): void {
 		true
 	);
 
-	$user_id       = defined('_USER_ID') ? _USER_ID : get_current_user_id();
+	$user_id       = get_current_user_id();
 	$user          = get_userdata( $user_id );
 	$is_supervisor = $user && $user->has_cap('manage_schedules') ? 'true' : 'false';
 	$is_admin      = $user && $user->has_cap('admin_schedules')  ? 'true' : 'false';
@@ -2227,6 +2247,29 @@ function schedules_normalize_custom_schedule( array $sched ): array {
 }
 
 /**
+ * Who may change whom (create / edit / deactivate / purge). Returns an error message, or '' if allowed.
+ * Member forms only require manage_schedules, and set_role() replaces EVERY role — so without this a
+ * supervisor could create or promote admins, or demote a WordPress administrator by editing them.
+ *  - A WordPress administrator account is never changed from the app.
+ *  - Granting the admin tier, or changing someone who already holds it, needs admin_schedules.
+ */
+function schedules_member_change_error( int $target_id = 0, string $member_role = '' ): string {
+	if ( $target_id ) {
+		$target = get_userdata( $target_id );
+		if ( $target && in_array( 'administrator', (array) $target->roles, true ) ) {
+			return 'WordPress administrator accounts can\'t be changed from the schedule.';
+		}
+		if ( $target && in_array( 'schedules_admin', (array) $target->roles, true ) && ! current_user_can( 'admin_schedules' ) ) {
+			return 'Only a full-access admin can change another full-access admin.';
+		}
+	}
+	if ( $member_role === 'admin' && ! current_user_can( 'admin_schedules' ) ) {
+		return 'Only a full-access admin can give someone full access.';
+	}
+	return '';
+}
+
+/**
  * Creates a new schedules member.
  */
 function schedules_create_member( array $data ): array {
@@ -2246,6 +2289,10 @@ function schedules_create_member( array $data ): array {
 
 	if ( empty($badge) || empty($password) || empty($email) ) {
 		return [ 'success' => false, 'message' => 'Badge number, password, and email are required.' ];
+	}
+
+	if ( $err = schedules_member_change_error( 0, $member_role ) ) {
+		return [ 'success' => false, 'message' => $err ];
 	}
 
 	if ( username_exists($badge) ) {
@@ -2488,8 +2535,7 @@ function schedules_notify_sick_threshold( int $user_id, float $total, int $thres
 	foreach ( array_merge( $shift_sups, $admins ) as $sup ) {
 		if ( in_array( $sup->ID, $seen_ids, true ) ) continue;
 		$seen_ids[] = $sup->ID;
-		$wpdb->insert(
-			schedules_table( 'notifications' ),
+		schedules_insert_notification(
 			[
 				'user_id'      => $sup->ID,
 				'type'         => 'sick_threshold',
@@ -2664,6 +2710,7 @@ function schedules_ajax_claim_block(): void {
 	$result   = schedules_claim_block( $block_id, $user_id );
 
 	if ( $result['success'] ) {
+		global $wpdb;   // was missing: a successful claim saved, then fataled here (500) before the reply
 		$_blk = $wpdb->get_row( $wpdb->prepare(
 			"SELECT b.start_hour, b.end_hour, d.schedule_date, d.shift_letter
 			 FROM " . schedules_table('blocks') . " b
@@ -2951,6 +2998,10 @@ function schedules_ajax_update_member(): void {
 		wp_send_json_error( [ 'message' => 'User not found.' ] );
 	}
 
+	if ( $err = schedules_member_change_error( $user_id, $member_role ) ) {
+		wp_send_json_error( [ 'message' => $err ] );
+	}
+
 	$update_data = [ 'ID' => $user_id ];
 	if ( $first_name ) $update_data['first_name']   = $first_name;
 	if ( $last_name )  $update_data['last_name']    = $last_name;
@@ -3022,6 +3073,10 @@ function schedules_ajax_deactivate_member(): void {
 		wp_send_json_error( [ 'message' => 'User not found.' ] );
 	}
 
+	if ( $err = schedules_member_change_error( $user_id ) ) {
+		wp_send_json_error( [ 'message' => $err ] );
+	}
+
 	$user         = new WP_User( $user_id );
 	$former_roles = $user->roles;
 	$user->set_role('subscriber');
@@ -3046,6 +3101,10 @@ function schedules_ajax_purge_member(): void {
 
 	if ( ! $user_id || ! get_userdata($user_id) ) {
 		wp_send_json_error( [ 'message' => 'User not found.' ] );
+	}
+
+	if ( $err = schedules_member_change_error( $user_id ) ) {
+		wp_send_json_error( [ 'message' => $err ] );
 	}
 
 	// Hard-delete all duty assignments for this member
@@ -4586,8 +4645,7 @@ function schedules_ajax_review_timeoff(): void {
 	}
 
 	// Notify the member of the decision
-	$wpdb->insert(
-		schedules_table('notifications'),
+	schedules_insert_notification(
 		[
 			'user_id'      => (int) $request['user_id'],
 			'type'         => 'timeoff_' . $decision,
@@ -4813,8 +4871,7 @@ function schedules_ajax_submit_timeoff(): void {
 			}
 		}
 		foreach ( $notif_users as $sup ) {
-			$wpdb->insert(
-				schedules_table('notifications'),
+			schedules_insert_notification(
 				[
 					'user_id'      => $sup->ID,
 					'type'         => 'timeoff_request',
@@ -5407,9 +5464,7 @@ function schedules_ajax_get_cover_requests(): void {
 		$user_shift = get_user_meta( $user_id, 'schedules_shift', true );
 		if ( $user_shift ) {
 			$rows = $wpdb->get_results( $wpdb->prepare(
-				"SELECT t.*,
-				        ru.first_name AS req_first, ru.last_name AS req_last,
-				        rc.first_name AS rec_first, rc.last_name AS rec_last
+				"SELECT t.*
 				 FROM " . schedules_table('trades') . " t
 				 JOIN {$wpdb->users} ru ON ru.ID = t.requester_id
 				 JOIN {$wpdb->users} rc ON rc.ID = t.recipient_id
@@ -5421,9 +5476,7 @@ function schedules_ajax_get_cover_requests(): void {
 		} else {
 			// Admin with no shift: see all pending_supervisor
 			$rows = $wpdb->get_results(
-				"SELECT t.*,
-				        ru.first_name AS req_first, ru.last_name AS req_last,
-				        rc.first_name AS rec_first, rc.last_name AS rec_last
+				"SELECT t.*
 				 FROM " . schedules_table('trades') . " t
 				 JOIN {$wpdb->users} ru ON ru.ID = t.requester_id
 				 JOIN {$wpdb->users} rc ON rc.ID = t.recipient_id
@@ -5434,9 +5487,7 @@ function schedules_ajax_get_cover_requests(): void {
 	} else {
 		// Members see their own incoming + outgoing (non-terminal)
 		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT t.*,
-			        ru.first_name AS req_first, ru.last_name AS req_last,
-			        rc.first_name AS rec_first, rc.last_name AS rec_last
+			"SELECT t.*
 			 FROM " . schedules_table('trades') . " t
 			 JOIN {$wpdb->users} ru ON ru.ID = t.requester_id
 			 JOIN {$wpdb->users} rc ON rc.ID = t.recipient_id
@@ -5446,6 +5497,18 @@ function schedules_ajax_get_cover_requests(): void {
 			$user_id, $user_id
 		), ARRAY_A ) ?: [];
 	}
+
+	// First/last names live in usermeta, not on wp_users — the SQL used to select ru.first_name (no such
+	// column), so the query failed and this list always came back empty. Fill them in per row instead.
+	foreach ( $rows as &$r ) {
+		$req = get_userdata( (int) $r['requester_id'] );
+		$rec = get_userdata( (int) $r['recipient_id'] );
+		$r['req_first'] = $req ? $req->first_name : '';
+		$r['req_last']  = $req ? $req->last_name  : '';
+		$r['rec_first'] = $rec ? $rec->first_name : '';
+		$r['rec_last']  = $rec ? $rec->last_name  : '';
+	}
+	unset( $r );
 
 	wp_send_json_success( [ 'requests' => $rows ] );
 }
@@ -5538,8 +5601,7 @@ function schedules_ajax_send_cover_request(): void {
 			$range_label = date( 'M j', strtotime( $start_date ) ) . '–' . date( 'M j, Y', strtotime( $end_date ) );
 		}
 		$day_word = $created === 1 ? '1 day' : "{$created} days";
-		$wpdb->insert(
-			schedules_table('notifications'),
+		schedules_insert_notification(
 			[
 				'user_id'      => $recipient_id,
 				'type'         => 'cover_request_received',
@@ -5597,7 +5659,7 @@ function schedules_ajax_respond_cover_request(): void {
 		);
 
 		// Notify requester
-		$wpdb->insert( schedules_table('notifications'), [
+		schedules_insert_notification( [
 			'user_id'      => (int) $trade['requester_id'],
 			'type'         => 'cover_request_accepted',
 			'related_id'   => $trade_id,
@@ -5617,7 +5679,7 @@ function schedules_ajax_respond_cover_request(): void {
 		foreach ( array_merge( $shift_sups, $admins ) as $sup ) {
 			if ( in_array( $sup->ID, $seen, true ) ) continue;
 			$seen[] = $sup->ID;
-			$wpdb->insert( schedules_table('notifications'), [
+			schedules_insert_notification( [
 				'user_id'      => $sup->ID,
 				'type'         => 'cover_pending_supervisor',
 				'related_id'   => $trade_id,
@@ -5640,7 +5702,7 @@ function schedules_ajax_respond_cover_request(): void {
 			[ '%d' ]
 		);
 
-		$wpdb->insert( schedules_table('notifications'), [
+		schedules_insert_notification( [
 			'user_id'      => (int) $trade['requester_id'],
 			'type'         => 'cover_request_declined',
 			'related_id'   => $trade_id,
@@ -5690,7 +5752,7 @@ function schedules_ajax_cancel_cover_request(): void {
 		$message    = "Coverage request cancelled: {$req_name}'s Shift {$trade['shift_letter']} on {$date_fmt}.";
 		$shift_sups = get_users( [ 'role' => 'schedules_supervisor', 'meta_key' => 'schedules_shift', 'meta_value' => $trade['shift_letter'] ] );
 		foreach ( $shift_sups as $sup ) {
-			$wpdb->insert( schedules_table('notifications'), [
+			schedules_insert_notification( [
 				'user_id'      => $sup->ID,
 				'type'         => 'cover_cancelled',
 				'related_id'   => $trade_id,
@@ -5766,7 +5828,7 @@ function schedules_ajax_review_cover_request(): void {
 
 	$notif_type = $decision === 'approve' ? 'cover_approved' : 'cover_rejected';
 	foreach ( [ (int) $trade['requester_id'] => $msg_req, (int) $trade['recipient_id'] => $msg_rec ] as $uid => $msg ) {
-		$wpdb->insert( schedules_table('notifications'), [
+		schedules_insert_notification( [
 			'user_id'      => $uid,
 			'type'         => $notif_type,
 			'related_id'   => $trade_id,

@@ -1782,7 +1782,7 @@ function site_pulse_get_company_voice( string $brand = '' ): string {
 add_action( 'wp_ajax_site_pulse_get_ai_prompts', 'site_pulse_ajax_get_ai_prompts' );
 function site_pulse_ajax_get_ai_prompts(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_ai_prompts' ) ) return;
 	wp_send_json_success( [
 		'prompts'  => site_pulse_get_ai_prompts(),
 		'voices'   => site_pulse_get_company_voices(),
@@ -1794,7 +1794,7 @@ function site_pulse_ajax_get_ai_prompts(): void {
 add_action( 'wp_ajax_site_pulse_save_ai_prompts', 'site_pulse_ajax_save_ai_prompts' );
 function site_pulse_ajax_save_ai_prompts(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_settings' ) ) return;
+	if ( ! site_pulse_admin_check( 'manage_ai_prompts' ) ) return;
 
 	// Each section is saved only when its key is present, so a partial save never wipes the other.
 	if ( isset( $_POST['prompts'] ) ) {

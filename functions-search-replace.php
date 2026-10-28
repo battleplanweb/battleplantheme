@@ -10,7 +10,6 @@
 # Screen (form + preview + commit handler)
 # Core Scan / Replace (reuses the media-replace serialize engine)
 # Snippet Preview
-# Helpers
 --------------------------------------------------------------*/
 
 /*
@@ -594,10 +593,3 @@ function bp_sr_snippet($value, $search, $render_as) {
 	$suffix = ($start + $len) < strlen($value) ? '…' : '';
 	return $prefix . $shown . $suffix;
 }
-
-
-/*--------------------------------------------------------------
-# Helpers
---------------------------------------------------------------*/
-
-// (reserved for future helpers)

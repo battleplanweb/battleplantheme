@@ -16,79 +16,59 @@ if (!function_exists('is_plugin_active')) {
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 }
 
-if (!isset($GLOBALS['bp_inline_css_buffer'])) {
-	$GLOBALS['bp_inline_css_buffer'] = [];
-}
+$GLOBALS['bp_inline_css_buffer'] ??= [];
 
 function bp_get_css_sources() {
-    $customer_info = customer_info();
+    $deferred = ['/style-testimonials.css', '/style-forms.css'];
 
-    $critical = [
-        '/style-normalize.css',
-        '/style.css',
-        '/style-grid.css',
-        '/style-navigation.css',
-    ];
+    if (bp_module_on(get_option('event_calendar'))) $deferred[] = '/style-events.css';
+    if (bp_module_on(get_option('timeline'))) $deferred[] = '/style-timeline.css';
+    if (is_plugin_active('woocommerce/woocommerce.php')) $deferred[] = '/style-woocommerce.css';
+    if (bp_module_on(get_option('site-pulse'))) $deferred[] = '/style-site-pulse.css';
+    if (is_plugin_active('cue/cue.php')) $deferred[] = '/style-cue.css';
 
-    $deferred = [];
-
-    $deferred[] = '/style-testimonials.css';
-    $deferred[] = '/style-forms.css';
-
-    $event_calendar = get_option('event_calendar');
-    if (is_array($event_calendar) && ($event_calendar['install'] ?? null) === 'true') {
-        $deferred[] = '/style-events.css';
-    }
-
-    $timeline = get_option('timeline');
-    if (is_array($timeline) && ($timeline['install'] ?? null) === 'true') {
-        $deferred[] = '/style-timeline.css';
-    }
-
-    if ( is_plugin_active('woocommerce/woocommerce.php') ) {
-        $deferred[] = '/style-woocommerce.css';
-    }
-
-    $site_pulse = get_option('site-pulse');
-    if (is_array($site_pulse) && ($site_pulse['install'] ?? null) === 'true') {
-        $deferred[] = '/style-site-pulse.css';
-    }
-
-    if ( is_plugin_active('cue/cue.php') ) {
-        $deferred[] = '/style-cue.css';
-    }
-
-    $start = strtotime(date("Y").'-12-01');
-    $end   = strtotime(date("Y").'-12-30');
-    if (
-        ($customer_info['cancel-holiday'] ?? 'false') === 'false' &&
-        time() > $start && time() < $end
-    ) {
+    // December 1st through the 29th
+    if ((customer_info()['cancel-holiday'] ?? 'false') === 'false' && date('n') == 12 && date('j') < 30) {
         $deferred[] = '/style-holiday.css';
     }
 
     return [
-        'critical' => $critical,
+        'critical' => ['/style-normalize.css', '/style.css', '/style-grid.css', '/style-navigation.css'],
         'deferred' => $deferred,
     ];
 }
 
 function bp_minify_css($css) {
-
-	// Remove comments
 	$css = preg_replace('!/\*.*?\*/!s', '', $css);
-
-	// Remove whitespace
 	$css = preg_replace('/\s+/', ' ', $css);
 
-	// Remove space around symbols
-	$css = preg_replace('/\s*([{}:;,])\s*/', '$1', $css);
+	// Space BEFORE a colon is kept: in a selector it's a descendant combinator (".foo :is(h1)" is not ".foo:is(h1)")
+	$css = preg_replace(['/\s*([{};,])\s*/', '/:\s+/'], ['$1', ':'], $css);
 
-	// Remove trailing semicolons
-	$css = str_replace(';}', '}', $css);
+	return trim(str_replace(';}', '}', $css));
+}
 
-	// Trim
-	return trim($css);
+// Write via temp file + rename so a concurrent request never inlines a half-written file
+function bp_write_atomic($file, $contents) {
+	$tmp = $file . '.' . uniqid('', true) . '.tmp';
+	if (file_put_contents($tmp, $contents) === false) return false;
+	if (@rename($tmp, $file)) return true;
+	@unlink($tmp);
+	return false;
+}
+
+// Bump when bp_minify_css() output changes, so every site rebuilds its dist/ files once on deploy
+const BP_CSS_BUILD_VER = 2;
+
+// Write a compiled css + min pair, then its signature (last, so a failed build retries next request)
+function bp_write_css_build($css_file, $min_file, $sig_file, $sig, $css) {
+	bp_write_atomic($css_file, $css);
+	bp_write_atomic($min_file, bp_minify_css($css));
+	bp_write_atomic($sig_file, $sig . '|' . BP_CSS_BUILD_VER);
+}
+
+function bp_css_build_needed($css_file, $min_file, $sig_file, $sig) {
+	return !file_exists($css_file) || !file_exists($min_file) || !file_exists($sig_file) || file_get_contents($sig_file) !== $sig . '|' . BP_CSS_BUILD_VER;
 }
 
 function bp_inline_minified_css($css_file) {
@@ -121,13 +101,9 @@ function bp_build_css_core() {
         ],
     ];
 
-    if (!is_dir($dist)) wp_mkdir_p($dist);
-
-    clearstatcache();
+    wp_mkdir_p($dist);
 
     foreach ( $files as $type => $config ) :
-        $missing = !file_exists($config['css']) || !file_exists($config['min']);
-
         // Gate on a CONTENT signature, not mtime. mtime is not deploy-stable: git /
         // WP Engine checkouts stamp every file with the same checkout time, so a
         // content-updated source and a stale compiled dist tie on mtime and the old
@@ -139,11 +115,10 @@ function bp_build_css_core() {
             $path = get_template_directory() . $rel;
             $sig_parts[] = $rel . ':' . (file_exists($path) ? md5_file($path) : 'missing');
         endforeach;
-        $sig         = md5(implode('|', $sig_parts));
-        $sig_file    = $config['css'] . '.sig';
-        $sig_changed = !file_exists($sig_file) || file_get_contents($sig_file) !== $sig;
+        $sig      = md5(implode('|', $sig_parts));
+        $sig_file = $config['css'] . '.sig';
 
-        if (!$missing && !$sig_changed) continue;
+        if (!bp_css_build_needed($config['css'], $config['min'], $sig_file, $sig)) continue;
 
         $out  = "@charset \"UTF-8\";\n";
         $out .= "/* Battle Plan Core CSS - " . ucfirst($type) . " */\n";
@@ -155,33 +130,21 @@ function bp_build_css_core() {
                 $out .= "/* MISSING: {$path} */\n\n";
                 continue;
             endif;
-            $contents = file_get_contents($path);
-            $contents = preg_replace('/@charset\s+["\'][^"\']*["\']\s*;/i', '', $contents);
+            $contents = preg_replace('/@charset\s+["\'][^"\']*["\']\s*;/i', '', file_get_contents($path));
             $out .= "/* ===== " . basename($path) . " ===== */\n";
             $out .= $contents . "\n\n";
         endforeach;
 
-        file_put_contents($config['css'], $out);
-        file_put_contents($config['min'], bp_minify_css($out));
-        file_put_contents($sig_file, $sig);
+        bp_write_css_build($config['css'], $config['min'], $sig_file, $sig, $out);
     endforeach;
 }
 
 function bp_build_site_css() {
-
-	$src  = get_stylesheet_directory() . '/style-site.css';
+	$src = get_stylesheet_directory() . '/style-site.css';
 	if (!file_exists($src)) return;
 
 	$dist = get_stylesheet_directory() . '/dist';
-	$site     = $dist . '/site.css';
-	$site_min = $dist . '/site.min.css';
-	$sig_file = $site . '.sig';
-
-	if (!is_dir($dist)) {
-		wp_mkdir_p($dist);
-	}
-
-	clearstatcache();
+	wp_mkdir_p($dist);
 
 	// Gate on a CONTENT signature, not mtime — see bp_build_css_core() for why mtime
 	// is unreliable across deploys. md5 of the source content rebuilds iff style-site.css
@@ -189,54 +152,30 @@ function bp_build_site_css() {
 	$css = file_get_contents($src);
 	$sig = md5($css);
 
-	$missing     = !file_exists($site) || !file_exists($site_min);
-	$sig_changed = !file_exists($sig_file) || file_get_contents($sig_file) !== $sig;
+	if (!bp_css_build_needed($dist . '/site.css', $dist . '/site.min.css', $dist . '/site.css.sig', $sig)) return;
 
-	if (!$missing && !$sig_changed) {
-		return;
-	}
-
-	file_put_contents($site, $css);
-	file_put_contents($site_min, bp_minify_css($css));
-	file_put_contents($sig_file, $sig);
+	bp_write_css_build($dist . '/site.css', $dist . '/site.min.css', $dist . '/site.css.sig', $sig, $css);
 }
-
 
 add_action('after_setup_theme', 'bp_build_css_core');
 add_action('after_setup_theme', 'bp_build_site_css');
 
-
-
-
-/*
-add_action('wp_enqueue_scripts', function () {
-    $file = _USER_LOGIN === 'battleplanweb' ? 'core-critical.css' : 'core-critical.min.css';
-    $path = get_stylesheet_directory() . '/dist/' . $file;
-    $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
-    if (!file_exists($path)) return;
-    wp_enqueue_style('battleplan-core', $url, [], _BP_VERSION);
-}, 1);
-*/
+// Path to a compiled dist/ file: unminified for battleplanweb, .min for everyone else ('' if not built)
+function bp_dist_css_path($name) {
+	$path = get_stylesheet_directory() . '/dist/' . $name . (_USER_LOGIN === 'battleplanweb' ? '.css' : '.min.css');
+	return file_exists($path) ? $path : '';
+}
 
 add_action('wp_head', function() {
-    if (is_admin()) return;
+    if (is_admin() || !($path = bp_dist_css_path('core-critical'))) return;
 
-    $file = _USER_LOGIN === 'battleplanweb' ? 'core-critical.css' : 'core-critical.min.css';
-    $path = get_stylesheet_directory() . '/dist/' . $file;
-
-    if (!file_exists($path)) return;
-
-    $critical_css = file_get_contents($path);
-    echo '<style id="battleplan-core-inline">' . $critical_css . '</style>';
+    echo '<style id="battleplan-core-inline">' . file_get_contents($path) . '</style>';
 }, 1);
 
 add_action('wp_enqueue_scripts', function () {
-    $file = _USER_LOGIN === 'battleplanweb' ? 'core-deferred.css' : 'core-deferred.min.css';
-    $path = get_stylesheet_directory() . '/dist/' . $file;
-    $url  = get_stylesheet_directory_uri() . '/dist/' . $file;
-    if (!file_exists($path)) return;
-    //wp_enqueue_style('battleplan-deferred', $url, ['battleplan-core'], _BP_VERSION);
-    wp_enqueue_style('battleplan-deferred', $url, [], _BP_VERSION . '.' . filemtime($path));
+    if (!($path = bp_dist_css_path('core-deferred'))) return;
+
+    wp_enqueue_style('battleplan-deferred', get_stylesheet_directory_uri() . '/dist/' . basename($path), [], _BP_VERSION . '.' . filemtime($path));
 }, 10);
 
 // The compiled site CSS holds all the above-the-fold hero styling — the :root font/color
@@ -253,33 +192,49 @@ add_action('wp_head', function() {
     // Modules can suppress the inline site CSS on their own screens (e.g. Site Pulse, which is
     // internal staff tooling that shouldn't inherit the client site's branding). This replaces the
     // old wp_dequeue_style('battleplan-site') hook, which no longer works now the CSS is inlined.
-    if (!apply_filters('bp_inline_site_css', true)) return;
-
-    $file = _USER_LOGIN === 'battleplanweb' ? 'site.css' : 'site.min.css';
-    $path = get_stylesheet_directory() . '/dist/' . $file;
-
-    if (!file_exists($path)) return;
+    if (!apply_filters('bp_inline_site_css', true) || !($path = bp_dist_css_path('site'))) return;
 
     echo '<style id="battleplan-site-inline">' . file_get_contents($path) . '</style>' . "\n";
 }, 11);
 
-add_filter('style_loader_tag', function($tag, $handle, $src) {
-    if ( is_admin() ) return $tag;
-    if ( $handle !== 'battleplan-deferred' ) return $tag;
+// script-site.js fires its animateDiv/animateDivs/animateGrid calls on window load, so their targets
+// paint visible, then blink out when the JS adds .animation-queued, then fade in. Pull the selectors
+// out of script-site.js and pre-hide them in the head so they're already at opacity 0 on first paint.
+// :not([class*="animation-"]) hands off to .animation-queued once the JS takes over. The hide only
+// applies while html.bp-anim-hide is set (JS on), and is lifted 4s after load as a failsafe for
+// anything the JS never reaches (conditional calls, script errors).
+add_action('wp_head', function() {
+    if (is_admin()) return;
+    if (!apply_filters('bp_inline_site_css', true)) return;
 
-    $html = str_replace(' />', '>', $tag);
-    $html = str_replace("media='all'", "media='print' onload=\"this.onload=null;this.media='all'\"", $html);
-    $html = str_replace('media="all"', "media='print' onload=\"this.onload=null;this.media='all'\"", $html);
+    $path = get_stylesheet_directory() . '/script-site.js';
+    if (!file_exists($path)) return;
 
-    $noscript = preg_replace('/\smedia=(["\'])print\1/', '', $html, 1);
-    $noscript = preg_replace('/\sid=(["\'])[^"\']*\1/', '', $noscript, 1);
-    $noscript = preg_replace('/ onload=(["\'])[^"\']*\1/', '', $noscript, 1);
+    $js = preg_replace('#/\*.*?\*/|(?<![:\'"\\\\])//[^\n]*#s', '', file_get_contents($path));
+    if (!preg_match_all('/\b(animateDivs?|animateGrid)\s*\(\s*([\'"])(.+?)\2/', $js, $calls, PREG_SET_ORDER)) return;
+
+    $sels = [];
+    foreach ($calls as $call) {
+        $sel = trim(str_replace(['<', '{', '}', ';'], '', $call[3]));
+        if ($sel === '' || strpos($sel, '${') !== false) continue;
+        $sels[] = $call[1] === 'animateGrid' ? ":is($sel):first-child, :is($sel):first-child ~ *" : ":is($sel)";
+    }
+    if (!$sels) return;
+
+    echo '<style id="bp-animate-prehide">html.bp-anim-hide :is(' . implode(', ', array_unique($sels)) . '):not([class*="animation-"]){opacity:0}</style>' . "\n";
+    echo '<script nonce="' . esc_attr(_BP_NONCE) . '" data-cfasync="false">document.documentElement.classList.add("bp-anim-hide");addEventListener("load",function(){setTimeout(function(){document.documentElement.classList.remove("bp-anim-hide")},4000)});</script>' . "\n";
+}, 12);
+
+add_filter('style_loader_tag', function($tag, $handle) {
+    if ( is_admin() || $handle !== 'battleplan-deferred' ) return $tag;
+
+    $async = "media='print' onload=\"this.onload=null;this.media='all'\"";
+    $html  = str_replace([' />', "media='all'", 'media="all"'], ['>', $async, $async], $tag);
+
+    $noscript = preg_replace(['/\smedia=(["\'])print\1/', '/\sid=(["\'])[^"\']*\1/', '/ onload="[^"]*"/'], '', $html, 1);
 
     return $html . "<noscript>" . $noscript . "</noscript>\n";
-}, 10, 3);
-
-
-
+}, 10, 2);
 
 add_action('wp_footer', function () {
 	if (is_admin() || empty($GLOBALS['bp_inline_css_buffer'])) return;

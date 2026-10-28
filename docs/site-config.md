@@ -60,7 +60,8 @@ $customer_info = array(
         'analytics' => 'G-XXXXXXXX',
         'clarity'   => 'xxxxxxxxxx',   // optional: Microsoft Clarity project ID
         'ads'       => 'AW-XXXXXXXX',
-        'event'     => array('phone_conversion_number', 'XXXXXXXXXXXXXXXX/XX-'),
+        'event'     => array('phone_conversion_number', 'XXXXXXXXXXXXXXXX/XX-'), // Ads "calls from website" label
+        'form-conversion' => 'XXXXXXXXXXXXXXXX',  // Ads "submit lead form" label — fires on successful form send only
     ),
     "scripts"       => array('magic-menu'), // optional extra scripts
     "lcp"           => 'site-background.webp',   // desktop LCP image filename

@@ -182,7 +182,7 @@ function bp_chat_ready(): bool {
 
 add_action( 'wp_enqueue_scripts', 'bp_chat_enqueue_assets' );
 function bp_chat_enqueue_assets(): void {
-	if ( is_admin() || ! bp_chat_ready() ) return;
+	if ( is_admin() || bp_is_site_pulse_page() || ! bp_chat_ready() ) return;   // never on the Site Pulse app
 
 	$o        = bp_chat_config();
 	$customer = function_exists( 'customer_info' ) ? customer_info() : [];
@@ -247,7 +247,7 @@ function bp_chat_enqueue_assets(): void {
 
 // Mount point — the widget builds its own DOM inside this.
 add_action( 'wp_footer', function () {
-	if ( is_admin() || ! bp_chat_ready() ) return;
+	if ( is_admin() || bp_is_site_pulse_page() || ! bp_chat_ready() ) return;   // never on the Site Pulse app
 	echo '<div id="bp-chat-root"></div>';
 } );
 

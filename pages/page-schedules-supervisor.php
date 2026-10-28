@@ -8,7 +8,7 @@ if ( ! is_user_logged_in() || ! current_user_can('manage_schedules') ) {
 	return $printPage;
 }
 
-$user_id    = defined('_USER_ID') ? _USER_ID : get_current_user_id();
+$user_id    = get_current_user_id();
 $user       = get_userdata($user_id);
 $badge      = $user ? esc_html($user->user_login) : '';
 $first_name = $user ? esc_html($user->first_name) : '';

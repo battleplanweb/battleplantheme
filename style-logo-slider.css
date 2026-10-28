@@ -15,7 +15,9 @@
 	flex-wrap:                                                 nowrap;
 	width:                                                     auto;
 	align-items:                                               center;
-	animation: scroll 20s linear infinite
+	animation:                                                 scroll 20s linear infinite;
+	padding-top:                                               10px;
+	padding-bottom:                                            10px;
 }
 
 .logo-slider .logo-row:nth-of-type(2) {
@@ -30,10 +32,7 @@
 	box-shadow:                                                none !important;
 	filter:                                                    none !important;
 	background:                                                none !important;
-	outline: none
-}
-
-.logo-slider img.logo-img.ruud-logo-img {
-	max-height:                                                150px;
-	width:                                                     auto;
+	outline:                                                   none;
+	max-height:                                                clamp(65px, calc(26.429px + 9.643vw), 200px);
+	object-fit:                                                contain;
 }

@@ -416,9 +416,10 @@ function bp_jobsite_setup($post_id, $user) {
           $new_address  = trim($address . ', ' . $city . ', ' . $state . ' ' . $zip);
           $last_address = get_post_meta($post_id, '_last_geocode_address', true);
 
-          if ($new_address !== $last_address && defined('_PLACES_API') && _PLACES_API) {
-               $fail_key = 'geocode_fail_' . md5($new_address);
-               if (get_transient($fail_key)) return;
+          // A recent failure for this address skips only the geocode — it used to `return` from the whole
+          // setup, which also skipped the service-area tag, photo alt text and the featured image.
+          $fail_key = 'geocode_fail_' . md5($new_address);
+          if ($new_address !== $last_address && defined('_PLACES_API') && _PLACES_API && !get_transient($fail_key)) {
 
                $googleAPI = 'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($new_address) . '&key=' . _PLACES_API;
                $response  = wp_remote_get($googleAPI, ['timeout' => 10]);
@@ -644,11 +645,44 @@ function bp_geo_photo_slot_ids($post_id) {
 // Only delete a photo this jobsite owns: parented here (or unattached, as GEO app
 // uploads are) and not used anywhere else on the site (bp_media_in_use, from
 // functions-media-cleanup.php — the same check the Clean Up Library tool uses).
+// The automatic 'Jobsite GEO' image category doesn't count as a use — every
+// jobsite photo has it, so counting it made every photo undeletable.
 function bp_geo_photo_is_deletable($aid, $post_id) {
 	if (get_post_type($aid) !== 'attachment') return false;
 	$parent = (int) get_post_field('post_parent', $aid);
 	if ($parent && $parent !== (int) $post_id) return false;
-	return !bp_media_in_use($aid, $post_id);
+	return !bp_media_in_use($aid, $post_id, ['Jobsite GEO']);
+}
+
+// Close the gaps a removed photo leaves: later photos (and their captions) move up,
+// so deleting #3 makes #4 the new #3 and the empty slots are always at the end.
+function bp_geo_compact_photo_slots($post_id) {
+	$post_id = (int) $post_id;
+	$slots   = ['jobsite_photo_1', 'jobsite_photo_2', 'jobsite_photo_3', 'jobsite_photo_4'];
+
+	$photos = [];
+	foreach ($slots as $slot) {
+		$aid = (int) get_post_meta($post_id, $slot, true);
+		if ($aid) $photos[] = [$aid, (string) get_field($slot . '_alt', $post_id)];
+	}
+
+	foreach ($slots as $i => $slot) {
+		$want     = $photos[$i] ?? [0, ''];
+		$have_aid = (int) get_post_meta($post_id, $slot, true);
+		if ($have_aid === $want[0] && (string) get_field($slot . '_alt', $post_id) === $want[1]) continue;
+		update_field($slot, $want[0] ?: '', $post_id);
+		update_field($slot . '_alt', $want[1], $post_id);
+	}
+}
+
+// A photo removed from every slot: delete it, or — when something else still uses
+// it — at least detach it, or the bridge drops it straight back into an empty slot.
+function bp_geo_drop_photo($aid, $post_id) {
+	if (bp_geo_photo_is_deletable($aid, $post_id)) {
+		wp_delete_attachment($aid, true);
+	} elseif ((int) get_post_field('post_parent', $aid) === (int) $post_id) {
+		wp_update_post(['ID' => $aid, 'post_parent' => 0]);
+	}
 }
 
 add_action('acf/save_post', function($post_id) {
@@ -672,8 +706,11 @@ add_action('acf/save_post', function($post_id) {
 	}
 
 	$removed = array_diff(array_filter($before), array_filter($after));
-	foreach (array_unique($removed) as $aid) {
-		if (bp_geo_photo_is_deletable($aid, $post_id)) wp_delete_attachment($aid, true);
+	foreach (array_unique($removed) as $aid) bp_geo_drop_photo($aid, $post_id);
+
+	if ($removed) {
+		bp_geo_compact_photo_slots($post_id);
+		$after = bp_geo_photo_slot_ids($post_id);
 	}
 
 	$thumb = $after['jobsite_photo_1'];
@@ -1292,6 +1329,18 @@ add_action('admin_enqueue_scripts', function($hook) {
 					voiceBtn.title    = "Speech recognition not supported in this browser";
 				}
 			}
+
+			// Confirm before removing a photo — on Update it is deleted from the media library
+			// too. Capture phase so a "Cancel" stops the click before the ACF remove handler sees it.
+			// (No apostrophes in this block: it sits inside a single-quoted PHP string.)
+			document.addEventListener("click", function(e) {
+				var btn = e.target.closest(".acf-field[data-name^=\"jobsite_photo_\"] a[data-name=\"remove\"]");
+				if (!btn) return;
+				if (!confirm("Delete this photo?\n\nWhen you click Update it will be permanently deleted from this jobsite and the media library, and the photos after it will move up a slot.")) {
+					e.preventDefault();
+					e.stopImmediatePropagation();
+				}
+			}, true);
 
 		});
 	');
@@ -2723,6 +2772,8 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 	$state        = get_post_meta( $post_id, BP_GEO_FIELD_STATE,    true );
 	$zip          = get_post_meta( $post_id, BP_GEO_FIELD_ZIP,      true );
 	$job_date     = get_post_meta( $post_id, BP_GEO_FIELD_JOB_DATE, true );
+	// Stored as Ymd (ACF native) — hand the AI a readable date.
+	if ( preg_match( '/^(\d{4})(\d{2})(\d{2})$/', (string) $job_date, $jd ) ) $job_date = "{$jd[1]}-{$jd[2]}-{$jd[3]}";
 
 	$location_context = trim( $city . ', ' . $state );
 
@@ -2772,10 +2823,17 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 	$GLOBALS['bp_jobsite_setup_running'] = true;
 	remove_action( 'save_post', 'bp_geo_ai_on_first_publish', 99 );
 
-	wp_update_post([
-		'ID'           => $post_id,
-		'post_content' => wp_kses_post( bp_fix_entities( $rewritten ) ),
-	]);
+	// bp_geo_keep_text (one-shot): the description was already AI-polished — and maybe hand-tweaked — in the
+	// Site Pulse form, so this run only CLASSIFIES (service terms + page below) and leaves the text alone.
+	if ( get_post_meta( $post_id, 'bp_geo_keep_text', true ) ) {
+		delete_post_meta( $post_id, 'bp_geo_keep_text' );
+		$rewritten = $current_content;
+	} else {
+		wp_update_post([
+			'ID'           => $post_id,
+			'post_content' => wp_kses_post( bp_fix_entities( $rewritten ) ),
+		]);
+	}
 
 	add_action( 'save_post', 'bp_geo_ai_on_first_publish', 99, 3 );
 	unset( $GLOBALS['bp_jobsite_setup_running'] );
@@ -3601,6 +3659,13 @@ function bp_geo_geocode(WP_REST_Request $request) {
 	if (!$lat || !$lon)
 		return new WP_Error('missing_coords', 'lat and lon parameters are required.', ['status' => 400]);
 
+	$res = bp_geo_reverse_geocode($lat, $lon);
+	return is_wp_error($res) ? $res : rest_ensure_response($res);
+}
+
+// GPS → street/city/state/zip/county via Google (the site's _PLACES_API key). Shared by the GEO app's
+// /geocode route and the Site Pulse Jobsites "Use my location" button. Returns an array or WP_Error.
+function bp_geo_reverse_geocode(float $lat, float $lon) {
 	if (!defined('_PLACES_API') || !_PLACES_API)
 		return new WP_Error('no_api_key', 'Google Maps API key not configured on this site.', ['status' => 503]);
 
@@ -3647,7 +3712,7 @@ function bp_geo_geocode(WP_REST_Request $request) {
 		}
 	}
 
-	return rest_ensure_response([
+	return [
 		'house_number' => $house_number,
 		'road'         => $road,
 		'city'         => $city,
@@ -3656,7 +3721,7 @@ function bp_geo_geocode(WP_REST_Request $request) {
 		'county'       => $county,
 		'lat'          => $lat,
 		'lon'          => $lon,
-	]);
+	];
 }
 
 // ── UPLOAD ────────────────────────────────────────────────────
@@ -3700,6 +3765,8 @@ function bp_geo_upload(WP_REST_Request $request) {
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
+// GEO app → shared save. The app's payload shape is mapped onto bp_geo_save_jobsite(), which also backs
+// the Site Pulse Jobsites module, so both paths create jobsites identically.
 function bp_geo_submit(WP_REST_Request $request) {
 	$user = bp_geo_verify_token($request->get_header('X-BP-Token'));
 	if (!$user)
@@ -3708,23 +3775,113 @@ function bp_geo_submit(WP_REST_Request $request) {
 	$body = json_decode($request->get_body(), true);
 	$meta = $body['meta'] ?? [];
 
-	$customer = sanitize_text_field($meta['bp_technician_name'] ?? '');
-	$address  = sanitize_text_field($meta['address'] ?? '');
-	$city     = sanitize_text_field($meta['city'] ?? '');
-	$state    = sanitize_text_field($meta['state'] ?? '');
-	$zip      = sanitize_text_field($meta['zip'] ?? '');
-	$desc     = sanitize_textarea_field($body['content'] ?? '');
-	$date     = sanitize_text_field($meta['job_date'] ?? date('Y-m-d'));
-	$title    = sanitize_text_field($body['title'] ?? $customer);
+	$photos = [];
+	for ($n = 1; $n <= 4; $n++) $photos[$n] = intval($meta["jobsite_photo_{$n}"] ?? 0);
 
-	if (empty($customer) || empty($address) || empty($city) || empty($desc))
-		return new WP_Error('missing_fields', 'Customer name, address, city, and description are required.', ['status' => 400]);
+	wp_set_current_user($user->ID);
 
-	// Older app builds (and techs typing manually) put the ZIP on the end of the
-	// street line — "Zoysia Ln. 75252". Split it back out so $zip is populated and
-	// the geocoder gets a clean street. App v28+ does this client-side too; this
-	// stays because the PWA is cached on tech phones and updates on its own schedule.
-	if ($zip === '' && preg_match('/[\s,]+(\d{5}(?:-\d{4})?)\.?$/', $address, $m)) {
+	$res = bp_geo_save_jobsite([
+		// The app labels the customer field bp_technician_name (historical).
+		'customer'    => $body['title'] ?? ($meta['bp_technician_name'] ?? ''),
+		'description' => $body['content'] ?? '',
+		'address'     => $meta['address'] ?? '',
+		'city'        => $meta['city'] ?? '',
+		'state'       => $meta['state'] ?? '',
+		'zip'         => $meta['zip'] ?? '',
+		'job_date'    => $meta['job_date'] ?? '',
+		'photos'      => $photos,
+		'lat'         => $meta['bp_geo_lat'] ?? '',
+		'lon'         => $meta['bp_geo_lon'] ?? '',
+		'county'      => $meta['bp_geo_county'] ?? '',
+		'source'      => 'Battle Plan GEO App',
+	], 0, (int) $user->ID);
+
+	if (is_wp_error($res)) {
+		$code = $res->get_error_code() === 'missing_fields' ? 400 : 500;
+		return new WP_Error($res->get_error_code(), $res->get_error_message(), ['status' => $code]);
+	}
+
+	// No 'link' on a held duplicate on purpose: a draft permalink 404s for the tech who taps it.
+	// The app only checks res.ok, so this still lands on its success screen.
+	if ($res['duplicate_of']) {
+		return rest_ensure_response([
+			'id'      => $res['id'],
+			'status'  => 'draft',
+			'message' => 'Jobsite saved and held for review — it looks like a repeat of a recent entry.',
+		]);
+	}
+
+	return rest_ensure_response([
+		'id'      => $res['id'],
+		'link'    => get_permalink($res['id']),
+		'status'  => $res['status'],
+		'message' => 'Jobsite submitted successfully.',
+	]);
+}
+
+// ── JOB DATE: ONE STORAGE FORMAT ──────────────────────────────
+// ACF's native storage for a date field is Ymd (20260628) — what the editor saves. Code paths (the GEO app,
+// Site Pulse, the HCP / Company Cam / Workiz importers) passed Y-m-d instead, so the meta held both, and
+// anything sorting by it as a string (the archive's meta_key order, the Site Pulse list) mis-ordered them.
+// Every writer goes through update_field(), so normalizing here covers them all, now and later.
+add_filter( 'acf/update_value/name=job_date', 'bp_geo_normalize_job_date', 10, 1 );
+function bp_geo_normalize_job_date( $value ) {
+	$v = trim( (string) $value );
+	if ( $v === '' || preg_match( '/^\d{8}$/', $v ) ) return $v;
+	$ts = strtotime( $v );
+	return $ts ? gmdate( 'Ymd', $ts ) : $v;
+}
+
+// One-time: convert the Y-m-d job dates already stored to Ymd.
+add_action( 'init', function () {
+	if ( get_option( 'bp_geo_job_date_ymd_v1' ) ) return;
+	global $wpdb;
+	$wpdb->query(
+		"UPDATE {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id AND p.post_type = 'jobsite_geo'
+		 SET pm.meta_value = REPLACE( pm.meta_value, '-', '' )
+		 WHERE pm.meta_key = 'job_date' AND pm.meta_value REGEXP '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'"
+	);
+	update_option( 'bp_geo_job_date_ymd_v1', '1' );
+}, 20 );
+
+// ── SHARED SAVE ───────────────────────────────────────────────
+/**
+ * Create or update a jobsite from plain values — the ONE save path behind the GEO app (bp_geo_submit) and
+ * the Site Pulse Jobsites module. It works from any request type: the save_post hooks are held off with
+ * $GLOBALS['bp_jobsite_setup_running'] (otherwise battleplan_saveJobsite skips under admin-ajax, and
+ * bp_geo_validate_required_fields would redirect + exit mid-JSON), bp_jobsite_setup() is called directly
+ * once the fields exist, and the AI rewrite is QUEUED (bp_geo_ai_rewrite_cron) rather than run inline, so
+ * the save returns in a second instead of waiting on the Anthropic call.
+ *
+ * $data (create needs customer, address, city, description; on update only the keys present change):
+ *   customer, description, address, city, state, zip, job_date (Y-m-d), priority (bool),
+ *   photos   [1..4 => attachment id, 0 = clear the slot]   captions [1..4 => text, '' = let AI write it]
+ *   lat, lon, county (GPS from the app), source (submission label, create only),
+ *   ai (bool)      — on update: rewrite the description with AI again (create always does)
+ *   keep_text (bool) — the description was already AI-polished in the form: any AI run this save queues
+ *                      only classifies (service page), it doesn't overwrite the text
+ *   publish (bool) — on update: publish a held draft (e.g. a reviewed possible-duplicate)
+ *
+ * New posts publish unless they look like a repeat of a recent entry (bp_geo_find_recent_duplicate), in
+ * which case they're held as a draft and Glendon is emailed. Returns ['id','status','duplicate_of'] or
+ * WP_Error ('missing_fields' | 'not_found' | 'insert_failed').
+ */
+function bp_geo_save_jobsite(array $data, int $post_id = 0, int $author = 0) {
+	$is_new = $post_id === 0;
+	if (!$is_new && get_post_type($post_id) !== 'jobsite_geo') return new WP_Error('not_found', 'Jobsite not found.');
+
+	$txt = static function ($k) use ($data) { return array_key_exists($k, $data) ? sanitize_text_field((string) $data[$k]) : null; };
+	$customer = $txt('customer');
+	$address  = $txt('address');
+	$city     = $txt('city');
+	$state    = $txt('state');
+	$zip      = $txt('zip');
+	$date     = $txt('job_date');
+	$desc     = array_key_exists('description', $data) ? sanitize_textarea_field((string) $data['description']) : null;
+
+	// Older app builds (and people typing manually) put the ZIP on the end of the street line —
+	// "Zoysia Ln. 75252". Split it back out so the ZIP is populated and the geocoder gets a clean street.
+	if ($address !== null && (string) $zip === '' && preg_match('/[\s,]+(\d{5}(?:-\d{4})?)\.?$/', $address, $m)) {
 		$prefix = substr($address, 0, strrpos($address, $m[0]));
 		// Guard against "PO Box 12345" / "Unit 40506" — a box or unit number is not a ZIP.
 		if (!preg_match('/\b(?:box|apt|ste|suite|unit|#)\s*$/i', $prefix)) {
@@ -3732,114 +3889,141 @@ function bp_geo_submit(WP_REST_Request $request) {
 			$address = rtrim($prefix, " \t,");
 		}
 	}
+	if ($state !== null && $state !== '') $state = strtoupper(bp_geo_normalize_state($state));
+	if ($date !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) $date = '';
 
-	// Normalize state — server-side safeguard in case a full name slips through
-	if (strlen($state) > 2) {
-		$stateMap = [
-			'Alabama'=>'AL','Alaska'=>'AK','Arizona'=>'AZ','Arkansas'=>'AR','California'=>'CA',
-			'Colorado'=>'CO','Connecticut'=>'CT','Delaware'=>'DE','Florida'=>'FL','Georgia'=>'GA',
-			'Hawaii'=>'HI','Idaho'=>'ID','Illinois'=>'IL','Indiana'=>'IN','Iowa'=>'IA','Kansas'=>'KS',
-			'Kentucky'=>'KY','Louisiana'=>'LA','Maine'=>'ME','Maryland'=>'MD','Massachusetts'=>'MA',
-			'Michigan'=>'MI','Minnesota'=>'MN','Mississippi'=>'MS','Missouri'=>'MO','Montana'=>'MT',
-			'Nebraska'=>'NE','Nevada'=>'NV','New Hampshire'=>'NH','New Jersey'=>'NJ','New Mexico'=>'NM',
-			'New York'=>'NY','North Carolina'=>'NC','North Dakota'=>'ND','Ohio'=>'OH','Oklahoma'=>'OK',
-			'Oregon'=>'OR','Pennsylvania'=>'PA','Rhode Island'=>'RI','South Carolina'=>'SC',
-			'South Dakota'=>'SD','Tennessee'=>'TN','Texas'=>'TX','Utah'=>'UT','Vermont'=>'VT',
-			'Virginia'=>'VA','Washington'=>'WA','West Virginia'=>'WV','Wisconsin'=>'WI','Wyoming'=>'WY',
-		];
-		$state = $stateMap[trim($state)] ?? strtoupper(substr(trim($state), 0, 2));
+	// Required fields — on create from the input, on update from input-or-current.
+	$geo_opts = get_option('jobsite_geo');
+	if ($is_new) {
+		if ((string) $state === '') $state = strtoupper((string) ($geo_opts['default_state'] ?? ''));
+		if ((string) $date === '')  $date  = current_time('Y-m-d');
+		if ((string) $customer === '' || (string) $address === '' || (string) $city === '' || (string) $desc === '')
+			return new WP_Error('missing_fields', 'Customer name, address, city, and description are required.');
 	} else {
-		$state = strtoupper(trim($state));
-	}
-
-	wp_set_current_user($user->ID);
-
-	// Guard: prevent bp_jobsite_setup() from running during wp_insert_post()
-	// with empty ACF fields. We'll set taxonomy inline after fields are saved.
-	$GLOBALS['bp_jobsite_setup_running'] = true;
-
-	$post_id = wp_insert_post([
-		'post_title'   => $title,
-		'post_content' => $desc,
-		'post_status'  => 'draft',
-		'post_type'    => 'jobsite_geo',
-		'post_author'  => $user->ID,
-	], true);
-
-	if (is_wp_error($post_id)) {
-		unset($GLOBALS['bp_jobsite_setup_running']);
-		return new WP_Error('insert_failed', $post_id->get_error_message(), ['status' => 500]);
-	}
-
-	// ── ACF fields ────────────────────────────────────────────
-	update_field('job_date', $date,    $post_id);
-	update_field('address',  $address, $post_id);
-	update_field('city',     $city,    $post_id);
-	update_field('state',    $state,   $post_id);
-	update_field('zip',      $zip,     $post_id);
-
-	// Photos — ACF image fields with return_format='id' expect a plain integer
-	$photo_fields = ['jobsite_photo_1','jobsite_photo_2','jobsite_photo_3','jobsite_photo_4'];
-	$first_photo  = 0;
-	foreach ($photo_fields as $field_name) {
-		$photo_id = intval($meta[$field_name] ?? 0);
-		if ($photo_id > 0) {
-			update_field($field_name, $photo_id, $post_id);
-			if (!$first_photo) $first_photo = $photo_id;
+		foreach (['customer' => $customer, 'address' => $address, 'city' => $city, 'state' => $state, 'description' => $desc] as $k => $v) {
+			if ($v !== null && $v === '') return new WP_Error('missing_fields', ucfirst($k) . ' can\'t be empty.');
 		}
 	}
-	if ($first_photo) set_post_thumbnail($post_id, $first_photo);
 
-	// ── Service-area taxonomy ─────────────────────────────────
-	// bp_jobsite_setup() is guarded above so it won't run with empty fields.
-	// Set the taxonomy here so drafts are filterable in the admin right away.
-	if ($city && $state) {
-		$location = sanitize_title(ucwords($city) . '-' . strtoupper($state));
-		if (!term_exists($location, 'jobsite_geo-service-areas'))
-			wp_insert_term($location, 'jobsite_geo-service-areas');
-		wp_set_post_terms($post_id, [$location], 'jobsite_geo-service-areas', false);
+	$old_addr  = $is_new ? '' : (string) get_post_meta($post_id, 'address', true);
+	$old_city  = $is_new ? '' : (string) get_post_meta($post_id, 'city', true);
+	$old_state = $is_new ? '' : strtoupper((string) get_post_meta($post_id, 'state', true));
+	$old_slots = $is_new ? [] : bp_geo_photo_slot_ids($post_id);
+
+	$GLOBALS['bp_jobsite_setup_running'] = true;
+
+	if ($is_new) {
+		// Created as a draft so nothing publish-side fires before the fields exist; published below.
+		$post_id = wp_insert_post([
+			'post_title'   => $customer,
+			'post_content' => $desc,
+			'post_status'  => 'draft',
+			'post_type'    => 'jobsite_geo',
+			'post_author'  => $author ?: get_current_user_id(),
+		], true);
+		if (is_wp_error($post_id)) {
+			unset($GLOBALS['bp_jobsite_setup_running']);
+			return new WP_Error('insert_failed', $post_id->get_error_message());
+		}
+	} else {
+		$upd = ['ID' => $post_id];
+		if ($customer !== null) $upd['post_title'] = $customer;
+		if ($desc !== null && $desc !== wp_strip_all_tags(get_post_field('post_content', $post_id))) $upd['post_content'] = $desc;
+		if (count($upd) > 1) wp_update_post($upd);
 	}
 
-	// ── Post meta ─────────────────────────────────────────────
-	update_post_meta($post_id, 'bp_raw_description',   $desc);
-	update_post_meta($post_id, 'bp_submission_source', 'Battle Plan GEO App');
-	update_post_meta($post_id, 'bp_customer_name',     $customer);
-	if (!empty($meta['bp_geo_lat'])) {
-		update_post_meta($post_id, 'bp_geo_lat',    sanitize_text_field($meta['bp_geo_lat']));
-		update_post_meta($post_id, 'bp_geo_lon',    sanitize_text_field($meta['bp_geo_lon']));
-		update_post_meta($post_id, 'bp_geo_county', sanitize_text_field($meta['bp_geo_county'] ?? ''));
+	// ── ACF fields (by name; update_field skips ACF's form validation, so the checks above stand in) ──
+	foreach (['job_date' => $date, 'address' => $address, 'city' => $city, 'state' => $state, 'zip' => $zip] as $field => $val) {
+		if ($val !== null) update_field($field, $val, $post_id);
+	}
+	if (array_key_exists('priority', $data)) update_field('is_priority_job', !empty($data['priority']) ? ['1'] : [], $post_id);
+
+	// Photos: a changed or cleared slot drops its old caption so the new photo gets its own (AI) one.
+	$photos   = is_array($data['photos'] ?? null) ? $data['photos'] : [];
+	$captions = is_array($data['captions'] ?? null) ? $data['captions'] : [];
+	for ($n = 1; $n <= 4; $n++) {
+		$slot = "jobsite_photo_{$n}";
+		if (array_key_exists($n, $photos)) {
+			$aid = (int) $photos[$n];
+			if ($aid && get_post_type($aid) !== 'attachment') $aid = 0;
+			if ($aid !== (int) ($old_slots[$slot] ?? 0)) {
+				update_field($slot, $aid ?: '', $post_id);
+				if (!array_key_exists($n, $captions)) update_field("{$slot}_alt", '', $post_id);
+			}
+			// Unattached uploads (GEO app, Site Pulse) get parented here — they then count as this jobsite's
+			// photos (deleted with it, never by another post) — and filed under the Jobsite GEO image category.
+			if ($aid && !(int) get_post_field('post_parent', $aid)) {
+				wp_update_post(['ID' => $aid, 'post_parent' => $post_id]);
+				if (taxonomy_exists('image-categories')) {
+					if (!term_exists('Jobsite GEO', 'image-categories')) wp_insert_term('Jobsite GEO', 'image-categories');
+					wp_set_object_terms($aid, 'Jobsite GEO', 'image-categories', true);
+				}
+			}
+		}
+		if (array_key_exists($n, $captions)) update_field("{$slot}_alt", sanitize_text_field((string) $captions[$n]), $post_id);
 	}
 
+	// ── Post meta ──
+	if ($is_new) {
+		update_post_meta($post_id, 'bp_raw_description',   $desc);
+		update_post_meta($post_id, 'bp_submission_source', sanitize_text_field((string) ($data['source'] ?? 'Battle Plan GEO App')));
+	}
+	if ($customer !== null) update_post_meta($post_id, 'bp_customer_name', $customer);
+	if (!empty($data['lat']) && !empty($data['lon'])) {
+		update_post_meta($post_id, 'bp_geo_lat',    sanitize_text_field((string) $data['lat']));
+		update_post_meta($post_id, 'bp_geo_lon',    sanitize_text_field((string) $data['lon']));
+		update_post_meta($post_id, 'bp_geo_county', sanitize_text_field((string) ($data['county'] ?? '')));
+	} elseif (!$is_new && (($address !== null && $address !== $old_addr) || ($city !== null && strcasecmp($city, $old_city) !== 0))) {
+		// Address edited by hand — the old GPS fix no longer describes it; let setup geocode the new one.
+		delete_post_meta($post_id, 'bp_geo_lat');
+		delete_post_meta($post_id, 'bp_geo_lon');
+	}
+
+	// Geocode, service-area tag, testimonial link, photo alt/caption crons, featured image.
+	bp_jobsite_setup($post_id, '');
+
+	// Photos that fell out of every slot are deleted, same as removing them in the editor.
+	if ($old_slots) {
+		$removed = array_diff(array_filter($old_slots), array_filter(bp_geo_photo_slot_ids($post_id)));
+		foreach (array_unique($removed) as $aid) bp_geo_drop_photo($aid, $post_id);
+		if ($removed) bp_geo_compact_photo_slots($post_id);
+		$thumb = (int) get_field('jobsite_photo_1', $post_id);
+		$thumb ? set_post_thumbnail($post_id, $thumb) : delete_post_thumbnail($post_id);
+	}
+
+	// ── Duplicate guard (new posts only) — hold it back instead of publishing a second page ──
+	$dupe_of = 0;
+	if ($is_new) {
+		$dupe_of = bp_geo_find_recent_duplicate($customer, $post_id);
+		if ($dupe_of) {
+			unset($GLOBALS['bp_jobsite_setup_running']);
+			update_post_meta($post_id, 'bp_geo_duplicate_of', $dupe_of);
+			bp_geo_email_possible_duplicate($post_id, $dupe_of);
+			error_log("bp_geo_save_jobsite: post {$post_id} held as a draft — looks like a repeat of {$dupe_of}.");
+			return ['id' => $post_id, 'status' => 'draft', 'duplicate_of' => $dupe_of];
+		}
+	}
+
+	$was_draft = get_post_status($post_id) !== 'publish';
+	if ($is_new || ($was_draft && !empty($data['publish']))) {
+		wp_update_post(['ID' => $post_id, 'post_status' => 'publish']);
+		delete_post_meta($post_id, 'bp_geo_duplicate_of');
+	}
 	unset($GLOBALS['bp_jobsite_setup_running']);
 
-	// ── Duplicate guard ───────────────────────────────────────
-	// Hold it back instead of publishing a second page for the same customer.
-	$dupe_of = bp_geo_find_recent_duplicate($title, $post_id);
-	if ($dupe_of) {
-		update_post_meta($post_id, 'bp_geo_duplicate_of', $dupe_of);
-		bp_geo_email_possible_duplicate($post_id, $dupe_of);
-		error_log("bp_geo_submit: post {$post_id} held as a draft — looks like a repeat of {$dupe_of}.");
-
-		// No 'link' on purpose: a draft permalink 404s for the tech who taps it.
-		// The app only checks res.ok, so this still lands on its success screen.
-		return rest_ensure_response([
-			'id'      => $post_id,
-			'status'  => 'draft',
-			'message' => 'Jobsite saved and held for review — it looks like a repeat of a recent entry.',
-		]);
+	// ── AI rewrite: first publish, an explicit re-run, or a moved job (the copy and its /service/ page name
+	// the city). Queued, not inline; spawn_cron() kicks it off right away instead of on the next visit.
+	$status = get_post_status($post_id);
+	$moved  = !$is_new && (($city !== null && strcasecmp($city, $old_city) !== 0) || ($state !== null && $state !== $old_state));
+	if ($status === 'publish' && ($is_new || $was_draft || !empty($data['ai']) || $moved)) {
+		if (!$is_new) delete_post_meta($post_id, BP_GEO_FIELD_AI_RAN);
+		// Already AI-polished in the form (keep_text): the queued run classifies only, the text stays as saved.
+		if (!empty($data['keep_text'])) update_post_meta($post_id, 'bp_geo_keep_text', '1');
+		if (!wp_next_scheduled('bp_geo_ai_rewrite_cron', [$post_id])) wp_schedule_single_event(time() + 5, 'bp_geo_ai_rewrite_cron', [$post_id]);
+		if (function_exists('spawn_cron')) spawn_cron();
 	}
 
-	// Publish the post now that all fields are saved.
-	// (Created as draft above so the required-field validation hook doesn't
-	// fire before ACF fields exist. Publish here after everything is in place.)
-	wp_update_post(['ID' => $post_id, 'post_status' => 'publish']);
-
-	return rest_ensure_response([
-		'id'      => $post_id,
-		'link'    => get_permalink($post_id),
-		'status'  => 'publish',
-		'message' => 'Jobsite submitted successfully.',
-	]);
+	return ['id' => $post_id, 'status' => $status, 'duplicate_of' => 0];
 }
 
 // ── DUPLICATE GUARD ───────────────────────────────────────────

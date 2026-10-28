@@ -7,7 +7,7 @@ if ( ! is_user_logged_in() ) {
 	return $printPage;
 }
 
-$user_id    = defined('_USER_ID') ? _USER_ID : get_current_user_id();
+$user_id    = get_current_user_id();
 $user       = get_userdata( $user_id );
 $priority   = function_exists('schedules_get_user_priority')   ? schedules_get_user_priority($user_id)   : '';
 $user_shift = function_exists('schedules_get_user_shift')      ? schedules_get_user_shift($user_id)      : '';

@@ -27,14 +27,6 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
- * Is private mode active for this site?
- */
-function bp_site_is_private(): bool {
-	$opts = get_option( 'site_private', [] );
-	return bp_module_on( $opts );
-}
-
-/**
  * The slug logged-out visitors are sent to. Falls back to wp-login.php when
  * no custom login page is configured.
  */
@@ -94,7 +86,11 @@ add_action( 'template_redirect', 'bp_private_site_guard', 1 );
 function bp_private_site_guard(): void {
 	$opts = get_option( 'site_private', [] );
 
-	if ( is_user_logged_in() ) {
+	// A store member is logged in but is a customer, not staff: on a private site they
+	// are treated exactly like a visitor who is not logged in.
+	$member_only = function_exists( 'sp_member_only' ) && sp_member_only();
+
+	if ( is_user_logged_in() && ! $member_only ) {
 		// Logged-in staff pass through — except the home URL, which on an app
 		// site is usually empty; send them to the configured landing page.
 		$home_redirect = isset( $opts['home_redirect'] ) ? trim( (string) $opts['home_redirect'], '/' ) : '';

@@ -44,6 +44,9 @@ if ( ! defined( 'ABSPATH' ) ) exit;
  *   ready     callable: is this provider configured on this site?
  *   begin     callable( int $order_id ): array|WP_Error — the handoff
  *   webhook   callable(): void — verifies and handles a posted webhook request
+ *   refund    callable( array $order, int $cents, string $note ): array|WP_Error —
+ *             sends money back and returns [ id, amount, status ]. Optional: a
+ *             provider without one is refunded in its own dashboard.
  *   does_tax  can the provider calculate sales tax itself?
  *
  * Filterable so a site or a future module can register another one without
@@ -57,6 +60,7 @@ function sp_store_providers(): array {
 			'ready'    => 'sp_store_stripe_ready',
 			'begin'    => 'sp_store_stripe_begin',
 			'webhook'  => 'sp_store_handle_webhook',
+			'refund'   => 'sp_store_stripe_refund',
 			'does_tax' => true,
 			'note'     => 'Recommended. Handles tax calculation itself if you want it to, and the shopper pays on a page Stripe hosts.',
 		],

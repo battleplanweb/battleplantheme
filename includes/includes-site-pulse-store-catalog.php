@@ -201,12 +201,20 @@ function sp_store_set_options( int $product_id, array $options ): void {
 	else          delete_post_meta( $product_id, '_sp_store_options' );
 }
 
-/** "Small, Medium , Large" -> ['Small','Medium','Large']. Commas, trimmed, deduped. */
+/**
+ * "Small, Medium , Large" -> ['Small','Medium','Large']. Commas, trimmed, deduped —
+ * IGNORING CASE, because the variants table's UNIQUE index does: "M" and "m" kept as
+ * two choices would generate two variants the database then refuses to store.
+ */
 function sp_store_split_values( string $input ): array {
-	$out = [];
+	$out  = [];
+	$seen = [];
 	foreach ( explode( ',', $input ) as $value ) {
 		$value = trim( sanitize_text_field( $value ) );
-		if ( $value !== '' && ! in_array( $value, $out, true ) ) $out[] = $value;
+		$fold  = mb_strtolower( $value );
+		if ( $value === '' || isset( $seen[ $fold ] ) ) continue;
+		$seen[ $fold ] = true;
+		$out[] = $value;
 	}
 	return $out;
 }
@@ -379,6 +387,11 @@ function sp_store_price_range_label( int $product_id ): string {
 	};
 
 	$now = $span( $range['min'], $range['max'] );
+
+	// A product that renews says how often, everywhere its price is shown.
+	$interval = function_exists( 'sp_member_product_interval' ) ? sp_member_product_interval( $product_id ) : '';
+	if ( $interval !== '' ) $now .= '<span class="store-price-per"> / ' . ( $interval === 'year' ? 'year' : 'month' ) . '</span>';
+
 	if ( empty( $range['on_sale'] ) ) return $now;
 
 	return '<del class="store-price-was">' . $span( $range['regular_min'], $range['regular_max'] ) . '</del>'
@@ -810,6 +823,54 @@ function sp_store_render_variants_box( WP_Post $post ): void {
 
 	wp_nonce_field( 'sp_store_save_product', 'sp_store_nonce' );
 
+	// ---- Shipping. One answer for the product, so it sits above the variants rather
+	// than as a column nobody would set differently row to row.
+	echo '<div class="sp-store-block">';
+	printf(
+		'<label><input type="checkbox" name="sp_store_ships" value="1"%s> <strong>Ships to the customer</strong></label>',
+		checked( sp_store_product_ships( $product_id ), true, false )
+	);
+	echo '<p class="description">Untick for anything that is not posted &mdash; a download, a class, a membership. Checkout then asks for no address and charges no shipping.</p>';
+	echo '</div>';
+
+	// ---- Extras. Each appears only while its feature is switched on.
+	if ( function_exists( 'sp_store_members_on' ) && sp_store_members_on() ) {
+		$plans = sp_member_plans( true );
+		$have  = sp_member_product_plan( $product_id );
+		echo '<div class="sp-store-block"><h4 class="sp-store-h">Membership</h4>';
+		echo '<label>Buying this gives <select name="sp_store_grants_plan"><option value="0">No membership</option>';
+		foreach ( $plans as $plan ) {
+			printf( '<option value="%d"%s>%s (%s)</option>', (int) $plan['id'], selected( $have, (int) $plan['id'], false ), esc_html( $plan['name'] ), esc_html( sp_member_plan_length_label( $plan ) ) );
+		}
+		echo '</select></label>';
+		if ( ! $plans ) echo '<p class="description">Set up a plan first, in Site Pulse under Settings &rarr; Store.</p>';
+		echo '</div>';
+	}
+
+	if ( function_exists( 'sp_store_agreements_on' ) && sp_store_agreements_on() ) {
+		$mine = sp_store_product_agreements( $product_id );
+		echo '<div class="sp-store-block"><h4 class="sp-store-h">Agreements</h4>';
+		echo '<input type="hidden" name="sp_store_agreements_shown" value="1">';
+		echo '<p class="description">The buyer has to accept these at checkout.</p>';
+		foreach ( sp_store_agreements() as $a ) {
+			printf( '<label style="display:block;margin:4px 0"><input type="checkbox" name="sp_store_agreements[]" value="%d"%s> %s%s</label>',
+				(int) $a['id'], checked( in_array( (int) $a['id'], $mine, true ), true, false ), esc_html( $a['title'] ), $a['signature'] ? ' <span class="description">(signature)</span>' : '' );
+		}
+		if ( ! sp_store_agreements() ) echo '<p class="description">Write an agreement first, in Site Pulse under Settings &rarr; Store.</p>';
+		echo '</div>';
+	}
+
+	if ( function_exists( 'sp_store_downloads_on' ) && sp_store_downloads_on() ) {
+		echo '<div class="sp-store-block"><h4 class="sp-store-h">Downloads</h4>';
+		echo '<p class="description">Files the buyer gets. They receive private links in their receipt and on their account page.</p>';
+		foreach ( sp_store_product_downloads( $product_id ) as $f ) {
+			printf( '<label style="display:block;margin:4px 0">%s <span class="description">%s</span> &nbsp; <input type="checkbox" name="sp_store_dl_remove[]" value="%s"> remove</label>',
+				esc_html( $f['name'] ), esc_html( sp_store_file_size_label( (int) $f['size'] ) ), esc_attr( $f['key'] ) );
+		}
+		echo '<p><input type="file" name="sp_store_dl_file"> <span class="description">Added when you press Update.</span></p>';
+		echo '</div>';
+	}
+
 	// ---- Options
 	echo '<div class="sp-store-block">';
 	echo '<h4 class="sp-store-h">Options</h4>';
@@ -1073,7 +1134,7 @@ function sp_store_variants_box_assets(): void {
 			return combos;
 		}
 
-		function rowKey( values ) { return values.join( ' ' ).toLowerCase(); }
+		function rowKey( values ) { return values.join( '\u0000' ).toLowerCase(); }
 
 		function rowValues( tr ) {
 			return Array.prototype.slice.call( tr.querySelectorAll( '.sp-store-opt-input' ) )
@@ -1222,6 +1283,188 @@ function sp_store_variants_box_assets(): void {
 	<?php
 }
 
+/**
+ * Does this product get posted to the customer? One answer for the whole product —
+ * a shirt is shipped in every size, a curriculum in none — read from its variants.
+ * A product with no variants yet is assumed to ship, the safe default.
+ */
+function sp_store_product_ships( int $product_id ): bool {
+	$variants = sp_store_get_variants( $product_id );
+	if ( ! $variants ) return true;
+	foreach ( $variants as $variant ) {
+		if ( (int) $variant['requires_shipping'] ) return true;
+	}
+	return false;
+}
+
+/**
+ * THE product save. Both editors end here — the wp-admin metaboxes (via
+ * sp_store_save_product below) and Site Pulse's product editor — so a rule enforced
+ * on one screen cannot be missing from the other.
+ *
+ * Takes CLEAN data, never $_POST: each caller reads its own form and hands over
+ *   options   [ [ 'name' => 'Size', 'values' => 'Small, Medium' | ['Small','Medium'] ], … ]
+ *   gallery   [ [ 'id' => 12, 'tag' => '1:Red' ], … ]          omit to leave unchanged
+ *   variants  [ row, … ]                                       omit to leave unchanged
+ *   ships     bool — applied to every variant                  omit to keep each as is
+ * where a variant row is id, remove, option1-3, sku, price, sale_price (as typed),
+ * stock ('' = leave alone), track_stock, allow_backorder, weight_grams.
+ *
+ * @return string[] warnings to show the person who saved — never fatal, the rest saves
+ */
+function sp_store_save_product_data( int $post_id, array $data ): array {
+	$errors = [];
+
+	// ---- Options: name + its declared values, entered together.
+	if ( array_key_exists( 'options', $data ) ) {
+		$options = [];
+		foreach ( (array) $data['options'] as $entry ) {
+			$entry = (array) $entry;
+			$name  = sanitize_text_field( (string) ( $entry['name'] ?? '' ) );
+			if ( trim( $name ) === '' ) continue;
+			$values = $entry['values'] ?? '';
+			$options[] = [
+				'name'   => $name,
+				'values' => is_array( $values ) ? sp_store_split_values( implode( ',', array_map( 'strval', $values ) ) ) : sp_store_split_values( (string) $values ),
+			];
+		}
+		sp_store_set_options( $post_id, $options );
+	}
+
+	// ---- Gallery: ordered attachment ids, each optionally tagged to an option value.
+	if ( array_key_exists( 'gallery', $data ) ) {
+		$gallery = [];
+		foreach ( (array) $data['gallery'] as $item ) {
+			$item = (array) $item;
+			$gallery[] = [
+				'id'  => (int) ( $item['id'] ?? 0 ),
+				'tag' => sanitize_text_field( (string) ( $item['tag'] ?? '' ) ),
+			];
+		}
+		sp_store_set_gallery( $post_id, $gallery );
+	}
+
+	// ---- Extras: the membership a purchase gives. Only touched when the caller sends
+	// it, which each editor does only while Memberships is switched on — so turning the
+	// feature off and saving a product never quietly unlinks its plan.
+	if ( array_key_exists( 'grants_plan', $data ) ) {
+		$plan = (int) $data['grants_plan'];
+		if ( $plan ) update_post_meta( $post_id, '_sp_store_grants_plan', $plan );
+		else         delete_post_meta( $post_id, '_sp_store_grants_plan' );
+	}
+
+	// ---- Extras: the agreements a buyer must accept. Same rule as grants_plan — only
+	// touched when the caller sends it, i.e. while the feature is switched on.
+	if ( array_key_exists( 'agreements', $data ) && function_exists( 'sp_store_set_product_agreements' ) ) {
+		sp_store_set_product_agreements( $post_id, (array) $data['agreements'] );
+	}
+
+	// Ships is a product-level answer stored per variant. Unspecified keeps whatever
+	// each variant already says, so a caller that does not know about it changes nothing.
+	$ships_given = array_key_exists( 'ships', $data );
+	$ships       = $ships_given ? (bool) $data['ships'] : true;
+
+	// ---- Variant rows
+	if ( array_key_exists( 'variants', $data ) ) {
+		$seen     = [];
+		$position = 0;
+
+		foreach ( (array) $data['variants'] as $row ) {
+			$row = (array) $row;
+			$id  = (int) ( $row['id'] ?? 0 );
+
+			if ( ! empty( $row['remove'] ) ) {
+				if ( $id ) sp_store_delete_variant( $id );
+				continue;
+			}
+
+			$opts = [];
+			foreach ( [ 'option1', 'option2', 'option3' ] as $key ) {
+				$opts[ $key ] = sanitize_text_field( (string) ( $row[ $key ] ?? '' ) );
+			}
+
+			// A row that is blank in every field is an "Add variant" click the user thought
+			// better of. Skip it silently rather than saving an empty SKU at $0.
+			$blank = implode( '', $opts ) === ''
+				&& trim( (string) ( $row['sku'] ?? '' ) ) === ''
+				&& trim( (string) ( $row['price'] ?? '' ) ) === '';
+			if ( ! $id && $blank ) continue;
+
+			// The DB would reject a duplicate option combination anyway; catching it here
+			// means the editor can say which row, instead of the save half-failing.
+			$key = strtolower( implode( "\0", $opts ) );
+			if ( isset( $seen[ $key ] ) ) {
+				$errors[] = sprintf( 'Two rows share the options "%s" — only the first was saved.', sp_store_variant_label( $opts ) );
+				continue;
+			}
+			$seen[ $key ] = true;
+
+			$existing = $id ? sp_store_get_variant( $id ) : null;
+
+			$saved = sp_store_save_variant( [
+				'id'                => $id,
+				'product_id'        => $post_id,
+				'sku'               => sanitize_text_field( (string) ( $row['sku'] ?? '' ) ),
+				'option1'           => $opts['option1'],
+				'option2'           => $opts['option2'],
+				'option3'           => $opts['option3'],
+				'position'          => $position++,
+				'price_cents'       => sp_store_parse_money( (string) ( $row['price'] ?? '' ) ),
+				'sale_price_cents'  => sp_store_parse_money( (string) ( $row['sale_price'] ?? '' ) ),
+				'track_stock'       => ! empty( $row['track_stock'] ),
+				'allow_backorder'   => ! empty( $row['allow_backorder'] ),
+				'requires_shipping' => $ships_given ? $ships : ( $existing ? (bool) (int) $existing['requires_shipping'] : true ),
+				'taxable'           => $existing ? (bool) (int) $existing['taxable'] : true,
+				'weight_grams'      => (int) ( $row['weight_grams'] ?? 0 ),
+				'currency'          => sp_store_currency(),
+			] );
+
+			if ( is_wp_error( $saved ) ) {
+				$errors[] = $saved->get_error_message();
+				continue;
+			}
+
+			// A sale price that is not lower than the regular price is ignored at display
+			// time (see sp_store_variant_price). Say so — a fat-fingered 150 instead of 15
+			// would otherwise just silently not be a sale, which is exactly the kind of
+			// quiet nothing-happened this module exists to avoid.
+			$regular_cents = sp_store_parse_money( (string) ( $row['price'] ?? '' ) );
+			$sale_cents    = sp_store_parse_money( (string) ( $row['sale_price'] ?? '' ) );
+			if ( $sale_cents > 0 && $sale_cents >= $regular_cents ) {
+				$errors[] = sprintf(
+					'"%s": the sale price (%s) is not lower than the regular price (%s), so it is being ignored.',
+					sp_store_variant_label( $opts ),
+					html_entity_decode( sp_store_money( $sale_cents ), ENT_QUOTES, 'UTF-8' ),
+					html_entity_decode( sp_store_money( $regular_cents ), ENT_QUOTES, 'UTF-8' )
+				);
+			}
+
+			// Stock is applied as a DELTA through the ledger, never written straight to the
+			// column — so an edit made here is as explainable as one made by a sale.
+			if ( isset( $row['stock'] ) && $row['stock'] !== '' ) {
+				sp_store_set_stock( (int) $saved, (int) $row['stock'], 'manual', 'Edited on the product screen' );
+			}
+		}
+	}
+
+	sp_store_ensure_default_variant( $post_id );
+
+	// A product saved without variant rows (the default-variant path, or a caller that
+	// only changed "ships") still has to carry the ships answer on what it does have.
+	if ( $ships_given ) {
+		global $wpdb;
+		$wpdb->update( sp_store_table( 'variants' ), [ 'requires_shipping' => $ships ? 1 : 0 ], [ 'product_id' => $post_id ] );
+		sp_store_flush_variant_cache( $post_id );
+	}
+
+	sp_store_refresh_sort_meta( $post_id );
+	return $errors;
+}
+
+/**
+ * wp-admin's save: read the metabox form, hand it to sp_store_save_product_data().
+ * Everything that decides anything lives in that function, not here.
+ */
 add_action( 'save_post_' . SITE_PULSE_STORE_CPT, 'sp_store_save_product', 10, 2 );
 function sp_store_save_product( int $post_id, WP_Post $post ): void {
 	if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
@@ -1230,114 +1473,19 @@ function sp_store_save_product( int $post_id, WP_Post $post ): void {
 	if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['sp_store_nonce'] ) ), 'sp_store_save_product' ) ) return;
 	if ( ! current_user_can( 'edit_post', $post_id ) ) return;
 
-	// ---- Options: name + its declared values, entered together.
-	$posted = (array) ( $_POST['sp_store_options'] ?? [] );
-	$options = [];
-	foreach ( $posted as $entry ) {
-		$entry = (array) $entry;
-		$name  = sanitize_text_field( wp_unslash( (string) ( $entry['name'] ?? '' ) ) );
-		if ( trim( $name ) === '' ) continue;
-		$options[] = [
-			'name'   => $name,
-			'values' => sp_store_split_values( (string) wp_unslash( $entry['values'] ?? '' ) ),
-		];
-	}
-	sp_store_set_options( $post_id, $options );
+	$data = [
+		'options'  => wp_unslash( (array) ( $_POST['sp_store_options'] ?? [] ) ),
+		'gallery'  => wp_unslash( (array) ( $_POST['sp_store_gallery'] ?? [] ) ),
+		'variants' => wp_unslash( (array) ( $_POST['sp_store_variants'] ?? [] ) ),
+		'ships'    => ! empty( $_POST['sp_store_ships'] ),
+	];
+	// Present in the form only while Memberships is on; absent means "leave it alone".
+	if ( isset( $_POST['sp_store_grants_plan'] ) ) $data['grants_plan'] = (int) $_POST['sp_store_grants_plan'];
+	// The marker field says the agreements box was on screen, so "none ticked" can be told
+	// apart from "the box was not there" (feature off) — only the first clears them.
+	if ( isset( $_POST['sp_store_agreements_shown'] ) ) $data['agreements'] = array_map( 'intval', (array) ( $_POST['sp_store_agreements'] ?? [] ) );
 
-	// ---- Gallery: ordered attachment ids, each optionally tagged to an option value.
-	$gallery = [];
-	foreach ( (array) ( $_POST['sp_store_gallery'] ?? [] ) as $item ) {
-		$item = (array) $item;
-		$gallery[] = [
-			'id'  => (int) ( $item['id'] ?? 0 ),
-			'tag' => sanitize_text_field( wp_unslash( (string) ( $item['tag'] ?? '' ) ) ),
-		];
-	}
-	sp_store_set_gallery( $post_id, $gallery );
-
-
-	// ---- Variant rows
-	$rows     = (array) ( $_POST['sp_store_variants'] ?? [] );
-	$errors   = [];
-	$seen     = [];
-	$position = 0;
-
-	foreach ( $rows as $row ) {
-		$row = (array) $row;
-		$id  = (int) ( $row['id'] ?? 0 );
-
-		if ( ! empty( $row['remove'] ) ) {
-			if ( $id ) sp_store_delete_variant( $id );
-			continue;
-		}
-
-		$opts = [];
-		foreach ( [ 'option1', 'option2', 'option3' ] as $key ) {
-			$opts[ $key ] = sanitize_text_field( wp_unslash( (string) ( $row[ $key ] ?? '' ) ) );
-		}
-
-		// A row that is blank in every field is an "Add variant" click the user thought
-		// better of. Skip it silently rather than saving an empty SKU at $0.
-		$blank = implode( '', $opts ) === ''
-			&& trim( (string) ( $row['sku'] ?? '' ) ) === ''
-			&& trim( (string) ( $row['price'] ?? '' ) ) === '';
-		if ( ! $id && $blank ) continue;
-
-		// The DB would reject a duplicate option combination anyway; catching it here
-		// means the editor can say which row, instead of the save half-failing.
-		$key = strtolower( implode( "\0", $opts ) );
-		if ( isset( $seen[ $key ] ) ) {
-			$errors[] = sprintf( 'Two rows share the options "%s" — only the first was saved.', sp_store_variant_label( $opts ) );
-			continue;
-		}
-		$seen[ $key ] = true;
-
-		$saved = sp_store_save_variant( [
-			'id'                => $id,
-			'product_id'        => $post_id,
-			'sku'               => sanitize_text_field( wp_unslash( (string) ( $row['sku'] ?? '' ) ) ),
-			'option1'           => $opts['option1'],
-			'option2'           => $opts['option2'],
-			'option3'           => $opts['option3'],
-			'position'          => $position++,
-			'price_cents'       => sp_store_parse_money( (string) ( $row['price'] ?? '' ) ),
-			'sale_price_cents'  => sp_store_parse_money( (string) ( $row['sale_price'] ?? '' ) ),
-			'track_stock'       => ! empty( $row['track_stock'] ),
-			'allow_backorder'   => ! empty( $row['allow_backorder'] ),
-			'requires_shipping' => true,
-			'taxable'           => true,
-			'weight_grams'      => (int) ( $row['weight_grams'] ?? 0 ),
-			'currency'          => sp_store_currency(),
-		] );
-
-		if ( is_wp_error( $saved ) ) {
-			$errors[] = $saved->get_error_message();
-			continue;
-		}
-
-		// A sale price that is not lower than the regular price is ignored at display
-		// time (see sp_store_variant_price). Say so — a fat-fingered 150 instead of 15
-		// would otherwise just silently not be a sale, which is exactly the kind of
-		// quiet nothing-happened this module exists to avoid.
-		$regular_cents = sp_store_parse_money( (string) ( $row['price'] ?? '' ) );
-		$sale_cents    = sp_store_parse_money( (string) ( $row['sale_price'] ?? '' ) );
-		if ( $sale_cents > 0 && $sale_cents >= $regular_cents ) {
-			$errors[] = sprintf(
-				'"%s": the sale price (%s) is not lower than the regular price (%s), so it is being ignored.',
-				sp_store_variant_label( $opts ),
-				sp_store_money( $sale_cents ),
-				sp_store_money( $regular_cents )
-			);
-		}
-
-		// Stock is applied as a DELTA through the ledger, never written straight to the
-		// column — so an edit made here is as explainable as one made by a sale.
-		if ( isset( $row['stock'] ) && $row['stock'] !== '' ) {
-			sp_store_set_stock( (int) $saved, (int) $row['stock'], 'manual', 'Edited on the product screen' );
-		}
-	}
-
-	sp_store_ensure_default_variant( $post_id );
+	$errors = sp_store_save_product_data( $post_id, $data );
 
 	if ( $errors ) {
 		set_transient( 'sp_store_notice_' . $post_id, $errors, 60 );

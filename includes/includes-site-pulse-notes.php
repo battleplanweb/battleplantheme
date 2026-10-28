@@ -263,7 +263,8 @@ function sp_notes_payload( array $notes, int $me ): array {
 	), ARRAY_A ) ?: [];
 	foreach ( $mrows as $m ) {
 		$nid = (int) $m['note_id']; $uid = (int) $m['user_id'];
-		$members[ $nid ][] = [ 'id' => $uid, 'name' => sp_notes_name( $uid ) ];
+		// photo: the directory picture chat uses (cached per request, so each person is looked up once).
+		$members[ $nid ][] = [ 'id' => $uid, 'name' => sp_notes_name( $uid ), 'photo' => function_exists( 'site_pulse_user_photo' ) ? site_pulse_user_photo( $uid ) : '' ];
 		if ( $uid === $me ) $order[ $nid ] = (int) $m['display_order'];
 	}
 
@@ -358,7 +359,7 @@ function sp_notes_ajax_list(): void {
 	$labels = array_keys( $labels );
 	natcasesort( $labels );
 
-	$sort = get_user_meta( get_current_user_id(), '_sp_notes_sort', true );
+	$sort = get_user_meta( site_pulse_effective_user_id(), '_sp_notes_sort', true );   // view-as shows their order
 	wp_send_json_success( [
 		'notes'  => $notes,
 		'labels' => array_values( $labels ),
@@ -640,6 +641,6 @@ function sp_notes_ajax_set_sort(): void {
 	$uid  = get_current_user_id();
 	if ( ! $uid ) wp_send_json_error();
 	$sort = in_array( $_POST['sort'] ?? '', [ 'edited', 'created', 'title', 'custom' ], true ) ? $_POST['sort'] : 'edited';
-	update_user_meta( $uid, '_sp_notes_sort', $sort );
+	if ( ! site_pulse_is_impersonating() ) update_user_meta( $uid, '_sp_notes_sort', $sort );   // view-as: on-screen only
 	wp_send_json_success( [ 'sort' => $sort ] );
 }

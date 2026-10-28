@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 				for (let i = lastDayOfMonth + 1; i <= 6; i++) {
 					const day = document.createElement("div");
-					day.classList.add("day");
+					day.classList.add("day", "day-empty");
 					days.appendChild(day);
 				}
 

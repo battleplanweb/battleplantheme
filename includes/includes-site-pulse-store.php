@@ -59,7 +59,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // The store owns its own schema version, separate from SITE_PULSE_DB_VERSION, so a
 // store schema change doesn't re-run dbDelta across all ~40 core Site Pulse tables
 // on every install in the fleet (and vice versa). Same idiom as Booking and Fleet.
-define( 'SITE_PULSE_STORE_DB_VERSION', '1.2' );
+define( 'SITE_PULSE_STORE_DB_VERSION', '1.6' );
 
 /** The post type that holds product CONTENT. Commerce lives in the tables below. */
 define( 'SITE_PULSE_STORE_CPT', 'bp_product' );
@@ -82,6 +82,14 @@ require_once get_template_directory() . '/includes/includes-site-pulse-store-tot
 require_once get_template_directory() . '/includes/includes-site-pulse-store-providers.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-checkout.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-checkout-page.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-orders.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-notify.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-products.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-admin-orders.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-members.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-agreements.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-downloads.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-import-woo.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-admin.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-front.php';
 
@@ -580,6 +588,8 @@ function sp_store_install_db(): void {
 		provider_checkout varchar(100) DEFAULT NULL,
 		provider_payment varchar(100) NOT NULL DEFAULT '',
 		provider_customer varchar(100) NOT NULL DEFAULT '',
+		provider_subscription varchar(100) NOT NULL DEFAULT '',
+		downloads int(11) NOT NULL DEFAULT 0,
 		source varchar(20) NOT NULL DEFAULT 'web',
 		customer_note text DEFAULT NULL,
 		staff_notes text DEFAULT NULL,
@@ -757,6 +767,70 @@ function sp_store_install_db(): void {
 		KEY variant_id (variant_id),
 		KEY order_id (order_id),
 		KEY created_at (created_at)
+	) $charset;";
+
+	// ---- 1.3: Membership plans — what a membership gives and for how long.
+	// `sections` is a JSON list of post types the plan locks as a whole (e.g. every
+	// Lesson); single pages are locked with _sp_member_plan post meta instead.
+	// `billing` is 'once' today; the renewing plans (Stripe subscriptions) add
+	// month/year and the price/provider ids they need.
+	$sql .= "CREATE TABLE " . sp_store_table( 'member_plans' ) . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		name varchar(120) NOT NULL DEFAULT '',
+		description text DEFAULT NULL,
+		length_unit varchar(10) NOT NULL DEFAULT 'forever',
+		length_n int(11) NOT NULL DEFAULT 0,
+		sections text DEFAULT NULL,
+		billing varchar(10) NOT NULL DEFAULT 'once',
+		display_order int(11) NOT NULL DEFAULT 0,
+		status varchar(20) NOT NULL DEFAULT 'active',
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		KEY status (status)
+	) $charset;";
+
+	// ---- 1.3: Memberships — one row per person per plan. Buying again extends the
+	// same row (UNIQUE user_id, plan_id) rather than stacking a second one, so "is
+	// this person a member" is one lookup. ends_at NULL means it never expires.
+	// provider_subscription is for renewing plans: Stripe's subscription id.
+	$sql .= "CREATE TABLE " . sp_store_table( 'memberships' ) . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		plan_id int(11) NOT NULL,
+		user_id bigint(20) unsigned NOT NULL,
+		email varchar(190) NOT NULL DEFAULT '',
+		status varchar(20) NOT NULL DEFAULT 'active',
+		starts_at datetime NOT NULL,
+		ends_at datetime DEFAULT NULL,
+		source varchar(20) NOT NULL DEFAULT 'staff',
+		order_id int(11) NOT NULL DEFAULT 0,
+		provider_subscription varchar(100) NOT NULL DEFAULT '',
+		note varchar(255) NOT NULL DEFAULT '',
+		created_by int(11) NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id),
+		UNIQUE KEY user_plan (user_id, plan_id),
+		KEY plan_status (plan_id, status),
+		KEY email (email)
+	) $charset;";
+
+	// ---- 1.5: Agreements accepted at checkout — a SNAPSHOT, one row per agreement per
+	// order: the exact text shown, the typed signature, when, and from where. Editing
+	// the agreement later never changes what a past customer agreed to.
+	$sql .= "CREATE TABLE " . sp_store_table( 'order_agreements' ) . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		order_id int(11) NOT NULL,
+		agreement_id int(11) NOT NULL DEFAULT 0,
+		title varchar(190) NOT NULL DEFAULT '',
+		body longtext DEFAULT NULL,
+		version varchar(30) NOT NULL DEFAULT '',
+		signed_name varchar(190) NOT NULL DEFAULT '',
+		accepted_at datetime NOT NULL,
+		ip varchar(45) NOT NULL DEFAULT '',
+		user_agent varchar(255) NOT NULL DEFAULT '',
+		PRIMARY KEY  (id),
+		KEY order_id (order_id)
 	) $charset;";
 
 	dbDelta( $sql );

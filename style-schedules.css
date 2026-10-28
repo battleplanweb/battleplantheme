@@ -66,6 +66,18 @@
   --s-color-8:                                              #e6af68;
   --s-color-8-light:                                        #d1f2f6;
 
+  /* Shift identity colors (pills, badges, Shift Settings cards) — separate from the status colors above
+     (shift B used to borrow --s-color-1, the "available" green). A host app can re-theme just these:
+     Site Pulse maps them to the company palette. */
+  --shift-a:                                                var(--s-color-3);
+  --shift-a-light:                                          var(--s-color-3-light);
+  --shift-b:                                                var(--s-color-1);
+  --shift-b-light:                                          var(--s-color-1-light);
+  --shift-c:                                                var(--s-color-4);
+  --shift-c-light:                                          var(--s-color-4-light);
+  --shift-d:                                                var(--s-color-5);
+  --shift-d-light:                                          var(--s-color-5-light);
+
 
 
 
@@ -410,6 +422,7 @@ body.has-schedules-app #masthead {
   font-family:                                              var(--button-font-family);
   color:                                                    var(--color-main);
   min-height:                                               100vh;
+  min-height:                                               100svh;
   margin:                                                   0;
   padding:                                                  0;
 }
@@ -434,6 +447,7 @@ body.has-schedules-app #masthead {
 
 #schedules-login-wrap {
   min-height:                                               100vh;
+  min-height:                                               100svh;
   display:                                                  flex;
   align-items:                                              center;
   justify-content:                                          center;
@@ -1543,10 +1557,10 @@ height:                                                     auto;
   border-radius:                                            12px;
 }
 
-.my-claim-item .claim-shift.shift-a { background: var(--s-color-3-light);  color: var(--s-color-3); }
-.my-claim-item .claim-shift.shift-b { background: var(--s-color-1-light); color: var(--s-color-1); }
-.my-claim-item .claim-shift.shift-c { background: #ede9fe; color: var(--s-color-4); }
-.my-claim-item .claim-shift.shift-d { background: #ffedd5; color: var(--s-color-5); }
+.my-claim-item .claim-shift.shift-a { background: var(--shift-a-light);  color: var(--shift-a); }
+.my-claim-item .claim-shift.shift-b { background: var(--shift-b-light); color: var(--shift-b); }
+.my-claim-item .claim-shift.shift-c { background: var(--shift-c-light); color: var(--shift-c); }
+.my-claim-item .claim-shift.shift-d { background: var(--shift-d-light); color: var(--shift-d); }
 
 .my-claim-item .claim-date { font-weight: 600; font-size: .9em; }
 .my-claim-item .claim-time { font-size: .85em; color: var(--dark-grey); }
@@ -1727,6 +1741,7 @@ height:                                                     auto;
   background:                                               var(--white);
   border-bottom:                                            2px solid var(--light-grey);
   max-height:                                               85vh;
+  max-height:                                               85dvh;
   overflow-y:                                               auto;
 }
 
@@ -1985,13 +2000,13 @@ height:                                                     auto;
 
 /* Shift & User Colors */
 .shift-pill.shift-a,
-.user-shift-badge.shift-a { background: var(--s-color-3-light);  color: var(--s-color-3); }
+.user-shift-badge.shift-a { background: var(--shift-a-light);  color: var(--shift-a); }
 .shift-pill.shift-b,
-.user-shift-badge.shift-b { background: var(--s-color-1-light); color: var(--s-color-1); }
+.user-shift-badge.shift-b { background: var(--shift-b-light); color: var(--shift-b); }
 .shift-pill.shift-c,
-.user-shift-badge.shift-c { background: var(--s-color-4-light); color: var(--s-color-4); }
+.user-shift-badge.shift-c { background: var(--shift-c-light); color: var(--shift-c); }
 .shift-pill.shift-d,
-.user-shift-badge.shift-d { background: var(--s-color-5-light); color: var(--s-color-5); }
+.user-shift-badge.shift-d { background: var(--shift-d-light); color: var(--shift-d); }
 .shift-pill.shift-none,
 .user-shift-badge.shift-none { background: transparent; color: var(--black-high); border: none; }
 
@@ -2314,6 +2329,7 @@ height:                                                     auto;
   width:                                                    100%;
   max-width:                                                640px;
   max-height:                                               90vh;
+  max-height:                                               90dvh;
   overflow-y:                                               auto;
   padding:                                                  28px 28px 24px;
   top:                                                      0;
@@ -2397,10 +2413,10 @@ height:                                                     auto;
   text-align:                                               center;
 }
 
-.shift-card-blue   { border-top-color: var(--s-color-3); }
-.shift-card-green  { border-top-color: var(--s-color-1); }
-.shift-card-purple { border-top-color: var(--s-color-4); }
-.shift-card-orange { border-top-color: var(--s-color-5); }
+.shift-card-blue   { border-top-color: var(--shift-a); }
+.shift-card-green  { border-top-color: var(--shift-b); }
+.shift-card-purple { border-top-color: var(--shift-c); }
+.shift-card-orange { border-top-color: var(--shift-d); }
 
 .shift-card-letter {
   font-size:                                                2.4em;
@@ -2409,10 +2425,10 @@ height:                                                     auto;
   color:                                                    var(--color-main);
 }
 
-.shift-card-blue   .shift-card-letter { color: var(--s-color-3); }
-.shift-card-green  .shift-card-letter { color: var(--s-color-1); }
-.shift-card-purple .shift-card-letter { color: var(--s-color-4); }
-.shift-card-orange .shift-card-letter { color: var(--s-color-5); }
+.shift-card-blue   .shift-card-letter { color: var(--shift-a); }
+.shift-card-green  .shift-card-letter { color: var(--shift-b); }
+.shift-card-purple .shift-card-letter { color: var(--shift-c); }
+.shift-card-orange .shift-card-letter { color: var(--shift-d); }
 
 .shift-card-info {
   display:                                                  flex;
@@ -3455,10 +3471,10 @@ body.schedules-dragging * {
   border:                                                   1px solid rgba(0,0,0,0.06);
 }
 
-.schedule-shift-badge.shift-a { background: var(--s-color-3-light); color: var(--s-color-3); }
-.schedule-shift-badge.shift-b { background: var(--s-color-1-light); color: var(--s-color-1); }
-.schedule-shift-badge.shift-c { background: var(--s-color-4-light); color: var(--s-color-4); }
-.schedule-shift-badge.shift-d { background: var(--s-color-5-light); color: var(--s-color-5); }
+.schedule-shift-badge.shift-a { background: var(--shift-a-light); color: var(--shift-a); }
+.schedule-shift-badge.shift-b { background: var(--shift-b-light); color: var(--shift-b); }
+.schedule-shift-badge.shift-c { background: var(--shift-c-light); color: var(--shift-c); }
+.schedule-shift-badge.shift-d { background: var(--shift-d-light); color: var(--shift-d); }
 
 .schedule-shift-badge.shift-custom {
   display:                                                  none;
@@ -3933,10 +3949,10 @@ body.schedules-dragging * {
 }
 
 /* Reuse shift colors from schedule calendar */
-.cover-shift-badge.shift-a { background: var(--s-color-3-light); color: var(--s-color-3); }
-.cover-shift-badge.shift-b { background: var(--s-color-1-light); color: var(--s-color-1); }
-.cover-shift-badge.shift-c { background: var(--s-color-4-light); color: var(--s-color-4); }
-.cover-shift-badge.shift-d { background: var(--s-color-5-light); color: var(--s-color-5); }
+.cover-shift-badge.shift-a { background: var(--shift-a-light); color: var(--shift-a); }
+.cover-shift-badge.shift-b { background: var(--shift-b-light); color: var(--shift-b); }
+.cover-shift-badge.shift-c { background: var(--shift-c-light); color: var(--shift-c); }
+.cover-shift-badge.shift-d { background: var(--shift-d-light); color: var(--shift-d); }
 
 .cover-card-date {
   font-weight:                                              600;
@@ -4047,6 +4063,7 @@ body.schedules-dragging * {
 .god-mode-panel {
   background:                                               #0f0a1e;
   min-height:                                               100vh;
+  min-height:                                               100svh;
   color:                                                    #e2e8f0;
 }
 

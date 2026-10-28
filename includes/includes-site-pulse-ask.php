@@ -107,11 +107,13 @@ function sp_ask_install_db(): void {
 }
 
 // Private testing: only these WordPress logins see Ask AI (nav, panel, endpoints). Checked against the
-// REAL signed-in user, so it can't be widened by impersonation; the data each question may read still
-// follows the EFFECTIVE user's view caps (sp_ask_sources).
+// EFFECTIVE user — while a god views as someone else, that person must be on the list too — so "view as"
+// a client shows exactly the client's menu (no Ask AI) and impersonation can't widen it either way. The
+// data each question may read follows the effective user's view caps too (sp_ask_sources).
 function sp_ask_visible(): bool {
-	$u = wp_get_current_user();
-	return $u && $u->exists() && in_array( $u->user_login, (array) apply_filters( 'site_pulse_ask_users', [ 'battleplanweb' ] ), true );
+	$uid = function_exists( 'site_pulse_effective_user_id' ) ? site_pulse_effective_user_id() : get_current_user_id();
+	$u   = $uid ? get_userdata( $uid ) : null;
+	return $u && in_array( $u->user_login, (array) apply_filters( 'site_pulse_ask_users', [ 'battleplanweb' ] ), true );
 }
 
 // The background read-through runs every 10 minutes while the AI module is on.

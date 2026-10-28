@@ -404,7 +404,7 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 
 		QTags.addButton( 'bp_expire-content', 'expire', '[expire start="YYYY-MM-DD" end="YYYY-MM-DD"]', '[/expire]\n\n', 'expire', 'Expire', 1000 );
 
-		QTags.addButton('bp_parallax', 'parallax', '[parallax section name="becomes id attribute" style="corresponds to css" width="default, stretch, full, edge, inline" img-w="1920" img-h="1024" height="800" padding="50 / applies to mobile" pos-x="50%" pos-x-mobile="50%" top-y="0" bottom-y="0" z-index="2" image="/wp-content/uploads/image.webp" image-mobile="/wp-content/uploads/image-mobile.webp" stack="false / true (drop hero-copy below hero-image)" ]\n', '[/parallax]\n\n', 'parallax', 'Parallax', 1000 );
+		QTags.addButton('bp_parallax', 'parallax', '[parallax section name="becomes id attribute" class="" style="corresponds to css" width="default, stretch, full, edge, inline" type="section, col" img-w="1920" img-h="1024" height="800" padding="50 / applies to mobile" pos-x="50%" pos-x-mobile="50%" top-y="0" bottom-y="0" mobile-breakpoint="1024, 860, 576" z-index="2" image="/wp-content/uploads/image.webp" image-mobile="/wp-content/uploads/image-mobile.webp" stack="false / true (drop hero-copy below hero-image) fixed="false, true" scroll-btn="false, true" scroll-loc="#page" scroll-icon="chevron-down" track="" ]\n', '[/parallax]\n\n', 'parallax', 'Parallax', 1000 );
 
 		QTags.addButton( 'bp_section', 'section', '[section name="becomes id attribute" hash="compensation for scroll on one-page sites" style="corresponds to css" width="default, stretch, full, edge, inline" background="url" left="50" top="50" class="" start="YYYY-MM-DD" end="YYYY-MM-DD"]\n', '[/section]\n\n', 'section', 'Section', 1000 );
 
@@ -821,6 +821,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	var cwvCharts = document.querySelectorAll('.bp-analytics-cwv');
 	var auditCharts = document.querySelectorAll('.bp-analytics-audit');
 	var keywordCharts = document.querySelectorAll('.bp-analytics-keywords');
+	var indexCharts = document.querySelectorAll('.bp-analytics-index');
+	var indexPies   = document.querySelectorAll('.bp-analytics-pie[data-pie="index"]');
 	if (!channelCharts.length && !behaviorCharts.length) return;
 
 	var payloadEl = document.getElementById('bp-an-payload');
@@ -1173,7 +1175,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		order.forEach(function (s) {
 			var runs = [], cur = [];
 			s.values.forEach(function (val, i) {
-				if (opts.gapAtZero && !(val > 0)) { if (cur.length) { runs.push(cur); cur = []; } return; }
+				// null = no reading for this period (always a gap, on any axis).
+				if (val === null || (opts.gapAtZero && !(val > 0))) { if (cur.length) { runs.push(cur); cur = []; } return; }
 				cur.push([xS(i), yS(val)]);
 			});
 			if (cur.length) runs.push(cur);
@@ -1183,7 +1186,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (opts.endLabels && s.values.length) {
 				// Anchor the end dot/label on the last REAL reading, not on a trailing gap.
 				var li = s.values.length - 1;
-				if (opts.gapAtZero) { while (li >= 0 && !(s.values[li] > 0)) li--; }
+				while (li >= 0 && (s.values[li] === null || (opts.gapAtZero && !(s.values[li] > 0)))) li--;
 				if (li >= 0) {
 					var ex = xS(li), ey = yS(s.values[li]);
 					marks.appendChild(el('circle', { 'class': 'bp-an-dotring', cx: ex, cy: ey, r: 5 }));
@@ -1235,7 +1238,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				var val = f.s.values[i] || 0, py = yS(val);
 				// Same gap rule as the line: no reading here, so hide the dot and say so rather than
 				// parking it at the top of an inverted axis where it would look like a perfect score.
-				var gap = opts.gapAtZero && !(val > 0);
+				var gap = f.s.values[i] === null || (opts.gapAtZero && !(val > 0));
 				f.dot.style.display = gap ? 'none' : ''; f.ring.style.display = gap ? 'none' : '';
 				f.dot.setAttribute('cx', cx); f.dot.setAttribute('cy', py);
 				f.ring.setAttribute('cx', cx); f.ring.setAttribute('cy', py);
@@ -1399,6 +1402,59 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (unit === 'rating') { opts.yMaxFixed = 5; opts.yStepFixed = 1; }       // stars top out at 5
 		else if (unit === 'pos') { opts.invertY = true; }                          // search position: lower = better = higher on chart
 		drawLineChart(container, periods, defs, opts);
+	}
+
+	// Pages Indexed — one pill per page group (All / Main / Jobsite GEO / Blog / Secondary). Each shows THAT
+	// group's Indexed vs Not Indexed over time + a donut of the ratio. Group values are null for snapshots
+	// taken before the per-group split existed (drawn as a gap, not a dip to zero).
+	function activeIndexGroup(container) { var card = container.closest('.bp-an-card'), b = card && card.querySelector('.bp-an-ixbtn.active'); return (b && b.dataset.ixgroup) || 'all'; }
+	function indexSlice(container) {
+		var data = payload.indexGroups, grain = activeGrain(), g = data && (data[grain] || data.daily || data.weekly || data.monthly);
+		if (!g || !g.periods || !g.periods.length) return null;
+		var r = activeRange(), lo = r ? r.lo : null, hi = r ? (r.hi || new Date()) : null, idx = [];
+		g.periods.forEach(function (k, j) { var dt = periodDate(k, grain); if ((!lo || dt >= lo) && (!hi || dt <= hi)) idx.push(j); });
+		if (!idx.length) idx = g.periods.map(function (_, j) { return j; });   // weekly snapshots — never leave the card blank
+		var ser = g.series[activeIndexGroup(container)] || {};
+		function pick(arr) { return idx.map(function (j) { return (arr && arr[j] !== undefined) ? arr[j] : null; }); }
+		var ix = pick(ser.indexed), nx = pick(ser.not_indexed);
+		if (!ix.concat(nx).some(function (v) { return v !== null; })) return null;   // no per-group snapshot yet
+		return { grain: grain, periods: idx.map(function (j) { return g.periods[j]; }), indexed: ix, not_indexed: nx };
+	}
+	function renderIndexCard(container) {
+		var data = payload.indexGroups, s = data ? indexSlice(container) : null;
+		if (!s) {
+			var em = document.createElement('p'); em.className = 'bp-an-empty';
+			em.textContent = (data && data.status) || 'The trend lines for this page type start with the next weekly check — the donut shows the current status.';
+			container.innerHTML = ''; container.appendChild(em); return;
+		}
+		var defs = [
+			{ key: 'indexed',     label: 'Indexed',     cls: 'green', emph: true, values: s.indexed },
+			{ key: 'not_indexed', label: 'Not Indexed', cls: 'red',   emph: true, values: s.not_indexed }
+		];
+		drawLineChart(container, s.periods, defs, { grain: s.grain, fmt: 'int', interactiveLegend: false, endLabels: true, showPct: true, rerender: function () { renderIndexCard(container); } });
+	}
+	function renderIndexPie(pieC) {
+		var data = payload.indexGroups;
+		if (!data) { pieC.innerHTML = ''; return; }
+		var card = pieC.closest('.bp-an-card'), chart = card ? card.querySelector('.bp-analytics-index') : null;
+		var group = chart ? activeIndexGroup(chart) : 'all', cur = (data.current && data.current[group]) || {};
+		// Open-ended range (30d / … / All) → the live per-URL stamps (most current). A custom end date →
+		// the latest snapshot in range, so the donut matches the end of the lines.
+		var r = activeRange(), s = (r && r.hi && chart) ? indexSlice(chart) : null, ix, nx, live = true;
+		if (s) for (var i = s.periods.length - 1; i >= 0; i--) if (s.indexed[i] !== null) { ix = s.indexed[i] || 0; nx = s.not_indexed[i] || 0; live = false; break; }
+		if (live) { ix = cur.indexed || 0; nx = cur.not_indexed || 0; }
+		var slices = [];
+		if (ix > 0) slices.push({ label: 'Indexed', value: ix, cls: 'green' });
+		if (nx > 0) slices.push({ label: 'Not Indexed', value: nx, cls: 'red' });
+		if (slices.length) drawDonut(pieC, slices);
+		else pieC.innerHTML = '<p class="bp-an-empty">None checked yet.</p>';
+		// Pages Google hasn't been asked about yet — they're in neither slice.
+		var pending = live ? Math.max(0, (cur.eligible || 0) - ix - nx) : 0;
+		if (pending > 0) {
+			var note = document.createElement('div'); note.className = 'bp-an-cardnote';
+			note.textContent = pending + ' more ' + (pending === 1 ? 'page' : 'pages') + ' not checked yet';
+			pieC.appendChild(note);
+		}
 	}
 
 	function renderBehavior(container) {
@@ -1906,12 +1962,14 @@ document.addEventListener('DOMContentLoaded', function () {
 		Array.prototype.forEach.call(cwvCharts, renderCWV);
 		Array.prototype.forEach.call(auditCharts, renderAuditCard);
 		Array.prototype.forEach.call(keywordCharts, renderKeywords);
+		Array.prototype.forEach.call(indexCharts, renderIndexCard);
+		Array.prototype.forEach.call(indexPies, renderIndexPie);
 	}
 
 	function clearDates() { var s = document.getElementById('bp-an-start'), e = document.getElementById('bp-an-end'); if (s) s.value = ''; if (e) e.value = ''; }
 	function setActive(sel, btn) { document.querySelectorAll(sel).forEach(function (x) { x.classList.remove('active'); }); btn.classList.add('active'); }
 	function clearCaps(nodes) { Array.prototype.forEach.call(nodes, function (c) { c._yCap = null; }); }
-	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); clearCaps(scrollCharts); clearCaps(eventCharts); clearCaps(cwvCharts); clearCaps(auditCharts); }
+	function clearAllCaps() { clearCaps(channelCharts); clearCaps(behaviorCharts); clearCaps(speedCharts); clearCaps(pageTrendCharts); clearCaps(clarityCharts); clearCaps(scrollCharts); clearCaps(eventCharts); clearCaps(cwvCharts); clearCaps(auditCharts); clearCaps(indexCharts); }
 
 	document.addEventListener('click', function (ev) {
 		var gb = ev.target.closest('.bp-an-gbtn');
@@ -1987,6 +2045,18 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 
+		var ix = ev.target.closest('.bp-an-ixbtn');
+		if (ix) {
+			ev.preventDefault();
+			var icard = ix.closest('.bp-an-card');
+			icard.querySelectorAll('.bp-an-ixbtn').forEach(function (x) { x.classList.remove('active'); });
+			ix.classList.add('active');
+			clearCaps(icard.querySelectorAll('.bp-analytics-index'));
+			icard.querySelectorAll('.bp-analytics-index').forEach(renderIndexCard);
+			icard.querySelectorAll('.bp-analytics-pie[data-pie="index"]').forEach(renderIndexPie);
+			return;
+		}
+
 		var km = ev.target.closest('.bp-an-kmbtn');
 		if (km) {
 			ev.preventDefault();
@@ -2034,6 +2104,8 @@ document.addEventListener('DOMContentLoaded', function () {
 					else if (t.dataset.pie === 'tech') renderTechPie(t);
 					else if (t.dataset.pie === 'channel') renderChannelPie(t);
 					else if (t.dataset.pie === 'behavior') renderBehaviorPie(t);
+					else if (t.dataset.pie === 'index') renderIndexPie(t);
+					else if (t.classList.contains('bp-analytics-index')) renderIndexCard(t);
 					else if (t.classList.contains('bp-analytics-pagetrend')) renderPageTrend(t);
 					else if (t.classList.contains('bp-analytics-clarity')) renderClarity(t);
 					else if (t.classList.contains('bp-analytics-scroll')) renderScroll(t);
@@ -2048,7 +2120,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				});
 			});
 		});
-		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, pagesPies, clarityCharts, scrollCharts, eventCharts, cwvCharts, auditCharts, keywordCharts].forEach(function (list) {
+		[channelCharts, behaviorCharts, channelPies, behaviorPies, techPies, widthBars, speedCharts, locationCharts, locationZoomCharts, pageTrendCharts, pagesPies, clarityCharts, scrollCharts, eventCharts, cwvCharts, auditCharts, keywordCharts, indexCharts, indexPies].forEach(function (list) {
 			Array.prototype.forEach.call(list, function (c) { ro.observe(c); });
 		});
 		renderAll(); // deterministic initial paint — don't rely solely on ResizeObserver's first callback

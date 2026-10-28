@@ -133,6 +133,7 @@
 	display: grid;
 	grid-template-columns: var(--sp-sidebar-width) 1fr;
 	min-height: 100vh;
+	min-height: 100svh;
 }
 
 #sp-app, #sp-app * {
@@ -150,6 +151,7 @@
 	padding: 28px clamp(2em, (100vw - 80em) * 0.28, 10%);
 	padding-top: calc(28px + var(--sp-god-h));
 	min-height: 100vh;
+	min-height: 100svh;
 }
 
 .sp-panel { display: none; }

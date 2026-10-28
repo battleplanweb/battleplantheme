@@ -239,35 +239,6 @@ function bp_event_topup_recurrences() {
 	wp_reset_postdata();
 }
 
-// Human-readable recurrence summary for the event meta display.
-function bp_event_recurrence_summary( $rule ) {
-	if ( ! $rule ) return '';
-
-	$ord = array( 'first'=>'1st', 'second'=>'2nd', 'third'=>'3rd', 'fourth'=>'4th', 'fifth'=>'5th', 'last'=>'last' );
-	$wd  = ucfirst( $rule['weekday'] );
-	$mon = date( 'F', mktime(0,0,0, max(1,(int)$rule['month']), 1) );
-	$n   = (int) $rule['interval'];
-
-	if ( $rule['freq'] === 'weekly' ) {
-		$days = array_map( 'ucfirst', $rule['weekdays'] );
-		$list = $days ? implode( ' & ', $days ) : 'week';
-		$text = ( $n >= 2 ) ? 'Every other '.$list : 'Every '.$list;
-	} elseif ( $rule['freq'] === 'monthly' ) {
-		$cycle = ( $n >= 2 ) ? 'every other month' : 'every month';
-		$text  = ( $rule['monthmode'] === 'monthday' )
-			? 'Day '.(int)$rule['monthday'].' of '.$cycle
-			: 'The '.$ord[ $rule['nth'] ].' '.$wd.' of '.$cycle;
-	} else { // yearly
-		$cycle = ( $n >= 2 ) ? ', every other year' : ', every year';
-		$text  = ( $rule['monthmode'] === 'monthday' )
-			? $mon.' '.(int)$rule['monthday'].$cycle
-			: 'The '.$ord[ $rule['nth'] ].' '.$wd.' of '.$mon.$cycle;
-	}
-
-	if ( $rule['until'] ) $text .= ' through '.date( 'M j, Y', strtotime( $rule['until'] ) );
-	return $text;
-}
-
 
 
 /*--------------------------------------------------------------
@@ -322,9 +293,11 @@ function battleplan_createEventLog() {
 
 	wp_reset_postdata();
 
-	$abbr_days = get_option('event_calendar')['abbr_days'] == true ? true : false;
+	// json_encode the bool: echoing a raw false printed "var abbr_days = ;" — a syntax error that
+	// took eventLog (same <script>) down with it.
+	$abbr_days = ! empty( get_option('event_calendar')['abbr_days'] );
 
-	?><script nonce="<?php echo _BP_NONCE; ?>">var eventLog = <?php echo json_encode($eventData); ?>; var abbr_days = <?php echo $abbr_days; ?>;</script><?php
+	?><script nonce="<?php echo _BP_NONCE; ?>">var eventLog = <?php echo wp_json_encode($eventData); ?>; var abbr_days = <?php echo wp_json_encode($abbr_days); ?>;</script><?php
 }
 
 
@@ -370,10 +343,14 @@ function battleplan_registerEventPostType() {
 		'show_ui'=>			true,
         	'show_admin_column'=>	true,
 	));
+}
 
-	wp_insert_term( 'upcoming', 'event-tags' );
-	wp_insert_term( 'expired', 'event-tags' );
-	wp_insert_term( 'featured', 'event-tags' );
+// Seed the standard event tags (admin only — wp_insert_term on every request cost three queries a hit)
+add_action( 'admin_init', 'battleplan_seedEventTags' );
+function battleplan_seedEventTags() {
+	foreach ( array( 'upcoming', 'expired', 'featured' ) as $tag ) {
+		if ( ! term_exists( $tag, 'event-tags' ) ) wp_insert_term( $tag, 'event-tags' );
+	}
 }
 
 add_action('acf/init', 'battleplan_add_event_acf_fields');
@@ -499,10 +476,6 @@ function battleplan_add_event_acf_fields() {
 // Build the event calendar
 add_shortcode( 'get-event-calendar', 'battleplan_getEventCalendar' );
 function battleplan_getEventCalendar($atts, $content = null ) {
-	//$a = shortcode_atts( array( 'info' => 'name', ), $atts );
-	//$info = esc_attr($a['info']);
-
-
 	$buildCalendar = '<h1 class="page-headline calendar-headline events-headline">Upcoming Events</h1>';
 
 	$buildCalendar .= '<div class="calendar-intro events-intro"><div class="calender-btn-row">[btn link="/events/"]List View[/btn]</div></div>';
@@ -557,16 +530,18 @@ function battleplan_event_teasers( $atts, $content = null ) {
 			$query->the_post();
 
 			$buildEvents .= '[col]';
-			if ( $link == "true" ) $buildEvents .= '<a href = "'.get_the_permalink($post->ID).'">';
+			if ( $link == "true" ) $buildEvents .= '<a href = "'.get_the_permalink().'">';
 			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => '' ) );
 			if ( $link == "true" ) $buildEvents .= '</a>';
 			$buildEvents .= '[txt]<h3>'.get_the_title().'</h3>';
-			$buildEvents .= include('wp-content/themes/battleplantheme/elements/element-events-meta.php');
+			// The element returns its markup — or nothing when there are no dates/venue, in which
+			// case include() returns 1, which used to print a stray "1".
+			$meta = include get_template_directory().'/elements/element-events-meta.php';
+			if ( is_string($meta) ) $buildEvents .= $meta;
 			if ( esc_attr($a['excerpt']) == "true" ) $buildEvents.= '<p>'.get_the_excerpt().'</p>';
 			$buildEvents .= '[/txt]';
-			if ( esc_attr($a['show_btn']) == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink($post->ID)).'"]'.esc_attr($a['btn_text']).'[/btn]';
+			if ( esc_attr($a['show_btn']) == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink()).'"]'.esc_attr($a['btn_text']).'[/btn]';
 			$buildEvents .= '[/col]';
-			$num++;
 	  	endwhile;
 	endif;
 

@@ -38,6 +38,7 @@ is a no-op.
 # Totals, Shipping & Tax
 # Starting a Checkout
 # Settling an Order
+# Refunds
 # Webhook
 # Return Page
 # Sweeper
@@ -357,14 +358,63 @@ function sp_store_stripe_begin( int $order_id ) {
 
 	if ( $cart['email'] !== '' ) $params['customer_email'] = $cart['email'];
 
-	$shipping = sp_store_shipping_options( $lines );
-	if ( $shipping ) {
-		$params['shipping_options']            = $shipping;
-		$params['shipping_address_collection'] = [ 'allowed_countries' => [ 'US' ] ];
+	// Shipping and tax are what OUR checkout already worked out and stored on the order,
+	// not a second round of choices at Stripe. Re-offering every rate there made the
+	// customer pick postage twice (and could charge a different one), and a flat tax
+	// shown on our page was never sent at all. The address is already on the order, so
+	// Stripe is not asked to collect it again.
+	if ( (int) $order['shipping_cents'] > 0 || $order['ship_address1'] !== '' ) {
+		$params['shipping_options'] = [ [
+			'shipping_rate_data' => [
+				'type'         => 'fixed_amount',
+				'display_name' => mb_substr( (string) ( $order['shipping_method'] ?: 'Shipping' ), 0, 100 ),
+				'fixed_amount' => [ 'amount' => (int) $order['shipping_cents'], 'currency' => strtolower( sp_store_currency() ) ],
+			],
+		] ];
+	} elseif ( ! $order['ship_address1'] && sp_store_lines_need_shipping( $lines ) ) {
+		// An older path that reached here without our checkout page: let Stripe ask.
+		$shipping = sp_store_shipping_options( $lines );
+		if ( $shipping ) {
+			$params['shipping_options']            = $shipping;
+			$params['shipping_address_collection'] = [ 'allowed_countries' => [ 'US' ] ];
+		}
+	}
+
+	if ( sp_store_tax_mode() === 'flat' && (int) $order['tax_cents'] > 0 ) {
+		$params['line_items'][] = [
+			'quantity'   => 1,
+			'price_data' => [
+				'currency'     => strtolower( sp_store_currency() ),
+				'unit_amount'  => (int) $order['tax_cents'],
+				'product_data' => [ 'name' => 'Sales tax' ],
+			],
+		];
 	}
 
 	if ( sp_store_tax_mode() === 'provider' ) {
 		$params['automatic_tax'] = [ 'enabled' => 'true' ];
+	}
+
+	// ---- A renewing membership in the cart makes this a SUBSCRIPTION checkout. Its line
+	// becomes a recurring price; anything else rides along as a one-off on the first
+	// invoice. sp_member_checkout_problem() has already refused carts this cannot carry
+	// (posted items — a subscription checkout cannot offer shipping — or two renewals).
+	// payment_intent_data is a payment-mode parameter and Stripe rejects it here, so the
+	// order ids travel on the subscription instead, where the renewals can find them.
+	if ( function_exists( 'sp_member_product_interval' ) ) {
+		$renews = false;
+		foreach ( $lines as $i => $line ) {
+			$interval = sp_member_product_interval( (int) $line['product_id'] );
+			if ( $interval === '' || ! isset( $params['line_items'][ $i ] ) ) continue;
+			$params['line_items'][ $i ]['price_data']['recurring'] = [ 'interval' => $interval ];
+			$params['line_items'][ $i ]['quantity'] = 1;
+			$renews = true;
+		}
+		if ( $renews ) {
+			$params['mode'] = 'subscription';
+			unset( $params['payment_intent_data'], $params['shipping_options'], $params['shipping_address_collection'] );
+			$params['subscription_data'] = [ 'metadata' => [ 'order_id' => $order_id, 'order_number' => $order['number'] ] ];
+		}
 	}
 
 	// The order number as the idempotency key: a double-click makes one session, not two.
@@ -462,6 +512,8 @@ function sp_store_create_pending_order( array $cart, array $lines, array $quote 
 			'subtotal_cents' => (int) $quote['subtotal_cents'],
 			'discount_cents' => (int) $quote['discount_cents'],
 			'shipping_cents' => (int) $quote['shipping_cents'],
+			'shipping_rate_id' => (int) ( $quote['shipping_rate_id'] ?? 0 ),
+			'shipping_method'  => mb_substr( (string) ( $quote['shipping_name'] ?? '' ), 0, 120 ),
 			'tax_cents'      => (int) $quote['tax_cents'],
 			'total_cents'    => (int) $quote['total_cents'],
 			'currency'       => sp_store_currency(),
@@ -554,6 +606,16 @@ function sp_store_settle_order( int $order_id, array $session ): bool {
 
 	$now = current_time( 'mysql', true );
 
+	// A SUBSCRIPTION checkout carries no payment_intent of its own — the money is on its
+	// first invoice. Refunds work off the payment_intent, so fetch it from there now.
+	$subscription = (string) ( $session['subscription'] ?? '' );
+	if ( empty( $session['payment_intent'] ) && ! empty( $session['invoice'] ) ) {
+		$invoice = sp_store_stripe( 'GET', 'invoices/' . rawurlencode( (string) $session['invoice'] ) );
+		if ( ! is_wp_error( $invoice ) && ! empty( $invoice['payment_intent'] ) ) {
+			$session['payment_intent'] = is_array( $invoice['payment_intent'] ) ? (string) ( $invoice['payment_intent']['id'] ?? '' ) : (string) $invoice['payment_intent'];
+		}
+	}
+
 	// The conditional UPDATE is the lock: whoever flips it away from unpaid owns the
 	// rest of this function, and the loser's affected-row count is zero.
 	$claimed = $wpdb->query( $wpdb->prepare(
@@ -566,7 +628,9 @@ function sp_store_settle_order( int $order_id, array $session ): bool {
 		  WHERE id = %d AND payment_status = 'unpaid'",
 		(int) ( $session['amount_total'] ?? 0 ),
 		(int) ( $session['amount_total'] ?? 0 ),
-		(int) ( $session['total_details']['amount_tax'] ?? 0 ),
+		// Stripe's tax figure only when Stripe worked the tax out. A flat tax is sent as
+		// its own line item, so Stripe reports 0 tax and would wipe the real figure.
+		sp_store_tax_mode() === 'provider' ? (int) ( $session['total_details']['amount_tax'] ?? 0 ) : (int) $order['tax_cents'],
 		(int) ( $session['total_details']['amount_shipping'] ?? 0 ),
 		(int) ( $session['total_details']['amount_discount'] ?? 0 ),
 		(string) ( $session['payment_intent'] ?? '' ),
@@ -578,6 +642,11 @@ function sp_store_settle_order( int $order_id, array $session ): bool {
 	) );
 
 	if ( $claimed !== 1 ) return true;   // somebody else settled it first; nothing to do
+
+	// Recorded before sp_store_order_paid fires, because the membership grant reads it.
+	if ( $subscription !== '' ) {
+		$wpdb->update( sp_store_table( 'orders' ), [ 'provider_subscription' => $subscription ], [ 'id' => $order_id ] );
+	}
 
 	// ---- Addresses, where Stripe collected them.
 	$ship = $session['shipping_details']['address'] ?? ( $session['customer_details']['address'] ?? [] );
@@ -632,6 +701,85 @@ function sp_store_settle_order( int $order_id, array $session ): bool {
 	do_action( 'sp_store_order_paid', $order_id );
 
 	return true;
+}
+
+
+/*--------------------------------------------------------------
+# Refunds
+--------------------------------------------------------------*/
+
+/**
+ * Stripe's refund: the provider registry's `refund` callable.
+ *
+ * The idempotency key folds in how much was ALREADY refunded, so a double-click is
+ * one refund — the second request repeats the first exactly and Stripe hands back
+ * the same object — while a genuine second partial refund (a different starting
+ * total) is a new one.
+ *
+ * Stripe's own `reason` field only takes three fixed words, so staff's note rides
+ * in metadata, where it shows on the refund in the Stripe dashboard.
+ */
+function sp_store_stripe_refund( array $order, int $cents, string $note = '' ) {
+	$pi = (string) $order['provider_payment'];
+	if ( strpos( $pi, 'pi_' ) !== 0 ) {
+		return new WP_Error( 'sp_store_stripe', 'This order has no Stripe payment on record, so it has to be refunded in the Stripe dashboard.' );
+	}
+
+	$refund = sp_store_stripe( 'POST', 'refunds', [
+		'payment_intent' => $pi,
+		'amount'         => $cents,
+		'metadata'       => [
+			'order_id'     => (int) $order['id'],
+			'order_number' => (string) $order['number'],
+			'note'         => mb_substr( $note, 0, 400 ),
+		],
+	], 'refund-' . $order['number'] . '-' . (int) $order['refunded_cents'] . '-' . $cents );
+
+	if ( is_wp_error( $refund ) ) return $refund;
+	if ( ( $refund['status'] ?? '' ) === 'failed' ) {
+		return new WP_Error( 'sp_store_stripe', 'Stripe could not send that refund back to the card.' );
+	}
+
+	return [
+		'id'     => (string) ( $refund['id'] ?? '' ),
+		'amount' => (int) ( $refund['amount'] ?? $cents ),
+		'status' => (string) ( $refund['status'] ?? 'succeeded' ),
+	];
+}
+
+/**
+ * Bring every refund Stripe holds for a payment into the ledger.
+ *
+ * Asked for by LISTING the payment's refunds rather than reading them off the event:
+ * since API 2022-11-15 a charge no longer carries its refunds inline, and a list is
+ * also the only way a missed or out-of-order event cannot leave a refund unrecorded.
+ * sp_store_record_refund() makes every one we already have a no-op.
+ */
+function sp_store_stripe_sync_refunds( string $payment_intent ): void {
+	global $wpdb;
+	$order_id = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM " . sp_store_table( 'orders' ) . " WHERE provider = 'stripe' AND provider_payment = %s LIMIT 1",
+		$payment_intent
+	) );
+	if ( ! $order_id ) return;
+
+	$list = sp_store_stripe( 'GET', 'refunds?payment_intent=' . rawurlencode( $payment_intent ) . '&limit=100' );
+	if ( is_wp_error( $list ) ) return;
+
+	foreach ( (array) ( $list['data'] ?? [] ) as $refund ) {
+		$new = sp_store_record_refund( $order_id, [
+			'id'     => (string) ( $refund['id'] ?? '' ),
+			'amount' => (int) ( $refund['amount'] ?? 0 ),
+			'status' => (string) ( $refund['status'] ?? 'succeeded' ),
+		], (string) ( $refund['metadata']['note'] ?? 'Refunded in the Stripe dashboard' ) );
+
+		// A refund we had never seen was made outside Site Pulse — the customer is
+		// owed the same notice they would have had from here.
+		if ( $new && empty( $refund['metadata']['order_id'] ) && function_exists( 'sp_store_queue' ) ) {
+			$order = sp_store_get_order( $order_id );
+			if ( $order ) sp_store_queue( $order_id, 'refunded', (string) $order['customer_email'], [ 'amount_cents' => (int) ( $refund['amount'] ?? 0 ) ], true );
+		}
+	}
 }
 
 
@@ -740,6 +888,17 @@ function sp_store_handle_webhook(): void {
 	} elseif ( $type === 'checkout.session.expired' || $type === 'checkout.session.async_payment_failed' ) {
 		$order_id = (int) ( $object['metadata']['order_id'] ?? 0 );
 		if ( $order_id ) sp_store_cancel_pending_order( $order_id, 'Checkout expired or failed.' );
+
+	} elseif ( $type === 'charge.refunded' || $type === 'charge.refund.updated' ) {
+		// Refunds issued from the Stripe dashboard, plus status changes on any refund
+		// (a card refund that later fails). Ours arrive here too and are no-ops.
+		// Both objects (a charge, a refund) carry the payment_intent the order is keyed on.
+		$pi = (string) ( $object['payment_intent'] ?? '' );
+		if ( $pi !== '' ) sp_store_stripe_sync_refunds( $pi );
+
+	} elseif ( in_array( $type, [ 'invoice.paid', 'customer.subscription.updated', 'customer.subscription.deleted' ], true ) ) {
+		// Renewing memberships: Stripe charges each period; this moves the paid-up date.
+		if ( function_exists( 'sp_member_handle_stripe_event' ) ) sp_member_handle_stripe_event( $type, $object );
 	}
 
 	$wpdb->update( sp_store_table( 'webhook_events' ),
@@ -786,9 +945,12 @@ function sp_store_thanks_page(): void {
 			<div class="store-thanks">
 			<?php if ( $order && $order['payment_status'] === 'paid' ) : ?>
 				<h1>Thank you &mdash; your order is confirmed</h1>
-				<p>Your order number is <strong><?php echo esc_html( $order['number'] ); ?></strong>. We have emailed a receipt to
-					<strong><?php echo esc_html( $order['customer_email'] ); ?></strong>.</p>
+				<p>Your order number is <strong><?php echo esc_html( $order['number'] ); ?></strong>.
+					<?php if ( sp_store_notify_on( 'receipt' ) && is_email( (string) $order['customer_email'] ) ) : ?>
+						A receipt is on its way to <strong><?php echo esc_html( $order['customer_email'] ); ?></strong>.
+					<?php endif; ?></p>
 				<p class="store-thanks-total">Total paid: <strong><?php echo sp_store_money( (int) $order['total_cents'], (string) $order['currency'] ); ?></strong></p>
+				<?php if ( function_exists( 'sp_store_downloads_html' ) ) echo sp_store_downloads_html( $order ); ?>
 			<?php elseif ( $order ) : ?>
 				<h1>Thank you &mdash; we are confirming your payment</h1>
 				<p>Your order number is <strong><?php echo esc_html( $order['number'] ); ?></strong>. Payment is still being

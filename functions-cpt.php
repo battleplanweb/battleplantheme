@@ -89,8 +89,6 @@ function battleplan_registerPostTypes() {
 		'show_ui'=>true,
         'show_admin_column'=>true,
 	));
-	wp_insert_term( 'Auto Generated', 'gallery-type' );
-	wp_insert_term( 'Shortcode', 'gallery-type' );
 	register_taxonomy( 'gallery-tags', array( 'galleries' ), array(
 		'labels'=>array(
 			'name'=>_x( 'Gallery Tags', 'Taxonomy General Name', 'text_domain' ),
@@ -146,8 +144,6 @@ function battleplan_registerPostTypes() {
 		'menu_icon'=>'dashicons-edit-page',
 		'has_archive'=>false,
 		'capability_type' => 'page',
-
-		//'rewrite' => array('slug' => 'service-areas'), // This line changes the slug
 	));
 	register_post_type( 'elements', array (
 		'label'=>__( 'elements', 'battleplan' ),
@@ -189,6 +185,13 @@ function battleplan_registerPostTypes() {
 	));
 }
 
+// The two built-in gallery types (wp_insert_term() used to run for both on every page view)
+add_action( 'admin_init', function() {
+	foreach ( array( 'Auto Generated', 'Shortcode' ) as $type ) {
+		if ( ! term_exists( $type, 'gallery-type' ) ) wp_insert_term( $type, 'gallery-type' );
+	}
+} );
+
 // Unregister 'landing' CPT if jobsite_geo is installed (it replaces the same function)
 add_action('init', function() {
 	$jobsite_geo = get_option('jobsite_geo');
@@ -200,8 +203,8 @@ add_action('init', function() {
 // Remove 'landing', 'universal', and 'elements' from the url so that pages look like regular pages
 add_filter( 'post_type_link', 'battleplan_remove_cpt_slug', 10, 2 );
 function battleplan_remove_cpt_slug( $post_link, $post ) {
-	if ( 'universal' === $post->post_type || 'landing' === $post->post_type || 'elements' === $post->post_type ) $post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
- 	return $post_link;
+	if ( in_array( $post->post_type, array( 'universal', 'landing', 'elements' ), true ) ) $post_link = str_replace( '/' . $post->post_type . '/', '/', $post_link );
+	return $post_link;
 }
 
 // Add certain post types to the main query, along with pages and posts
@@ -416,8 +419,7 @@ function bp_reviews_schedule_daily_digest() {
 	$setting = get_option('bp_reviews_digest');
 
 	if ( $setting === 'false' ) {
-		$ts = wp_next_scheduled('bp_reviews_daily_digest');
-		if ( $ts ) wp_unschedule_event($ts, 'bp_reviews_daily_digest');
+		wp_clear_scheduled_hook('bp_reviews_daily_digest');
 		return;
 	}
 
@@ -435,8 +437,8 @@ function bp_reviews_send_daily_digest() {
 	if ( $setting === 'false' ) return;
 
 	// Recipient: a specific address if set, else the client's own email.
-	$customer = get_option('customer_info');
-	$to = ( is_string($setting) && $setting !== '' && $setting !== 'true' && is_email($setting) )
+	$customer = customer_info();
+	$to =( is_string($setting) && $setting !== '' && $setting !== 'true' && is_email($setting) )
 		? $setting
 		: ( ! empty($customer['email']) && is_email($customer['email']) ? $customer['email'] : '' );
 	if ( ! $to ) return;
@@ -541,12 +543,12 @@ function bp_reviews_send_daily_digest() {
 	$message .= $cards;
 	$message .= '</div>';
 
-	$headers   = [];
-	$headers[] = 'Content-Type: text/html; charset=UTF-8';
-	$headers[] = 'From: ' . $site_name . ' <noreply@' . $domain . '>';
-	$headers[] = 'Reply-To: noreply@' . $domain;
-	// Copy battleplanweb so we see exactly what the client sees (matches the jobsite digest).
-	$headers[] = 'Bcc: email@bp-webdev.com';
+	$headers = [
+		'Content-Type: text/html; charset=UTF-8',
+		'From: ' . $site_name . ' <noreply@' . $domain . '>',
+		'Reply-To: noreply@' . $domain,
+		'Bcc: email@bp-webdev.com',   // copy battleplanweb so we see exactly what the client sees (matches the jobsite digest)
+	];
 
 	wp_mail($to, $subject, $message, $headers);
 

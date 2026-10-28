@@ -77,6 +77,11 @@ function bp_match($value, $map, $default = '') {
 		: $default;
 }
 
+// Meta keys shown/entered as dollars (price, deposit, cost, amount)
+function bp_is_money_key($meta_key) {
+	return (bool) preg_match('/price|deposit|cost|amount/', (string) $meta_key);
+}
+
 function bp_render_meta($id, $cols, $col, $pt) {
 
 	$meta_key = $cols[$col]['meta_key'];
@@ -114,35 +119,23 @@ function bp_render_meta($id, $cols, $col, $pt) {
 		}
 	}
 
-	if ($value && is_numeric($value) && (
-		strpos($meta_key,'price')!==false ||
-		strpos($meta_key,'deposit')!==false ||
-		strpos($meta_key,'cost')!==false ||
-		strpos($meta_key,'amount')!==false
-	)) {
+	if ($value && is_numeric($value) && bp_is_money_key($meta_key)) {
 		$display_value = '$'.number_format($value,0);
 	}
 
-	if($pt === 'events'){
+	if($pt === 'events' && in_array($meta_key, ['start_date', 'end_date'], true)){
 
 		$start_date = get_post_meta($id,'start_date',true);
 		$start_time = get_post_meta($id,'start_time',true);
-		$end_date   = get_post_meta($id,'end_date',true);
-		$end_time   = get_post_meta($id,'end_time',true);
+		$time       = $meta_key === 'start_date' ? $start_time : get_post_meta($id,'end_time',true);
+		$date       = $meta_key === 'start_date' ? $start_date : (get_post_meta($id,'end_date',true) ?: $start_date);
 
-		if($meta_key === 'start_date'){
-			$dt = new DateTime(trim($start_date.' '.$start_time));
-			$display_value =
-				$dt->format('F j, Y').
-				($start_time ? '<br>'.$dt->format('g:ia') : '');
-		}
-
-		if($meta_key === 'end_date'){
-			$display_date = $end_date ?: $start_date;
-			$dt = new DateTime(trim($display_date.' '.$end_time));
-			$display_value =
-				$dt->format('F j, Y').
-				($end_time ? '<br>'.$dt->format('g:ia') : '');
+		// A malformed date used to throw out of here and take the whole Events list screen down
+		try {
+			$dt = new DateTime(trim($date.' '.$time));
+			$display_value = $dt->format('F j, Y').($time ? '<br>'.$dt->format('g:ia') : '');
+		} catch (Exception $e) {
+			$display_value = trim($date.' '.$time);
 		}
 	}
 
@@ -429,6 +422,9 @@ function bp_admin_columns($config){
 
 	$pt   = $config['post_type'];
 	$cols = $config['columns'];
+
+	// Remember who has a config, so the default for unconfigured CPTs (below) skips them
+	$GLOBALS['bp_admin_columns_types'][$pt] = true;
 
 	/* Columns Layout */
 	if($pt === 'attachment') {
@@ -915,6 +911,8 @@ function bp_admin_columns($config){
 	}, 999);
 
 	/* Persistent Sort Preference */
+	// Configs registered from inside admin_init (site configs, the store, the CPT default)
+	// would add this at a priority that already ran, so it never fired — queue it last instead.
 	add_action('admin_init', function() use ($pt) {
 
 		global $pagenow;
@@ -950,7 +948,7 @@ function bp_admin_columns($config){
 			}
 		}
 
-	});
+	}, doing_action('admin_init') ? PHP_INT_MAX : 10);
 }
 
 add_filter('posts_request', function($sql, $query){
@@ -1695,8 +1693,16 @@ add_action('wp_ajax_bp_resolve_meta_value', function(){
 	}
 
 	// Try to find a post by this name (for sire, dam, etc.)
-	$post_types = get_post_types(['public' => true], 'names');
-	$post = get_page_by_title($value, OBJECT, $post_types);
+	// (get_page_by_title() is deprecated since WP 6.2 — this is its documented replacement)
+	$found = get_posts([
+		'post_type'      => get_post_types(['public' => true], 'names'),
+		'title'          => $value,
+		'post_status'    => 'any',
+		'posts_per_page' => 1,
+		'orderby'        => 'ID',
+		'order'          => 'ASC',
+	]);
+	$post = $found[0] ?? null;
 
 	if ($post) {
 		// Found a post - return its ID and title
@@ -1730,10 +1736,7 @@ add_action('wp_ajax_bp_resolve_meta_value', function(){
 
 
 	// Check if it's currency (starts with $ or is numeric for price/deposit fields)
-	if (strpos($meta_key, 'price') !== false ||
-	    strpos($meta_key, 'deposit') !== false ||
-	    strpos($meta_key, 'cost') !== false ||
-	    strpos($meta_key, 'amount') !== false) {
+	if (bp_is_money_key($meta_key)) {
 		// Remove $ and commas, keep just numbers
 		$numeric = preg_replace('/[^0-9.]/', '', $value);
 		if (is_numeric($numeric)) {
@@ -1915,13 +1918,17 @@ add_action('wp_ajax_bp_inline_edit_user_save', function(){
 	}
 
 	// Get data
-	$user_id = (int) $_POST['user_id'];
-	$field = sanitize_text_field($_POST['field']);
-	$value = sanitize_text_field($_POST['value']);
+	$user_id = (int) ($_POST['user_id'] ?? 0);
+	$field = sanitize_text_field($_POST['field'] ?? '');
+	$value = sanitize_text_field($_POST['value'] ?? '');
 
-	// Verify user can edit users
-	if (!current_user_can('edit_users')) {
+	// Per-USER check (edit_user, not just edit_users) and only the columns the inline editor exposes —
+	// it used to write ANY user meta key (wp_user_level…) on ANY user, admins included.
+	if (!current_user_can('edit_user', $user_id)) {
 		wp_send_json_error('Permission denied');
+	}
+	if (!in_array($field, (array) apply_filters('bp_inline_edit_user_fields', ['display_name', 'first_name', 'last_name']), true)) {
+		wp_send_json_error('That field cannot be edited here');
 	}
 
 	// Update based on field type
@@ -1952,6 +1959,20 @@ add_action('wp_ajax_bp_inline_edit_user_save', function(){
 	]);
 });
 
+// Only someone who can already manage the site may hand out Administrator. Core leaves this to the
+// promote_users cap alone, and the framework's "Manage Users" role has promote_users — so without this a
+// client's user-manager account could make itself an admin, here or on WP's own Users screens.
+add_filter('editable_roles', function($roles) {
+	if (!current_user_can('manage_options')) unset($roles['administrator']);
+	return $roles;
+});
+
+// Roles the current user may assign: role key => name (WP's editable_roles, filtered above)
+function bp_assignable_roles() {
+	if (!function_exists('get_editable_roles')) require_once ABSPATH . 'wp-admin/includes/user.php';
+	return array_map(fn($r) => $r['name'], get_editable_roles());
+}
+
 // AJAX handler to get available user roles
 add_action('wp_ajax_bp_get_user_roles', function(){
 
@@ -1961,16 +1982,13 @@ add_action('wp_ajax_bp_get_user_roles', function(){
 	}
 
 	// Verify user can edit users
-	if (!current_user_can('edit_users')) {
+	if (!current_user_can('promote_users')) {
 		wp_send_json_error('Permission denied');
 	}
 
-	// Get all available roles
-	$roles = wp_roles()->get_names();
-
-	// Format role names (capitalize first letter)
+	// Only the roles this user is allowed to hand out (same list as WP's own user screen)
 	$formatted_roles = [];
-	foreach ($roles as $role_key => $role_name) {
+	foreach (bp_assignable_roles() as $role_key => $role_name) {
 		$formatted_roles[$role_key] = translate_user_role($role_name);
 	}
 
@@ -1988,19 +2006,23 @@ add_action('wp_ajax_bp_save_user_roles', function(){
 	}
 
 	// Get data
-	$user_id = (int) $_POST['user_id'];
-	$new_roles = isset($_POST['roles']) ? array_map('sanitize_text_field', $_POST['roles']) : [];
+	$user_id = (int) ($_POST['user_id'] ?? 0);
+	$new_roles = isset($_POST['roles']) && is_array($_POST['roles']) ? array_map('sanitize_key', $_POST['roles']) : [];
 
-	// Verify user can edit users
-	if (!current_user_can('edit_users')) {
+	// This used to check only edit_users and accept ANY role — so a "Manage Users" account could make
+	// itself (or anyone) an administrator. Now: promote_user for THIS user, never your own account, and
+	// only roles you're allowed to assign.
+	if (!current_user_can('promote_user', $user_id)) {
 		wp_send_json_error('Permission denied');
 	}
+	if ($user_id === get_current_user_id()) {
+		wp_send_json_error('You cannot change your own role');
+	}
 
-	// Verify all roles exist
-	$available_roles = array_keys(wp_roles()->get_names());
+	$available_roles = array_keys(bp_assignable_roles());
 	foreach ($new_roles as $role) {
-		if (!in_array($role, $available_roles)) {
-			wp_send_json_error('Invalid role: ' . $role);
+		if (!in_array($role, $available_roles, true)) {
+			wp_send_json_error('You are not allowed to assign the role: ' . $role);
 		}
 	}
 
@@ -2572,6 +2594,39 @@ bp_admin_columns([
 		],
 	)
 ]);
+
+
+/*--------------------------------------------------------------
+# Default For Unconfigured Custom Post Types
+--------------------------------------------------------------*/
+// Any public CPT nobody configured above (or in functions-site.php / a module) gets the
+// Pages layout instead of WP's bare Title/Date table. Top/Bottom are left off — those boxes
+// only exist on page/post/landing/service-areas. Runs at admin_init 999 so site and module
+// configs (admin_init 10/20) have already claimed their types.
+//
+// Opt a type out per site:
+//   add_filter('bp_admin_columns_default', fn($cols, $pt) => $pt === 'videos' ? false : $cols, 10, 2);
+add_action('admin_init', function() use ($bp_id, $bp_title, $bp_modified, $bp_order, $bp_attachments) {
+
+	// Plugins with their own list tables
+	$skip = ['product', 'shop_order', 'shop_coupon'];
+
+	foreach (get_post_types(['public' => true, '_builtin' => false, 'show_ui' => true]) as $pt) {
+
+		if (isset($GLOBALS['bp_admin_columns_types'][$pt]) || in_array($pt, $skip, true)) continue;
+
+		$cols = apply_filters('bp_admin_columns_default', array_merge(
+			$bp_id,
+			$bp_title,
+			$bp_modified,
+			post_type_supports($pt, 'page-attributes') ? $bp_order : [],
+			$bp_attachments
+		), $pt);
+
+		if ($cols) bp_admin_columns(['post_type' => $pt, 'columns' => $cols]);
+	}
+
+}, 999);
 
 
 /*--------------------------------------------------------------

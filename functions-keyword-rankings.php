@@ -33,11 +33,6 @@ function bp_kw_site_domain(): string {
 	return str_replace(['https://', 'http://'], '', rtrim(get_bloginfo('url'), '/'));
 }
 
-function bp_kw_site_brand(): string {
-	$domain = preg_replace('/^www\./', '', bp_kw_site_domain());
-	return strtolower(explode('.', $domain)[0]);
-}
-
 // Returns the brand exclude terms from customer_info as a lowercase array
 function bp_kw_brand_terms(): array {
 	static $terms = null;
@@ -408,8 +403,7 @@ function bp_kw_vertical_defaults(): array {
 	return apply_filters('bp_kw_vertical_defaults', array_values(array_unique($flat)), $type);
 }
 
-// US state map: lowercased full name → 2-letter abbr. Single source of truth shared by
-// bp_kw_normalize_area() (full→abbr) and bp_kw_state_full() (abbr→full inverse).
+// US state map: lowercased full name → 2-letter abbr, used by bp_kw_normalize_area().
 function bp_kw_state_map(): array {
 	static $map = null;
 	if ($map === null) {
@@ -428,31 +422,6 @@ function bp_kw_state_map(): array {
 		];
 	}
 	return $map;
-}
-
-// Resolve a state input (abbr or full name) to its title-cased full name.
-// "tn" → "Tennessee", "TN" → "Tennessee", "Tennessee" → "Tennessee". Empty if unrecognized.
-function bp_kw_state_full(string $input): string {
-	$key = strtolower(trim($input));
-	if (!$key) return '';
-	// Already a full name? Return title-cased.
-	$abbr_to_full = array_flip(bp_kw_state_map());
-	if (isset(bp_kw_state_map()[$key])) return ucwords($key);
-	// Two-letter abbr → lookup.
-	if (isset($abbr_to_full[$key])) return ucwords($abbr_to_full[$key]);
-	return '';
-}
-
-// Format a city/state pair as a DataForSEO location_name string.
-// "huntingdon" + "tn" → "Huntingdon,Tennessee,United States"
-// Returns empty string if state can't be resolved (caller should fall back to location_code 2840).
-function bp_kw_dfs_location_name(string $city, string $state): string {
-	$city  = trim($city);
-	$state = trim($state);
-	if (!$city || !$state) return '';
-	$state_full = bp_kw_state_full($state);
-	if (!$state_full) return '';
-	return ucwords($city) . ',' . $state_full . ',United States';
 }
 
 // Canonical form for any tracked keyword — used everywhere md5(keyword) is computed.

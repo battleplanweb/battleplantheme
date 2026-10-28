@@ -8,6 +8,7 @@
 # Field Shortcodes ([bp-text], [bp-email], etc.)
 # Form Slots ([bp-slot])
 # Standard Forms ([bp-contact-form], [bp-quote-form]) + the site's primary form
+# Employment Application Form ([bp-employment-form])
 # Multi-step wrapper ([bp-form-steps])
 # REST Submission Endpoint
 # Spam Pipeline
@@ -33,8 +34,8 @@ function bp_render_form($atts, $content = null) {
 	$form_id   = sanitize_key($a['id']);
 	$class     = trim('bp-form ' . esc_attr($a['class']));
 	$redirect  = esc_attr($a['redirect']);
-	$subject   = esc_attr($a['subject']);
-	$recipient = esc_attr($a['recipient']);
+	$subject   = esc_attr(trim($a['subject']));
+	$recipient = esc_attr(trim($a['recipient']));
 
 	// Time-based HMAC for spam check (cache-friendly)
 	$ts   = time();
@@ -67,8 +68,11 @@ function bp_render_form($atts, $content = null) {
 	$out .= '<input type="hidden" name="bp_t" value="' . $ts . '">';
 	$out .= '<input type="hidden" name="bp_h" value="' . $hmac . '">';
 	$out .= '<input type="hidden" name="bp_redirect" value="' . $redirect . '">';
-	if ($subject)   $out .= '<input type="hidden" name="bp_subject" value="'   . $subject   . '">';
-	if ($recipient) $out .= '<input type="hidden" name="bp_recipient" value="' . $recipient . '">';
+	// Subject + recipient are signed so the endpoint only honours values THIS form rendered — unsigned,
+	// anyone could POST their own recipient list and use the site as a mail relay (bp_form_signed_param()).
+	// Signed as the browser will POST them: the attribute value with its entities decoded.
+	if ($subject)   $out .= '<input type="hidden" name="bp_subject" value="'   . $subject   . '"><input type="hidden" name="bp_subject_sig" value="'   . esc_attr(bp_form_sign(html_entity_decode($subject, ENT_QUOTES | ENT_HTML5, 'UTF-8')))   . '">';
+	if ($recipient) $out .= '<input type="hidden" name="bp_recipient" value="' . $recipient . '"><input type="hidden" name="bp_recipient_sig" value="' . esc_attr(bp_form_sign(html_entity_decode($recipient, ENT_QUOTES | ENT_HTML5, 'UTF-8'))) . '">';
 
 	// Sign the union of accept lists from [bp-file] children, so the server can
 	// trust this form's declared allowlist without a per-site filter.
@@ -160,10 +164,7 @@ function bp_field_attrs($a, $extra = []) {
 	if (!empty($a['minlength']))    $attrs[] = 'minlength="' . (int)$a['minlength'] . '"';
 	if (!empty($a['maxlength']))    $attrs[] = 'maxlength="' . (int)$a['maxlength'] . '"';
 	if (!empty($a['pattern']))      $attrs[] = 'pattern="' . esc_attr(bp_field_pattern($a['pattern'])) . '"';
-	if (!empty($a['required']) && $a['required'] !== 'false') {
-		$attrs[] = 'required';
-		bp_register_required($a['name'] ?? '');
-	}
+	if (bp_field_required($a)) $attrs[] = 'required';
 	foreach ($extra as $k => $v) $attrs[] = $k . '="' . esc_attr($v) . '"';
 	return implode(' ', $attrs);
 }
@@ -176,6 +177,13 @@ function bp_register_required($name) {
 	if (empty($name)) return;
 	$base = preg_replace('/\[\]$/', '', $name);
 	$GLOBALS['bp_form_render_ctx']['required'][] = $base;
+}
+
+// Is this field marked required="true"? Registers it with the form for server-side enforcement when it is.
+function bp_field_required($a) {
+	$required = !empty($a['required']) && $a['required'] !== 'false';
+	if ($required) bp_register_required($a['name'] ?? '');
+	return $required;
 }
 
 function bp_field_wrap($name, $type, $inner) {
@@ -254,10 +262,7 @@ add_shortcode('bp-select', function($atts) {
 	$attrs = [];
 	if ($a['name'])     $attrs[] = 'name="' . esc_attr($a['name']) . '"';
 	if ($a['id'])       $attrs[] = 'id="' . esc_attr($a['id']) . '"';
-	if (!empty($a['required']) && $a['required'] !== 'false') {
-		$attrs[] = 'required';
-		bp_register_required($a['name']);
-	}
+	if (bp_field_required($a)) $attrs[] = 'required';
 	$inner = '<select class="' . $cls . '" ' . implode(' ', $attrs) . '>';
 	if ($a['first'] !== '') $inner .= '<option value="">' . esc_html($a['first']) . '</option>';
 	foreach ($opts as $opt) {
@@ -272,8 +277,7 @@ add_shortcode('bp-radio', function($atts) {
 	$a = shortcode_atts(['name'=>'', 'options'=>'', 'value'=>'', 'required'=>'false', 'class'=>''], $atts);
 	$opts = bp_parse_options($a['options']);
 	$cls  = trim('bp-radio ' . esc_attr($a['class']));
-	$req  = (!empty($a['required']) && $a['required'] !== 'false');
-	if ($req) bp_register_required($a['name']);
+	$req  = bp_field_required($a);
 	$inner = '<span class="bp-list ' . $cls . '">';
 	foreach ($opts as $i => $opt) {
 		$id = sanitize_key($a['name']) . '-' . $i;
@@ -295,9 +299,7 @@ add_shortcode('bp-checkbox', function($atts, $content = null) {
 	$id  = sanitize_key($a['name']);
 	$label = $a['label'] !== '' ? $a['label'] : (string)$content;
 	$checked = ($a['checked'] !== 'false' && $a['checked'] !== '') ? ' checked' : '';
-	$is_req  = (!empty($a['required']) && $a['required'] !== 'false');
-	$req     = $is_req ? ' required' : '';
-	if ($is_req) bp_register_required($a['name']);
+	$req     = bp_field_required($a) ? ' required' : '';
 	$inner = '<span class="bp-list-item">';
 	$inner .= '<label for="' . $id . '">';
 	$inner .= '<input type="checkbox" class="' . $cls . '" name="' . esc_attr($a['name']) . '" id="' . $id . '" value="' . esc_attr($a['value']) . '"' . $checked . $req . '>';
@@ -362,10 +364,8 @@ add_shortcode('bp-file', function($atts) {
 			$GLOBALS['bp_form_render_ctx']['max_mb'] = max($current, $size_mb);
 		}
 	}
-	$is_req = (!empty($a['required']) && $a['required'] !== 'false');
-	$req    = $is_req ? ' required' : '';
+	$req    = bp_field_required($a) ? ' required' : '';
 	$mul    = (!empty($a['multiple']) && $a['multiple'] !== 'false') ? ' multiple' : '';
-	if ($is_req) bp_register_required($a['name']);
 	$inner = '<input type="file" class="' . $cls . '" name="' . esc_attr($a['name']) . '" id="' . esc_attr($a['id']) . '"' . $accept . $req . $mul . '>';
 	return bp_field_wrap($a['name'], 'file', $inner);
 });
@@ -396,10 +396,7 @@ add_shortcode('bp-recipient-select', function($atts) {
 	$attrs = [];
 	if ($a['name']) $attrs[] = 'name="' . esc_attr($a['name']) . '"';
 	if ($a['id'])   $attrs[] = 'id="' . esc_attr($a['id']) . '"';
-	if (!empty($a['required']) && $a['required'] !== 'false') {
-		$attrs[] = 'required';
-		bp_register_required($a['name']);
-	}
+	if (bp_field_required($a)) $attrs[] = 'required';
 
 	$inner  = '<select class="' . $cls . '" ' . implode(' ', $attrs) . '>';
 	if ($a['first'] !== '') $inner .= '<option value="">' . esc_html($a['first']) . '</option>';
@@ -568,6 +565,206 @@ function bp_default_quote_body($submit_label = 'Request Quote') {
 
 
 /*--------------------------------------------------------------
+# Employment Application Form ([bp-employment-form])
+#
+# Drop [bp-employment-form] on a page to render the standard employment
+# application. Available on every site type. Per-site customization via
+# the bp_employment_* filters below.
+--------------------------------------------------------------*/
+
+// Default screening Yes/No questions (criminal history, driver's license, manual labor)
+
+
+// The screening questions (filterable), each as name => label
+function bp_employment_screening_labels() {
+	$labels = [];
+	foreach (apply_filters('bp_employment_screening_questions', bp_employment_default_screening()) as $name => $cfg) {
+		$labels[$name] = $cfg['label'] ?? ucwords(str_replace(['-', '_'], ' ', $name));
+	}
+	return $labels;
+}
+
+// Position options. Return '' from bp_employment_position_options to drop the question entirely.
+function bp_employment_positions() {
+	return trim((string)apply_filters('bp_employment_position_options', 'Installation Technician|Service Technician|Duct Team|Office|Management|Internship'));
+}
+
+// The form shortcode
+add_shortcode('bp-employment-form', function($atts) {
+	$a = shortcode_atts(['submit' => 'Submit'], $atts);
+
+	$screening = apply_filters('bp_employment_screening_questions', bp_employment_default_screening());
+	$positions = bp_employment_positions();
+	$types     = apply_filters('bp_employment_type_options', 'HVAC|Plumbing|Electrical|Other');
+
+	// Screening questions — one row per question (question left, answers right), so any count lays out cleanly
+	$screening_cols = '';
+	$labels = bp_employment_screening_labels();
+	foreach ($screening as $name => $cfg) {
+		$label = $labels[$name];
+		$opts  = $cfg['options'] ?? 'Yes|No';
+		$screening_cols .= '[col][seek label="' . esc_attr($label) . '" id="' . esc_attr($name) . '" req="true"][bp-radio name="' . esc_attr($name) . '" options="' . esc_attr($opts) . '" required="true"][/seek][/col]';
+	}
+
+	$positions_row = $positions === '' ? '' : '
+		[layout grid="1" class="form-stacked"]
+			[col][seek label="Position(s) Interested In" id="pos-interest" req="true"][bp-checkboxes name="pos-interest" options="' . esc_attr($positions) . '"][/seek][/col]
+		[/layout]';
+
+	return do_shortcode('[bp-form id="employment" subject="Employment Application" class="application"]
+		[layout grid="3-3-2"]
+			[col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
+			[col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
+			[col][seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek][/col]
+		[/layout]
+
+		[layout grid="1" class="form-stacked application-experience"]
+			[col][seek label="Years of Experience" id="years-exp" req="true"][bp-text name="years-exp" required="true"][/seek][/col]
+			[col][seek label="Type(s) of Experience" id="type-exp" req="true"][bp-checkboxes name="type-exp" options="' . esc_attr($types) . '"][/seek][/col]
+		[/layout]
+
+		[layout grid="1" class="application-screening"]
+			' . $screening_cols . '
+		[/layout]
+		' . $positions_row . '
+
+		[seek label="Tell us a little about yourself." id="user-message" width="full"][bp-textarea name="user-message"][/seek]
+
+		[seek label="button"][bp-submit]' . esc_html($a['submit']) . '[/bp-submit][/seek]
+	[/bp-form]');
+});
+
+// Default field labels — matches the email body template below
+add_filter('bp_field_labels', function($labels, $form_id) {
+	if ($form_id !== 'employment') return $labels;
+
+	return array_merge($labels, bp_employment_screening_labels(), [
+		'years-exp'    => 'Years Exp',
+		'type-exp'     => 'Type Exp',
+		'pos-interest' => 'Positions',
+		'user-message' => 'Additional Info',
+	]);
+}, 10, 2);
+
+// Default email body template (matches the legacy CF7 layout exactly)
+add_filter('bp_form_email_template', function($template, $form_id, $ctx) {
+	if ($form_id !== 'employment') return $template;
+
+	$screening_lines = '';
+	foreach (bp_employment_screening_labels() as $name => $label) {
+		$screening_lines .= "$label: [$name]\n";
+	}
+
+	return "Name: [user-name]\nEmail: [user-email]\nPhone: [user-phone]\n\n"
+		 . "Years Exp: [years-exp]\nType Exp: [type-exp]\n\n"
+		 . trim($screening_lines) . "\n\n"
+		 . (bp_employment_positions() === '' ? '' : "Positions: [pos-interest]\n\n")
+		 . "Additional Info:\n[user-message]";
+}, 10, 3);
+
+// Set recipient(s). Default: customer_info['email']. Sites add via bp_employment_recipients.
+add_filter('bp_form_before_send', function($email, $ctx) {
+	if (($ctx['form_id'] ?? '') !== 'employment') return $email;
+	// This runs after the spam + test reroutes - don't undo them (it used to send both to the client)
+	if (!empty($ctx['spam']) || bp_is_test_submission($ctx['fields'] ?? [])) return $email;
+
+	$default_emails = [];
+	$business_email = $ctx['customer']['email'] ?? '';
+	if ($business_email) $default_emails[] = $business_email;
+
+	$emails = apply_filters('bp_employment_recipients', $default_emails, $ctx);
+	$emails = array_filter(array_map('sanitize_email', (array)$emails));
+	if (!empty($emails)) $email['to'] = implode(', ', $emails);
+
+	return $email;
+}, 11, 2);
+
+// Qualification check + subject prefix. Sites can override the qualification logic
+// via bp_employment_qualified if their screening questions differ.
+add_filter('bp_form_before_send', 'battleplan_handleEmploymentApp', 10, 2);
+function battleplan_handleEmploymentApp($email, $ctx) {
+	if (($ctx['form_id'] ?? '') !== 'employment') return $email;
+
+	$qualified = apply_filters('bp_employment_qualified', bp_employment_default_qualified_check($ctx), $ctx);
+
+	$email['subject'] = ($qualified ? '< QUALIFIED >' : '< unqualified >') . ' ' . $email['subject'];
+
+	$GLOBALS['bp_employment_qualified'] = $qualified;
+	return $email;
+}
+
+// Default qualification: criminal=No, license=Yes, background-chk-or-manual-labor=Yes.
+// Missing fields are treated as "pass" so removing a screening question doesn't auto-fail anyone.
+function bp_employment_default_qualified_check($ctx) {
+	$fields = $ctx['fields'] ?? [];
+	$norm   = fn($v) => is_array($v) ? ($v[0] ?? null) : $v;
+
+	$criminal   = $norm($fields['criminal-history'] ?? null);
+	$license    = $norm($fields['driver-license']   ?? null);
+	$background = $norm($fields['background-chk'] ?? $fields['manual-labor'] ?? null);
+
+	return ($criminal == null   || str_contains((string)$criminal,   'No'))
+		&& ($license == null    || str_contains((string)$license,    'Yes'))
+		&& ($background == null || str_contains((string)$background, 'Yes'));
+}
+
+// Auto-reply with PDF — fires only when a PDF path is configured AND candidate qualified.
+// Test-mode aware: messages starting with "test" reroute the auto-reply to the dev mailbox too.
+add_action('bp_form_after_send', function($email, $ctx, $sent) {
+	if (!$sent) return;
+	if (($ctx['form_id'] ?? '') !== 'employment') return;
+	if (empty($GLOBALS['bp_employment_qualified'])) return;
+
+	$pdf_path = apply_filters('bp_employment_autoreply_pdf', '', $ctx);
+	if (empty($pdf_path)) return;
+
+	$applicant_email = $ctx['fields']['user-email'] ?? '';
+	if (!is_email($applicant_email)) return;
+
+	// Reroute auto-reply during test submissions so we don't email real people
+	if (function_exists('bp_is_test_submission') && bp_is_test_submission($ctx['fields'])) {
+		$applicant_email = apply_filters('bp_form_test_recipient', 'glendon@bp-webdev.com');
+	}
+
+	$autoreply = apply_filters('bp_employment_autoreply', bp_employment_default_autoreply($ctx), $ctx);
+
+	$pdf_full = (strpos($pdf_path, ABSPATH) === 0) ? $pdf_path : ABSPATH . ltrim($pdf_path, '/');
+	$attachments = file_exists($pdf_full) ? [$pdf_full] : [];
+
+	$business_name = bp_decode_text( $ctx['customer']['name'] ?? get_bloginfo('name') );
+	$from_email    = 'email@admin.' . preg_replace('#https?://#', '', get_bloginfo('url'));
+	$headers = [
+		'Content-Type: text/html; charset=UTF-8',
+		'From: ' . $business_name . ' <' . $from_email . '>',
+	];
+
+	wp_mail(
+		$applicant_email,
+		$autoreply['subject'] ?? 'Thank you for your employment application.',
+		$autoreply['body']    ?? '',
+		$headers,
+		$attachments
+	);
+}, 10, 3);
+
+function bp_employment_default_autoreply($ctx) {
+	$business_name = bp_decode_text( $ctx['customer']['name'] ?? get_bloginfo('name') );
+	$applicant     = $ctx['fields']['user-name'] ?? '';
+
+	$body  = '<p>' . esc_html($applicant) . ', thank you for your interest in employment with ' . esc_html($business_name) . '.</p>';
+	$body .= '<p>Based on your initial responses on our website, we feel you may be a qualified candidate for employment.</p>';
+	$body .= '<p>Attached is a PDF of our full employment application. Please fill out this application and return it to us in person or by email.</p>';
+	$body .= '<p>Once we receive your application, a member of our management team will review it and be in contact as soon as possible.</p>';
+	$body .= '<p>Thank you!<br>' . esc_html($business_name) . ' Management</p>';
+
+	return [
+		'subject' => 'Thank you for your employment application.',
+		'body'    => $body,
+	];
+}
+
+
+/*--------------------------------------------------------------
 # CF7 Legacy Shim ([contact-form-7])
 #
 # Contact Form 7 was removed framework-wide in favour of [bp-form].
@@ -596,16 +793,14 @@ function bp_cf7_shim($atts = []) {
 // to the bp form that replaces it. The decision is driven by the CF7 `title`
 // attribute — the only piece stable across sites (numeric ids differ per install):
 //   title contains quote / estimate / request → [bp-quote-form]
-//   title contains employ / application / …    → [bp-employment-form] (HVAC; only if registered)
+//   title contains employ / application / …    → [bp-employment-form]
 //   anything else                              → [bp-contact-form]
 function bp_cf7_target_shortcode($atts) {
 	if (!is_array($atts)) $atts = shortcode_parse_atts((string)$atts) ?: [];
 	$title = strtolower((string)($atts['title'] ?? ''));
 
 	if (preg_match('/quote|estimate|request/', $title)) return '[bp-quote-form]';
-	if (preg_match('/employ|application|career|job/', $title) && shortcode_exists('bp-employment-form')) {
-		return '[bp-employment-form]';
-	}
+	if (preg_match('/employ|application|career|job/', $title)) return '[bp-employment-form]';
 	return '[bp-contact-form]';
 }
 
@@ -789,8 +984,10 @@ function bp_handle_form_submission(WP_REST_Request $request) {
 	if ($idem_key !== '') set_transient($idem_key, time(), 3 * MINUTE_IN_SECONDS);
 
 	// --- resolve dynamic recipient (from [bp-recipient-select]) ---
+	// recipient="" / subject="" from the shortcode only count when signed (see bp_render_form); a direct
+	// POST naming its own recipients just goes to the business's own address.
 	$customer_info = customer_info();
-	$default_to    = bp_sanitize_email_list($params['bp_recipient'] ?? ($customer_info['email'] ?? get_option('admin_email')));
+	$default_to    = bp_sanitize_email_list(bp_form_signed_param($params, 'bp_recipient') ?: ($customer_info['email'] ?? get_option('admin_email')));
 	if ($default_to === '') $default_to = sanitize_email(get_option('admin_email'));
 	$resolved      = bp_resolve_recipient($params, $fields, $default_to);
 	if ($resolved['tampered'] && $spam_reason === '') $spam_reason = 'Bot:recipient';
@@ -802,7 +999,7 @@ function bp_handle_form_submission(WP_REST_Request $request) {
 		'customer'       => $customer_info,
 		'recipient'      => $resolved['email'],
 		'recipient_label'=> $resolved['label'],
-		'subject'        => (string)($params['bp_subject'] ?? bp_default_subject($form_id, $customer_info)),
+		'subject'        => bp_form_signed_param($params, 'bp_subject') ?: bp_default_subject($form_id, $customer_info),
 		'referrer'       => esc_url_raw($_SERVER['HTTP_REFERER'] ?? ''),
 		'ip'             => $_SERVER['REMOTE_ADDR'] ?? '',
 		'ua'             => $_SERVER['HTTP_USER_AGENT'] ?? '',
@@ -906,6 +1103,18 @@ function bp_form_idempotency_key($form_id, $fields, $params) {
 	$basis = $form_id . '|' . ($params['bp_recipient'] ?? '') . '|' . wp_json_encode($parts);
 	$ip    = $_SERVER['REMOTE_ADDR'] ?? '';
 	return 'bp_form_idem_' . md5($ip . '|' . $basis);
+}
+
+// Signature for a value the form renders and the endpoint must be able to trust (stable, so it caches)
+function bp_form_sign($value) {
+	return hash_hmac('sha256', 'bp-form|' . (string) $value, wp_salt('auth'));
+}
+
+// A posted value, but only when it carries a valid {name}_sig from bp_form_sign(); '' otherwise
+function bp_form_signed_param($params, $name) {
+	$value = trim((string) ($params[$name] ?? ''));
+	$sig   = (string) ($params[$name . '_sig'] ?? '');
+	return ($value !== '' && $sig !== '' && hash_equals(bp_form_sign($value), $sig)) ? $value : '';
 }
 
 // Sanitize a recipient string that may contain one or more comma-separated
@@ -1327,7 +1536,7 @@ function bp_build_email($ctx) {
 	// Default From / Reply-To matching prior CF7 setup
 	$server_email = 'email@admin.' . str_replace('https://', '', get_bloginfo('url'));
 	$from         = 'Website · ' . str_replace(',', '', $site_name) . ' <' . $server_email . '>';
-	$reply_to     = $user_name && $user_email ? $user_name . ' <' . $user_email . '>' : '';
+	$reply_to     = $user_name && $user_email ? trim(preg_replace('/[\r\n<>"]+/', ' ', $user_name)) . ' <' . $user_email . '>' : '';   // a name is free text: no line breaks or brackets in a header
 	$cc           = '';
 	$bcc          = 'Website Administrator <email@bp-webdev.com>';
 
@@ -1560,7 +1769,9 @@ function bp_format_field_values($fields) {
 	foreach ($fields as $key => $value) {
 		if (!is_string($value)) continue;
 		if (bp_is_phone_field($key)) {
-			$fields[$key] = preg_replace('~.*(\d{3})[^[(col|layout)[s]]{0,7}(\d{3})[^\d]{0,7}(\d{4}).*~', '($1) $2-$3', $value);
+			// (The first separator used to read [^[(col|layout)[s]] - a search/replace casualty that made
+			// "2145551234" and "(214)555-1234" fail to format, so the validator below rejected real numbers.)
+			$fields[$key] = preg_replace('~.*(\d{3})[^\d]{0,7}(\d{3})[^\d]{0,7}(\d{4}).*~', '($1) $2-$3', $value);
 		}
 	}
 	return $fields;
@@ -1651,7 +1862,7 @@ function bp_is_test_submission($fields) {
 }
 
 function bp_blocklist_emails() {
-	return [$_SERVER['HTTP_HOST'] ?? '', 'testing.com', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices.com', 'ismael57morenozvm@outlook.com', 'vasdirect.com', 'webmai.co', 'hdsupply.com', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp.com', 'getoffyourhighhorse', 'advancedbodyscan.com', 'clientcaf.info', 'brucesilverman.outsourcing', 'chemtreat.com', 'astoundz.com', 'xinyisolar.online', 'BISHOPKNIGHTLLC.COM', 'rezult.org', 'casey.swiftt@aol.com', 'aecom-usa.com', 'academicproductions.com', 'houseflippers.biz', 'virtualhandsupport.com', 'pursuitind.com', 'magwitch.com', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy.com', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat.com', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'virtualeaseservice', 'humanwebdesign', 'dwbytes', 'onlinereviewfixer', 'archtri', 'aircoolsupply','restorecalls', 'businessbrokersleads', 'leaddesire', 'delphiconstructions', 'vettedvas', 'facilitiesfirstcall', 'smith-tanks', 'pathwaybuild.com', 'garrisonconstructions.com', 'boxedup.info', 'Ringboost.com', 'reachpiperich.com', 'springfieldsolutionsllc.com', 'sevenforone.com', 'miasoltan.com', 'govcrest.com', 'offer.aibusinesssites.com', 'almshib.com', 'shellprocurement-uae', 'allstar-estimation.com', 'net2phone.com', 'usefirstcallmechanical.com', 'fleetuckertn.com', 'crunchtimecapital.com', 'growthaspire.agency', 'vellops.com', 'kaletechsllc.com', 'disasterprepared.info', 'logangrowthcapital.com', 'tidalconstructionsgroup', 'onehello.site', 'dgridsenergy.com', 'exitlogangrowth', 'uselogangrowth.com', 'goodchoicedevelopment', 'grinderhaizlips', 'tidyhome.info', 'moritzmuench.dev', 'bookr.page', 'fieldpulse.com', 'growpiperich.com', 'mariasites.com', 'mariaranks.com', 'scalelogangrowth.com'];
+	return [$_SERVER['HTTP_HOST'] ?? '', 'testing.com', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices.com', 'ismael57morenozvm@outlook.com', 'vasdirect.com', 'webmai.co', 'hdsupply.com', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp.com', 'getoffyourhighhorse', 'advancedbodyscan.com', 'clientcaf.info', 'brucesilverman.outsourcing', 'chemtreat.com', 'astoundz.com', 'xinyisolar.online', 'BISHOPKNIGHTLLC.COM', 'rezult.org', 'casey.swiftt@aol.com', 'aecom-usa.com', 'academicproductions.com', 'houseflippers.biz', 'virtualhandsupport.com', 'pursuitind.com', 'magwitch.com', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy.com', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat.com', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'virtualeaseservice', 'humanwebdesign', 'dwbytes', 'onlinereviewfixer', 'archtri', 'aircoolsupply','restorecalls', 'businessbrokersleads', 'leaddesire', 'delphiconstructions', 'vettedvas', 'facilitiesfirstcall', 'smith-tanks', 'pathwaybuild.com', 'garrisonconstructions.com', 'boxedup.info', 'Ringboost.com', 'reachpiperich.com', 'springfieldsolutionsllc.com', 'sevenforone.com', 'miasoltan.com', 'govcrest.com', 'offer.aibusinesssites.com', 'almshib.com', 'shellprocurement-uae', 'allstar-estimation.com', 'net2phone.com', 'usefirstcallmechanical.com', 'fleetuckertn.com', 'crunchtimecapital.com', 'growthaspire.agency', 'vellops.com', 'kaletechsllc.com', 'disasterprepared.info', 'logangrowthcapital.com', 'tidalconstructionsgroup', 'onehello.site', 'dgridsenergy.com', 'exitlogangrowth', 'uselogangrowth.com', 'goodchoicedevelopment', 'grinderhaizlips', 'tidyhome.info', 'moritzmuench.dev', 'bookr.page', 'fieldpulse.com', 'growpiperich.com', 'mariasites.com', 'mariaranks.com', 'scalelogangrowth.com', 'relomoving.com', 'msecomllc.com', 'sharngroup.com', 'draftrise.com', 'bitwisebuilt.com', 'powerhopper.energy', 'mandlsinc.com', 'sterlingcooper.us', 'automaxrevenue.com', 'getdandynow.com', 'raven.work'];
 }
 
 function bp_blocklist_words() {
@@ -1713,6 +1924,7 @@ function bp_blocklist_words() {
         'available for download',
         'at no cost',
         'boost your business',
+	   'Reply no and I won\'t contact you again',
         'targeted Customers',
         'We help you get',
         'designing and development',
@@ -1758,7 +1970,6 @@ function bp_blocklist_words() {
         'Can you take on more clients',
         'excellent option for prospective entrepreneurs',
         'Kegel Devices',
-        'N/A',
         'web development company',
         'Mary Kay Sales Director',
         'Odena',
@@ -1840,7 +2051,11 @@ function bp_blocklist_words() {
         'briefly specify',
 	   'liked what you\'re doing',
 	   'send our requirements',
-	   'take on a new project'
+	   'take on a new project',
+	   'are you currently taking on new work',
+	   'I help local service businesses',
+	   'B2B research',
+	   'AutoMaxRevenue',
     ];
 }
 
@@ -1907,6 +2122,8 @@ function bp_blocklist_kill() {
         'you\'re usually busy on the job site',
 	   'can you handle 1-2 more replacement jobs a week',
 	   'I work with HVAC business owners',
+	   'Hi sales',
+	   'Thank you for your time and consideration',
 
         // ESTIMATING / QUANTITY TAKEOFFS
         'Cost Estimation',
@@ -1922,6 +2139,8 @@ function bp_blocklist_kill() {
         'estimating/architectural',
         'an official quotation',
         'quantity takeoff',
+	   'takeoffs and cost estimates',
+	   'cost estimates for building projects',
         'cost planning',
         'Estimating & Quantity Takeoff Services',
         'cost estimating and material takeoff quotes',
@@ -1987,7 +2206,9 @@ function bp_blocklist_kill() {
         'If customers are searching for what you offer',
         'help you hit the Top 3',
         'appears in AI search results',
-		'website visitors',
+	   'I build websites',
+	   'website visitors',
+	   'new website',
 
         // AI / AUTOMATION SPAM
         'chatGPT',

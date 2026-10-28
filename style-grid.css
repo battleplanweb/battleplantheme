@@ -750,7 +750,6 @@ section.section .flex.nested .flex,
 #page,
 .wp-gr.wp-google-badge,
 .stuck {
-	max-width:                                                 1920px;
 	margin:                                                    0 auto;
 }
 
@@ -1073,6 +1072,7 @@ a#bbblink {
 .section.section-lock[data-pos="center"] {
 	width:                                                     100vw;
 	height:                                                    100vh;
+	height:                                                    100dvh;
 	background:                                                var(--black-highest);
 	padding:                                                   0;
 }
@@ -1084,6 +1084,7 @@ a#bbblink {
 	width:                                                     96%;
 	max-width:                                                 1000px;
 	max-height:                                                calc(95vh - 60px);
+	max-height:                                                calc(95dvh - 60px);
 	top:                                                       50%;
 	left:                                                      50%;
 	transform:                                                 translate(-50%, -50%);

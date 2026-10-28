@@ -165,17 +165,8 @@ function bp_ga4_client(): ?array {
 --------------------------------------------------------------*/
 function bp_gsc_collect_top_queries(): void {
 
-    if (!defined('GA4_SERVICE_ACCOUNT_JSON')) return;
-
-    $credentials = json_decode(base64_decode(GA4_SERVICE_ACCOUNT_JSON), true);
-    $token       = bp_get_google_access_token($credentials, [
-        'https://www.googleapis.com/auth/webmasters.readonly'
-    ]);
-
-    if (!$token) {
-        //error_log('bp_gsc_collect_top_queries: failed to get token');
-        return;
-    }
+    $token = bp_gsc_token();
+    if (!$token) return;
 
     $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', get_bloginfo('url'));
     $result  = [];
@@ -189,45 +180,21 @@ function bp_gsc_collect_top_queries(): void {
     ];
 
     foreach ($periods as $label => $days) {
-
-        $body = json_encode([
-            'startDate'             => date('Y-m-d', strtotime("-{$days} days")),
-            'endDate'               => date('Y-m-d', strtotime('-1 day')),
-            'dimensions'            => ['query'],
-            'rowLimit'              => 50,
-            'orderBy'               => [['fieldName' => 'clicks', 'sortOrder' => 'DESCENDING']],
-            'dimensionFilterGroups' => [[
-                'filters' => [[
-                    'dimension'  => 'country',
-                    'operator'   => 'equals',
-                    'expression' => 'usa',
-                ]]
-            ]],
+        $resp = wp_remote_post('https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($siteUrl) . '/searchAnalytics/query', [
+            'timeout' => 15,
+            'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
+            'body'    => wp_json_encode([
+                'startDate'             => date('Y-m-d', strtotime("-{$days} days")),
+                'endDate'               => date('Y-m-d', strtotime('-1 day')),
+                'dimensions'            => ['query'],
+                'rowLimit'              => 50,
+                'orderBy'               => [['fieldName' => 'clicks', 'sortOrder' => 'DESCENDING']],
+                'dimensionFilterGroups' => [['filters' => [['dimension' => 'country', 'operator' => 'equals', 'expression' => 'usa']]]],
+            ]),
         ]);
+        if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) continue;
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => 'https://www.googleapis.com/webmasters/v3/sites/'
-                                    . rawurlencode($siteUrl) . '/searchAnalytics/query',
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_TIMEOUT        => 15,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $token,
-                'Content-Type: application/json',
-            ],
-        ]);
-        $response = curl_exec($ch);
-        $http     = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        curl_close($ch);
-
-        if ($http !== 200) {
-            //error_log("bp_gsc_collect_top_queries: API error {$http} for {$label}: {$response}");
-            continue;
-        }
-
-        $data = json_decode($response, true);
+        $data = json_decode(wp_remote_retrieve_body($resp), true);
 
         foreach ($data['rows'] ?? [] as $row) {
             $query = $row['keys'][0] ?? '';
@@ -507,7 +474,6 @@ function bp_ga4_collect_channel_history(BetaAnalyticsDataClient $client, $proper
     $weekly      = [];
     $daily       = [];
     $dailyCutoff = date('Ymd', strtotime('-500 days')); // ~16 months: enough for last-90d YoY tile comparisons
-    $meta        = ['ran_at' => time(), 'years' => $years, 'ranges' => [], 'core_rows' => 0];
 
     $blank = function () { return ['sessions'=>0,'users'=>0,'newUsers'=>0,'engagedSessions'=>0,'pageviews'=>0,'duration'=>0.0]; };
     $add   = function (&$store, $key, $ch, $m) use ($blank) {
@@ -523,7 +489,6 @@ function bp_ga4_collect_channel_history(BetaAnalyticsDataClient $client, $proper
     // One year-range at a time (a single multi-year range comes back nearly empty).
     foreach (bp_ga4_year_ranges($years) as $range) {
 
-        $meta['ranges'][] = $range['start'] . '→' . $range['end'];
 
         $rows = bp_ga4_run_report_all_rows($client, [
             'property'        => 'properties/' . $propertyId,
@@ -532,7 +497,6 @@ function bp_ga4_collect_channel_history(BetaAnalyticsDataClient $client, $proper
             'metrics'         => $coreMetrics,
             'dimensionFilter' => bp_ga4_dimension_filter(),
         ]);
-        $meta['core_rows'] += count($rows);
 
         foreach ($rows as $row) {
             $ymd = trim($row['d'][0]);          // "20260629"
@@ -543,11 +507,6 @@ function bp_ga4_collect_channel_history(BetaAnalyticsDataClient $client, $proper
             if ($ymd >= $dailyCutoff) $add($daily, $ymd, $ch, $row['m']);
         }
     }
-
-    $meta['months'] = count($monthly);
-    $meta['weeks']  = count($weekly);
-    $meta['days']   = count($daily);
-    update_option('bp_ga4_channel_history_meta', $meta, false);
 
     if (empty($monthly)) return false;
 
@@ -648,75 +607,6 @@ function bp_ga4_collect_speed_history(BetaAnalyticsDataClient $client, $property
     update_option('bp_ga4_speed_history', $store, false);
 
     return true;
-}
-
-/*
- * TEMP diagnostic: isolate why the channel query returns almost no rows. Runs a
- * matrix of last-90-day reports and reports row counts + GA4 response metadata
- * (thresholding / sampling / empty-reason) so we can see whether it's the channel
- * dimension, the yearMonth dimension, or the geo filter. Remove once resolved.
- */
-function bp_ga4_channel_diagnose(): array {
-    $ga4 = bp_ga4_client();
-    if (!$ga4) return ['error' => 'no GA4 client'];
-
-    $client = $ga4['client'];
-    $prop   = $ga4['property'];
-    $start  = date('Y-m-d', strtotime('-90 days'));
-    $end    = date('Y-m-d', strtotime('-1 day'));
-
-    // Use the SAME helper the real collectors use (sets limit, paginates) so counts
-    // are trustworthy and directly comparable to bp_ga4_daily_clean's 861 rows.
-    $run = function (array $dimNames, bool $withFilter) use ($client, $prop, $start, $end): array {
-        $req = [
-            'property'   => 'properties/' . $prop,
-            'dateRanges' => [new DateRange(['start_date' => $start, 'end_date' => $end])],
-            'dimensions' => array_map(fn($n) => new Dimension(['name' => $n]), $dimNames),
-            'metrics'    => [new Metric(['name' => 'sessions'])],
-        ];
-        if ($withFilter) $req['dimensionFilter'] = bp_ga4_dimension_filter();
-
-        $rows = bp_ga4_run_report_all_rows($client, $req);
-
-        $out = ['count' => count($rows), 'sample' => []];
-        $i = 0;
-        foreach ($rows as $r) {
-            if ($i++ >= 8) break;
-            $out['sample'][] = implode(' | ', $r['d']) . ' = ' . implode(',', $r['m']);
-        }
-        return $out;
-    };
-
-    // Stored daily data (bp_ga4_daily_clean) for comparison — if this shows rich
-    // recent history while the LIVE queries above are near-empty, the property being
-    // queried has changed / is wrong (stored data is stale from a prior property).
-    $storedDaily   = get_option('bp_ga4_daily_clean');
-    $storedSummary = ['days' => 0, 'span' => '', 'recent' => []];
-    if (is_array($storedDaily) && $storedDaily) {
-        krsort($storedDaily);
-        $keys = array_keys($storedDaily);
-        $storedSummary['days'] = count($keys);
-        $storedSummary['span'] = end($keys) . ' .. ' . reset($keys);
-        foreach (array_slice($storedDaily, 0, 12, true) as $d => $m) {
-            $storedSummary['recent'][$d] = (int)($m['sessions'] ?? 0);
-        }
-    }
-
-    return [
-        'property_id'                   => (string) $prop,
-        'range'                         => "$start -> $end",
-        'stored_daily (bp_ga4_daily_clean)' => $storedSummary,
-        'A date +filter (control)'      => $run(['date'], true),
-        'B yearMonth+channel +filter'   => $run(['yearMonth', 'sessionDefaultChannelGroup'], true),
-        'C yearMonth+channel NO filter' => $run(['yearMonth', 'sessionDefaultChannelGroup'], false),
-        'D channel only +filter'        => $run(['sessionDefaultChannelGroup'], true),
-        'E date+channel +filter'        => $run(['date', 'sessionDefaultChannelGroup'], true),
-        'F channel only NO filter'      => $run(['sessionDefaultChannelGroup'], false),
-        'G yearMonth+sourceMedium +flt' => $run(['yearMonth', 'sessionSourceMedium'], true),
-        'H date+sourceMedium +filter'   => $run(['date', 'sessionSourceMedium'], true),
-        'I sourceMedium ALONE +filter'  => $run(['sessionSourceMedium'], true),
-        'J sourceMedium ALONE no flt'   => $run(['sessionSourceMedium'], false),
-    ];
 }
 
 function bp_rollup_totals_from_daily(array $daily): array {
@@ -1321,7 +1211,8 @@ function bp_gsc_collect_totals(): void {
  *  dashboard shows the true site total. Runs on each Chron C pass; self-gates to weekly (phase-shifted per site).
  *  $force (a manual Chron C run) inspects now, rate-limited to once/7d via bp_gsc_coverage_forced_until. Needs the
  *  service account to be an OWNER/FULL user of the property (a 403 on the first URL = only Restricted).
- *  Store: bp_gsc_coverage_history[YYYYMMDD] = ['indexed','not_indexed','total','reasons'=>[coverageState=>n]]. */
+ *  Store: bp_gsc_coverage_history[YYYYMMDD] = ['indexed','not_indexed','total','reasons'=>[coverageState=>n],
+ *  'groups'=>[main|secondary|blog|jobsite=>['i'=>,'n'=>]]] — see bp_gsc_coverage_by_group(). */
 function bp_gsc_collect_index_coverage(bool $force = false): void {
     $now = time();
     if ($force && $now < (int) get_option('bp_gsc_coverage_forced_until', 0)) $force = false;   // force still cooling down
@@ -1365,18 +1256,11 @@ function bp_gsc_collect_index_coverage(bool $force = false): void {
     }
     if ($ok === 0) return;                                                                      // nothing succeeded — retry next pass
 
-    // Site-wide aggregate across post meta (core) + term meta (/service/ pages).
+    // Site-wide aggregate across post meta (core) + term meta (/service/ pages), split by page group.
     global $wpdb;
+    $groups  = bp_gsc_coverage_by_group();
     $indexed = 0; $not = 0; $reasons = [];
-    $tally = function ($rows) use (&$indexed, &$not) {
-        foreach ($rows as $r) { if ($r->v === '1') $indexed += (int) $r->c; else $not += (int) $r->c; }
-    };
-    $tally($wpdb->get_results("SELECT pm.meta_value v, COUNT(*) c FROM {$wpdb->postmeta} pm
-        JOIN {$wpdb->posts} p ON p.ID = pm.post_id AND p.post_status = 'publish'
-        WHERE pm.meta_key = '_bp_gsc_indexed' GROUP BY pm.meta_value"));
-    $tally($wpdb->get_results("SELECT tm.meta_value v, COUNT(*) c FROM {$wpdb->termmeta} tm
-        JOIN {$wpdb->term_taxonomy} tt ON tt.term_id = tm.term_id AND tt.taxonomy = 'jobsite_geo-services'
-        WHERE tm.meta_key = '_bp_gsc_indexed' GROUP BY tm.meta_value"));
+    foreach ($groups as $g) { $indexed += $g['i']; $not += $g['n']; }
     foreach ($wpdb->get_results("SELECT pm.meta_value v, COUNT(*) c FROM {$wpdb->postmeta} pm
         JOIN {$wpdb->posts} p  ON p.ID = pm.post_id AND p.post_status = 'publish'
         JOIN {$wpdb->postmeta} pi ON pi.post_id = pm.post_id AND pi.meta_key = '_bp_gsc_indexed' AND pi.meta_value = '0'
@@ -1388,7 +1272,7 @@ function bp_gsc_collect_index_coverage(bool $force = false): void {
     arsort($reasons);
 
     bp_audit_metric_store('bp_gsc_coverage_history', date('Ymd'), [
-        'indexed' => $indexed, 'not_indexed' => $not, 'total' => $indexed + $not, 'reasons' => $reasons,
+        'indexed' => $indexed, 'not_indexed' => $not, 'total' => $indexed + $not, 'reasons' => $reasons, 'groups' => $groups,
     ], 400);
 
     update_option('bp_gsc_coverage_next', $now + 7 * DAY_IN_SECONDS, false);

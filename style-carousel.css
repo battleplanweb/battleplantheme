@@ -309,6 +309,7 @@
 
 .slider-blur .carousel-inner {
 	height:                                                    75vh;
+	height:                                                    75svh;
 }
 
 .slider-blur .carousel-item {

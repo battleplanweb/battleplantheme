@@ -42,23 +42,31 @@ function sp_directory_can_manage( int $user_id = 0 ): bool {
 
 // A Site Pulse user's directory photo, or '' if none. Tries the linked directory entry first
 // (employees.user_id), then falls back to a first+last NAME match — since most directory entries
-// aren't tied to a user account. Used by the chat avatars. Cached per request.
+// aren't tied to a user account. Used by every face in Site Pulse (chat, action items, notes, pickers).
+// Every directory photo is read in ONE query per request and matched in memory, so a list of fifty
+// people costs no more than one; the earliest entry (lowest id) wins, as before.
 function site_pulse_user_photo( int $user_id ): string {
-	static $cache = [];
+	static $cache = [], $by_user = null, $by_name = null;
 	if ( ! $user_id ) return '';
 	if ( isset( $cache[ $user_id ] ) ) return $cache[ $user_id ];
 
-	global $wpdb;
-	$t = site_pulse_table( 'employees' );
+	if ( null === $by_user ) {
+		global $wpdb;
+		$by_user = $by_name = [];
+		$rows = $wpdb->get_results( "SELECT user_id, first_name, last_name, photo_url FROM " . site_pulse_table( 'employees' ) . " WHERE photo_url IS NOT NULL AND photo_url <> '' ORDER BY id", ARRAY_A ) ?: [];
+		foreach ( $rows as $r ) {
+			$uid = (int) $r['user_id'];
+			if ( $uid && ! isset( $by_user[ $uid ] ) ) $by_user[ $uid ] = (string) $r['photo_url'];
+			$key = strtolower( trim( (string) $r['first_name'] ) ) . '|' . strtolower( trim( (string) $r['last_name'] ) );
+			if ( ! isset( $by_name[ $key ] ) ) $by_name[ $key ] = (string) $r['photo_url'];
+		}
+	}
 
 	// 1) Directory entry explicitly linked to this user.
-	$url = $wpdb->get_var( $wpdb->prepare(
-		"SELECT photo_url FROM $t WHERE user_id = %d AND photo_url IS NOT NULL AND photo_url <> '' ORDER BY id LIMIT 1",
-		$user_id
-	) );
+	$url = $by_user[ $user_id ] ?? '';
 
 	// 2) Fall back to matching the user's name against the directory.
-	if ( ! $url ) {
+	if ( '' === $url ) {
 		$u = get_userdata( $user_id );
 		if ( $u ) {
 			$first = trim( (string) $u->first_name );
@@ -68,16 +76,11 @@ function site_pulse_user_photo( int $user_id ): string {
 				$first = $parts[0] ?? '';
 				$last  = ( count( $parts ) > 1 ) ? end( $parts ) : '';
 			}
-			if ( '' !== $first || '' !== $last ) {
-				$url = $wpdb->get_var( $wpdb->prepare(
-					"SELECT photo_url FROM $t WHERE photo_url IS NOT NULL AND photo_url <> '' AND LOWER(first_name) = LOWER(%s) AND LOWER(last_name) = LOWER(%s) ORDER BY id LIMIT 1",
-					$first, $last
-				) );
-			}
+			if ( '' !== $first || '' !== $last ) $url = $by_name[ strtolower( $first ) . '|' . strtolower( $last ) ] ?? '';
 		}
 	}
 
-	return $cache[ $user_id ] = ( $url ? (string) $url : '' );
+	return $cache[ $user_id ] = $url;
 }
 
 // Normalize whatever date string we're handed (Y-m-d, m/d/Y, or ACF's stored Ymd) to Y-m-d, or ''.

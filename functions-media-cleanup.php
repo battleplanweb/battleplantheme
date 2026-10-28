@@ -51,13 +51,15 @@ if (!defined('BP_MC_BATCH'))            define('BP_MC_BATCH', 20);
 # Usage Detection (is an image used anywhere?)
 --------------------------------------------------------------*/
 
-function bp_media_in_use($aid, $exclude_post = 0) {
-	return isset(bp_media_used_ids([(int) $aid], $exclude_post)[(int) $aid]);
+function bp_media_in_use($aid, $exclude_post = 0, array $ignore_terms = []) {
+	return isset(bp_media_used_ids([(int) $aid], $exclude_post, $ignore_terms)[(int) $aid]);
 }
 
 // Returns [attachment_id => where it was found] for every ID that is in use.
 // $exclude_post — ignore references from this post (the jobsite being edited/deleted).
-function bp_media_used_ids(array $ids, $exclude_post = 0) {
+// $ignore_terms — image category/tag names that don't count as "in use" (e.g. 'Jobsite GEO',
+// which every jobsite photo gets automatically).
+function bp_media_used_ids(array $ids, $exclude_post = 0, array $ignore_terms = []) {
 	global $wpdb;
 	$ids          = array_values(array_unique(array_filter(array_map('intval', $ids))));
 	$exclude_post = (int) $exclude_post;
@@ -74,10 +76,12 @@ function bp_media_used_ids(array $ids, $exclude_post = 0) {
 	// Tagged images are pulled dynamically by the image shortcodes.
 	if ($needles) {
 		$in     = implode(',', array_keys($needles));
+		$skip   = $ignore_terms ? " AND t.name NOT IN ('" . implode("','", array_map('esc_sql', $ignore_terms)) . "')" : '';
 		$tagged = $wpdb->get_col(
 			"SELECT DISTINCT tr.object_id FROM {$wpdb->term_relationships} tr
 			 JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
-			 WHERE tt.taxonomy IN ('image-tags','image-categories') AND tr.object_id IN ($in)"
+			 JOIN {$wpdb->terms} t ON t.term_id = tt.term_id
+			 WHERE tt.taxonomy IN ('image-tags','image-categories') AND tr.object_id IN ($in){$skip}"
 		);
 		foreach ($tagged as $id) { $used[(int) $id] = 'image tag/category'; unset($needles[(int) $id]); }
 	}

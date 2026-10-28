@@ -65,13 +65,13 @@ function site_pulse_modules(): array {
 		'forms' => [
 			'label'   => 'Forms',
 			'desc'    => 'Shared forms library — upload and organize files by repository (Training, Kitchen, FOH, Misc).',
-			'caps'    => [ 'view_forms', 'upload_forms' ],
+			'caps'    => [ 'view_forms', 'upload_forms', 'manage_form_repositories' ],
 			'default' => true,
 		],
 		'reviews' => [
 			'label'   => 'Reviews',
 			'desc'    => 'Google review aggregation, one-click replies, and one-click testimonials.',
-			'caps'    => [ 'view_reviews', 'manage_reviews' ],
+			'caps'    => [ 'view_reviews', 'manage_reviews', 'view_customer_messages', 'manage_customer_messages' ],   // + FB/IG Direct Messages (Customer Feedback)
 			'default' => false,
 		],
 		'surveys' => [
@@ -89,7 +89,7 @@ function site_pulse_modules(): array {
 		'emails' => [
 			'label'   => 'Customer Emails',
 			'desc'    => 'Flagged customer-service emails (complaints, compliments, comments) forwarded in from the public sites\' contact forms. Shown as a tab under Customer Feedback.',
-			'caps'    => [ 'view_emails', 'manage_emails' ],
+			'caps'    => [ 'view_emails', 'manage_emails', 'view_routed_emails', 'manage_routed_emails' ],   // + Routed Emails (Customer Feedback)
 			'default' => true,
 		],
 		'fleet' => [
@@ -114,6 +114,18 @@ function site_pulse_modules(): array {
 			'label'   => 'Store',
 			'desc'    => 'Sell products online &mdash; catalog, cart, Stripe checkout, orders and inventory. Replaces WooCommerce. Products are edited in WordPress so they keep the SEO module and the media library; orders, fulfillment and stock live in Site Pulse.',
 			'caps'    => [ 'view_orders', 'manage_orders', 'manage_products', 'manage_store_payments', 'manage_store_settings' ],
+			'default' => false,
+		],
+		'schedules' => [
+			'label'   => 'Shift Scheduling',
+			'desc'    => 'Shift / overtime scheduling — claim OT, PDO and coverage requests, duty assignments, and the member roster. Members added on its Members screen become Site Pulse users on the Shift Member / Supervisor / Admin tiers.',
+			'caps'    => [ 'use_shift_scheduling', 'manage_shift_schedules', 'manage_shift_settings' ],
+			'default' => false,
+		],
+		'jobsites' => [
+			'label'   => 'Jobsite GEO',
+			'desc'    => 'Add and edit Jobsite GEO entries (real completed jobs that build the /service/ landing pages) without going into WordPress — photos, address, description, with AI rewrite and captions. Needs Jobsite GEO installed on the site; switched on automatically where it is.',
+			'caps'    => [ 'view_jobsites', 'add_jobsites', 'manage_jobsites' ],
 			'default' => false,
 		],
 	];
@@ -186,22 +198,53 @@ function site_pulse_filter_caps_by_module( array $caps ): array {
 --------------------------------------------------------------*/
 
 /**
- * One-time: persist the current module states so a live install (Rovin) behaves
- * identically the moment this ships — every already-built module defaults ON,
- * Reviews ships OFF. Guarded by an option flag, matching the existing
- * site_pulse_*_seeded idiom. Modules added to the registry later fall through to
- * their own default until a superadmin saves the Modules screen.
+ * One-time, on a site's FIRST Site Pulse load: write every module's starting state. Guarded by an
+ * option flag, so installs that already seeded (Rovin, etc.) are never touched — and because every
+ * slug is written explicitly, the registry `default` only matters for modules added to the registry
+ * AFTER an install seeded (those fall through to it until a superadmin saves the Modules screen).
+ *
+ * A new install starts MINIMAL: Dashboard, Chat and Action Items (core, not modules) + Notes. A site can
+ * name its own starting set with 'start_modules' => array( 'notes', 'reviews', … ) in its site_pulse
+ * option (NOT 'modules' — site_pulse_get_setting() falls back to option keys, and 'modules' is the live
+ * JSON state), and Jobsites is added automatically wherever Jobsite GEO is installed.
  */
-add_action( 'init', 'site_pulse_seed_modules' );
-function site_pulse_seed_modules(): void {
-	if ( get_option( 'site_pulse_modules_seeded' ) ) return;
+function site_pulse_new_install_modules(): array {
+	$opt = get_option( 'site_pulse' );
+	$on  = ( is_array( $opt ) && isset( $opt['start_modules'] ) && is_array( $opt['start_modules'] ) ) ? array_values( $opt['start_modules'] ) : [ 'notes' ];
+	if ( function_exists( 'bp_module_on' ) && bp_module_on( get_option( 'jobsite_geo' ) ) ) $on[] = 'jobsites';
+	return array_unique( $on );
+}
 
+// Priority 15: AFTER the config table is created (site_pulse_install_db runs on init 10, and this file is
+// required before that hook is registered, so at 10 this ran first on a brand-new install — the write hit
+// a missing table, failed silently, and the seeded flag was set anyway, leaving every module on its
+// registry default). The flag is now only set once the state actually reads back.
+add_action( 'init', 'site_pulse_seed_modules', 15 );
+function site_pulse_seed_modules(): void {
+	$seeded = get_option( 'site_pulse_modules_seeded' );
+	if ( $seeded && get_option( 'site_pulse_modules_repair_checked' ) ) return;
+
+	// One-time repair: "seeded" but nothing persisted. A real seed — or any save of the Modules screen —
+	// writes every slug, and 'reports' was in the registry from the very first seed, so a missing
+	// 'reports' means the seed never landed (the bug above). Reseed those installs with the new-install
+	// set; any install that seeded properly (Rovin) is left exactly as it is.
+	$has = function (): bool {
+		$s = json_decode( site_pulse_get_setting( 'modules', '{}' ), true );
+		return is_array( $s ) && array_key_exists( 'reports', $s );
+	};
+	if ( $seeded && $has() ) { update_option( 'site_pulse_modules_repair_checked', '1' ); return; }
+
+	$on    = site_pulse_new_install_modules();
 	$state = [];
 	foreach ( site_pulse_modules() as $slug => $mod ) {
-		$state[ $slug ] = ! empty( $mod['default'] ) ? '1' : '0';
+		$state[ $slug ] = in_array( $slug, $on, true ) ? '1' : '0';
 	}
 	site_pulse_set_setting( 'modules', wp_json_encode( $state ) );
-	update_option( 'site_pulse_modules_seeded', '1' );
+
+	if ( $has() ) {                                            // only mark done once it really saved
+		update_option( 'site_pulse_modules_seeded', '1' );
+		update_option( 'site_pulse_modules_repair_checked', '1' );
+	}
 }
 
 

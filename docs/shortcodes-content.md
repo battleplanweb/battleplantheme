@@ -284,6 +284,7 @@ Used in the site header and as a widget.
 - `speed` → `"slow"` `"medium"` `"fast"`
 - `package="hvac"` → loads standard HVAC brand logos automatically
 - `direction="reverse"` → scrolls right-to-left
+- `orderby` and `order_by` are interchangeable on every shortcode that takes one (`bp_orderby_atts()` in functions.php) — new shortcodes with an order attribute should call it before `shortcode_atts()`
 
 ### [get-emergency-service] — Emergency service graphic
 ```
@@ -319,6 +320,8 @@ The framework SEO module runs shortcodes on stored SEO title/description values 
 | Phone | `[get-biz info="area-phone"]` | formatted number, link stripped to text (e.g. `(469) 230-0781`) |
 | Years of experience | `[get-years start="YYYY"]` | e.g. `25 years` — **always ASK for the start year each audit; don't infer it** (see below) |
 | Primary brand | `[get-biz info="site-brand" array="0"]` | first `site-brand` entry |
+
+**✨ Write with AI** (editor SEO box, beside SEO Title and Meta Description): reads the page (title, editor body including unsaved edits, Page Top/Bottom) and writes the value using these tokens/shortcodes. It measures the *rendered* length (title ≤ 60, description ≤ 155) and returns the draft for a rewrite (up to 3 drafts) if it runs long or types out the business name, city, or phone instead of using the token. It never uses `[get-years]` (see below). `%%sep%%` is for titles only; descriptions are sentences separated by periods. Em/en dashes are forbidden in the prompt, and any that slip through are replaced after generation (`bp_seo_ai_dedash()`): a comma in titles; in descriptions, a period when a capital letter follows, otherwise a comma. It only fills the field, so nothing saves until **Update**. The live `52 / 60` counters beside each label count rendered characters too. Model: `BP_SEO_AI_MODEL` (default `claude-sonnet-4-6`); it uses the same API key as AI alt text and is hidden when there's no key.
 
 Two gotchas:
 - **`site-brand` values are often lowercase slugs** (`amana`, `goodman`) because they double as logo-file keys. `[get-biz info="site-brand" array="0"]` outputs them verbatim, so it may render lowercase in a title — check the site's `site-brand` values and, if they're slugs, type the brand name directly instead.

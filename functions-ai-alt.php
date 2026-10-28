@@ -26,8 +26,7 @@ if (!defined('BP_AI_ALT_MAX_TOKENS')) define('BP_AI_ALT_MAX_TOKENS', 200);
  * Returns true if an Anthropic API key is configured.
  */
 function bp_ai_alt_available() {
-	return (defined('ANTHROPIC_API_KEY') && ANTHROPIC_API_KEY)
-		|| (defined('BP_ANTHROPIC_API_KEY') && BP_ANTHROPIC_API_KEY);
+	return bp_ai_alt_api_key() !== '';
 }
 
 function bp_ai_alt_api_key() {
@@ -574,15 +573,17 @@ function bp_alt_update_img_alts($html, $attachment_id, $new_alt, $force) {
 		$tag = $m[0];
 		if (!preg_match($class_re, $tag)) return $tag; // not this attachment
 
-		if (preg_match('/\balt\s*=\s*("|\')(.*?)\1/i', $tag, $a)) {
+		// (Spliced in by position, not preg_replace — a "$1" or "\1" in the alt text would be
+		// read as a backreference there.)
+		if (preg_match('/\balt\s*=\s*("|\')(.*?)\1/i', $tag, $a, PREG_OFFSET_CAPTURE)) {
 			if (!$force) {
-				$current = html_entity_decode($a[2], ENT_QUOTES);
+				$current = html_entity_decode($a[2][0], ENT_QUOTES);
 				if (trim($current) !== '') return $tag; // already has alt — leave it
 			}
-			return preg_replace('/\balt\s*=\s*("|\')(.*?)\1/i', $new_attr, $tag, 1);
+			return substr_replace($tag, $new_attr, $a[0][1], strlen($a[0][0]));
 		}
 
 		// No alt attribute at all — insert one right after <img.
-		return preg_replace('/<img\b/i', '<img ' . $new_attr, $tag, 1);
+		return '<img ' . $new_attr . substr($tag, 4);
 	}, $html);
 }

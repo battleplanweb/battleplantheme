@@ -19,41 +19,15 @@ function ci_normalize_pids($raw): array {
 }
 
 
+/** Area code + phone reduced to one digit string, for comparing customer_info against GBP. */
+function ci_phone_digits($area, $phone): string {
+	return preg_replace('/\D+/', '', (string)$area . (string)$phone);
+}
+
+
 /*--------------------------------------------------------------
 # Email Diff Helpers
 --------------------------------------------------------------*/
-
-function ci_email_diff(array $old, array $new, string $site_name): void {
-	$diffs = [];
-	$keys  = array_unique(array_merge(array_keys($old), array_keys($new)));
-
-	foreach ($keys as $k) {
-		$ov = $old[$k] ?? null;
-		$nv = $new[$k] ?? null;
-		if ($ov === $nv) continue;
-
-		$toS = function($x) {
-			if (is_array($x)) {
-				$j = json_encode($x);
-				return strlen($j) > 400 ? substr($j, 0, 400) . '…' : $j;
-			}
-			return (string)$x;
-		};
-
-		$diffs[$k] = ['old' => $toS($ov), 'new' => $toS($nv)];
-	}
-
-	if (!$diffs) return;
-
-	$msg = "customer_info changes for {$site_name}:\n\n";
-	foreach ($diffs as $k => $d) {
-		$msg .= "• {$k}\n  - old: {$d['old']}\n  - new: {$d['new']}\n\n";
-	}
-
-	if (function_exists('emailMe')) { emailMe('customer_info updated - ' . $site_name, $msg); }
-	else { //error_log($msg); 
-	}
-}
 
 /**
  * Make values readable in diff emails.
@@ -87,23 +61,22 @@ function _fmt_email_val($v): string {
 
 function bp_get_google_access_token(array $credentials, array $scopes): ?string {
 
-    $now    = time();
-    $expiry = $now + 3600;
+    if (empty($credentials['client_email']) || empty($credentials['private_key'])) return null;
 
-    $header  = base64_encode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
-    $payload = base64_encode(json_encode([
+    // JWTs are base64url (RFC 7515), not plain base64
+    $b64url = fn($s) => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+    $now    = time();
+
+    $toSign = $b64url(json_encode(['alg' => 'RS256', 'typ' => 'JWT'])) . '.' . $b64url(json_encode([
         'iss'   => $credentials['client_email'],
         'scope' => implode(' ', $scopes),
         'aud'   => 'https://oauth2.googleapis.com/token',
-        'exp'   => $expiry,
+        'exp'   => $now + 3600,
         'iat'   => $now,
     ]));
 
-    $toSign = $header . '.' . $payload;
-    $key    = $credentials['private_key'];
-
-    openssl_sign($toSign, $signature, $key, 'SHA256');
-    $jwt = $toSign . '.' . base64_encode($signature);
+    if (!openssl_sign($toSign, $signature, $credentials['private_key'], 'SHA256')) return null;
+    $jwt = $toSign . '.' . $b64url($signature);
 
     $ch = curl_init();
     curl_setopt_array($ch, [
@@ -119,7 +92,7 @@ function bp_get_google_access_token(array $credentials, array $scopes): ?string 
     $response = curl_exec($ch);
     curl_close($ch);
 
-    $data = json_decode($response, true);
+    $data = is_string($response) ? json_decode($response, true) : null;
     return $data['access_token'] ?? null;
 }
 
@@ -133,37 +106,22 @@ function gbp_diff_vs_ci_and_notify(array $ci, array $google_info, array $placeID
 	$primePID    = $placeIDs[0] ?? null;
 	$gbp_primary = $primePID ? ($google_info[$primePID] ?? []) : [];
 
-	$norm_str   = fn($v) => strtolower(trim(preg_replace('/\s+/', ' ', (string)$v)));
-	$norm_phone = function($area, $phone) {
-		$a = preg_replace('/\D+/', '', (string)$area);
-		$p = preg_replace('/\D+/', '', (string)$phone);
-		return (strlen($a) === 3 && strlen($p) === 7) ? $a . $p : preg_replace('/\D+/', '', $a . $p);
+	$norm = fn($v, $mode) => match ($mode) {
+		'str'   => strtolower(trim(preg_replace('/\s+/', ' ', (string)$v))),
+		'upper' => strtoupper(trim((string)$v)),
+		default => trim((string)$v),
 	};
 
 	$diffs = [];
-	$pairs = [
-		'name'       => ['ci' => $ci['name']       ?? null, 'gbp' => $gbp_primary['name']       ?? null, 'norm' => 'str'],
-		'street'     => ['ci' => $ci['street']     ?? null, 'gbp' => $gbp_primary['street']     ?? null, 'norm' => 'str'],
-		'city'       => ['ci' => $ci['city']       ?? null, 'gbp' => $gbp_primary['city']       ?? null, 'norm' => 'str'],
-		'state-abbr' => ['ci' => $ci['state-abbr'] ?? null, 'gbp' => $gbp_primary['state-abbr'] ?? null, 'norm' => 'upper'],
-		'state-full' => ['ci' => $ci['state-full'] ?? null, 'gbp' => $gbp_primary['state-full'] ?? null, 'norm' => 'str'],
-		'zip'        => ['ci' => $ci['zip']        ?? null, 'gbp' => $gbp_primary['zip']        ?? null, 'norm' => 'raw'],
-	];
-
-	foreach ($pairs as $label => $pair) {
-		$ciV  = $pair['ci'];
-		$gbpV = $pair['gbp'];
-		$ciN  = $pair['norm'] === 'str'   ? $norm_str($ciV)
-			  : ($pair['norm'] === 'upper' ? strtoupper(trim((string)$ciV))
-			  : trim((string)$ciV));
-		$gbpN = $pair['norm'] === 'str'   ? $norm_str($gbpV)
-			  : ($pair['norm'] === 'upper' ? strtoupper(trim((string)$gbpV))
-			  : trim((string)$gbpV));
-		if ($gbpN !== '' && $ciN !== $gbpN) $diffs[$label] = ['current' => $ciV, 'gbp' => $gbpV];
+	foreach (['name' => 'str', 'street' => 'str', 'city' => 'str', 'state-abbr' => 'upper', 'state-full' => 'str', 'zip' => 'raw'] as $label => $mode) {
+		$ciV  = $ci[$label] ?? null;
+		$gbpV = $gbp_primary[$label] ?? null;
+		$gbpN = $norm($gbpV, $mode);
+		if ($gbpN !== '' && $norm($ciV, $mode) !== $gbpN) $diffs[$label] = ['current' => $ciV, 'gbp' => $gbpV];
 	}
 
-	$ciPhone  = $norm_phone($ci['area'] ?? '', $ci['phone'] ?? '');
-	$gbpPhone = $norm_phone($gbp_primary['area'] ?? '', $gbp_primary['phone'] ?? '');
+	$ciPhone  = ci_phone_digits($ci['area'] ?? '', $ci['phone'] ?? '');
+	$gbpPhone = ci_phone_digits($gbp_primary['area'] ?? '', $gbp_primary['phone'] ?? '');
 	if ($gbpPhone !== '' && $ciPhone !== $gbpPhone) {
 		$diffs['phone_full'] = [
 			'current' => trim(($ci['area'] ?? '') . ' ' . ($ci['phone'] ?? '')),
@@ -228,9 +186,8 @@ function ci_merge_gbp_into_ci(array $ci, array $gbp_primary, bool $pid_sync): ar
 	}
 
 	// Phone as a combined comparison/overlay
-	$digits = fn($v) => preg_replace('/\D+/', '', (string)$v);
-	$ci10   = (function($a, $p, $d) { $a = $d($a); $p = $d($p); return (strlen($a) === 3 && strlen($p) === 7) ? $a . $p : $d($a . $p); })($new['area'] ?? '', $new['phone'] ?? '', $digits);
-	$gbp10  = (function($a, $p, $d) { $a = $d($a); $p = $d($p); return (strlen($a) === 3 && strlen($p) === 7) ? $a . $p : $d($a . $p); })($gbp_primary['area'] ?? '', $gbp_primary['phone'] ?? '', $digits);
+	$ci10   = ci_phone_digits($new['area'] ?? '', $new['phone'] ?? '');
+	$gbp10  = ci_phone_digits($gbp_primary['area'] ?? '', $gbp_primary['phone'] ?? '');
 
 	if ($gbp10 !== '' && $ci10 !== $gbp10) {
 		$diffs['phone_full'] = [
@@ -340,20 +297,19 @@ function ci_build_hours($periods, $wkdesc): array {
 		}
 	}
 
-	$any = false;
-	foreach ($byDay as $slots) { if (!empty($slots)) { $any = true; break; } }
-	if (!$any) return $res;
+	if (!array_filter($byDay)) return $res;
 
-	$abbrs  = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-	$days   = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-	$order  = [1, 2, 3, 4, 5, 6, 0];
-	$groups = [];
+	$abbrs       = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+	$days        = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+	$groups      = [];
+	$schemaParts = [];
 
-	foreach ($order as $i => $gDay) {
-		if (!empty($byDay[$gDay])) {
-			[$from, $to] = $byDay[$gDay][0];
-			$groups["$from-$to"][] = $days[$i];
-		}
+	// Google numbers days Sunday = 0; walk them Monday-first
+	foreach ([1, 2, 3, 4, 5, 6, 0] as $i => $gDay) {
+		if (empty($byDay[$gDay])) continue;
+		[$from, $to] = $byDay[$gDay][0];
+		$groups["$from-$to"][] = $days[$i];
+		$schemaParts[]         = $abbrs[$i] . ' ' . $from . '-' . $to;
 	}
 
 	foreach ($groups as $range => $dows) {
@@ -364,14 +320,6 @@ function ci_build_hours($periods, $wkdesc): array {
 			'opens'      => $opens,
 			'closes'     => $closes,
 		];
-	}
-
-	$schemaParts = [];
-	foreach ($order as $i => $gDay) {
-		if (!empty($byDay[$gDay])) {
-			[$from, $to] = $byDay[$gDay][0];
-			$schemaParts[] = $abbrs[$i] . ' ' . $from . '-' . $to;
-		}
 	}
 
 	$res['compact'] = implode(' ', $schemaParts);
@@ -514,7 +462,7 @@ function ci_build_schema(array $ci, array $gbp_primary = [], array $google_info 
 	$areaServed = [];
 	if (!empty($ci['service-areas']) && is_array($ci['service-areas'])) {
 		$seen = [];
-		$ci['service-areas'][] = [$ci['city'], $ci['state-full']];
+		$ci['service-areas'][] = [$ci['city'] ?? null, $ci['state-full'] ?? null];
 		foreach ($ci['service-areas'] as $city) {
 			if (!isset($city[0], $city[1])) continue;
 			$c     = preg_replace('/\s+/', ' ', trim((string)$city[0]));

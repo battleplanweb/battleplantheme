@@ -146,58 +146,6 @@ function bp_seo_import_run( bool $dry = true ): array {
 	return $report;
 }
 
-/**
- * Email a migration summary (used by the run-once housekeeping cutover). Recipient
- * is filterable; defaults to the Battle Plan dev inbox so the whole fleet reports
- * to one place. Subject carries the site + headline counts so 130 emails sort cleanly.
- *
- * @param array  $report      return of bp_seo_import_run(false)
- * @param int    $redirects   count imported by bp_seo_import_yoast_redirects()
- * @param array  $deactivated Yoast plugin files that were deactivated
- * @param bool   $robots_phys whether a physical /robots.txt is shadowing the module's rules
- */
-function bp_seo_email_migration_report( array $report, int $redirects, array $deactivated, bool $robots_phys ): void {
-	$site  = get_bloginfo('name');
-	$url   = get_bloginfo('url');
-	$to    = apply_filters( 'bp_seo_migration_email', 'email@bp-webdev.com' );
-
-	$tokens = $report['unknown_tokens'] ?? [];
-	$flag   = ! empty($tokens) || $robots_phys ? ' ⚠' : '';
-
-	$subject = sprintf( 'SEO migration%s: %s — %d pages, %d redirects',
-		$flag, $site, (int) ( $report['posts_touched'] ?? 0 ), $redirects );
-
-	$L   = [];
-	$L[] = "Battle Plan SEO migration complete — Yoast deactivated.";
-	$L[] = "";
-	$L[] = "Site:      {$site}";
-	$L[] = "URL:       {$url}";
-	$L[] = "Posts:     " . (int) ( $report['posts_touched'] ?? 0 ) . " page(s) with SEO data imported";
-	$L[] = "Terms:     " . (int) ( $report['terms_touched'] ?? 0 ) . " term(s) imported";
-	$L[] = "Redirects: {$redirects} imported from Yoast";
-	$L[] = "Deactivated: " . implode( ', ', $deactivated );
-	$L[] = "";
-	foreach ( (array) ( $report['fields'] ?? [] ) as $k => $c ) $L[] = sprintf('  %-28s %d', $k, $c);
-
-	if ( ! empty($tokens) ) {
-		$L[] = "";
-		$L[] = "⚠ Unrecognized %%tokens%% (these pages will render the token literally — review):";
-		foreach ( $tokens as $tok => $sample ) $L[] = "  {$tok}  — e.g. \"{$sample}\"";
-	}
-	if ( $robots_phys ) {
-		$L[] = "";
-		$L[] = "⚠ A physical /robots.txt exists on this site, so the module's robots rules";
-		$L[] = "  (Disallow wp-json/search + Sitemap line) are NOT applied. Delete the file";
-		$L[] = "  to let WordPress serve the virtual robots.txt.";
-	}
-	if ( empty($tokens) && ! $robots_phys ) {
-		$L[] = "";
-		$L[] = "✓ No token or robots.txt issues flagged.";
-	}
-
-	wp_mail( $to, $subject, implode( "\n", $L ) );
-}
-
 /*--------------------------------------------------------------
 # Admin page  (Tools → Import Yoast SEO)
 --------------------------------------------------------------*/

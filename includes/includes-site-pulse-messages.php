@@ -28,7 +28,7 @@ function sp_msg_contacts( int $exclude_user_id ): array {
 		$role = site_pulse_get_role( (int) $r['role_id'] );
 		$loc  = (int) $r['location_id'] ? site_pulse_get_location( (int) $r['location_id'] ) : null;
 		$meta = trim( ( $role ? $role['label'] : '' ) . ( $loc ? ' · ' . $loc['name'] : '' ) );
-		$out[] = [ 'id' => $uid, 'name' => site_pulse_display_name( $u ), 'meta' => $meta ];
+		$out[] = [ 'id' => $uid, 'name' => site_pulse_display_name( $u ), 'meta' => $meta, 'photo' => function_exists( 'site_pulse_user_photo' ) ? site_pulse_user_photo( $uid ) : '' ];
 	}
 	usort( $out, fn( $a, $b ) => strcmp( $a['name'], $b['name'] ) );
 	return $out;

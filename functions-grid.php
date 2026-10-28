@@ -17,45 +17,89 @@ function bp_is_blank_html( $html ) {
 	return trim( $strip ) === '';
 }
 
+// Shared shortcode helpers ------------------------------------
+
+// Is now inside the shortcode's start="" / end="" window? (any strtotime() string; blank = open-ended)
+function bp_sc_in_window( $a ) {
+	$now   = time();
+	$start = strtotime( esc_attr( $a['start'] ?? '' ) );
+	$end   = strtotime( esc_attr( $a['end'] ?? '' ) );
+	return !( ( $start && $now < $start ) || ( $end && $now > $end ) );
+}
+
+// Pass any data-* attributes straight through (shortcode_atts() drops keys it doesn't know)
+function bp_sc_data_attrs( $atts ) {
+	$out = '';
+	foreach ( is_array( $atts ) ? $atts : array() as $k => $v ) {
+		if ( strpos( (string) $k, 'data-' ) === 0 ) $out .= ' ' . sanitize_key( $k ) . ( $v !== '' ? '="' . esc_attr( $v ) . '"' : '' );
+	}
+	return $out;
+}
+
+// track="x" → ' data-track="x"', and tags the element with the tracking class
+function bp_sc_tracking( $a, &$class ) {
+	$track = esc_attr( $a['track'] ?? '' );
+	if ( $track === '' ) return '';
+	$class .= ' tracking';
+	return ' data-track="' . $track . '"';
+}
+
+// Inline style for css="" + background="" (+ left/top focal point)
+function bp_sc_bg_style( $css, $background, $left, $top ) {
+	if ( $background === '' && $css === '' ) return '';
+	return ' style="' . $css . ( $background !== '' ? ' background: url(' . $background . ') ' . $left . '% ' . $top . '% no-repeat; background-size:cover;' : '' ) . '"';
+}
+
+// [href, link-class] for [img]/[btn]: get-biz="" wins over link=""; link="none" renders unlinked; PDFs get a cache-buster
+function bp_sc_link( $a ) {
+	$getBiz = esc_attr( $a['get-biz'] );
+	if ( $getBiz !== '' ) return array( do_shortcode( '[get-biz info="' . $getBiz . '"]' ), '' );
+
+	$link = esc_attr( $a['link'] );
+	if ( in_array( $link, array( '', 'none', 'no' ), true ) ) return array( '', " class='no-link'" );
+	if ( strpos( $link, 'pdf' ) ) $link .= '?id=' . time();
+	return array( $link, '' );
+}
+
+function bp_sc_new_tab( $a ) {
+	return in_array( esc_attr( $a['new-tab'] ), array( 'yes', 'true' ), true ) ? 'target="_blank"' : '';
+}
+
 // Expire Content
 add_shortcode( 'expire', 'battleplan_expireContent' );
 function battleplan_expireContent( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'start'=>'1980-01-01', 'end'=>'3000-12-31' ), $atts );
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	$now = time();
-	if ( $now > $start && $now < $end ) { return do_shortcode($content); } else { return null; }
+	return bp_sc_in_window( $a ) ? do_shortcode( $content ) : null;
 }
 
 // Restricted Content
 add_shortcode( 'restrict', 'battleplan_restrictContent' );
 function battleplan_restrictContent( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'max'=>'administrator', 'min'=>'none' ), $atts );
-	$max = esc_attr($a['max']);
-	if ( $max == "admin" || $max == "administrator" ) : $max = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $max = "bp_".$max; endif; endif;
-	$min = esc_attr($a['min']);
-	if ( $min == "admin" || $min == "administrator" ) : $min = "administrator"; else: if ( substr($min, 0, 3) !== "bp_" ) : $min = "bp_".$min; endif; endif;
-	$role = battleplan_getUserRole( '', 'name' );
-	$user_caps = get_role( $role )->capabilities;
-	$max_caps = get_role( $max )->capabilities;
-	$min_caps = get_role( $min )->capabilities;
-	$max_level = $min_level = $user_level = 0;
 
-	for ($x = 0; $x <= 10; $x++) {
-		if ( $max_caps['level_'.$x] == 1 || $max_caps['level_'.$x] == true ) $max_level = $x;
-		if ( $min_caps['level_'.$x] == 1 || $min_caps['level_'.$x] == true ) $min_level = $x;
-		if ( $user_caps['level_'.$x] == 1 || $user_caps['level_'.$x] == true ) $user_level = $x;
-	}
+	// "admin" → administrator; anything else is a bp_ role (the prefix is optional)
+	$role_name = fn( $r ) => in_array( $r, array( 'admin', 'administrator' ), true ) ? 'administrator' : ( strpos( $r, 'bp_' ) === 0 ? $r : 'bp_' . $r );
 
-	if ( $user_level >= $min_level && $user_level <= $max_level ) : return do_shortcode($content);
-	else: return "";
-	endif;
+	// Highest legacy level_0..level_10 cap the role holds (0 for an unknown role)
+	$level = function( $role ) {
+		$caps  = get_role( (string) $role )?->capabilities ?? array();
+		$level = 0;
+		for ( $x = 0; $x <= 10; $x++ ) if ( ! empty( $caps[ 'level_' . $x ] ) ) $level = $x;
+		return $level;
+	};
+
+	$user_level = $level( battleplan_getUserRole( '', 'name' ) );
+	$in_range   = $user_level >= $level( $role_name( esc_attr( $a['min'] ) ) ) && $user_level <= $level( $role_name( esc_attr( $a['max'] ) ) );
+
+	return $in_range ? do_shortcode( $content ) : '';
 }
 
 // Section
 add_shortcode( 'section', 'battleplan_buildSection' );
 function battleplan_buildSection( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'class'=>'', 'style'=>'', 'width'=>'', 'break'=>'', 'valign'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'grid'=>'', 'preload'=>'' ), $atts );
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name !== '' ? ' id="'.$name.'"' : '';
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
@@ -63,28 +107,9 @@ function battleplan_buildSection( $atts, $content = null ) {
 	$width = esc_attr($a['width']) !== '' ? ' section-'.esc_attr($a['width']) : '';
 	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';
 	$valign = esc_attr($a['valign']) !== '' ? ' valign-'.esc_attr($a['valign']) : '';
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
-	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking !== '' ) $class .= " tracking";
+	$tracking = bp_sc_tracking( $a, $class );
 	$background = esc_attr($a['background']);
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$css = esc_attr($a['css']);
 	$hash = esc_attr($a['hash']) !== '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
-
-	$data_attrs = '';
-	foreach ( $atts as $k => $v ) {
-		if ( strpos($k, 'data-') === 0 ) {
-			$k = sanitize_key($k);
-			$data_attrs .= $v !== '' ? ' ' . $k . '="' . esc_attr($v) . '"' : ' ' . $k;
-		}
-	}
 
 	$buildLayout = esc_attr($a['grid']) !== '' ? '<div class="flex grid-'.esc_attr($a['grid']).$valign.$break.$class.'">'.do_shortcode($content).'</div>' : do_shortcode($content);
 
@@ -96,23 +121,11 @@ function battleplan_buildSection( $atts, $content = null ) {
 	// section per page claims the slot (the real LCP is above the fold); opt a decorative/lower one out
 	// with preload="false". A CSS background can't use srcset, so it's a plain-URL preload of the one
 	// image — keep that image reasonably sized since it serves every device.
-	if ( $background !== '' && $a['preload'] !== 'false' && function_exists( 'bp_register_hero_preload' ) ) {
-		$bg_raw = trim( $a['background'] );
-		if ( preg_match( '/\.(webp|jpe?g|png|avif|gif)(\?.*)?$/i', $bg_raw ) ) {
-			bp_register_hero_preload( $bg_raw );
-		}
+	if ( $background !== '' && $a['preload'] !== 'false' && preg_match( '/\.(webp|jpe?g|png|avif|gif)(\?.*)?$/i', trim( $a['background'] ) ) ) {
+		bp_register_hero_preload( trim( $a['background'] ) );
 	}
 
-	$buildSection = '<section'.$name.' '.$data_attrs.' class="section'.$style.$width.$class.'" '.$hash.$tracking;
-	if ( $background !== '' || $css !== '' ) {
-		$buildSection .= ' style="';
-		if ( $css !== '' ) $buildSection .= $css;
-		if ( $background !== '' ) $buildSection .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';
-		$buildSection .= '"';
-	}
-	$buildSection .= '>'.$buildLayout.'</section>';
-
-	return $buildSection;
+	return '<section'.$name.' '.bp_sc_data_attrs($atts).' class="section'.$style.$width.$class.'" '.$hash.$tracking.bp_sc_bg_style( esc_attr($a['css']), $background, esc_attr($a['left']), esc_attr($a['top']) ).'>'.$buildLayout.'</section>';
 }
 
 /* Layout (Nested) — @deprecated 2026-08-02. DO NOT USE ON NEW BUILDS.
@@ -135,17 +148,12 @@ function battleplan_buildNested( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'grid'=>'1', 'break'=>'', 'valign'=>'', 'class'=>'', 'track'=>'' ), $atts );
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name ? ' id="'.$name.'"' : '';
-	$grid = esc_attr($a['grid']);
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
-	$break = esc_attr($a['break']);
-	$valign = esc_attr($a['valign']);
-	if ( $valign != '' ) $valign = " valign-".$valign;
-	if ( $break != '' ) $break = " break-".$break;
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
+	$tracking = bp_sc_tracking( $a, $class );
+	$valign = esc_attr($a['valign']) !== '' ? ' valign-'.esc_attr($a['valign']) : '';
+	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';
 
-	return '<div'.$name.' class="flex nested grid-'.$grid.$valign.$break.$class.'" '.$tracking.'">'.do_shortcode($content).'</div>';
+	return '<div'.$name.' class="flex nested grid-'.esc_attr($a['grid']).$valign.$break.$class.'"'.$tracking.'>'.do_shortcode($content).'</div>';
 }
 
 // Layout
@@ -155,28 +163,24 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name ? ' id="'.$name.'"' : '';
 	$grid = esc_attr($a['grid']);
-	if ( strpos($grid,'px') !== false || strpos($grid,'em') !== false || strpos($grid,'fr') !== false ) {
+	$custom_grid = '';
+	if ( preg_match('/px|em|fr/', $grid) ) {
 		$custom_grid = 'grid-template-columns: '.$grid.';';
 		$grid = 'custom';
-	} else {
-		$custom_grid = '';
 	}
 	$gap = !empty($a['gap']) ? 'gap:' . esc_attr($a['gap']) . '; ' : '';
 	$break = !empty($a['break']) ? ' break-' . esc_attr($a['break']) : '';
 	$valign = !empty($a['valign']) ? ' valign-' . esc_attr($a['valign']) : '';
 	$align = !empty($a['align']) ? ' align-' . esc_attr($a['align']) : '';
 	$class = !empty($a['class']) ? ' ' . esc_attr($a['class']) : '';
-	$data = !empty($a['data']) ? ' data-' . esc_attr($a['data']) : '';
-	$tracking = !empty($a['track']) ? ' data-track="' . esc_attr($a['track']) . '"'	: '';
-	if ( $tracking !== '' ) $class .= " tracking";
+	$tracking = bp_sc_tracking( $a, $class );
 
 	// Swipe scroller — at its break point the row scrolls sideways instead of stacking, so a
 	// row of cards stays card-sized on a phone (style-scroller.css + script-scroller.js).
 	// scroll="true" uses the default slide width; scroll="65%" / scroll="18em" sets your own.
 	// Needs break="1-4" — that class is what tells the CSS which break point to scroll at.
 	$scroll = strtolower(trim(esc_attr($a['scroll'])));
-	$swipe = '';
-	$slide = '';
+	$swipe = $slide = '';
 	if ( !in_array($scroll, ['', 'false', 'no'], true) && in_array(esc_attr($a['break']), ['1','2','3','4'], true) ) {
 		$swipe = ' swipe';
 		if ( !in_array($scroll, ['true', 'yes', '1'], true) && preg_match('/^[0-9.]+(px|em|rem|%|vw)$/', $scroll) ) {
@@ -189,67 +193,32 @@ function battleplan_buildLayout( $atts, $content = null ) {
 
 	$style = $gap !== '' || $custom_grid !== '' || $slide !== '' ? ' style="'.$gap.' '.$custom_grid.' '.$slide.'"' : '';
 
-	$data_attrs = '';
-	foreach ( $atts as $k => $v ) {
-		if ( strpos($k, 'data-') === 0 ) {
-			$k = sanitize_key($k);
-			$data_attrs .= $v !== '' ? ' ' . $k . '="' . esc_attr($v) . '"' : ' ' . $k;
-		}
-	}
-
-	return '<div'.$name.' '.$data_attrs.' class="flex grid-'.$grid.$valign.$align.$break.$swipe.$class.'"'.$style.$tracking.'>'.do_shortcode($content).'</div>';
+	return '<div'.$name.' '.bp_sc_data_attrs($atts).' class="flex grid-'.$grid.$valign.$align.$break.$swipe.$class.'"'.$style.$tracking.'>'.do_shortcode($content).'</div>';
 }
 
 // Column
 add_shortcode( 'col', 'battleplan_buildColumn' );
 function battleplan_buildColumn( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'class'=>'', 'order'=>'', 'break'=>'', 'align'=>'', 'valign'=>'', 'h-span'=>'', 'v-span'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'css'=>'', 'hash'=>'', 'gap'=>'' ), $atts );
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
 	$name = $name !== '' ? ' id="'.$name.'"' : '';
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
-	$order = esc_attr($a['order']) !== '' ? 'order: '.esc_attr($a['order']).' !important;' : '';
+	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important;'" : '';
 	$break = esc_attr($a['break']) !== '' ? ' break-'.esc_attr($a['break']) : '';
 	$align = esc_attr($a['align']) !== '' ? " text-".esc_attr($a['align']) : '';
 	$valign = esc_attr($a['valign']) !== '' ? " valign-".esc_attr($a['valign']) : '';
 	$hSpan = esc_attr($a['h-span']) !== '' ? ' h-span-'.esc_attr($a['h-span']) : '';
 	$vSpan = esc_attr($a['v-span']) !== '' ? ' v-span-'.esc_attr($a['v-span']) : '';
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
-	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking !== '' ) $class .= " tracking";
-	$background = esc_attr($a['background']);
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$css = esc_attr($a['css']);
+	$tracking = bp_sc_tracking( $a, $class );
 	$hash = esc_attr($a['hash']) !== '' ? 'data-hash="'.esc_attr($a['hash']).'"' : '';
-	$gap = esc_attr($a['gap']) !== '' ? ' style="gap:'.esc_attr($a['gap']).'"' : '';
-	$style = $order ? " style='".$order."'" : '';
 
-	$data_attrs = '';
-	foreach ( $atts as $k => $v ) {
-		if ( strpos($k, 'data-') === 0 ) {
-			$k = sanitize_key($k);
-			$data_attrs .= $v !== '' ? ' ' . $k . '="' . esc_attr($v) . '"' : ' ' . $k;
-		}
-	}
+	// gap + css + background share ONE style attribute (a second style="" on the same tag is ignored)
+	$innerCss = trim( ( esc_attr($a['gap']) !== '' ? 'gap:'.esc_attr($a['gap']).'; ' : '' ) . esc_attr($a['css']) );
+	$innerStyle = bp_sc_bg_style( $innerCss, esc_attr($a['background']), esc_attr($a['left']), esc_attr($a['top']) );
 
-	$buildCol = '<div'.$name.' '.$data_attrs.' class="col '.$class.$align.$valign.$break.$hSpan.$vSpan.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$gap;
-	if ( $background !== "" || $css !== "" ) {
-		$buildCol .= ' style="';
-		if ( $css !== "" ) $buildCol .= $css;
-		if ( $background !== "" ) $buildCol .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';
-		$buildCol .= '"';
-	}
-	$buildCol .= '>';
-	$buildCol .= do_shortcode($content);
-	$buildCol .= '</div></div>';
-
-	return $buildCol;
+	return '<div'.$name.' '.bp_sc_data_attrs($atts).' class="col '.$class.$align.$valign.$break.$hSpan.$vSpan.'" '.$tracking.$hash.$style.'><div class="col-inner"'.$innerStyle.'>'.do_shortcode($content).'</div></div>';
 }
 
 // Group & Text Blocks
@@ -257,66 +226,53 @@ add_shortcode('group', 'battleplan_buildGroup');
 add_shortcode('txt',   'battleplan_buildGroup');
 function battleplan_buildGroup($atts, $content=null, $tag=''){
 	$a = shortcode_atts(['size'=>'100', 'class'=>'', 'start'=>'', 'end'=>'', 'order'=>'', 'track'=>''], $atts);
-	$size = convertSize(esc_attr($a['size']));
-	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
-	$order = esc_attr($a['order']) !== '' ? ' style="order: '.esc_attr($a['order']).' !important"' : '';
-	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking !== '' ) $class .= " tracking";
+	if ( ! bp_sc_in_window( $a ) ) return null;
 
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
+	$tracking = bp_sc_tracking( $a, $class );
 	$block = ($tag==='group') ? 'group' : 'text';
-	return '<div class="block block-'.$block.' span-'.$size.$class.'"'.$tracking.'>'.do_shortcode($content).'</div>';
+
+	return '<div class="block block-'.$block.' span-'.convertSize(esc_attr($a['size'])).$class.'"'.$tracking.'>'.do_shortcode($content).'</div>';
 }
 
 // Image Block
 add_shortcode( 'img', 'battleplan_buildImg' );
 function battleplan_buildImg( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'', 'ada-hidden'=>'false', 'start'=>'', 'end'=>'', 'track'=>'' ), $atts );
-	$size = convertSize(esc_attr($a['size']));
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
 	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
-	$getBiz = esc_attr($a['get-biz']);
-	if ( $getBiz === "" ) {
-		$linkClass = "";
-		$link = esc_attr($a['link']);
-		if ( $link === "" || $link === "none" || $link === "no" ) {
-			$linkClass=" class='no-link'";
-			$link = '';
-		}
-		if ( strpos($link, 'pdf') ) $link .= "?id=".time();
-	} else {
-		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
-	};
-	$target = esc_attr($a['new-tab']) === "yes" || esc_attr($a['new-tab']) === "true" ? 'target="_blank"' : '';
+	[ $link, $linkClass ] = bp_sc_link( $a );
 	$hidden = esc_attr($a['ada-hidden']) === "true" ? " aria-hidden='true' tabindex='-1'" : "";
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
-	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking !== '' ) $class .= " tracking";
+	$tracking = bp_sc_tracking( $a, $class );
 
-	$buildImg = '<div class="block block-image span-'.$size.$class.'" '.$tracking.$style.'>';
-	if ( $link !== '' ) $buildImg .= '<a '.$target.$linkClass.' href="'.$link.'"'.$hidden.'>';
-	$buildImg .= do_shortcode($content);
-	if ( $link !== '' )  $buildImg .= '</a>';
-	$buildImg .= '</div>';
+	$inner = do_shortcode($content);
+	if ( $link !== '' ) $inner = '<a '.bp_sc_new_tab($a).$linkClass.' href="'.$link.'"'.$hidden.'>'.$inner.'</a>';
 
-	return $buildImg;
+	return '<div class="block block-image span-'.convertSize(esc_attr($a['size'])).$class.'" '.$tracking.$style.'>'.$inner.'</div>';
+}
+
+// Vimeo poster frame, cached (the API call used to run on every render, with no timeout)
+function bp_vimeo_thumb( $id ) {
+	$key   = 'bp_vimeo_thumb_' . md5( $id );
+	$thumb = get_transient( $key );
+	if ( $thumb !== false ) return $thumb;
+
+	$r     = wp_remote_get( 'https://vimeo.com/api/v2/video/' . rawurlencode( $id ) . '.json', array( 'timeout' => 5 ) );
+	$data  = is_wp_error( $r ) ? null : json_decode( wp_remote_retrieve_body( $r ) );
+	$thumb = ! empty( $data[0]->thumbnail_large ) ? str_replace( 'http:', '', $data[0]->thumbnail_large . '.jpg' ) : '';
+
+	set_transient( $key, $thumb, $thumb !== '' ? WEEK_IN_SECONDS : HOUR_IN_SECONDS );
+	return $thumb;
 }
 
 // Video Block
 add_shortcode( 'vid', 'battleplan_buildVid' );
 function battleplan_buildVid( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	bp_inline_minified_css( get_template_directory() . '/style-video.css' );
 	// The facade that swaps these thumbnails for real iframes lives in
 	// script-video.js (shared with [yt-channel] in includes-video.php). It used to
@@ -324,72 +280,42 @@ function battleplan_buildVid( $atts, $content = null ) {
 	// demand now, so [vid] has to ask for it.
 	bp_enqueue_script( 'battleplan-script-video', 'script-video', ['battleplan-script-pages'] );
 
-	$a = shortcode_atts( array( 'size'=>'100', 'mobile'=>'100', 'class'=>'', 'order'=>'', 'link'=>'', 'thumb'=>'', 'start'=>'', 'end'=>'', 'preload'=>'false', 'related'=>'false', 'fullscreen'=>'false', 'controls'=>'true', 'autoplay'=>'false', 'loop'=>'false', 'muted'=>'false', 'begin'=>'', 'track'=>'' ), $atts );
 	$size = convertSize(esc_attr($a['size']));
 	$mobile = esc_attr($a['mobile']) !== '100' ? ' data-mobile-w="'.esc_attr($a['mobile']).'"' : '';
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
 	$link = esc_attr($a['link']);
 	$thumb = esc_attr($a['thumb']);
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
-	$preload = esc_attr($a['preload']);
-	$related = esc_attr($a['related']);
 	$order = esc_attr($a['order']);
 	$fullscreen = esc_attr($a['fullscreen']);
+	$style = '';
 	if ( $order !== '' || $fullscreen !== "false" ) {
-		$style = ' style="';
-		if ( $order !== '' ) $style .= 'order: '.$order.'  !important; ';
-		if ( $fullscreen !== 'false' ) $style .= 'margin: 0; ';
-		$style .= '"';
-	} else { $style = ''; }
-	$controls = esc_attr($a['controls']);
+		$style = ' style="'.( $order !== '' ? 'order: '.$order.'  !important; ' : '' ).( $fullscreen !== 'false' ? 'margin: 0; ' : '' ).'"';
+	}
 	$autoplay = esc_attr($a['autoplay']);
-	$loop = esc_attr($a['loop']);
-	$muted = esc_attr($a['muted']);
-	if ( $autoplay === 'true' ) $muted = 'true';		// browsers block autoplay unless the video is muted
-	$begin = esc_attr($a['begin']);
-	$tracking = esc_attr($a['track']) !== '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking !== '' ) $class .= " tracking";
+	$muted = $autoplay === 'true' ? 'true' : esc_attr($a['muted']);		// browsers block autoplay unless the video is muted
+	$tracking = bp_sc_tracking( $a, $class );
 
-	if ( ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false || strpos($link, 'vimeo') !== false ) && $preload == "false" ) :
-		// Both branches set $id — it is what data-id carries, and the schema below is
-		// shared. Before this each branch set only its OWN variable, so every YouTube
-		// embed emitted an undefined $id and every Vimeo embed claimed a YouTube
-		// thumbnail URL built from an undefined $vid_id.
-		$id = '';
-		$embed = '';
-		if ( strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false ) :
+	$isYouTube = strpos($link, 'youtube') !== false || strpos($link, 'youtu.be') !== false;
+
+	if ( ( $isYouTube || strpos($link, 'vimeo') !== false ) && esc_attr($a['preload']) == "false" ) :
+		if ( $isYouTube ) :
 			$link = (strpos($link, '?si=') !== false) ? strstr($link, '?si=', true) : $link;
-			$link = str_replace('www.', '', $link);
-			$link = str_replace('https://youtu.be/', '', $link);
-			$link = str_replace('https://youtube.com/shorts/', '', $link);
-			$link = str_replace('https://youtube.com/embed/', '', $link);
-			$link = str_replace('https://youtube.com/watch?v=', '', $link);
+			$link = str_replace(['www.', 'https://youtu.be/', 'https://youtube.com/shorts/', 'https://youtube.com/embed/', 'https://youtube.com/watch?v='], '', $link);
 
 			preg_match('/^[^?]+/', $link, $matches);
-			$vid_id = $matches[0];
-			$id = $vid_id;
-			$embed = 'https://www.youtube.com/embed/'.$vid_id;
+			$id = $matches[0] ?? '';
+			$embed = 'https://www.youtube.com/embed/'.$id;
 
-			$link = 'https://www.youtube.com/embed/'.$vid_id.'?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer';
+			$link = $embed.'?autoplay=1&enablejsapi=1&version=3&playerapiid=ytplayer';
+			if ( esc_attr($a['related']) === "false" ) $link .= "&rel=0";
+			if ( esc_attr($a['begin']) !== "" ) $link .= "&start=".esc_attr($a['begin']);
 
-			if ( $thumb === '' ) : $thumb = '//i.ytimg.com/vi/'.$vid_id.'/hqdefault.jpg'; endif;
-			if ( $related === "false" ) : $link .= "&rel=0";	endif;
-			if ( $begin !== "" ) : $link .= "&start=".$begin; endif;
+			$thumb = $thumb !== '' ? $thumb : '//i.ytimg.com/vi/'.$id.'/hqdefault.jpg';
 		else:
 			$id = str_replace(['https://player.vimeo.com/video/', 'https://vimeo.com/'], '', $link);
 			$embed = 'https://player.vimeo.com/video/'.$id;
 			$link .= "?autoplay=1&title=0&byline=0&portrait=0";
-			if ( $thumb === '' ) :
-				$data = file_get_contents('https://vimeo.com/api/v2/video/'.$id.'.json');
-				$data = json_decode($data);
-				$thumb = str_replace('http:', '', $data[0]->thumbnail_large.'.jpg');
-			endif;
+			if ( $thumb === '' ) $thumb = bp_vimeo_thumb( $id );
 		endif;
 
 		// schema.org wants an absolute URL. The auto-generated thumbs are
@@ -405,83 +331,61 @@ function battleplan_buildVid( $atts, $content = null ) {
 			'name'         => get_the_title(),
 			'description'  => get_the_excerpt() ?: get_the_title(),
 			'thumbnailUrl' => $schemaThumb,
-			'uploadDate' 	=> get_the_date('c'),
+			'uploadDate'   => get_the_date('c'),
 			'embedUrl'     => $embed,
 		];
 
 		$schemaBlock = '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
 
 		return $schemaBlock . '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.$style.' data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
-	else:
-		$dotPos = strrpos($link, '.');
-		$extension = substr($link, $dotPos + 1);
-		$file = substr($link, 0, $dotPos);
-		$buildVid = '<div class="block block-video span-'.$size.$class.'"'.$tracking.$style.'>';
-		$buildVid .= '<video playsinline ';
-		if ( $controls == 'true' ) $buildVid .= 'controls ';
-		if ( $autoplay == 'true' ) $buildVid .= 'autoplay ';
-		if ( $loop == 'true' ) $buildVid .= 'loop ';
-		if ( $muted == 'true' ) $buildVid .= 'muted ';
-
-		$buildVid .= 'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%"'.$mobile.'>';
-		$buildVid .= '<source src="'.$link.'" type="video/'.$extension.'">';
-		if ( $extension === 'webm' ) $buildVid .= '<source src="'.$file.'-ios.mp4" type="video/mp4">';	// fallback for iOS
-		$buildVid .= '<img loading="lazy" src="'.$thumb.'">';
-		$buildVid .= '</video></div>';
-
-		return $buildVid;
 	endif;
+
+	$dotPos = strrpos($link, '.');
+	$extension = substr($link, $dotPos + 1);
+
+	$flags = '';
+	foreach ( ['controls' => esc_attr($a['controls']), 'autoplay' => $autoplay, 'loop' => esc_attr($a['loop']), 'muted' => $muted] as $flag => $on ) {
+		if ( $on == 'true' ) $flags .= $flag.' ';
+	}
+
+	$buildVid = '<div class="block block-video span-'.$size.$class.'"'.$tracking.$style.'>';
+	$buildVid .= '<video playsinline '.$flags.'poster="'.$thumb.'" style="position:relative; top:0; left:0; width:100%; height:100%"'.$mobile.'>';
+	$buildVid .= '<source src="'.$link.'" type="video/'.$extension.'">';
+	if ( $extension === 'webm' ) $buildVid .= '<source src="'.substr($link, 0, $dotPos).'-ios.mp4" type="video/mp4">';	// fallback for iOS
+	$buildVid .= '<img loading="lazy" src="'.$thumb.'">';
+	$buildVid .= '</video></div>';
+
+	return $buildVid;
 }
 
 // Button Block
 add_shortcode( 'btn', 'battleplan_buildButton' );
 function battleplan_buildButton( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'size'=>'100', 'align'=>'center', 'order'=>'', 'link'=>'', 'get-biz'=>'', 'new-tab'=>'false', 'class'=>'', 'fancy'=>'false', 'icon'=>'false', 'top'=>0, 'left'=>0, 'before'=>'false', 'graphic'=>'false', 'graphic-w'=>'40', 'ada'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'click'=>'', 'onclick'=>'' ), $atts );
-	$size = convertSize(esc_attr($a['size']));
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	$align = esc_attr($a['align']) !== 'center' ? " button-".esc_attr($a['align']) : '';
 	$style = esc_attr($a['order']) !== '' ? " style='order: ".esc_attr($a['order'])." !important'" : '';
-	$getBiz = esc_attr($a['get-biz']);
-	if ( $getBiz === "" ) {
-		$linkClass = "";
-		$link = esc_attr($a['link']);
-		if ( $link === "" || $link === "none" || $link === "no" ) {
-			$linkClass=" class='no-link'";
-			$link = '';
-		}
-		if ( strpos($link, 'pdf') ) $link .= "?id=".time();
-	} else {
-		$link = do_shortcode( '[get-biz info="'.$getBiz.'"]' );
-	};
-	$target = esc_attr($a['new-tab']) === "yes" || esc_attr($a['new-tab']) === "true" ? 'target="_blank"' : '';
+	[ $link ] = bp_sc_link( $a );
 	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-
-	$fancy_val = isset($a['fancy']) ? trim($a['fancy']) : '';
-	$fancy = $fancy_val !== '' ? '-' . esc_attr($fancy_val) : '';
 
 	$icon = esc_attr($a['icon']) === 'false' ? '' : esc_attr($a['icon']);
 	if ( $icon !== '' ) :
 		bp_inline_minified_css( get_template_directory() . '/style-fancy-btn.css' );
 
-		$class .= " fancy".$fancy;
-		$icon = $icon === 'true' ? 'chevron-right' : $icon;
-		$content = esc_attr($a['before']) === 'false'
-			? '<span class="fancy-text">'.$content.'</span><span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span>'
-			: '<span class="fancy-icon">[get-icon type="'.$icon.'" top="'.$top.'" left="'.$left.'"]</span><span class="fancy-text">'.$content.'</span>';
+		$fancy = trim($a['fancy']);
+		$class .= " fancy".( $fancy !== '' ? '-'.esc_attr($fancy) : '' );
+		$iconSpan = '<span class="fancy-icon">[get-icon type="'.( $icon === 'true' ? 'chevron-right' : $icon ).'" top="'.esc_attr($a['top']).'" left="'.esc_attr($a['left']).'"]</span>';
+		$textSpan = '<span class="fancy-text">'.$content.'</span>';
+		$content = esc_attr($a['before']) === 'false' ? $textSpan.$iconSpan : $iconSpan.$textSpan;
 	endif;
-	$graphicW = esc_attr($a['graphic-w']);
+
 	if ( esc_attr($a['graphic']) !== "false" ) {
+		$graphicW = esc_attr($a['graphic-w']);
 		$class .= " graphic-icon";
 		$content = '<img src="/wp-content/uploads/'.esc_attr($a['graphic']).'" width="'.$graphicW.'" height="'.$graphicW.'" style="aspect-ratio:'.$graphicW.'/'.$graphicW.'" alt="" ><span class="unique">'.$content.'</span>';
 	}
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
+
 	$ada = esc_attr($a['ada']) !== '' ? ' <span class="screen-reader-text">'.esc_attr($a['ada']).'</span>' : '';
 
 	// Auto-describe generic buttons ("Learn More", "Read More", …) that have no explicit
@@ -496,8 +400,7 @@ function battleplan_buildButton( $atts, $content = null ) {
 			if ( $destName !== '' ) $ada = ' <span class="screen-reader-text">: '.esc_html($destName).'</span>';
 		}
 	}
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
+	$tracking = bp_sc_tracking( $a, $class );
 
 	// click="x" → a tracked conversion click (fires conversion-x via script-tracking.js).
 	// Lands on the <a> ONLY — $class goes on the wrapper div too, and a .track-clicks
@@ -508,20 +411,13 @@ function battleplan_buildButton( $atts, $content = null ) {
 	$onclick = esc_attr($a['onclick']);
 	$inlineBtnID = 'btn_'.str_replace('/', '', $link);
 
-	$script = $onclick !== '' ?
-        '<script nonce="'._BP_NONCE.'">
-            document.addEventListener("DOMContentLoaded", function() {
-                const '.$inlineBtnID.' = document.getElementById("'.$inlineBtnID.'");
-                if ('.$inlineBtnID.') {
-                    '.$inlineBtnID.'.addEventListener("click", function(event) {
-                        {'.$onclick.'}
-                    });
-                }
-            });
-        </script>' :
-	'';
+	// The element is looked up by id but held in a plain local — the id itself (built from the link)
+	// is rarely a valid JS identifier, so declaring it as the variable name was a syntax error.
+	$script = $onclick !== ''
+		? '<script nonce="'._BP_NONCE.'">document.addEventListener("DOMContentLoaded", function() { const btn = document.getElementById("'.$inlineBtnID.'"); if (btn) btn.addEventListener("click", function(event) { '.$onclick.' }); });</script>'
+		: '';
 
-	return $script.'<div class="block block-button span-'.$size.$class.$align.'"'.$tracking.$style.'><a id="'.$inlineBtnID.'" '.$target.' href="'.$link.'" class="button'.$class.$clickClass.'"'.$clickTrack.'>'.do_shortcode($content).$ada.'</a></div>';
+	return $script.'<div class="block block-button span-'.convertSize(esc_attr($a['size'])).$class.$align.'"'.$tracking.$style.'><a id="'.$inlineBtnID.'" '.bp_sc_new_tab($a).' href="'.$link.'" class="button'.$class.$clickClass.'"'.$clickTrack.'>'.do_shortcode($content).$ada.'</a></div>';
 }
 
 // Resolve a button link to a human-readable destination name for the auto-ada label on
@@ -586,27 +482,27 @@ function bp_prune_missing_srcset( $srcset ) {
 // Accordion Block
 add_shortcode( 'accordion', 'battleplan_buildAccordion' );
 function battleplan_buildAccordion( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true', 'track'=>'', 'multiple'=>'true' ), $atts );
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	bp_enqueue_script( 'battleplan-accordion', 'script-accordion' );
 	bp_inline_minified_css( get_template_directory() . '/style-accordion.css' );
 
-	$a = shortcode_atts( array( 'title'=>'', 'excerpt'=>'', 'class'=>'', 'active'=>'false', 'btn'=>'false', 'btn_collapse'=>'false', 'icon'=>'true', 'start'=>'', 'end'=>'', 'scroll'=>'true', 'track'=>'', 'multiple'=>'true' ), $atts );
 	$excerpt = esc_attr($a['excerpt']);
 	if ( $excerpt !== '' ) $excerpt = '<div class="accordion-excerpt"><div class="accordion-box"><p>'.$excerpt.'</p></div></div>';
-	$class = esc_attr($a['class']);
-	if ( $class != '' ) $class = " ".$class;
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
 	$title = esc_attr($a['title']);
 	$btnCollapse = esc_attr($a['btn_collapse']);
 	$btn = esc_attr($a['btn']);
 	$scroll = esc_attr($a['scroll']) == "true" ? "" : " no-scroll";
-	$addBtn = '';
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	$multiple = esc_attr($a['multiple']) === 'true' ? '' : ' data-multiple="false"';
-	if ( $tracking != '' ) $class .= " tracking";
+	$tracking = bp_sc_tracking( $a, $class );
 	$icon = ($v = esc_attr($a['icon'])) === 'true'
 		? '<span class="accordion-icon" aria-hidden="true">[get-icon type="chevron-right"]</span>'
 		: ($v === 'false' ? '' : '<span class="accordion-icon" aria-hidden="true">[get-icon type="'.$v.'"]</span>');
 
-	if ( $title ) $printTitle = '<h2 role="button" tabindex="0" class="accordion-title accordion-button'.$scroll.'">'.$icon.$title.'</h2>';
+	$printTitle = $title ? '<h2 role="button" tabindex="0" class="accordion-title accordion-button'.$scroll.'">'.$icon.$title.'</h2>' : '';
+	$addBtn = '';
 
 	if ( $btn !== "false" ) :
 		if ( $btnCollapse === "false" ) $btnCollapse = "hide";
@@ -618,33 +514,26 @@ function battleplan_buildAccordion( $atts, $content = null ) {
 		endif;
 	endif;
 
-	$active = esc_attr($a['active']);
-	if ( $active != "false" ) $class .= " start-active";
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) :
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	endif;
+	if ( esc_attr($a['active']) != "false" ) $class .= " start-active";
+
+	// Rendered once and reused for both the FAQ schema and the markup (it used to render twice)
+	$body = do_shortcode($content);
 
 	// FAQPage schema: a question-titled accordion is a Q&A pair. bp_output_faq_schema() emits them.
 	if ( substr(trim($a['title']), -1) === '?' && bp_faq_schema_on() ) :
-		$answer = trim( preg_replace('/\s+/', ' ', wp_strip_all_tags( do_shortcode($content) ) ) );
+		$answer = trim( preg_replace('/\s+/', ' ', wp_strip_all_tags( $body ) ) );
 		if ( $answer !== '' ) $GLOBALS['bp_faq_schema'][] = [ 'q' => bp_decode_text( trim($a['title']) ), 'a' => bp_decode_text($answer) ];
 	endif;
 
-	return do_shortcode('<div class="block block-accordion'.$class.$scroll.'"'.$multiple.$tracking.'>'.$printTitle.$excerpt.'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.$content.'</div></div>'.$addBtn.'</div>');
+	return '<div class="block block-accordion'.$class.$scroll.'"'.$multiple.$tracking.'>'.do_shortcode($printTitle.$excerpt).'<div class="accordion-content'.$scroll.'"><div class="accordion-box'.$scroll.'">'.$body.'</div></div>'.do_shortcode($addBtn).'</div>';
 }
 
 // Parallax Section
 add_shortcode( 'parallax', 'battleplan_buildParallax' );
 function battleplan_buildParallax( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'', 'type'=>'section', 'width'=>'edge', 'img-w'=>'2000', 'img-h'=>'1333', 'height'=>'800', 'padding'=>'50', 'pos-x'=>'50%', 'pos-x-mobile'=>'', 'top-y'=>0, 'bottom-y'=>0, 'image'=>'', 'image-mobile'=>'', 'mobile-breakpoint'=>'1024', 'stack'=>'false', 'class'=>'', 'fixed'=>'false', 'scroll-btn'=>'false', 'scroll-loc'=>'#page', 'scroll-icon'=>'chevron-down', 'z-index'=>'2', 'track'=>'' ), $atts );
-	$name = strtolower(esc_attr($a['name']));
-	$name = preg_replace("/[\s_]/", "-", $name);
-	$style = esc_attr($a['style']);
-	if ( $style != '' ) $style = " style-".$style;
+	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name']))) ?: "section-".rand(10000,99999);
+	$style = esc_attr($a['style']) !== '' ? " style-".esc_attr($a['style']) : '';
 	$type = esc_attr($a['type']);
 	$width = esc_attr($a['width']);
 	$imgW = esc_attr($a['img-w']);
@@ -660,19 +549,11 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	$posX = esc_attr($a['pos-x']);
 	$posXM = esc_attr($a['pos-x-mobile']);
 	$padding = esc_attr($a['padding']);
-	$fixed = esc_attr($a['fixed']);
 	$image = esc_attr($a['image']);
 	$hasImage = !empty($image);
-	$class = esc_attr($a['class']);
-	$zIndex = esc_attr($a['z-index']);
-	if ( $class != '' ) $class = " ".$class;
-	$scrollBtn = esc_attr($a['scroll-btn']);
-	$scrollLoc = esc_attr($a['scroll-loc']);
-	$scrollIcon = '[get-icon type="'.esc_attr($a['scroll-icon']).'" sr="Scroll Down"]';
-	if ( $scrollBtn != "false" ) : $buildScrollBtn = '<div class="scroll-down"><a href="'.$scrollLoc.'">'.$scrollIcon.'</a></div>'; else: $buildScrollBtn = ''; endif;
-	if ( !$name ) $name = "section-".rand(10000,99999);
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
+	$class = esc_attr($a['class']) !== '' ? ' '.esc_attr($a['class']) : '';
+	$buildScrollBtn = esc_attr($a['scroll-btn']) != "false" ? '<div class="scroll-down"><a href="'.esc_attr($a['scroll-loc']).'">[get-icon type="'.esc_attr($a['scroll-icon']).'" sr="Scroll Down"]</a></div>' : '';
+	$tracking = bp_sc_tracking( $a, $class );
 
 	$attachment_id = $hasImage ? attachment_url_to_postid(site_url().$image) : 0;
 	$alt_text = $attachment_id ? get_post_meta($attachment_id, '_wp_attachment_image_alt', true) : '';
@@ -703,7 +584,7 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		if ( abs($mobileBP - $bp) < abs($mobileBP - $stackBP) ) $stackBP = $bp;
 	}
 
-	if ( $type === "col" ) : $div = "div"; else: $div = $type; endif;
+	$div = $type === "col" ? "div" : $type;
 
 	// ONE markup path for every device. There is deliberately no is_mobile() branch here: EverCache
 	// stores a single HTML entry per URL with no Vary: User-Agent, so whichever device warms the cache
@@ -716,13 +597,13 @@ function battleplan_buildParallax( $atts, $content = null ) {
 	// the custom properties emitted below (--hero-h / --hero-pad / --hero-ar / --hero-x / --hero-x-m).
 	// Same cached HTML everywhere; the breakpoint decides. The image size is no longer picked in PHP at
 	// all — srcset/sizes lets the browser choose on width AND DPR, which it does better than a glob().
+	$heroImg = $dataAttrs = $parallaxClass = '';
 	if ( $hasImage ) {
 		// Responsive <img> hero backdrop: the browser picks the file via srcset/sizes (native, width +
 		// DPR aware); the parallax drift is a compositor transform on that same <img> (.hero-bg in
 		// style-grid.css). Replaces the old CSS-background + .load-bg-img JS sizer (which double-loaded:
 		// preload the original, then JS-fetch a responsive size).
 		$srcset  = $attachment_id ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_id, 'full' ) ) : '';
-
 		$srcsetM = $attachment_mid ? bp_prune_missing_srcset( wp_get_attachment_image_srcset( $attachment_mid, 'full' ) ) : '';
 
 		// Preload the SAME candidate set the <img> resolves so the LCP image is fetched high-priority
@@ -763,10 +644,6 @@ function battleplan_buildParallax( $atts, $content = null ) {
 		// proportions" height; with content the hero grows instead, same as it always did.
 		$parallaxClass = ' ' . $type . '-parallax' . ( trim($content) === '' ? ' hero-empty' : '' )
 			. ( $stack ? ' hero-stack hero-stack-' . $stackBP : '' );
-	} else {
-		$heroImg       = '';
-		$dataAttrs     = '';
-		$parallaxClass = '';
 	}
 
 	// Box metrics as custom properties, NOT as concrete inline declarations: an inline declaration
@@ -863,8 +740,7 @@ function bp_inject_hero_preload( $html ) {
 		// media= on a preload link is what stops a phone downloading the desktop hero too.
 		if ( $media !== '' ) $attr .= ' media="' . esc_attr($media) . '"';
 
-		$link .= '<link rel="preload" as="image" ' . $attr . ' fetchpriority="high">' . "
-";
+		$link .= '<link rel="preload" as="image" ' . $attr . ' fetchpriority="high">' . "\n";
 	}
 	if ( $link === '' ) return $html;
 
@@ -901,15 +777,11 @@ add_filter( 'wp_get_attachment_image_attributes', function ( $attr ) {
 	if ( empty( $GLOBALS['bp_in_chrome'] ) ) return $attr;
 
 	// (1) Don't let the logo hold the LCP's high-priority slot.
-	if ( isset( $attr['fetchpriority'] ) && 'high' === $attr['fetchpriority'] ) {
-		unset( $attr['fetchpriority'] );
-	}
+	if ( ( $attr['fetchpriority'] ?? '' ) === 'high' ) unset( $attr['fetchpriority'] );
 
 	// (2) Give a blank-alt logo the business name so it isn't silent.
 	if ( '' === trim( (string) ( $attr['alt'] ?? '' ) ) ) {
-		$ci   = function_exists( 'customer_info' ) ? customer_info() : [];
-		$name = is_array( $ci ) ? trim( (string) ( $ci['name'] ?? '' ) ) : '';
-		if ( '' === $name ) $name = get_bloginfo( 'name' );
+		$name = trim( (string) ( customer_info()['name'] ?? '' ) ) ?: get_bloginfo( 'name' );
 		if ( '' !== $name ) $attr['alt'] = bp_decode_text( $name );   // WP esc_attr's attributes on output
 	}
 
@@ -920,44 +792,27 @@ add_filter( 'wp_get_attachment_image_attributes', function ( $attr ) {
 add_shortcode( 'lock', 'battleplan_buildLockedSection' );
 function battleplan_buildLockedSection( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'name'=>'', 'style'=>'lock', 'width'=>'edge', 'position'=>'bottom', 'delay'=>'3000', 'show'=>'session', 'css'=>'', 'background'=>'', 'left'=>'50', 'top'=>'50', 'class'=>'', 'start'=>'', 'end'=>'', 'btn-activated'=>'no', 'track'=>'', 'content'=>'text', 'pages'=>'', 'exclude'=>'', 'exit'=>'no', 'scroll'=>'', 'device'=>'all', 'idle'=>'', 'visitor'=>'all', 'visits'=>'' ), $atts );
+	if ( ! bp_sc_in_window( $a ) ) return null;
 
 	// Page targeting (server-side): on off-target pages we ship nothing at all.
 	//   pages="contact, about"   → show ONLY on these slugs
 	//   exclude="checkout"       → show everywhere EXCEPT these slugs
-	$slug = defined('_PAGE_SLUG') ? strtolower((string)_PAGE_SLUG) : '';
-	if ( $slug === '' && function_exists('is_front_page') && is_front_page() ) $slug = 'home';
+	$slug = strtolower((string)_PAGE_SLUG);
+	if ( $slug === '' && is_front_page() ) $slug = 'home';
 	$only = array_filter( array_map('trim', explode(',', strtolower((string)$a['pages']))) );
 	$not  = array_filter( array_map('trim', explode(',', strtolower((string)$a['exclude']))) );
 	if ( $only && ! in_array($slug, $only, true) ) return null;
 	if ( $not  &&   in_array($slug, $not,  true) ) return null;
 
-	$name = strtolower(esc_attr($a['name']));
-	$name = preg_replace("/[\s_]/", "-", $name);
-	$delay = esc_attr($a['delay']);
-	$show = esc_attr($a['show']);
-	$css = esc_attr($a['css']);
-	$background = esc_attr($a['background']);
-	$left = esc_attr($a['left']);
-	$top = esc_attr($a['top']);
-	$width = esc_attr($a['width']);
-	if ( $width != '' ) $width = " section-".$width;
-	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
+	$name = preg_replace("/[\s_]/", "-", strtolower(esc_attr($a['name'])));
+	$name = $name ? " id='".$name."'" : "";
+	$width = esc_attr($a['width']) != '' ? " section-".esc_attr($a['width']) : '';
 	$pos = esc_attr($a['position']);
-	$class .= " position-".$pos;
+	$class = ( esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '' )." position-".$pos;
 	$style = esc_attr($a['style']) == "lock" ? "" : " style-".esc_attr($a['style']);
-	if ( $name ) : $name = " id='".$name."'"; else: $name = ""; endif;
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
 	$contentType = esc_attr($a['content']) == 'text' ? ' content-text' : ' content-image';
-	if ( $tracking != '' ) $class .= " tracking";
-	$btnActivated = esc_attr($a['btn-activated']);
-	if ($btnActivated == "true" || $btnActivated == "yes" ) $btnActivated = "yes";
+	$tracking = bp_sc_tracking( $a, $class );
+	$btnActivated = in_array(esc_attr($a['btn-activated']), ['true', 'yes'], true) ? 'yes' : esc_attr($a['btn-activated']);
 
 	// Triggers + targeting: exit-intent (desktop only), scroll-depth (percent), idle (seconds),
 	// device, new/returning visitor, and a minimum-pageviews gate.
@@ -968,17 +823,8 @@ function battleplan_buildLockedSection( $atts, $content = null ) {
 	$visitor = in_array(strtolower((string)$a['visitor']), ['new','returning'],    true) ? strtolower((string)$a['visitor']) : 'all';
 	$visits  = preg_replace('/[^0-9]/', '', (string)$a['visits']);  // show only on/after Nth pageview
 
-	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$contentType.$class.'"'.$tracking.' data-pos="'.$pos.'" data-delay="'.$delay.'" data-show="'.$show.'" data-btn="'.$btnActivated.'" data-exit="'.$exit.'" data-scroll="'.$scroll.'" data-idle="'.$idle.'" data-device="'.$device.'" data-visitor="'.$visitor.'" data-visits="'.$visits.'"';
-
-	if ( $background != "" || $css != "" ) :
-		$buildSection .= ' style="';
-		if ( $css != "" ) $buildSection .= $css;
-		if ( $background != "" ) $buildSection .= ' background: url('.$background.') '.$left.'% '.$top.'% no-repeat; background-size:cover;';
-		$buildSection .= '"';
-	endif;
-
-	//$buildSection .= '><div class="closeBtn" aria-label="close" aria-hidden="false" tabindex="0"><span class="icon x-large"></span></div>'.do_shortcode($content).'</section>';	/* WP3 validation 12/11/24 */
-
+	$buildSection = '<section'.$name.' class="section section-lock style-lock'.$style.$width.$contentType.$class.'"'.$tracking.' data-pos="'.$pos.'" data-delay="'.esc_attr($a['delay']).'" data-show="'.esc_attr($a['show']).'" data-btn="'.$btnActivated.'" data-exit="'.$exit.'" data-scroll="'.$scroll.'" data-idle="'.$idle.'" data-device="'.$device.'" data-visitor="'.$visitor.'" data-visits="'.$visits.'"';
+	$buildSection .= bp_sc_bg_style( esc_attr($a['css']), esc_attr($a['background']), esc_attr($a['left']), esc_attr($a['top']) );
 	$buildSection .= '><button class="closeBtn" aria-label="close">[get-icon type="x-large"]</button>'.$content.'</section>';
 
 	return do_shortcode($buildSection);
@@ -991,18 +837,19 @@ function battleplan_formField( $atts, $content = null ) {
 	$label = esc_attr($a['label']);
 	$labelPos = esc_attr($a['label-pos']);
 	$labelValign = esc_attr($a['label-valign']) === 'bottom' ? 'baseline' : esc_attr($a['label-valign']);
-	$req = esc_attr($a['req']);
+	$req = esc_attr($a['req']) != 'false';
 	$width = 'width-'.esc_attr($a['width']);
-	$maxW = esc_attr($a['max-w']);
+	$maxW = esc_attr($a['max-w']) != '' ? ' style="margin:0 auto; max-width:'.esc_attr($a['max-w']).'"' : '';
 	$value = esc_attr($a['value']) !== '' ? ' data-value="'.esc_attr($a['value']).'"' : '';
-	if ( $maxW != '' ) $maxW = ' style="margin:0 auto; max-width:'.$maxW.'"';
 	$class = esc_attr($a['class']) != '' ? " ".esc_attr($a['class']) : '';
-	$show = esc_attr($a['show']);
-	$aria = $buildInput = '';
-	if ( $show != 'true' ) : $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; endif;
+	$show = esc_attr($a['show']) == 'true';
+	$aria = '';
+	if ( ! $show ) { $width = 'width-none'; $aria = 'aria-label="'.$label.'"'; }
 	$asterisk = '<span class="required"></span><span class="sr-only">Required Field</span>';
 
 	$content = do_shortcode((string)$content);
+
+	if ( $label == "button" ) return '<div class="block block-button block-100">'.$content.'</div>';
 
 	// Floating (label-inside-the-field) labels only make sense for text-like
 	// controls that have a placeholder state (text, email, tel, textarea, etc.)
@@ -1017,19 +864,13 @@ function battleplan_formField( $atts, $content = null ) {
 		$class .= ' form-label-outside';
 	}
 
-	if ( $label == "button" ) :
-		$buildInput .= '<div class="block block-button block-100">'.$content.'</div>';
-	else:
+	$labelHtml = $show ? '<label for="'.$id.'" class="'.$width.' label-'.$labelValign.'">'.$label.( $req ? $asterisk : '' ).'</label>' : '';
+
 	// removed col from classes 5/19 for animation purposes
-		$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' label-pos-'.$labelPos.' '.$width.$class.'"'.$value.$maxW.' '.$aria.'>';
-		if ( $labelPos == 'after' ) $buildInput .= $content;
-		if ( $show == 'true' ) $buildInput .= '<label for="'.$id.'" class="'.$width.' label-'.$labelValign.'">'.$label;
-		if ( $show == 'true' && $req != 'false' ) $buildInput .= $asterisk;
-		if ( $show == 'true' ) $buildInput .= '</label>';
-		if ( $labelPos != 'after' ) $buildInput .= $content;
-		if ( $show != 'true' && $req != 'false' ) $buildInput .= $asterisk;
-		$buildInput .= '</div>';
-	endif;
+	$buildInput = '<div class="form-input input-'.strtolower(preg_replace('/[^A-Za-z0-9\-]/', '', str_replace(" ","-",$label))).' input-'.$id.' label-pos-'.$labelPos.' '.$width.$class.'"'.$value.$maxW.' '.$aria.'>';
+	$buildInput .= $labelPos == 'after' ? $content.$labelHtml : $labelHtml.$content;
+	if ( ! $show && $req ) $buildInput .= $asterisk;
+	$buildInput .= '</div>';
 
 	return $buildInput;
 }
@@ -1038,72 +879,73 @@ function battleplan_formField( $atts, $content = null ) {
 add_shortcode( 'widget', 'battleplan_buildWidget' );
 function battleplan_buildWidget( $atts, $content = null ) {
 	$a = shortcode_atts( array( 'type'=>'basic', 'title'=>'hide', 'lock'=>'none', 'priority'=>'2', 'set'=>'none', 'class'=>'', 'show'=>'', 'hide'=>'', 'start'=>'', 'end'=>'', 'track'=>'', 'intro'=>'', 'empty'=>'hide'), $atts );
+	if ( ! bp_sc_in_window( $a ) ) return null;
+
 	$type = strtolower(preg_replace("/[\s_]/", "-", esc_attr($a['type'])));
 	$title = esc_attr($a['title']);
 	$lock = esc_attr($a['lock']);
 	$priority = esc_attr($a['priority']);
 	$set = esc_attr($a['set']);
 	$class = esc_attr($a['class']);
-	$show = esc_attr($a['show']);
-	$intro = esc_attr($a['intro']);
-	$empty = esc_attr($a['empty']);
-	$hide = esc_attr($a['hide']);
-	$start = strtotime(esc_attr($a['start']));
-	$end = strtotime(esc_attr($a['end']));
-	if ( $start || $end ) {
-		$now = time();
-		if ( $start && $now < $start ) return null;
-		if ( $end && $now > $end ) return null;
-	}
 	$addHide = $addClass = $name = '';
-	$tracking = esc_attr($a['track']) != '' ? ' data-track="'.esc_attr($a['track']).'"' : '';
-	if ( $tracking != '' ) $class .= " tracking";
+	$tracking = bp_sc_tracking( $a, $class );
 
-	$display = true;
-	$brand = customer_info()['site-brand'] ?? '';
+	switch ( $type ) {
+		case 'form':
+			$lock = 'top'; $priority = '4'; $addHide = '404, contact, review';
+			if ( $title == 'hide' ) $title = 'Service Request';
+			// Widget form column: the site's primary form when one is declared (bp_set_primary_form),
+			// else the standard quote form this column has always defaulted to.
+			if ( $content == null ) $content = bp_primary_form_or('[bp-quote-form]');
+			break;
 
-	if ( $type == "form" ) : $lock = "top"; $priority = '4'; $addHide = "404, contact, review"; endif;
-	if ( $type == "form" && $title == "hide" ) : $title = 'Service Request'; endif;
-	// Widget form column: the site's primary form when one is declared (bp_set_primary_form),
-	// else the standard quote form this column has always defaulted to.
-	if ( $type == "form" && $content == null ) : $content = bp_primary_form_or('[bp-quote-form]'); endif;
+		case 'brand-logo':
+			$lock = 'top'; $priority = '4';
+			if ( $content == null ) $content = '[get-brand-logo]';
+			break;
 
-	if ( $type == "brand-logo" ) : $lock = 'top'; $priority = '4'; endif;
-	if ( $type == "brand-logo" && $content == null ) : $content = '[get-brand-logo]'; endif;
+		case 'financing':
+			$priority = '3';
+			break;
 
-	if ( $type == "financing" ) : $priority = '3'; endif;
+		case 'customer-care':
+			$addClass = ' widget-image'; $addHide = 'customer-care';
+			if ( $content == null ) {
+				$brand = customer_info()['site-brand'] ?? '';
+				$care  = array( 'american standard' => '[get-customer-care]', 'ruud' => '[ruud-pro-partner]', 'comfortmaker' => '[get-comfortmaker-elite-dealer]', 'tempstar' => '[get-tempstar-elite-dealer]' );
+				$content = $care[ strtolower( trim( is_array( $brand ) ? ( $brand[0] ?? '' ) : (string) $brand ) ) ] ?? $content;
+			}
+			break;
 
-	if ( $type == "customer-care" ) : $addClass = ' widget-image'; $addHide = 'customer-care'; endif;
-	if ( $type == "customer-care" && $content == null ) :
-		$careBrand = strtolower( trim( is_array( $brand ) ? ( $brand[0] ?? '' ) : (string) $brand ) );
-		if     ( $careBrand == 'american standard' ) : $content = '[get-customer-care]';
-		elseif ( $careBrand == 'ruud' )              : $content = '[ruud-pro-partner]';
-		elseif ( $careBrand == 'comfortmaker' )      : $content = '[get-comfortmaker-elite-dealer]';
-		elseif ( $careBrand == 'tempstar' )          : $content = '[get-tempstar-elite-dealer]';
-		endif;
-	endif;
+		case 'symptom-checker':
+			$addClass = ' widget-image'; $priority = '1'; $addHide = 'symptom-checker';
+			if ( $content == null ) $content = '[get-symptom-checker]';
+			break;
 
-	if ( $type == "symptom-checker" ) : $addClass = ' widget-image'; $priority = '1'; $addHide = 'symptom-checker'; endif;
-	if ( $type == "symptom-checker" && $content == null ) : $content = '[get-symptom-checker]'; endif;
+		case 'credit-cards':
+			$addClass = ' widget-image'; $lock = 'bottom'; $priority = '3';
+			if ( $content == null ) $content = '[get-credit-cards]';
+			break;
 
-	if ( $type == "credit-cards" ) : $addClass = ' widget-image'; $lock = 'bottom'; $priority = '3'; endif;
-	if ( $type == "credit-cards" && $content == null ) : $content = '[get-credit-cards]'; endif;
+		case 'event':
+			$addClass = ' widget-image'; $addHide = 'event';
+			break;
 
-	if ( $type == "event" ) : $addClass = ' widget-image'; $addHide = 'event'; endif;
+		case 'topper':
+			$addClass = ' widget-image'; $priority = '5'; $lock = 'top';
+			break;
 
-	if ( $type == "topper" ) : $addClass = ' widget-image'; $priority = '5'; $lock = 'top';  endif;
-
-	if ( $type == "filler" ) : $priority = '5'; $content = "&nbsp;"; endif;
+		case 'filler':
+			$priority = '5'; $content = "&nbsp;";
+			break;
+	}
 
 	if ( $type == "menu" ) :
-		$buildWidget = '<div id="desktop-navigation" class="widget widget-navigation widget-priority-5 lock-to-top widget_nav_menu hide-1 hide-2 hide-2"'.$tracking.' data-priority="5">';
+		$buildWidget = '<div id="desktop-navigation" class="widget widget-navigation widget-priority-5 lock-to-top widget_nav_menu hide-1 hide-2"'.$tracking.' data-priority="5">';
 		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
 		$buildWidget .= wp_nav_menu ( array ( 'echo' => false, 'container' => 'div', 'container_class' => 'menu-main-menu-container', 'menu_id' => 'main-menu-menu', 'menu_class' => 'menu', 'theme_location' =>'widget-menu', 'walker' => new Aria_Walker_Nav_Menu(), ) );
 		$buildWidget .= '</div>';
 	else:
-		if ( $hide ) : if ( $addHide ) : $hide .= ', '.$addHide; endif;
-		else: if ( $addHide ) : $hide = $addHide; endif; endif;
-
 		if ( $title != 'hide' ) $name = ' widget-'.strtolower(preg_replace("/[\s_]/", "-", $title));
 
 		$buildClasses = 'widget widget-'.$type.$addClass.$name.' widget-priority-'.$priority;
@@ -1111,39 +953,38 @@ function battleplan_buildWidget( $atts, $content = null ) {
 		if ( $lock != "none" ) $buildClasses .= ' lock-to-'.$lock;
 		if ( $class != "" ) $buildClasses .= ' '.$class;
 
-		$buildWidget = '<div class="'.$buildClasses.'"'.$tracking.'>';
-		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
-
-		if ( $intro !== '' ) $buildWidget .= '<div class="widget-intro">'.$intro.'</div>';
-
 		$widgetContent = do_shortcode($content);
 
 		// Nothing came back (no upcoming events, no testimonials, etc) - drop the whole
 		// widget rather than leaving an empty box in the sidebar. Opt out with empty="show".
-		if ( $empty != 'show' && $type != 'filler' && bp_is_blank_html($widgetContent) ) return null;
+		if ( esc_attr($a['empty']) != 'show' && $type != 'filler' && bp_is_blank_html($widgetContent) ) return null;
 
+		$buildWidget = '<div class="'.$buildClasses.'"'.$tracking.'>';
+		if ( $title != "hide" ) $buildWidget .= '<h3 class="widget-title">'.$title.'</h3>';
+		if ( esc_attr($a['intro']) !== '' ) $buildWidget .= '<div class="widget-intro">'.esc_attr($a['intro']).'</div>';
 		$buildWidget .= '<div class="widget-content">'.$widgetContent.'</div>';
 		$buildWidget .= '</div>';
 	endif;
 
-	if ( $show != '' ) :
-		$show = str_replace(" ", "", $show);
-		$show = explode(",", $show);
-		$display = false;
+	// show="" / hide="" take comma-separated URL fragments, plus the special "home" and "404"
+	$bodyClass = null;
+	$on_page = function( $list ) use ( &$bodyClass ) {
+		foreach ( explode( ',', str_replace( ' ', '', $list ) ) as $check ) {
+			if ( $check === '' ) continue;
+			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false ) return true;
+			if ( $check === '404' || $check === 'home' ) {
+				$bodyClass ??= get_body_class();
+				if ( in_array( $check === '404' ? 'error404' : 'home', $bodyClass ) ) return true;
+			}
+		}
+		return false;
+	};
 
-		foreach ( $show as $check ) :
-			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = true;
-		endforeach;
-	endif;
+	$show = esc_attr($a['show']);
+	$hide = implode( ', ', array_filter( array( esc_attr($a['hide']), $type == 'menu' ? '' : $addHide ) ) );
 
-	if ( $hide != '' ) :
-		$hide = str_replace(" ", "", $hide);
-		$hide = explode(",", $hide);
+	if ( $show !== '' && ! $on_page( $show ) ) return null;
+	if ( $hide !== '' && $on_page( $hide ) ) return null;
 
-		foreach ( $hide as $check ) :
-			if ( strpos( _PAGE_SLUG_FULL, $check ) !== false || ( $check == '404' && in_array( 'error404', get_body_class() )) || ( $check == 'home' && in_array( 'home', get_body_class() ))) $display = false;
-		endforeach;
-	endif;
-
-	if ( $display == true) return $buildWidget;
+	return $buildWidget;
 }

@@ -991,6 +991,7 @@ function bp_seo_metabox_render( $post ) {
 	$g = fn($k) => esc_attr( get_post_meta($post->ID, $k, true) );
 	$sep  = bp_seo_sep();
 	$tTpl = esc_attr( bp_seo_resolve_vars( bp_seo_title_template(), ['title' => get_the_title($post)] ) );
+	$ai   = bp_seo_ai_available();
 	?>
 	<style>
 		.bp-seo-field{margin:0 0 14px}
@@ -1002,15 +1003,37 @@ function bp_seo_metabox_render( $post ) {
 		.bp-seo-tokens .bp-seo-hint{margin-right:2px}
 		.bp-seo-tok{cursor:pointer;font-size:11px;line-height:1.6;font-family:Consolas,Monaco,monospace;color:#2271b1;background:#f0f6fc;border:1px solid #c3d9ed;border-radius:3px;padding:1px 6px}
 		.bp-seo-tok:hover{background:#2271b1;border-color:#2271b1;color:#fff}
+		.bp-seo-head{display:flex;align-items:center;gap:12px;margin:0 0 4px}
+		.bp-seo-head label{flex:1;margin:0}
+		.bp-seo-count{color:#646970;font-size:12px;white-space:nowrap}
+		.bp-seo-count.is-over{color:#d63638;font-weight:600}
+		.bp-seo-ai{cursor:pointer;color:#9b59b6;background:none;border:none;padding:0;font-size:12px;white-space:nowrap}
+		.bp-seo-ai:hover{text-decoration:underline}
+		.bp-seo-ai:disabled{cursor:wait;color:#646970;text-decoration:none}
+		.bp-seo-ai-note{color:#646970;font-size:12px;margin:5px 0 0}
+		.bp-seo-ai-note:empty{display:none}
+		.bp-seo-ai-note.is-warn{color:#d63638}
 	</style>
 	<div class="bp-seo-field">
-		<label for="bp_seo_title">SEO Title <span class="bp-seo-hint">— blank uses: <?php echo $tTpl; ?></span></label>
+		<div class="bp-seo-head">
+			<label for="bp_seo_title">SEO Title <span class="bp-seo-hint">— blank uses: <?php echo $tTpl; ?></span></label>
+			<span class="bp-seo-count" data-for="bp_seo_title" data-max="<?php echo bp_seo_ai_limits('title')['max']; ?>"></span>
+			<?php if ( $ai ) : ?><button type="button" class="bp-seo-ai" data-field="title" data-target="bp_seo_title" data-other="bp_seo_desc" title="Read this page and write an SEO title">✨ Write with AI</button><?php endif; ?>
+		</div>
 		<input type="text" id="bp_seo_title" name="<?php echo BP_SEO_TITLE; ?>" value="<?php echo $g(BP_SEO_TITLE); ?>" placeholder="<?php echo $tTpl; ?>">
+		<div class="bp-seo-ai-note" id="bp_seo_title_note"></div>
+		<div class="bp-seo-ai-note is-warn" id="bp_seo_title_warn"></div>
 		<?php bp_seo_token_bar('bp_seo_title', $sep); ?>
 	</div>
 	<div class="bp-seo-field">
-		<label for="bp_seo_desc">Meta Description</label>
+		<div class="bp-seo-head">
+			<label for="bp_seo_desc">Meta Description</label>
+			<span class="bp-seo-count" data-for="bp_seo_desc" data-max="<?php echo bp_seo_ai_limits('desc')['max']; ?>"></span>
+			<?php if ( $ai ) : ?><button type="button" class="bp-seo-ai" data-field="desc" data-target="bp_seo_desc" data-other="bp_seo_title" title="Read this page and write a meta description">✨ Write with AI</button><?php endif; ?>
+		</div>
 		<textarea id="bp_seo_desc" name="<?php echo BP_SEO_DESC; ?>" rows="3"><?php echo $g(BP_SEO_DESC); ?></textarea>
+		<div class="bp-seo-ai-note" id="bp_seo_desc_note"></div>
+		<div class="bp-seo-ai-note is-warn" id="bp_seo_desc_warn"></div>
 		<?php bp_seo_token_bar('bp_seo_desc', $sep); ?>
 	</div>
 	<div class="bp-seo-row">
@@ -1039,15 +1062,16 @@ function bp_seo_metabox_render( $post ) {
 		<textarea id="bp_seo_og_desc" name="<?php echo BP_SEO_OG_DESC; ?>" rows="2"><?php echo $g(BP_SEO_OG_DESC); ?></textarea>
 	</div>
 	<?php bp_seo_token_script(); ?>
+	<?php bp_seo_ai_script( $post ); ?>
 	<?php
 }
 
-// Clickable variable/shortcode chips that insert into $target at the cursor.
-function bp_seo_token_bar( $target, $sep ) {
-	$tokens = [
+// The click-to-insert variables/shortcodes (token => chip note). Also the vocabulary the AI writer may use.
+function bp_seo_tokens(): array {
+	return [
 		'%%title%%'            => '',
 		'%%sitename%%'         => '',
-		'%%sep%%'              => " ({$sep})",
+		'%%sep%%'              => ' (' . bp_seo_sep() . ')',
 		'%%primary_category%%' => '',
 		'[get-biz info="name"]'       => '',
 		'[get-biz info="city"]'       => '',
@@ -1055,8 +1079,12 @@ function bp_seo_token_bar( $target, $sep ) {
 		'[get-biz info="area-phone"]' => '',
 		'[get-years start="xxxx"]'    => '',
 	];
+}
+
+// Clickable variable/shortcode chips that insert into $target at the cursor.
+function bp_seo_token_bar( $target, $sep ) {
 	echo '<div class="bp-seo-tokens"><span class="bp-seo-hint">Click to insert:</span>';
-	foreach ( $tokens as $tok => $note ) {
+	foreach ( bp_seo_tokens() as $tok => $note ) {
 		printf(
 			'<button type="button" class="bp-seo-tok" data-target="%s" data-token="%s">%s</button>',
 			esc_attr($target), esc_attr($tok), esc_html($tok . $note)
@@ -1086,6 +1114,368 @@ function bp_seo_token_script() {
 		else          f.setSelectionRange(s + t.length, s + t.length);
 		f.dispatchEvent(new Event('input', {bubbles:true}));
 	});
+	</script>
+	<?php
+}
+
+/*--------------------------------------------------------------
+# §11b. AI writer — "✨ Write with AI" on SEO Title + Meta Description
+# Reads the page (title, editor body, Page Top/Bottom) and asks Claude for a
+# value built from the click-to-insert tokens. The result is measured RENDERED
+# (tokens resolved, shortcodes run — what Google actually sees) and sent back
+# for a rewrite if it runs long or types out a value a token already provides.
+# Only fills the field; nothing is saved until the post is updated.
+# Uses the same API key as AI alt text (functions-ai-alt.php).
+--------------------------------------------------------------*/
+if ( ! defined('BP_SEO_AI_MODEL') ) define('BP_SEO_AI_MODEL', 'claude-sonnet-4-6');
+
+/**
+ * Character budget per field. Google truncates by pixel width (~580px title,
+ * ~920px description); these counts keep typical copy inside that.
+ */
+function bp_seo_ai_limits( string $field ): array {
+	return $field === 'title' ? ['min' => 45, 'max' => 60] : ['min' => 120, 'max' => 155];
+}
+
+function bp_seo_ai_available(): bool {
+	return function_exists('bp_ai_alt_available') && bp_ai_alt_available();
+}
+
+/**
+ * Render context for a post outside the front-end query (editor / AJAX), where
+ * %%title%% and %%primary_category%% can't come from get_queried_object().
+ */
+function bp_seo_post_ctx( WP_Post $post, string $title = '' ): array {
+	$pc  = (int) get_post_meta($post->ID, BP_SEO_PRIMARYCAT, true);
+	$cat = $pc ? get_cat_name($pc) : '';
+	if ( $cat === '' && ( $cats = get_the_category($post->ID) ) ) $cat = $cats[0]->name;
+	return [ 'title' => $title !== '' ? $title : get_the_title($post), 'primary_cat' => $cat ];
+}
+
+/** A stored SEO value as plain text the way Google sees it, plus its length. */
+function bp_seo_plain( string $raw, array $ctx ): array {
+	$out = html_entity_decode( bp_seo_render_value($raw, $ctx), ENT_QUOTES, 'UTF-8' );
+	return [ $out, mb_strlen($out) ];
+}
+
+/**
+ * Each token → what it renders as on this post. Feeds the AI (so it can budget
+ * characters) and the live counters. [get-years] is left out on purpose: its start
+ * year must come from the operator, never be guessed (docs/shortcodes-content.md).
+ */
+function bp_seo_token_values( array $ctx ): array {
+	$vals = [];
+	foreach ( array_keys( bp_seo_tokens() ) as $tok ) {
+		if ( strpos($tok, '[get-years') === 0 ) continue;
+		// A lone %%sep%% resolves to '' (the resolver trims edge separators), so read it directly.
+		$vals[$tok] = $tok === '%%sep%%' ? bp_seo_sep() : bp_seo_plain($tok, $ctx)[0];
+	}
+	return $vals;
+}
+
+/** The page's readable copy: editor body (unsaved edits when passed in) + Page Top/Bottom. */
+function bp_seo_page_text( WP_Post $post, string $body = '' ): string {
+	$text = implode( "\n\n", [
+		$body !== '' ? $body : $post->post_content,
+		(string) get_post_meta($post->ID, 'page-top_text', true),
+		(string) get_post_meta($post->ID, 'page-bottom_text', true),
+	] );
+	// Resolve business-fact shortcodes so their words survive; drop every other shortcode
+	// TAG but keep what it wraps ([txt]…[/txt] holds the copy).
+	$text = preg_replace_callback( '/\[get-biz\b[^\]]*\]/', fn($m) => do_shortcode($m[0]), $text );
+	$text = preg_replace( '/\[\/?[a-z][^\]]*\]/i', ' ', $text );
+	$text = html_entity_decode( wp_strip_all_tags( str_replace('<', ' <', $text) ), ENT_QUOTES, 'UTF-8' );
+	return mb_substr( trim( preg_replace('/\s+/', ' ', $text) ), 0, 12000 );
+}
+
+function bp_seo_ai_prompt( string $field, WP_Post $post, array $ctx, array $vals, string $text, string $other ): string {
+	$ci   = function_exists('customer_info') ? (array) customer_info() : [];
+	$lim  = bp_seo_ai_limits($field);
+	$type = $ci['site-type'] ?? ( $ci['business-type'] ?? '' );
+	$svc  = $ci['service-type'] ?? '';
+	$svc  = is_array($svc) ? implode(', ', $svc) : (string) $svc;
+
+	$L = [];
+	$L[] = 'You are writing the ' . ( $field === 'title' ? 'SEO title (the <title> tag)' : 'meta description' ) . ' for one page of a local business website.';
+	$L[] = '';
+	$L[] = 'Business: ' . bp_business_name() . ( $type ? " (a {$type} business)" : '' );
+	if ( $svc ) $L[] = "Services: {$svc}";
+	$L[] = '';
+	$L[] = 'Your output is stored as a TEMPLATE. These tokens render at page load, so the text stays correct if the business details ever change:';
+	foreach ( $vals as $tok => $val ) {
+		if ( $val === '' ) continue;
+		$L[] = "  {$tok}  → \"{$val}\" (" . mb_strlen($val) . ' chars)';
+	}
+	$L[] = '';
+	// No em dashes anywhere in this prompt: models mirror the punctuation they're shown.
+	$L[] = 'Token rules:';
+	$L[] = '- Never type out a value a token provides (business name, city, state, phone). Use the token.';
+	if ( $field === 'title' ) {
+		$L[] = '- Separate title segments with %%sep%% (surrounded by spaces). Never type "|", "-" or "•" as a separator.';
+	} else {
+		$L[] = '- Do NOT use %%sep%% in a description. It is written in sentences, separated by periods.';
+	}
+	$L[] = '- Do NOT use [get-years] or state a number of years in business.';
+	$L[] = '- Length is measured on the RENDERED text (every token replaced by its value above).';
+	$L[] = '';
+	$L[] = 'Requirements:';
+	$L[] = "- {$lim['min']} to {$lim['max']} characters rendered. {$lim['max']} is a hard maximum.";
+	$L[] = '- NEVER use em dashes or en dashes. Use a period or a comma instead.';
+	if ( $field === 'title' ) {
+		$L[] = '- Lead with the page\'s main service or topic: the phrase a searcher would type.';
+		$L[] = '- Add the location (city, state) when the page is about local services and it fits.';
+		$L[] = '- End with " %%sep%% %%sitename%%" when it fits. Drop that before dropping the keyword or location.';
+		$L[] = '- Use %%title%% only if the page title is already the right keyword phrase.';
+		$L[] = '- Title Case. No ALL CAPS, exclamation marks, keyword stuffing or clickbait.';
+	} else {
+		$L[] = '- One or two complete sentences, each ending with a period: what this page offers, where, why choose this business, and a call to action.';
+		$L[] = '- Work in the main service and the location naturally. [get-biz info="area-phone"] may go in the call to action if it fits.';
+		$L[] = '- Active voice. No keyword stuffing, no quotes, and don\'t open with the business name.';
+	}
+	$L[] = '- Only claim what the page content supports. No invented prices, guarantees, awards, offers or credentials.';
+	$L[] = '';
+	$L[] = 'Page title: ' . html_entity_decode( $ctx['title'], ENT_QUOTES, 'UTF-8' );
+	$L[] = 'Post type: ' . $post->post_type;
+	if ( $post->post_name ) $L[] = 'URL slug: ' . $post->post_name;
+	if ( $other !== '' ) $L[] = ( $field === 'title' ? 'Current meta description' : 'Current SEO title' ) . " (keep consistent, don't repeat it word for word): {$other}";
+	$L[] = '';
+	$L[] = 'Page content:';
+	$L[] = $text !== '' ? $text : '(empty, so work from the page title and business details)';
+	$L[] = '';
+	$L[] = 'Output ONLY the ' . ( $field === 'title' ? 'title' : 'description' ) . ' on one line. No quotes, no label, no explanation.';
+	return implode("\n", $L);
+}
+
+/** What's wrong with a draft, phrased as revision instructions. Empty = good. */
+function bp_seo_ai_problems( string $field, string $raw, array $ctx, array $vals ): array {
+	$lim = bp_seo_ai_limits($field);
+	$len = bp_seo_plain($raw, $ctx)[1];
+	$p   = [];
+	if ( $len > $lim['max'] )     $p[] = "It renders to {$len} characters; the maximum is {$lim['max']}.";
+	elseif ( $len < $lim['min'] ) $p[] = "It renders to only {$len} characters; aim for {$lim['min']}–{$lim['max']}.";
+
+	// Hard-coded facts: look only at the text OUTSIDE tokens.
+	$bare = preg_replace( '/%%[a-z_]+%%|\[[^\]]*\]/i', ' ', $raw );
+	foreach ( ['%%sitename%%', '[get-biz info="name"]', '[get-biz info="city"]'] as $tok ) {
+		$v = $vals[$tok] ?? '';
+		if ( mb_strlen($v) > 2 && stripos($bare, $v) !== false ) $p[] = "It types \"{$v}\" — use {$tok} instead.";
+	}
+	$digits = preg_replace( '/\D/', '', $vals['[get-biz info="area-phone"]'] ?? '' );
+	if ( strlen($digits) >= 7 && strpos( preg_replace('/\D/', '', $bare), $digits ) !== false ) {
+		$p[] = 'It types the phone number — use [get-biz info="area-phone"] instead.';
+	}
+	return array_values( array_unique($p) );
+}
+
+/**
+ * Strip labels/quotes the model sometimes adds, swap any literal pipe for %%sep%%, and
+ * filter out dashes that sneak in despite the prompt.
+ */
+function bp_seo_ai_clean( string $text, string $field ): string {
+	$lines = array_values( array_filter( array_map('trim', explode("\n", $text)) ) );
+	$text  = $lines[0] ?? '';
+	$text  = preg_replace( '/^(seo title|title|meta description|description)\s*:\s*/i', '', $text );
+	$text  = trim( $text, "\"'“”‘’ \t" );
+	$text  = preg_replace( '/\s+\|\s+/', ' %%sep%% ', $text );
+	$text  = bp_seo_ai_dedash( $text, $field );
+	return trim( preg_replace('/\s+/', ' ', $text) );
+}
+
+/**
+ * Replace em/en dashes (and a spaced " - " used as one) with a period or comma. In a
+ * description, %%sep%% is treated the same way, since descriptions are sentences.
+ * Title: always a comma. Description: a period when a new sentence follows (capital
+ * letter), otherwise a comma. Hyphenated words ("same-day") are left alone.
+ */
+function bp_seo_ai_dedash( string $text, string $field ): string {
+	$desc = $field === 'desc';
+	$re   = '/([.,!?;:]?)(?:\s*[—–]\s*|\s+-\s+' . ( $desc ? '|\s*%%sep%%\s*' : '' ) . ')(?=(\S?))/u';
+	return preg_replace_callback( $re, function( $m ) use ( $desc ) {
+		if ( $m[2] === '' ) return '';                    // trailing dash: just drop it
+		if ( $m[1] !== '' ) return $m[1] . ' ';           // already punctuated: keep that mark
+		if ( ! $desc ) return ', ';
+		return preg_match('/\p{Lu}/u', $m[2]) ? '. ' : ', ';
+	}, $text );
+}
+
+function bp_seo_ai_request( array $messages ) {
+	$response = wp_remote_post('https://api.anthropic.com/v1/messages', [
+		'timeout' => 25,
+		'headers' => [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => bp_ai_alt_api_key(),
+			'anthropic-version' => '2023-06-01',
+		],
+		'body' => wp_json_encode([
+			'model'      => BP_SEO_AI_MODEL,
+			'max_tokens' => 300,
+			'messages'   => $messages,
+		]),
+	]);
+	if ( is_wp_error($response) ) return $response;
+
+	$status  = wp_remote_retrieve_response_code($response);
+	$decoded = json_decode( wp_remote_retrieve_body($response), true );
+	if ( $status !== 200 ) {
+		$msg = $decoded['error']['message'] ?? 'Unknown API error.';
+		if ( function_exists('bp_ai_model_alert') ) bp_ai_model_alert( (int) $status, $decoded, BP_SEO_AI_MODEL, 'AI SEO writer' );
+		return new WP_Error('api_error', "Anthropic API error ($status): $msg");
+	}
+	$text = trim( (string) ( $decoded['content'][0]['text'] ?? '' ) );
+	return $text !== '' ? $text : new WP_Error('empty', 'Empty response from API.');
+}
+
+/**
+ * Write an SEO title ('title') or meta description ('desc') for $post.
+ * Up to three drafts: each one that runs long / short or hard-codes a fact is sent back
+ * with the specific problem. Stops early near WP Engine's 60s request limit and returns
+ * the best draft, with a warning if it still isn't clean.
+ * Returns [value, preview, length, max, warning] or a WP_Error.
+ */
+function bp_seo_ai_write( string $field, WP_Post $post, string $title = '', string $body = '', string $other = '' ) {
+	if ( ! bp_seo_ai_available() ) return new WP_Error('no_api_key', 'No Anthropic API key configured.');
+
+	$ctx      = bp_seo_post_ctx($post, $title);
+	$vals     = bp_seo_token_values($ctx);
+	$messages = [[ 'role' => 'user', 'content' => bp_seo_ai_prompt( $field, $post, $ctx, $vals, bp_seo_page_text($post, $body), $other ) ]];
+	$start    = time();
+	$best     = null;
+
+	for ( $try = 0; $try < 3; $try++ ) {
+		$reply = bp_seo_ai_request($messages);
+		if ( is_wp_error($reply) ) {
+			if ( $best ) break;
+			return $reply;
+		}
+		$raw      = bp_seo_ai_clean($reply, $field);
+		$problems = bp_seo_ai_problems($field, $raw, $ctx, $vals);
+		[ $plain, $len ] = bp_seo_plain($raw, $ctx);
+		$score    = count($problems) * 1000 + max(0, $len - bp_seo_ai_limits($field)['max']);
+		if ( ! $best || $score < $best['score'] ) $best = compact('raw', 'plain', 'len', 'problems', 'score');
+
+		if ( ! $problems || time() - $start > 35 ) break;
+		$messages[] = [ 'role' => 'assistant', 'content' => $raw ];
+		$messages[] = [ 'role' => 'user', 'content' => "Revise it:\n- " . implode("\n- ", $problems) . "\nOutput ONLY the revised line." ];
+	}
+
+	return [
+		'value'   => $best['raw'],
+		'preview' => $best['plain'],
+		'length'  => $best['len'],
+		'max'     => bp_seo_ai_limits($field)['max'],
+		'warning' => implode(' ', $best['problems']),
+	];
+}
+
+add_action('wp_ajax_bp_seo_ai_generate', function() {
+	check_ajax_referer('bp_seo_ai', 'nonce');
+
+	$id   = isset($_POST['post_id']) ? (int) $_POST['post_id'] : 0;
+	$post = $id ? get_post($id) : null;
+	if ( ! $post || ! current_user_can('edit_post', $id) ) {
+		wp_send_json_error(['message' => 'Not authorized.'], 403);
+	}
+
+	$field = ( $_POST['field'] ?? '' ) === 'desc' ? 'desc' : 'title';
+	$out   = bp_seo_ai_write(
+		$field,
+		$post,
+		sanitize_text_field( wp_unslash( $_POST['title'] ?? '' ) ),
+		(string) wp_unslash( $_POST['content'] ?? '' ),   // editor HTML — only ever stripped to text for the prompt
+		sanitize_textarea_field( wp_unslash( $_POST['other'] ?? '' ) )
+	);
+	if ( is_wp_error($out) ) wp_send_json_error(['message' => $out->get_error_message()], 500);
+	wp_send_json_success($out);
+});
+
+/**
+ * Live "52 / 60" counters (rendered length — tokens swapped for this post's values)
+ * and the ✨ button handler. The counters run even without an API key.
+ */
+function bp_seo_ai_script( $post ) {
+	$vals = bp_seo_token_values( bp_seo_post_ctx($post) );
+	?>
+	<script>
+	(function(){
+		var VALS = <?php echo wp_json_encode($vals); ?>, NONCE = '<?php echo esc_js( wp_create_nonce('bp_seo_ai') ); ?>', POST_ID = <?php echo (int) $post->ID; ?>;
+
+		function rendered(f){
+			var s = f.value || f.placeholder || '', t = document.getElementById('title');
+			Object.keys(VALS).forEach(function(k){
+				var v = ( k === '%%title%%' && t && t.value ) ? t.value : VALS[k];
+				s = s.split(k).join(v);
+			});
+			return s.replace(/%%[a-z_]+%%/g, '').replace(/\s+/g, ' ').trim();
+		}
+		function count(){
+			document.querySelectorAll('.bp-seo-count').forEach(function(c){
+				var f = document.getElementById(c.dataset.for), max = +c.dataset.max;
+				if ( ! f ) return;
+				var text = rendered(f), n = Array.from(text).length;
+				c.textContent = n + ' / ' + max;
+				c.title = 'Characters as Google sees it (tokens filled in)';
+				c.classList.toggle('is-over', n > max);
+
+				// Live "Google sees:" line under the field (hidden via :empty when there's nothing to show).
+				var note = document.getElementById(c.dataset.for + '_note');
+				if ( ! note ) return;
+				note.textContent = '';
+				if ( text ) {
+					var strong = document.createElement('b');
+					strong.textContent = text;
+					note.append('Google sees: ', strong);
+				}
+			});
+		}
+		document.addEventListener('input', function(e){
+			if ( e.target.id === 'bp_seo_title' || e.target.id === 'bp_seo_desc' || e.target.id === 'title' ) count();
+			// An AI warning is about that draft — clear it once the field is hand-edited.
+			if ( e.isTrusted && ( e.target.id === 'bp_seo_title' || e.target.id === 'bp_seo_desc' ) ) {
+				var w = document.getElementById(e.target.id + '_warn');
+				if ( w ) w.textContent = '';
+			}
+		});
+		count();
+
+		function editorBody(){
+			var ed = window.tinymce && tinymce.get('content');
+			if ( ed && ! ed.isHidden() ) return ed.getContent();
+			var ta = document.getElementById('content');
+			return ta ? ta.value : '';
+		}
+
+		document.addEventListener('click', function(e){
+			var b = e.target.closest ? e.target.closest('.bp-seo-ai') : null;
+			if ( ! b || b.disabled ) return;
+			e.preventDefault();
+			var f = document.getElementById(b.dataset.target), o = document.getElementById(b.dataset.other),
+				warn = document.getElementById(b.dataset.target + '_warn'), t = document.getElementById('title');
+
+			var form = new FormData();
+			form.append('action', 'bp_seo_ai_generate');
+			form.append('nonce', NONCE);
+			form.append('post_id', POST_ID);
+			form.append('field', b.dataset.field);
+			form.append('title', t ? t.value : '');
+			form.append('content', editorBody());
+			form.append('other', o ? o.value : '');
+
+			var label = b.textContent;
+			b.textContent = '⏳ Writing…';
+			b.disabled = true;
+			fetch(ajaxurl, { method: 'POST', body: form, credentials: 'same-origin' })
+				.then(function(r){ return r.json(); })
+				.then(function(json){
+					if ( ! json.success ) throw new Error(json.data && json.data.message ? json.data.message : 'Generation failed');
+					f.value = json.data.value;
+					f.dispatchEvent(new Event('input', { bubbles: true }));   // refreshes counter + "Google sees"
+					warn.textContent = json.data.warning ? '⚠ ' + json.data.warning + ' Edit before saving.' : '';
+					note.classList.toggle('is-warn', !! json.data.warning);
+				})
+				.catch(function(err){ alert('AI SEO writer failed: ' + err.message); })
+				.finally(function(){ b.textContent = label; b.disabled = false; });
+		});
+	})();
 	</script>
 	<?php
 }

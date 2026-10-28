@@ -438,40 +438,6 @@ function site_pulse_ajax_agency_reply_review(): void {
 # AJAX — push a review to the client's site as a Testimonial CPT
 --------------------------------------------------------------*/
 
-/**
- * Is a Google reviewer photo a REAL uploaded picture (vs Google's monogram default — a colored circle
- * with an initial)? We can't tell reliably from the URL (the size directive is stripped), so we fetch the
- * image and count distinct (quantized) colors: a monogram resolves to a handful of buckets, a real photo
- * to many. Returns false when it can't verify, so only confirmed real photos are ever sent.
- */
-function sp_agency_photo_is_real( string $url ): bool {
-	if ( '' === $url || stripos( $url, 'default-user' ) !== false ) return false;
-
-	$res = wp_remote_get( $url, [ 'timeout' => 10 ] );
-	if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) return false;
-
-	$bytes = (string) wp_remote_retrieve_body( $res );
-	if ( '' === $bytes || ! function_exists( 'imagecreatefromstring' ) ) return false;
-
-	$img = @imagecreatefromstring( $bytes );
-	if ( ! $img ) return false;
-
-	$w = imagesx( $img );
-	$h = imagesy( $img );
-	$step = max( 1, (int) floor( min( $w, $h ) / 24 ) ); // ~24x24 sample grid
-	$buckets = [];
-	for ( $x = 0; $x < $w; $x += $step ) {
-		for ( $y = 0; $y < $h; $y += $step ) {
-			$rgb = imagecolorat( $img, $x, $y );
-			// Quantize to 4 bits/channel so anti-aliasing noise doesn't inflate the count.
-			$buckets[ ( ( $rgb >> 20 ) & 0xF ) . '-' . ( ( $rgb >> 12 ) & 0xF ) . '-' . ( ( $rgb >> 4 ) & 0xF ) ] = true;
-			if ( count( $buckets ) >= 16 ) { imagedestroy( $img ); return true; } // clearly a real photo
-		}
-	}
-	imagedestroy( $img );
-	return count( $buckets ) >= 16;
-}
-
 /** Save a base64 data-URI image to the hub's uploads and return its URL (or '' on failure). Used for the
  *  manually-uploaded profile photo on a Facebook review, so the client site can sideload it. */
 function sp_agency_save_fb_photo( string $data_uri ): string {

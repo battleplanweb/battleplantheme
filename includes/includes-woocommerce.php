@@ -5,9 +5,7 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Functions to extend WordPress
-# Import Advanced Custom Fields
 # Basic Theme Set Up
-
 --------------------------------------------------------------*/
 
 if ( ! defined( '_BP_SET_ALT_TEXT' ) ) { define( '_BP_SET_ALT_TEXT', 'false' ); }
@@ -25,15 +23,6 @@ function battleplan_getCartNum($atts, $content = null ) {
 		return do_shortcode($printCart);
 	endif;
 }
-/*
-add_filter('woocommerce_product_add_to_cart_text', function($text, $product){
-	return do_shortcode('[get-icon type="cart"]&nbsp;&nbsp;'. $text);
-}, 10, 2);
-
-add_filter('woocommerce_product_single_add_to_cart_text', function($text){
-	return do_shortcode('[get-icon type="cart"]&nbsp;&nbsp;'. $text);
-}, 10, 1);
-*/
 
 add_filter('woocommerce_add_to_cart_fragments', function($frags){
 	$qty = WC()->cart ? WC()->cart->get_cart_contents_count() : 0;
@@ -46,28 +35,6 @@ add_filter('woocommerce_add_to_cart_fragments', function($frags){
 	$frags['a.header-cart-link'] = $html;
 	return $frags; // MUST return array
 });
-
-
-// Change labels on woocommerce 'product' post type
-function battleplan_woo_labels($single, $plural){
-   $arr = array(
-      'name' => $plural,
-      'singular_name' => $single,
-      'menu_name' => $plural,
-      'add_new' => 'Add '.$single,
-      'add_new_item' => 'Add New '.$single,
-      'edit' => 'Edit',
-      'edit_item' => 'Edit '.$single,
-      'new_item' => 'New '.$single,
-      'view' => 'View '.$plural,
-      'view_item' => 'View '.$single,
-      'search_items' => 'Search '.$plural,
-      'not_found' => 'No '.$plural.' Found',
-      'not_found_in_trash' => 'No '.$plural.' Found in Trash',
-      'parent' => 'Parent '.$single
-   );
-   return $arr;
-}
 
 /*--------------------------------------------------------------
 # Basic Theme Set Up

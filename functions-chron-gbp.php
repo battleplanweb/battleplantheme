@@ -1,8 +1,6 @@
 <?php
 /* Battle Plan Web Design Functions: Chron A — GBP + CI Sync */
 
-require_once get_template_directory() . '/vendor/autoload.php';
-
 function bp_run_chron_gbp(bool $force = false): void {
 
 	$google_info  = get_option('bp_gbp_update') ?: [];
@@ -13,24 +11,15 @@ function bp_run_chron_gbp(bool $force = false): void {
 	if (!empty($placeIDs)) {
 
 // 1) Decide whether to hit the Places API based on review count thresholds
-		$today      = strtotime(date("F j, Y"));
-		$daysSince  = ($today - (int)($google_info['date'] ?? 0)) / 86400;
-		$reviewCount = (int)($google_info['google-reviews'] ?? 0);
+		$today     = strtotime('today');
+		$daysSince = ($today - (int)($google_info['date'] ?? 0)) / 86400;
 
-		// Sync cadence in days, by review count — highest matching threshold wins.
-		// The loop used to fall through every row without breaking, so the SMALLEST
-		// matching threshold always won and every site with 50+ reviews synced on the
-		// same 6-day cadence no matter its size. Values are floored at 6 days on
-		// purpose: each Place ID fetched is one Place Details *Enterprise* call
-		// ($20/1,000 — the rating/userRatingCount/phone fields force that tier), so
-		// cadence is the only real cost lever in this function. Do not lower these
-		// without checking the Places API spend first.
-		$thresholds = [1000 => 6, 500 => 6, 250 => 7, 125 => 7, 75 => 7, 50 => 7];
-		$days       = 7;
-
-		foreach ($thresholds as $limit => $val) {
-			if ($reviewCount >= $limit) { $days = $val; break; }
-		}
+		// Sync cadence in days, by review count: 6 days at 500+ reviews, otherwise 7. Floored at
+		// 6 days on purpose: each Place ID fetched is one Place Details *Enterprise* call
+		// ($20/1,000 — the rating/userRatingCount/phone fields force that tier), so cadence is
+		// the only real cost lever in this function. Do not lower this without checking the
+		// Places API spend first.
+		$days = (int)($google_info['google-reviews'] ?? 0) >= 500 ? 6 : 7;
 
 		// Back-off after a fully-failed run. Because a failed run deliberately no longer
 		// stamps $google_info['date'], $daysSince stays huge forever once a site breaks —
@@ -49,12 +38,8 @@ function bp_run_chron_gbp(bool $force = false): void {
 			$fetch_errors      = [];                                       // collected errors → one deduped alert, not one-per-PID
 			$old_review_total  = (int) ($google_info['google-reviews'] ?? 0); // last-known-good total, for drop detection
 
+			// (ci_normalize_pids() has already dropped anything too short to be a Place ID)
 			foreach ($placeIDs as $placeID) {
-				if (strlen($placeID) <= 10) {
-					$fetch_errors[] = "PID '$placeID' — skipped (too short / not a valid Place ID)";
-					continue;
-				}
-
 				$fields = 'displayName,formattedAddress,addressComponents,location,regularOpeningHours,currentOpeningHours,internationalPhoneNumber,rating,userRatingCount,utcOffsetMinutes';
 				$url    = 'https://places.googleapis.com/v1/places/' . rawurlencode($placeID) . '?fields=' . urlencode($fields) . '&key=' . _PLACES_API;
 
@@ -113,7 +98,7 @@ function bp_run_chron_gbp(bool $force = false): void {
 					$localDigits = $m[2] . '-' . $m[3];
 					$google_info[$placeID]['area']  = $areaDigits;
 					$google_info[$placeID]['phone'] = $localDigits;
-					if (str_contains((string)$customer_info['area-after'], '.')) {
+					if (str_contains((string)($customer_info['area-after'] ?? ''), '.')) {
 						$google_info[$placeID]['phone'] = str_replace('-', '.', $google_info[$placeID]['phone']);
 					}
 					$google_info[$placeID]['phone-format'] =
@@ -166,21 +151,7 @@ function bp_run_chron_gbp(bool $force = false): void {
 				$prem  = trim((string)$comp['premise']);
 				$floor = trim((string)$comp['floor']);
 
-				$normalizeSubpremise = function(string $s): string {
-					$s = preg_replace('/\s+/', ' ', trim($s));
-					if ($s === '') return '';
-					if (preg_match('/^#\s*\S+$/', $s)) return '#' . preg_replace('/^#\s*/', '', $s);
-					if (preg_match('/^[0-9]+[A-Za-z]?$/', $s)) return '#' . $s;
-					if (preg_match('/^(suite|ste|unit|apt|apartment|bldg)\b[\s\-#]*([\w\-# ]+)$/i', $s, $m)) {
-						$label = ucfirst(strtolower($m[1]));
-						$rest  = preg_replace('/\s+/', ' ', trim($m[2]));
-						if (preg_match('/^[0-9]+[A-Za-z]?$/', $rest)) $rest = '#' . $rest;
-						return $label . ' ' . $rest;
-					}
-					return $s;
-				};
-
-				$subNorm = $normalizeSubpremise($sub);
+				$subNorm = bp_gbp_normalize_subpremise($sub);
 				$line1   = $base;
 				if ($subNorm !== '') $line1 .= ' ' . $subNorm;
 				if ($prem !== '')    $line1 .= ', ' . $prem;
@@ -189,7 +160,7 @@ function bp_run_chron_gbp(bool $force = false): void {
 
 				$google_info[$placeID]['street']       = $line1;
 				$google_info[$placeID]['street_line1'] = $base;
-				$google_info[$placeID]['street_line2'] = trim(($prem ? $prem : '') . ($floor ? ($prem ? ', ' : '') . $floor : ''));
+				$google_info[$placeID]['street_line2'] = implode(', ', array_filter([$prem, $floor]));
 				$google_info[$placeID]['suite']        = $subNorm;
 				$google_info[$placeID]['city']         = $comp['city'];
 				$google_info[$placeID]['state-abbr']   = $comp['state_abbr'];
@@ -245,22 +216,30 @@ function bp_run_chron_gbp(bool $force = false): void {
 // 4) Merge GBP into CI
 	$primePID                   = $placeIDs[0] ?? null;
 	$gbp_primary                = $primePID ? ($google_info[$primePID] ?? []) : [];
-	list($ci_new, $merge_diffs) = ci_merge_gbp_into_ci($customer_info, $gbp_primary, $pid_sync);
+	[$ci_new]                   = ci_merge_gbp_into_ci($customer_info, $gbp_primary, $pid_sync);
 
 // 5) Finalize derived fields (phone-format, default-loc) and prune trivial empties
 	ci_finalize_fields($ci_new);
 
 // 6) Build schema from final CI
-	$schema = ci_build_schema($ci_new, $gbp_primary, $google_info, [
-		'include_aggregate_rating' => true,
-		'min_rating_value'         => 4.0,
-	]);
-	$ci_new['schema'] = $schema;
+	$ci_new['schema'] = ci_build_schema($ci_new, $gbp_primary, $google_info);
 
 // 7) Save CI if changed
-	if ($ci_new !== $customer_info) {
-		update_customer_info($ci_new);
+	if ($ci_new !== $customer_info) update_customer_info($ci_new);
+}
+
+/** Tidy a GBP subpremise into "#12", "Suite #200", "Unit B4" style. */
+function bp_gbp_normalize_subpremise(string $s): string {
+	$s = preg_replace('/\s+/', ' ', trim($s));
+	if ($s === '') return '';
+	if (preg_match('/^#\s*\S+$/', $s)) return '#' . preg_replace('/^#\s*/', '', $s);
+	if (preg_match('/^[0-9]+[A-Za-z]?$/', $s)) return '#' . $s;
+	if (preg_match('/^(suite|ste|unit|apt|apartment|bldg)\b[\s\-#]*([\w\-# ]+)$/i', $s, $m)) {
+		$rest = preg_replace('/\s+/', ' ', trim($m[2]));
+		if (preg_match('/^[0-9]+[A-Za-z]?$/', $rest)) $rest = '#' . $rest;
+		return ucfirst(strtolower($m[1])) . ' ' . $rest;
 	}
+	return $s;
 }
 
 

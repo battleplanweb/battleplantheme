@@ -122,6 +122,18 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 		$out .= '</section>';
 	}
 
+	// Order notes: optional, for the things a shop needs to be told ("clockwise coil,
+	// please"). Stored on the order's customer_note and shown to staff on the order.
+	$out .= '<section class="store-checkout-section">';
+	$out .= '<h2>Order notes <span class="store-field-note">(optional)</span></h2>';
+	$out .= '<label class="store-field"><span class="screen-reader-text">Order notes</span>';
+	$out .= '<textarea id="sp-co-note" rows="3" maxlength="1000" placeholder="Anything we should know about your order?"></textarea>';
+	$out .= '</label>';
+	$out .= '</section>';
+
+	// Terms the basket's products require (Extras). '' when none, or when the feature is off.
+	if ( function_exists( 'sp_store_agreements_checkout_html' ) ) $out .= sp_store_agreements_checkout_html( $lines );
+
 	$out .= '<section class="store-checkout-section">';
 	$out .= '<h2>Payment</h2>';
 	$out .= '<div class="store-pay-mount" data-store-pay></div>';
@@ -143,6 +155,17 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 
 /** The shipping choices, as radios. Re-rendered by the quote endpoint. */
 function sp_store_shipping_choices_html( array $quote ): string {
+	// Distance pricing: one figure, worked out from the address — nothing to choose.
+	if ( ! empty( $quote['shipping_by_distance'] ) ) {
+		if ( empty( $quote['shipping_rates'] ) ) {
+			return '<p class="store-field-note" data-store-ship-note>' . esc_html( (string) $quote['shipping_note'] ) . '</p>';
+		}
+		$rate = $quote['shipping_rates'][0];
+		return '<div class="store-ship-option is-active"><input type="hidden" name="sp_ship_rate" value="-1">'
+			. '<span class="store-ship-name">' . esc_html( $rate['name'] ) . '</span>'
+			. '<span class="store-ship-price">' . sp_store_money( (int) $rate['amount_cents'] ) . '</span></div>';
+	}
+
 	if ( empty( $quote['shipping_rates'] ) ) {
 		return '<p class="store-field-note">No delivery options are set up for this order. Please contact us.</p>';
 	}
@@ -291,8 +314,13 @@ function sp_store_ajax_quote(): void {
 	$lines = $cart ? sp_store_cart_lines( (int) $cart['id'] ) : [];
 	if ( ! $lines ) wp_send_json_error( [ 'message' => 'Your cart is empty.' ] );
 
+	// The address as typed so far, unvalidated: distance pricing re-prices as soon as it
+	// is complete enough to route to, before the shopper presses anything.
+	$partial = sp_store_clean_address( wp_unslash( (array) ( $_POST['address'] ?? [] ) ) )['address'];
+
 	$quote = sp_store_quote( $lines, [
 		'shipping_rate_id' => (int) ( $_POST['shipping_rate_id'] ?? 0 ),
+		'address'          => $partial,
 	] );
 
 	wp_send_json_success( [
@@ -323,20 +351,40 @@ function sp_store_ajax_place_order(): void {
 	$email = sanitize_email( (string) ( $_POST['email'] ?? '' ) );
 	if ( ! is_email( $email ) ) wp_send_json_error( [ 'message' => 'Please enter a valid email address.' ] );
 
-	$rate_id = (int) ( $_POST['shipping_rate_id'] ?? 0 );
-	$quote   = sp_store_quote( $lines, [ 'shipping_rate_id' => $rate_id ] );
+	// A renewing membership has to go through on its own (see sp_member_checkout_problem).
+	if ( function_exists( 'sp_member_checkout_problem' ) ) {
+		$problem = sp_member_checkout_problem( $lines );
+		if ( $problem !== '' ) wp_send_json_error( [ 'message' => $problem ] );
+	}
 
+	$rate_id = (int) ( $_POST['shipping_rate_id'] ?? 0 );
+
+	// The address is validated BEFORE pricing, because with distance shipping the
+	// address is part of what the order costs.
 	$address = [];
-	if ( $quote['needs_shipping'] ) {
-		$clean = sp_store_clean_address( (array) ( $_POST['address'] ?? [] ) );
+	if ( sp_store_lines_need_shipping( $lines ) ) {
+		$clean = sp_store_clean_address( wp_unslash( (array) ( $_POST['address'] ?? [] ) ) );
 		if ( $clean['errors'] ) wp_send_json_error( [ 'message' => implode( ' ', $clean['errors'] ) ] );
 		$address = $clean['address'];
+	}
 
-		// A rate id that is no longer available — the basket changed in another tab,
-		// or the order dropped below a free-shipping threshold.
-		if ( ! $quote['shipping_rate_id'] ) {
-			wp_send_json_error( [ 'message' => 'Please choose a delivery method.' ] );
-		}
+	$quote = sp_store_quote( $lines, [ 'shipping_rate_id' => $rate_id, 'address' => $address ] );
+
+	// A rate id that is no longer available — the basket changed in another tab, the
+	// order dropped below a free-shipping threshold, or no distance price could be found.
+	if ( $quote['needs_shipping'] && ! $quote['shipping_rate_id'] ) {
+		wp_send_json_error( [ 'message' => $quote['shipping_note'] !== '' ? $quote['shipping_note'] : 'Please choose a delivery method.' ] );
+	}
+
+	// Agreements are checked against what the BASKET needs, not what the page sent.
+	$agreed = [ 'list' => [], 'name' => '' ];
+	if ( function_exists( 'sp_store_agreements_check' ) ) {
+		$agreed = sp_store_agreements_check(
+			$lines,
+			array_map( 'intval', (array) ( $_POST['agree'] ?? [] ) ),
+			(string) wp_unslash( $_POST['sign_name'] ?? '' )
+		);
+		if ( is_wp_error( $agreed ) ) wp_send_json_error( [ 'message' => $agreed->get_error_message() ] );
 	}
 
 	sp_store_set_cart_email( (int) $cart['id'], $email );
@@ -362,6 +410,16 @@ function sp_store_ajax_place_order(): void {
 		foreach ( $reserved as $vid => $qty ) sp_store_release_stock( $vid, $qty );
 		wp_send_json_error( [ 'message' => 'We could not start your order. Please try again.' ] );
 	}
+
+	$note = trim( sanitize_textarea_field( wp_unslash( (string) ( $_POST['note'] ?? '' ) ) ) );
+	if ( $note !== '' ) {
+		global $wpdb;
+		$wpdb->update( sp_store_table( 'orders' ), [ 'customer_note' => mb_substr( $note, 0, 1000 ) ], [ 'id' => $order_id ] );
+	}
+
+	// The snapshot is written now, against the pending order, so it exists before any
+	// money moves — an order is never paid without its agreements on record.
+	if ( function_exists( 'sp_store_agreements_record' ) ) sp_store_agreements_record( $order_id, $agreed );
 
 	$payment = sp_store_begin_payment( $order_id );
 	if ( is_wp_error( $payment ) ) {

@@ -14,16 +14,29 @@
 # CSS Variables
 --------------------------------------------- */
 :root {
-  --calendar-border-width:                                  1px;
-  --calendar-border-style:                                  solid;
-  --calendar-border-color:                                  rgba(0, 0, 0, 0.2);
-  --calendar-background:                                    var(--white);
-  --calendar-background-today:                              rgba(0, 0, 0, 0.1);
-  --calendar-background-empty:                              rgba(0, 0, 0, 0.025);
-  --calendar-title-color:                                   var(--darkest-grey);
-  --calendar-title-size:                                    var(--font-size-h6);
-  --calendar-day-color:                                     var(--darkest-grey);
-  --calendar-day-today-color:                               var(--darkest-grey);
+	--calendar-border-width:                                   1px;
+	--calendar-border-style:                                   solid;
+	--calendar-border-color:                                   rgba(0, 0, 0, 0.2);
+	--calendar-background:                                     var(--white);
+
+	--calendar-title-color:                                    var(--text-color);
+	--calendar-title-size:                                     var(--font-size-h6);
+
+	--calendar-day-color:                                      var(--text-color);
+	--calendar-day-background:                                 var(--calendar-background);
+
+	--calendar-day-color-today:                                var(--calendar-day-color);
+	--calendar-day-background-today:                           var(--calendar-day-background);
+	--calendar-day-outline-today:                              1px solid var(--calendar-day-color-today);
+
+	--calendar-day-color-event:                                var(--calendar-day-color);
+	--calendar-day-background-event:                           var(--calendar-day-background);
+	--calendar-day-outline-event:                              2px solid var(--calendar-day-color-event);
+
+	--calendar-day-background-empty:                           var(--calendar-day-background);
+
+	--calendar-link-color:                                     var(--text-color);
+	--calendar-link-color-hover:                               var(--text-color);
 }
 
 
@@ -61,6 +74,10 @@ h2.month-divider {
 	justify-content:                                           center;
 }
 
+#calendar .body {
+	background:                                                var(--calendar-background);
+}
+
 #calendar .titles .title,
 #calendar .body .day {
 	position:                                                  relative;
@@ -73,7 +90,7 @@ h2.month-divider {
 	aspect-ratio:                                              20/15;
 	border-top:                                                var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
 	border-left:                                               var(--calendar-border-width) var(--calendar-border-style) var(--calendar-border-color);
-	background:                                                var(--calendar-background);
+	background:                                                var(--calendar-day-background);
 	color:                                                     var(--calendar-day-color);
 }
 
@@ -86,12 +103,23 @@ h2.month-divider {
 }
 
 #calendar .body .day.current-day {
-	background:                                                var(--calendar-background-today);
-	color:                                                     var(--calendar-day-today-color);
+	background:                                                var(--calendar-day-background-today);
+	color:                                                     var(--calendar-day-color-today);
+	border:                                                    var(--calendar-day-outline-today);
+	width:                                                     calc(14.28% - 2px);
+	margin:                                                    1px;
+}
+
+#calendar .body .day.event-day {
+	background:                                                var(--calendar-day-background-event);
+	color:                                                     var(--calendar-day-color-event);
+	border:                                                    var(--calendar-day-outline-event);
+	width:                                                     calc(14.28% - 2px);
+	margin:                                                    1px;
 }
 
 #calendar .body .day.day-empty {
-	background:                                                var(--calendar-background-empty);
+	background:                                                var(--calendar-day-background-empty);
 }
 
 #calendar .body .day .date {
@@ -149,6 +177,14 @@ h2.month-divider {
 
 #calendar .body .event a {
 	text-decoration:                                           none;
+	color:                                                     var(--calendar-link-color);
+}
+
+#calendar .body .event a:hover,
+#calendar .body .event a:hover,
+#calendar .body .event a:hover {
+	text-decoration:                                           none;
+	color:                                                     var(--calendar-link-color-hover);
 }
 
 #calendar .body .event img {

@@ -44,7 +44,7 @@ fieldset.hidden-fields-container {
 	position:                                                  relative;
 	display:                                                   grid;
 	grid-template-columns:                                     max-content 1fr;
-	gap:                                                       0.15em var(--measure-base);
+	gap:                                                       0.35em var(--measure-base);
 }
 
 body.form-stacked .bp-form form .form-input,
@@ -125,7 +125,7 @@ body.form-stacked .bp-form form label,
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) {
 	position:                                                  relative;
 	grid-template-columns:                                     1fr !important;   /* override the inline label column set by formLabelWidth() */
-	margin-top:                                                10px;             /* room for the floated label, which pokes ~10px above the field — selects/dates float it from the start. On every field so side-by-side fields stay level */
+	margin-top:                                                10px;             /* room for the floated label, which pokes ~10px above the field — dates (and selects with no empty first option) float it from the start. On every field so side-by-side fields stay level */
 }
 
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) > label {
@@ -148,10 +148,12 @@ body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input
 	font-size:                                                 calc(var(--font-size-text) * 0.8);
 }
 
-/* Float up: on focus, when the field holds a value, or for selects (always) */
+/* Float up: on focus, when the field holds a value, or for selects once a real option is picked.
+   (select is excluded from :placeholder-shown — a select never matches it, so it would always float.
+   A select with no empty "first" option always has a real value checked, so it still floats from the start.) */
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):focus-within > label,
-body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(.bp-control:not(:placeholder-shown)) > label,
-body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(select) > label {
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(.bp-control:not(select):not(:placeholder-shown)) > label,
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside):has(select option:checked:not([value=""])) > label {
 	top:                                                       0;
 	transform:                                                 translateY(-60%) scale(0.8);
 	color:                                                     var(--label-color-focus);
@@ -164,6 +166,18 @@ body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input
 body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) :is(input, textarea) {
 	--input-padding:                                           6px 7px 0px;
 	--input-padding-focus:                                     6px 7px 0px;
+}
+
+/* Select still on its empty "— select —" option: hide that text so the label reads as the placeholder.
+   Options get their colour back explicitly — some browsers paint the open list in the select's colour.
+   The list only opens while the select is focused (painted on --input-background-focus), so pair it
+   with --input-color-focus — the resting --input-color can match the focus background (Elevate: cream on cream). */
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) select:has(option:checked[value=""]):not(:focus) {
+	color:                                                     transparent;
+}
+
+body:not(.form-label-outside) .bp-form:not(.form-label-outside) form .form-input:not(.width-none):not(.label-pos-after):not(.form-label-outside) select option {
+	color:                                                     var(--input-color-focus);
 }
 
 /*--------------------------------------------------------------
@@ -625,8 +639,60 @@ input[type="checkbox"]:checked::after,
 --------------------------------------------------------------*/
 
 .application .flex {
-	border-bottom:                                             1px solid var(--black);
+	/*border-bottom:                                             1px solid var(--black-low);*/
 	padding:                                                   0 0 var(--measure-small);
+}
+
+/* [bp-employment-form]: years field sized like a Name/Email/Phone column, experience checkboxes on an even grid */
+.application .application-experience .input-years-exp {
+	max-width:                                                 260px;
+}
+
+.application .application-experience .bp-list {
+	display:                                                   grid;
+	grid-template-columns:                                     repeat(3, minmax(0, 1fr));
+	gap:                                                       8px 20px;
+}
+
+.application .application-experience .bp-list-item {
+	margin:                                                    0;
+}
+
+/* keep a long option's text beside its box when the column narrows, instead of dropping under it */
+.bp-form.application form .application-experience .bp-list-item label {
+	display:                                                   flex;
+	align-items:                                               center;
+}
+
+/* flex does the centering, so drop the global inline-flow translateY nudge */
+.bp-form.application form .application-experience .bp-list-item input {
+	flex-shrink:                                               0;
+	transform:                                                 none;
+}
+
+/* [bp-employment-form]: one screening question per row — question left, answers right */
+.application .application-screening {
+	gap:                                                       0 !important;
+}
+
+.application .application-screening .col + .col {
+	/*border-top:                                                1px solid var(--black-low);*/
+}
+
+.bp-form.application form .application-screening .form-input {
+	grid-template-columns:                                     1fr auto !important;
+	align-items:                                               center;
+	gap:                                                       0 20px;
+	padding:                                                   10px 0;
+}
+
+.bp-form.application form .application-screening .form-input > label {
+	text-align:                                                left;
+	align-self:                                                center;
+}
+
+.application .application-screening .bp-list-item:last-child {
+	margin-right:                                              0;
 }
 
 /* outside-label fields only — a floating label is positioned against the .form-input box, so
@@ -778,6 +844,24 @@ span.bp-spinner::before {
 	}
 
 	body .bp-form form label {
+		text-align:                                               center;
+	}
+
+	.application .application-experience .input-years-exp {
+		max-width:                                                none;
+	}
+
+	.application .application-experience .bp-list {
+		grid-template-columns:                                    repeat(2, minmax(0, 1fr));
+	}
+
+	.bp-form.application form .application-screening .form-input {
+		grid-template-columns:                                    1fr !important;
+		justify-items:                                            center;
+		gap:                                                      6px 0;
+	}
+
+	.bp-form.application form .application-screening .form-input > label {
 		text-align:                                               center;
 	}
 }

@@ -147,8 +147,8 @@ function sp_store_agreements_checkout_html( array $lines ): string {
 
 	if ( $sign ) {
 		$out .= '<div class="store-field-row">';
-		$out .= '<label class="store-field"><span>Type your full name as your signature</span><input type="text" id="sp-co-sign" autocomplete="name" required></label>';
-		$out .= '<label class="store-field"><span>Date</span><input type="text" value="' . esc_attr( wp_date( 'F j, Y' ) ) . '" readonly></label>';
+		$out .= sp_store_field( 'sp-co-sign', 'Type your full name as your signature', 'user-name', 'text', '<input type="text" id="sp-co-sign" autocomplete="name" placeholder=" " required>' );
+		$out .= sp_store_field( 'sp-co-sign-date', 'Date', 'user-date', 'text', '<input type="text" id="sp-co-sign-date" value="' . esc_attr( wp_date( 'F j, Y' ) ) . '" readonly>' );
 		$out .= '</div>';
 	}
 

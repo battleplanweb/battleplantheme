@@ -530,6 +530,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	overflow:                                                  hidden;
 	background:                                                var(--store-btn-bg);
 	max-width:                                                 100%;
+	transition:                                                var(--button-transition);
 }
 
 /* The caret is drawn here, on the wrapper, so its distance from the number and from
@@ -542,6 +543,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	align-items:                                               center;
 	border-right:                                              1px solid var(--white-low);
 	color:                                                     var(--store-btn-color);
+	transition:                                                var(--button-transition);
 }
 
 .store-buy-joined .store-qty-pick::after {
@@ -583,7 +585,19 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	background:                                                var(--white);
 }
 
-.store-buy-joined .store-add {
+/* All five states in one list, and not by accident: style-forms.css paints every
+   button's hover, focus and active from the --button-*-hover tokens with a selector
+   that scores (0,2,1), so a plain `.store-buy-joined .store-add` at (0,2,0) loses the
+   moment the cursor arrives. On this site that meant the pill shrank by 10px (the
+   site's --button-padding is 8px 32px, the pill needs 13px to match the select) and
+   the inner region grew its own 12px corners against the divider, splitting the one
+   pill into two shapes. Adding the states here makes these (0,3,0) and settles it.
+   Do not collapse this list back to a single selector. */
+.store-buy-joined .store-add,
+.store-buy-joined .store-add:hover,
+.store-buy-joined .store-add:focus,
+.store-buy-joined .store-add:active,
+.store-buy-joined .store-add.tab-focus {
 	flex:                                                      1;
 	display:                                                   flex;
 	flex-direction:                                            column;
@@ -605,7 +619,42 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	cursor:                                                    pointer;
 }
 
-.store-buy-joined .store-buy-pill:hover { opacity: .9; }
+/* The two halves of the pill do different things, so they light differently.
+
+   Over the button, the whole pill lights: that is the click target, and anywhere on
+   the pill that is not the select will add to the basket. Over the quantity, only the
+   quantity lights -- clicking there opens a dropdown and adds nothing, so promising a
+   whole-button press would be a lie. Hence :has() rather than a plain :hover on the
+   pill, which cannot tell which half the cursor is over.
+
+   A browser without :has() drops the first rule as invalid and keeps the second, so
+   the quantity side still responds and only the whole-pill lift is lost. */
+.store-buy-joined .store-buy-pill:has(.store-add:hover),
+.store-buy-joined .store-buy-pill:has(.store-add.tab-focus) {
+	background:                                                var(--store-btn-bg-hover);
+}
+
+.store-buy-joined .store-buy-pill:has(.store-add:hover) .store-add,
+.store-buy-joined .store-buy-pill:has(.store-add:hover) .store-qty-pick,
+.store-buy-joined .store-buy-pill:has(.store-add:hover) .store-qty,
+.store-buy-joined .store-buy-pill:has(.store-add.tab-focus) .store-add,
+.store-buy-joined .store-buy-pill:has(.store-add.tab-focus) .store-qty-pick,
+.store-buy-joined .store-buy-pill:has(.store-add.tab-focus) .store-qty {
+	color:                                                     var(--store-btn-color-hover);
+}
+
+/* Quantity side only. The pill's overflow:hidden clips this to the rounded left end,
+   so it reads as that half of the pill rather than a box sitting inside it. */
+.store-buy-joined .store-qty-pick:hover,
+.store-buy-joined .store-qty-pick:focus-within {
+	background:                                                var(--store-btn-bg-hover);
+	color:                                                     var(--store-btn-color-hover);
+}
+
+.store-buy-joined .store-qty-pick:hover .store-qty,
+.store-buy-joined .store-qty-pick:focus-within .store-qty {
+	color:                                                     var(--store-btn-color-hover);
+}
 
 .store-add-note {
 	font-size:                                                 12px;
@@ -897,12 +946,30 @@ body.store-drawer-open { overflow: hidden; }
 # only a hook for a site to grab; the paint comes from style-forms.css.
 --------------------------------------------------------------*/
 
-/* Doubled class so the quiet variant outweighs the framework button it modifies. */
-.store-btn.store-btn-secondary {
+/* Doubled class so the quiet variant outweighs the framework button it modifies --
+   and every state listed, because the framework's hover/focus/active selector scores
+   (0,2,1) and would otherwise fill this one solid the moment the cursor arrived,
+   taking the outline with it. See the note on .store-buy-joined .store-add. */
+.store-btn.store-btn-secondary,
+.store-btn.store-btn-secondary:hover,
+.store-btn.store-btn-secondary:focus,
+.store-btn.store-btn-secondary:active,
+.store-btn.store-btn-secondary.tab-focus {
 	background:                                                transparent;
 	color:                                                     var(--store-title-color);
 	box-shadow:                                                inset 0 0 0 1px currentColor;
 	text-shadow:                                               none;
+}
+
+/* Quiet at rest, solid on hover: the outline fills with the colour it was drawn in,
+   which keeps the variant recognisable instead of turning it into the primary button. */
+.store-btn.store-btn-secondary:hover,
+.store-btn.store-btn-secondary:focus,
+.store-btn.store-btn-secondary:active,
+.store-btn.store-btn-secondary.tab-focus {
+	background:                                                var(--store-title-color);
+	color:                                                     var(--store-card-bg);
+	box-shadow:                                                inset 0 0 0 1px var(--store-title-color);
 }
 
 .store-locked-teaser {
@@ -1237,42 +1304,39 @@ body.store-drawer-open { overflow: hidden; }
 	font-size:                                                 1.1rem;
 }
 
+/* Checkout fields are framework form fields (.form-input.store-field, built by
+   sp_store_field()), so the in-field floating label, field icon and padding all
+   come from style-forms.css. Only the store's own box look is set here. */
 .store-field {
-	display:                                                   block;
 	margin:                                                    0 0 14px;
 }
 
-.store-field > span {
-	display:                                                   block;
-	margin:                                                    0 0 5px;
-	font-size:                                                 14px;
-	font-weight:                                               600;
-}
-
-.store-field > span em {
-	font-weight:                                               400;
-	font-style:                                                normal;
-	color:                                                     var(--store-muted);
-}
-
 /* Descendant selectors because style-forms.css sizes every bare input in the
-   theme; a single-class rule here loses to it. */
+   theme; a single-class rule here loses to it. No padding or height here: the
+   floating label is placed for the framework's own field size, and sets the
+   padding itself, with room for the field icon. */
 .store-field input,
-.store-field select {
+.store-field select,
+.store-field textarea {
 	width:                                                     100%;
 	margin:                                                    0;
-	padding:                                                   12px 14px;
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--white);
 	font-size:                                                 16px;
 }
 
+.store-field textarea {
+	height:                                                    auto;
+	min-height:                                                96px;
+}
+
 /* 16px above is deliberate and must not be reduced: iOS Safari zooms the whole
    page in when a focused field's text is smaller than that. */
 
 .store-field input:focus,
-.store-field select:focus {
+.store-field select:focus,
+.store-field textarea:focus {
 	outline:                                                   2px solid var(--accent-color);
 	outline-offset:                                            1px;
 }

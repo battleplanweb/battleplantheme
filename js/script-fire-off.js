@@ -21,7 +21,6 @@ document.addEventListener("DOMContentLoaded", function () {	"use strict";
 		const resizeFunc = () => {
 			if (typeof widgetInit === 'function') { widgetInit(); }		
 			if (typeof centerSubNav === 'function') { centerSubNav(); }	
-			if (typeof formLabelWidth === 'function') { formLabelWidth(); }	
 			if (typeof screenResize === 'function') { screenResize(); }
 			if (typeof buildAccordion === 'function') { buildAccordion(); }	
 			if (typeof areWeOpenBanner === 'function') { areWeOpenBanner(0); }				

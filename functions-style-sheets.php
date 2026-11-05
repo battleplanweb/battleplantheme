@@ -166,13 +166,39 @@ function bp_dist_css_path($name) {
 	return file_exists($path) ? $path : '';
 }
 
+// battleplanweb gets every source file as its own <link> (not the dist/ bundles or inline blocks),
+// so DevTools names the real file + line of each rule. Same cascade order: critical (1) → deferred (8) → site (11).
+function bp_css_debug() {
+	return _USER_LOGIN === 'battleplanweb';
+}
+
+function bp_css_debug_link($id, $path, $uri) {
+	echo '<link rel="stylesheet" id="' . esc_attr($id) . '" href="' . esc_url($uri . '?ver=' . filemtime($path)) . '">' . "\n";
+}
+
 add_action('wp_head', function() {
-    if (is_admin() || !($path = bp_dist_css_path('core-critical'))) return;
+    if (is_admin()) return;
+
+    if (bp_css_debug()) :
+        foreach (bp_get_css_sources()['critical'] as $rel) :
+            if (file_exists($path = get_template_directory() . $rel)) bp_css_debug_link('bp-src-' . basename($rel, '.css'), $path, get_template_directory_uri() . $rel);
+        endforeach;
+        return;
+    endif;
+
+    if (!($path = bp_dist_css_path('core-critical'))) return;
 
     echo '<style id="battleplan-core-inline">' . file_get_contents($path) . '</style>';
 }, 1);
 
 add_action('wp_enqueue_scripts', function () {
+    if (bp_css_debug()) :
+        foreach (bp_get_css_sources()['deferred'] as $rel) :
+            if (file_exists($path = get_template_directory() . $rel)) wp_enqueue_style('bp-src-' . basename($rel, '.css'), get_template_directory_uri() . $rel, [], filemtime($path));
+        endforeach;
+        return;
+    endif;
+
     if (!($path = bp_dist_css_path('core-deferred'))) return;
 
     wp_enqueue_style('battleplan-deferred', get_stylesheet_directory_uri() . '/dist/' . basename($path), [], _BP_VERSION . '.' . filemtime($path));
@@ -192,7 +218,14 @@ add_action('wp_head', function() {
     // Modules can suppress the inline site CSS on their own screens (e.g. Site Pulse, which is
     // internal staff tooling that shouldn't inherit the client site's branding). This replaces the
     // old wp_dequeue_style('battleplan-site') hook, which no longer works now the CSS is inlined.
-    if (!apply_filters('bp_inline_site_css', true) || !($path = bp_dist_css_path('site'))) return;
+    if (!apply_filters('bp_inline_site_css', true)) return;
+
+    if (bp_css_debug() && file_exists($src = get_stylesheet_directory() . '/style-site.css')) :
+        bp_css_debug_link('bp-src-style-site', $src, get_stylesheet_directory_uri() . '/style-site.css');
+        return;
+    endif;
+
+    if (!($path = bp_dist_css_path('site'))) return;
 
     echo '<style id="battleplan-site-inline">' . file_get_contents($path) . '</style>' . "\n";
 }, 11);
@@ -238,6 +271,19 @@ add_filter('style_loader_tag', function($tag, $handle) {
 
 add_action('wp_footer', function () {
 	if (is_admin() || empty($GLOBALS['bp_inline_css_buffer'])) return;
+
+	if (bp_css_debug()) :
+		$roots = [realpath(get_stylesheet_directory()) => get_stylesheet_directory_uri(), realpath(get_template_directory()) => get_template_directory_uri()];
+		foreach ($GLOBALS['bp_inline_css_buffer'] as $path => $css) :
+			foreach ($roots as $dir => $uri) :
+				if (strpos($path, $dir . DIRECTORY_SEPARATOR) !== 0) continue;
+				bp_css_debug_link('bp-src-' . basename($path, '.css'), $path, $uri . str_replace('\\', '/', substr($path, strlen($dir))));
+				unset($GLOBALS['bp_inline_css_buffer'][$path]);
+				break;
+			endforeach;
+		endforeach;
+		if (empty($GLOBALS['bp_inline_css_buffer'])) return;
+	endif;
 
 	echo "<style id='bp-shortcode-css'>\n";
 

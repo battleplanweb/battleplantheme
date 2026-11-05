@@ -313,6 +313,71 @@ Common variables (each has a matching `--…-hover` that defaults to the base va
 
 Set only the ones you're changing; the rest inherit framework defaults. **Don't** write `a.button { background: … }` plus a separate `:hover` block — that bypasses the variable system and re-does work the framework already handles. (Note: it's `--button-border`, not `--butotn-border`.)
 
+#### `class="unique"` is the opt-out — use it only for things that are not buttons
+
+`style-forms.css` styles every bare `<button>` through `button:not(.unique)`, and every
+`<a class="button">`. Adding `unique` opts that control out of the whole variable system,
+so it keeps none of the site's font, padding, radius, border or hover. Reach for it only
+for controls that are not buttons in the visual sense — an icon close (×), a +/- stepper,
+a small underlined text action.
+
+A module that opts out and then re-declares `background`/`color`/`radius` for itself ends
+up matching nothing: it inherits none of `--button-font-family`, `--button-text-transform`,
+`--button-letter-spacing`, `--button-border` or `--button-box-shadow`, so on any site with
+a styled button it reads as foreign. The shop had exactly this bug until 2026-11-05 — the
+"Add to Cart", drawer "Checkout" and "Place order" buttons each re-implemented a subset of
+the button rule. The fix is always the same: drop `unique`, give links `class="button"`,
+and leave only layout (width, flex, disabled state) in the module's own stylesheet.
+
+#### Overriding a button? List the states, or it reverts under the cursor
+
+`style-forms.css` paints the resting button with a selector that scores **(0,1,1)**, but
+it paints `:hover`, `:focus`, `:active` and `.tab-focus` with one that scores **(0,2,1)**:
+
+```css
+button:not(.unique)        { padding: var(--button-padding); … }        /* (0,1,1) */
+button:not(.unique):hover  { padding: var(--button-padding-hover); … }  /* (0,2,1) */
+```
+
+So a two-class override like `.store-buy-joined .store-add` **(0,2,0)** wins at rest and
+loses the instant the cursor arrives — the button reverts to the framework's geometry
+mid-interaction. It is a nasty one to spot, because it looks right until you hover it.
+
+The hover rule re-declares the full set: `padding`, `border`, `border-radius`,
+`box-shadow`, `background`, `color`, `text-shadow`, `transform`, `letter-spacing` and
+more. Override any of those and you must list the states too:
+
+```css
+.store-buy-joined .store-add,
+.store-buy-joined .store-add:hover,
+.store-buy-joined .store-add:focus,
+.store-buy-joined .store-add:active,
+.store-buy-joined .store-add.tab-focus { … }   /* (0,3,0) — beats (0,2,1) */
+```
+
+Two real examples, both from 2026-11-05. The joined "Add to Cart" pill shrank 10px and
+grew 12px corners against its divider on hover, splitting one pill into two shapes; and
+the outline `.store-btn-secondary` dropped its border and filled solid, becoming the
+primary button. Neither used `!important` to fix it — adding the states is enough.
+
+### Short pages — the content has a minimum height, so the footer is never left mid-screen
+
+`style.css` makes `#page` a flex column with `min-height: 100dvh` and gives
+`#wrapper-content` `flex: 1 0 auto`. The effect is a floor under the content: it may not
+be shorter than the window less the masthead and the footer, so a thin page does not end
+with its footer stranded halfway up and a band of background beneath it.
+
+The footer is **not** pinned, fixed or sticky — `#colophon` stays `position: relative`
+and scrolls with the page. The flex column is only how the subtraction is done, since the
+browser knows the real masthead and colophon heights and a hardcoded number would drift
+out of step with the footer's design. A page already taller than the window is untouched,
+because the floor lands below its content height.
+
+Two consequences worth knowing:
+- `#page`'s direct children are flex items, so **margins between them no longer collapse**.
+- `100dvh`, not `100vh`: `vh` counts the space behind a phone's browser toolbars, which
+  would push the footer below the fold on exactly the short pages this is for.
+
 ### Styled lists — use the framework `.bullet` system, don't hand-roll list CSS
 
 The framework ships a bullet/icon-list system (in `style.css`). For a checkmark/icon list, add a base class + a glyph modifier to the `<ul>` — **do not** build `<li>` rows out of `[get-icon]` + `<span>` + custom flex CSS. One class swaps the marker; no per-item markup.

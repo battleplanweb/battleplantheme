@@ -837,6 +837,7 @@ function activatePanel(panelId) {
 	if (panelId === 'store-orders')               { initStoreOrders(); loadStoreOrders(); }
 	if (panelId === 'store-products')             { initStoreProducts(); loadStoreProducts(); }
 	if (panelId === 'store-customers')            { initStoreCustomers(); loadStoreCustomers(); }
+	if (panelId === 'store-categories')           { initStoreCategories(); loadStoreCategories(); }
 	if (panelId === 'store-inventory')            { initStoreInventory(); loadStoreInventory(); }
 	if (panelId === 'booking-calendar')           { initBookingCalendar(); loadBookingCalendar(); }
 	if (panelId === 'booking-list')               { initBookingList(); loadBookingList(); }
@@ -11085,6 +11086,179 @@ function spStoreStockSheet(r) {
 		} catch (err) { spToast(spErrorText(null, 'Couldn\'t update the stock.'), 6000); b.disabled = false; }
 	});
 }
+
+/*--------------------------------------------------------------
+# Store — Categories
+#
+# The groups products are sorted into on the shop. The count includes hidden
+# (draft) products, so it agrees with the Products screen rather than quietly
+# disagreeing by however many are unpublished.
+#
+# Two things the confirmations say out loud, because both are the opposite of
+# what a shop owner fears: renaming leaves the category's web address alone, and
+# deleting a category never deletes the products in it.
+--------------------------------------------------------------*/
+
+const _spStoreCats = { wired: false, rows: [] };
+
+function initStoreCategories() {
+	const S = _spStoreCats;
+	if (S.wired) return;
+	S.wired = true;
+
+	$('#sp-store-cat-new')?.addEventListener('click', () => spStoreCategorySheet(null));
+
+	$('#sp-store-cats')?.addEventListener('click', (e) => {
+		const btn = e.target.closest('[data-cat-act]');
+		if (!btn) return;
+		const row = S.rows.find(r => String(r.id) === btn.dataset.id);
+		if (!row) return;
+		if (btn.dataset.catAct === 'edit') spStoreCategorySheet(row);
+		if (btn.dataset.catAct === 'delete') spStoreCategoryDelete(row);
+	});
+}
+
+async function loadStoreCategories() {
+	const box = $('#sp-store-cats');
+	if (!box) return;
+	box.innerHTML = SP_LIST_SKELETON;
+	try {
+		const res = await spAjax('site_pulse_store_categories', {});
+		if (!res.success) {
+			box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(spErrorText(res, 'Couldn\'t load the categories.')) + '</div>';
+			return;
+		}
+		spStoreCategoriesRender(res.data.rows || []);
+	} catch (e) {
+		box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load the categories. Try again in a moment.') + '</div>';
+	}
+}
+
+// Redrawn from the server's list after every save and delete, so the counts and the
+// nesting are never this screen's guess at what the write did.
+function spStoreCategoriesRender(rows) {
+	const S = _spStoreCats;
+	S.rows = rows;
+
+	const cnt = $('#sp-store-cat-count');
+	if (cnt) cnt.textContent = rows.length ? `${rows.length} ${rows.length === 1 ? 'category' : 'categories'}` : '';
+
+	const box = $('#sp-store-cats');
+	if (!box) return;
+
+	if (!rows.length) {
+		box.innerHTML = spEmptyHTML({
+			icon: 'box',
+			title: 'No categories yet',
+			text: 'Categories group products on the shop — Shirts, Hats, Gift Cards. Add one here, then put products in it from the product itself.',
+		});
+		return;
+	}
+
+	// One category per row: the name, how many products are in it, rename and delete.
+	// A plain div, not a button row: the row itself goes nowhere, the two buttons do.
+	box.innerHTML = '<div class="sp-card sp-card--flush"><div class="sp-list">' + rows.map(r => {
+		const n = r.count === 1 ? '1 product' : `${r.count} products`;
+		const inside = r.children ? `<span>${r.children} ${r.children === 1 ? 'category' : 'categories'} inside</span>` : '';
+		return `<div class="sp-row" style="padding-left:${16 + r.depth * 18}px">`
+			+   '<span class="sp-row__main">'
+			+     `<strong class="sp-row__title">${esc(r.name)}</strong>`
+			+     `<span class="sp-meta"><span>${n}</span>${inside}</span>`
+			+   '</span>'
+			+   `<span class="sp-row__trail">${iconBtn('edit', '', `data-cat-act="edit" data-id="${r.id}" title="Rename"`)}`
+			+     `${iconBtn('delete', '', `data-cat-act="delete" data-id="${r.id}"`)}</span>`
+			+ '</div>';
+	}).join('') + '</div></div>';
+	markUniqueSpans(box);
+}
+
+// Every category this one may be moved inside: not itself, and not one of its own
+// descendants, which would detach the whole branch from the tree.
+function spStoreCatDescendants(id) {
+	const out = new Set();
+	for (let pass = 0; pass < _spStoreCats.rows.length; pass++) {
+		let grew = false;
+		_spStoreCats.rows.forEach(r => {
+			if (!out.has(r.id) && (r.parent === id || out.has(r.parent))) { out.add(r.id); grew = true; }
+		});
+		if (!grew) break;
+	}
+	return out;
+}
+
+// Add (row = null) or rename.
+function spStoreCategorySheet(row) {
+	const isNew = !row;
+	const banned = isNew ? new Set() : spStoreCatDescendants(row.id);
+	const parentOpts = ['<option value="0">Top level</option>'].concat(
+		_spStoreCats.rows
+			.filter(r => isNew || (r.id !== row.id && !banned.has(r.id)))
+			.map(r => `<option value="${r.id}"${!isNew && row.parent === r.id ? ' selected' : ''}>`
+				+ `${'— '.repeat(r.depth)}${esc(r.name)}</option>`)
+	).join('');
+
+	const body = '<div class="sp-stack">'
+		+ `<label class="sp-field"><span class="sp-field__label">Name</span>`
+		+   `<input type="text" class="sp-input" data-f="name" value="${isNew ? '' : esc(row.name)}" placeholder="Shirts" autocomplete="off"></label>`
+		+ '<label class="sp-field"><span class="sp-field__label">Inside</span>'
+		+   `<select class="sp-select" data-f="parent">${parentOpts}</select>`
+		+   '<span class="sp-field__hint">Leave this on Top level unless it belongs under another category.</span></label>'
+		+ (isNew ? '' : '<p class="sp-help-text">Renaming does not change the category&rsquo;s web address, so any links to it keep working.</p>')
+		+ '</div>';
+
+	const s = spSheetOpen({
+		title: isNew ? 'Add category' : 'Rename category',
+		body,
+		foot: '<button type="button" class="unique sp-btn sp-btn--primary" data-save>Save</button>'
+			+ '<button type="button" class="unique sp-btn" data-sp-sheet-cancel>Cancel</button>',
+	});
+	s.classList.add('sp-sheet--narrow');
+	$('[data-sp-sheet-cancel]', s)?.addEventListener('click', () => spSheetClose());
+	$('[data-f="name"]', s)?.focus();
+
+	$('[data-save]', s).addEventListener('click', async (e) => {
+		const b = e.currentTarget;
+		const name = ($('[data-f="name"]', s)?.value || '').trim();
+		if (!name) { spToast('Type a name for the category.'); return; }
+		b.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_store_category_save', {
+				id: isNew ? 0 : row.id,
+				name,
+				parent: $('[data-f="parent"]', s)?.value || 0,
+			});
+			if (!res.success) { spToast(spErrorText(res, 'That didn\'t save.'), 6000); b.disabled = false; return; }
+			spStoreCategoriesRender(res.data.rows || []);
+			spSheetClose();
+			spToast(isNew ? 'Category added.' : 'Category renamed.');
+		} catch (err) {
+			spToast(spErrorText(null, 'That didn\'t save.'), 6000);
+			b.disabled = false;
+		}
+	});
+}
+
+async function spStoreCategoryDelete(row) {
+	const moves = row.children
+		? ` Anything inside it moves up a level.`
+		: '';
+	const text = row.count
+		? `${row.count === 1 ? '1 product is' : row.count + ' products are'} in this category. `
+			+ `Deleting it does not delete them — they stay exactly as they are and simply leave the group.${moves}`
+		: `Nothing is in this category yet.${moves}`;
+
+	if (!await spConfirm({ title: `Delete ${row.name}?`, text, ok: 'Delete', danger: true })) return;
+
+	try {
+		const res = await spAjax('site_pulse_store_category_delete', { id: row.id });
+		if (!res.success) { spToast(spErrorText(res, 'Couldn\'t delete that category.'), 6000); return; }
+		spStoreCategoriesRender(res.data.rows || []);
+		spToast('Category deleted.');
+	} catch (e) {
+		spToast(spErrorText(null, 'Couldn\'t delete that category.'), 6000);
+	}
+}
+
 
 /*--------------------------------------------------------------
 # Store — Membership plans (Settings → Store, only while Memberships is on)

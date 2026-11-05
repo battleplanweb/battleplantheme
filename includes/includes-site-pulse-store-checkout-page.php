@@ -196,22 +196,21 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 
 	$out .= '<section class="store-checkout-section">';
 	$out .= '<h2>Contact</h2>';
-	$out .= '<label class="store-field"><span>Email</span>';
-	$out .= '<input type="email" id="sp-co-email" name="email" autocomplete="email" required value="' . esc_attr( (string) $cart['email'] ) . '">';
-	$out .= '</label>';
+	$out .= sp_store_field( 'sp-co-email', 'Email', 'user-email', 'email',
+		'<input type="email" id="sp-co-email" name="email" autocomplete="email" placeholder=" " required value="' . esc_attr( (string) $cart['email'] ) . '">' );
 	$out .= '<p class="store-field-note">Your receipt and any delivery updates go here.</p>';
 	$out .= '</section>';
 
 	if ( $quote['needs_shipping'] ) {
 		$out .= '<section class="store-checkout-section">';
 		$out .= '<h2>Delivery address</h2>';
-		$out .= '<label class="store-field"><span>Full name</span><input type="text" id="sp-co-name" autocomplete="name" required></label>';
-		$out .= '<label class="store-field"><span>Address</span><input type="text" id="sp-co-address1" autocomplete="address-line1" required></label>';
-		$out .= '<label class="store-field"><span>Apartment, suite, etc. <em>(optional)</em></span><input type="text" id="sp-co-address2" autocomplete="address-line2"></label>';
+		$out .= sp_store_field( 'sp-co-name', 'Full name', 'user-name', 'text', '<input type="text" id="sp-co-name" autocomplete="name" placeholder=" " required>' );
+		$out .= sp_store_field( 'sp-co-address1', 'Address', 'user-address', 'text', '<input type="text" id="sp-co-address1" autocomplete="address-line1" placeholder=" " required>' );
+		$out .= sp_store_field( 'sp-co-address2', 'Apartment, suite, etc. (optional)', 'user-address-2', 'text', '<input type="text" id="sp-co-address2" autocomplete="address-line2" placeholder=" ">' );
 		$out .= '<div class="store-field-row">';
-		$out .= '<label class="store-field"><span>City</span><input type="text" id="sp-co-city" autocomplete="address-level2" required></label>';
-		$out .= '<label class="store-field"><span>State</span>' . sp_store_state_select() . '</label>';
-		$out .= '<label class="store-field"><span>ZIP</span><input type="text" id="sp-co-zip" autocomplete="postal-code" inputmode="numeric" required></label>';
+		$out .= sp_store_field( 'sp-co-city', 'City', 'user-city', 'text', '<input type="text" id="sp-co-city" autocomplete="address-level2" placeholder=" " required>' );
+		$out .= sp_store_field( 'sp-co-state', 'State', 'user-state', 'select', sp_store_state_select() );
+		$out .= sp_store_field( 'sp-co-zip', 'ZIP', 'user-zip', 'text', '<input type="text" id="sp-co-zip" autocomplete="postal-code" inputmode="numeric" placeholder=" " required>' );
 		$out .= '</div>';
 		$out .= '</section>';
 
@@ -227,9 +226,8 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 	// please"). Stored on the order's customer_note and shown to staff on the order.
 	$out .= '<section class="store-checkout-section">';
 	$out .= '<h2>Order notes <span class="store-field-note">(optional)</span></h2>';
-	$out .= '<label class="store-field"><span class="screen-reader-text">Order notes</span>';
-	$out .= '<textarea id="sp-co-note" rows="3" maxlength="1000" placeholder="Anything we should know about your order?"></textarea>';
-	$out .= '</label>';
+	$out .= sp_store_field( 'sp-co-note', 'Anything we should know about your order?', 'user-message', 'textarea',
+		'<textarea id="sp-co-note" rows="3" maxlength="1000" placeholder=" "></textarea>' );
 	$out .= '</section>';
 
 	// Terms the basket's products require (Extras). '' when none, or when the feature is off.
@@ -252,6 +250,20 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 
 	$out .= '</div></div>';
 	return $out;
+}
+
+/**
+ * One checkout field, in the framework's form-field markup
+ * (.form-input > label + .bp-control-wrap), so style-forms.css gives it the same
+ * in-field floating label and field icon as every contact form. $name picks the
+ * icon (user-email, user-name, user-address, user-zip, user-message ...). Inputs
+ * carry placeholder=" " because the float reads :placeholder-shown.
+ */
+function sp_store_field( string $id, string $label, string $name, string $type, string $control ): string {
+	return '<div class="form-input store-field">'
+		. '<label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . '</label>'
+		. bp_field_wrap( $name, $type, $control )
+		. '</div>';
 }
 
 /** The shipping choices, as radios. Re-rendered by the quote endpoint. */

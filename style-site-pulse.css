@@ -6847,7 +6847,8 @@ body.has-site-pulse .sp-msg-contact-pick {
 }
 
 /* Back to wp-admin, pinned to the bar's last column. Same chip treatment as the Odin Mode label. */
-.sp-god-admin {
+.sp-god-admin,
+a.sp-god-admin.sp-button {
 	grid-column:                                               -2;
 	font-weight:                                               700;
 	text-transform:                                            uppercase;
@@ -6862,7 +6863,9 @@ body.has-site-pulse .sp-msg-contact-pick {
 }
 
 .sp-god-admin:hover,
-.sp-god-admin:focus-visible {
+.sp-god-admin:focus-visible,
+a.sp-god-admin.sp-button:hover,
+a.sp-god-admin.sp-button:focus-visible {
 	color:                                                     var(--white);
 	background:                                                rgba(255,255,255,0.35);
 }

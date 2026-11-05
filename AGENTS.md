@@ -106,7 +106,7 @@ Set via `add_filter('body_class', ...)`. Pick one from each group:
 | Sidebar style | `content-sidebar-box` `sidebar-line` `widget-box` (default) |
 | Content box | `content-box` (default: none) |
 | Accordion | `accordion-box` (default: none) |
-| Forms | `form-stacked` (default: inline) |
+| Forms | (none — labels float inside text fields, stack above radios/checkboxes; `form-stacked` is legacy and does nothing) |
 | Post thumbnail | `thumb-left` `thumb-right` + optional `switch-thumb` |
 
 ### battleplan_updateSiteOptions() — All Fields
@@ -714,7 +714,7 @@ Both accept `redirect="/thanks/"` and `submit="Send My Message"` to override the
 
 ### Field shortcodes (for custom form bodies)
 
-All field shortcodes go inside `[bp-form id="..."]…[/bp-form]`. Wrap each field in `[seek label="..." id="..." req="true|false" label-pos="top|before|after"]…[/seek]` to get the label + form-input grid wrapper.
+All field shortcodes go inside `[bp-form id="..."]…[/bp-form]`. Wrap each field in `[seek label="..." id="..." req="true|false"]…[/seek]` to get the label + `.form-input` wrapper. Text-like fields (text, email, tel, number, date, textarea, select) float the label inside the field as its placeholder; radios, checkboxes and file uploads stack the label above. That is the only layout — `label-pos`, `label-valign` and `form-stacked` are legacy, still accepted but do nothing (no label-beside-input mode any more). `show="false"` drops the label entirely; `form-label-outside` (on the field, the `.bp-form`, or `<body>`) stacks every label above instead of floating.
 
 | Shortcode | Required attrs | Optional attrs |
 |---|---|---|
@@ -828,7 +828,7 @@ Two patterns, in order from simplest to most powerful:
 ```php
 add_filter('bp_form_extra_fields', function($fields, $form_id) {
     if ($form_id === 'quote') $fields .= '
-        [seek label="Service Needed" id="user-service" label-pos="top"]
+        [seek label="Service Needed" id="user-service"]
             [bp-select name="user-service" first="— select —" options="AC Repair|Heating Repair|Maintenance" required="true"]
         [/seek]
     ';
@@ -844,18 +844,18 @@ The added fields are appended after the standard form body, before the submit bu
 add_shortcode('site-application-form', function() {
     return do_shortcode('[bp-form id="application"]
         [layout grid="1-1"]
-            [col][seek label="Name" id="user-name" req="true" label-pos="top"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
-            [col][seek label="Email" id="user-email" req="true" label-pos="top"][bp-email name="user-email" required="true"][/seek][/col]
+            [col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
+            [col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
         [/layout]
-        [seek label="Phone" id="user-phone" req="true" label-pos="top"][bp-tel name="user-phone" required="true"][/seek]
-        [seek label="Address" id="user-address" req="true" label-pos="top"][bp-text name="user-address" required="true" autocomplete="street-address"][/seek]
-        [seek label="How old are you?" id="user-age" req="true" label-pos="top"]
+        [seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek]
+        [seek label="Address" id="user-address" req="true"][bp-text name="user-address" required="true" autocomplete="street-address"][/seek]
+        [seek label="How old are you?" id="user-age" req="true"]
             [bp-select name="user-age" first="— select —" options="0-10|11-25|26-50" required="true"]
         [/seek]
-        [seek label="Do you speak English?" id="user-english" req="true" label-pos="top"]
+        [seek label="Do you speak English?" id="user-english" req="true"]
             [bp-radio name="user-english" options="Yes|No" required="true"]
         [/seek]
-        [seek label="Message" id="user-message" label-pos="top"][bp-textarea name="user-message" rows="5"][/seek]
+        [seek label="Message" id="user-message"][bp-textarea name="user-message" rows="5"][/seek]
         [seek label="button"][bp-submit]Submit Application[/bp-submit][/seek]
     [/bp-form]');
 });

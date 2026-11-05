@@ -363,8 +363,9 @@ $nav[] = [
 	'children' => [
 		[ 'slug' => 'store-orders',    'label' => 'Orders',    'show' => $cap_store_orders ],
 		[ 'slug' => 'store-customers', 'label' => 'Customers', 'show' => $cap_store_orders ],
-		[ 'slug' => 'store-products',  'label' => 'Products',  'show' => $cap_store_products ],
-		[ 'slug' => 'store-inventory', 'label' => 'Inventory', 'show' => $cap_store_products ],
+		[ 'slug' => 'store-products',   'label' => 'Products',   'show' => $cap_store_products ],
+		[ 'slug' => 'store-categories', 'label' => 'Categories', 'show' => $cap_store_products ],
+		[ 'slug' => 'store-inventory',  'label' => 'Inventory',  'show' => $cap_store_products ],
 	],
 ];
 
@@ -1722,6 +1723,19 @@ if ( $cap_store_products ) {
 	$printPage .=   $sp_book_tripwire;
 	$printPage .=   '<div class="sp-stack" id="sp-store-products"></div>';
 	$printPage .=   '<div id="sp-store-product-more"></div>';
+	$printPage .= '</div></section>';
+
+	// Categories: the groups products are sorted into on the shop. Add, rename, delete, and the
+	// count of products in each — including hidden ones, so the number agrees with the Products
+	// screen. Deleting a category never deletes products; they simply leave the group.
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-categories"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Categories"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Categories</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-store-cat-new" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Category</button></div>'
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-toolbar"><span class="sp-meta" id="sp-store-cat-count"></span></div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack" id="sp-store-cats"></div>';
 	$printPage .= '</div></section>';
 
 	$printPage .= '<section class="sp-panel" id="sp-panel-store-inventory"><div class="sp-page">';

@@ -23,7 +23,7 @@ Both accept `redirect="/thanks/"` and `submit="Send My Message"` to override the
 
 ### Field shortcodes (for custom form bodies)
 
-All field shortcodes go inside `[bp-form id="..."]…[/bp-form]`. Wrap each field in `[seek label="..." id="..." req="true|false" label-pos="top|before|after"]…[/seek]` to get the label + form-input grid wrapper.
+All field shortcodes go inside `[bp-form id="..."]…[/bp-form]`. Wrap each field in `[seek label="..." id="..." req="true|false"]…[/seek]` to get the label + `.form-input` wrapper. Text-like fields (text, email, tel, number, date, textarea, select) float the label inside the field as its placeholder; radios, checkboxes and file uploads stack the label above. That is the only layout — `label-pos`, `label-valign` and `form-stacked` are legacy, still accepted but do nothing (no label-beside-input mode any more). `show="false"` drops the label entirely; `form-label-outside` (on the field, the `.bp-form`, or `<body>`) stacks every label above instead of floating.
 
 | Shortcode | Required attrs | Optional attrs |
 |---|---|---|
@@ -49,17 +49,18 @@ Every floating-label field gets a small icon at its left edge, picked from the `
 | Icon | Matches |
 |---|---|
 | person | `data-name` `user-name`, `user-first-name`, `user-last-name` |
-| pin | `user-city`, `user-address`, `user-street`, `user-zip` |
+| pin | `user-city`, `user-address`, `user-address-2`, `user-street`, `user-zip` |
 | envelope | `data-type="email"` |
 | phone | `data-type="tel"` |
 | chat | `data-type="textarea"`, or `data-name="user-message"` (the quote form's message is a one-line `[bp-text]`) |
 
-Any other field gets no icon and keeps its normal padding. Outside-label modes (`form-label-outside`, `label-pos-after`, `width-none`) never get them.
+Any other field gets no icon and keeps its normal padding. Outside-label fields (`form-label-outside`, `show="false"`) never get them.
 
 - **Opt out:** `form-no-icons` on the `<body>`, the `.bp-form` wrapper (`[bp-quote-form class="form-no-icons"]`), or one `.form-input`.
+- **Outside `[bp-form]`:** the float + icons match markup, not a wrapper, so any hand-built `<div class="form-input"><label for>…</label>` + `bp_field_wrap( $name, $type, $control )` gets them (the store checkout does this via `sp_store_field()`). Text inputs need `placeholder=" "` — the float reads `:placeholder-shown`.
 - **Tint:** `--field-icon-color` / `--field-icon-color-focus`. They default to `--label-color` / `--label-color-focus`, so most sites need nothing.
-- **New icon:** add a `.bp-control-wrap[data-name="…"] { --field-icon: url("data:image/svg+xml;utf8,…") }` rule **and** add the same selector to the `:is()` lists in the gating rules below it. A field that matches the gate but has no `--field-icon` paints a solid square.
-- **The wrap is `position: relative`** (so the icon centres on the control, not on the label + error row), which puts it in a later paint layer than the absolutely-positioned label. That is why the icon rules give the label `z-index: 2`. Drop that and the input background covers the label.
+- **New icon:** add a `.form-input:not(.form-no-icons, .form-no-icons *):has(> .bp-control-wrap[data-name="…"]) { --field-icon: url("data:image/svg+xml;utf8,…") }` rule **and** add the same `data-name` to the `:is()` list in the "every icon makes room for itself" rule (it turns the icon on and makes space for it).
+- **The wrap is `position: relative`** (so the icon centres on the control, not on the label + error row), which puts it in a later paint layer than the absolutely-positioned label. That is why the floating label has `z-index: 2`. Drop that and the input background covers the label.
 - Padding is set as `--input-padding` **on the control**, not on the wrap. The floating-label rule above it sets that variable directly on `input`/`textarea`, so a value inherited from the wrap would lose.
 
 ### Which button sent them? — `[bp-hidden param="…"]`
@@ -251,7 +252,7 @@ Notes:
 ```php
 add_filter('bp_form_extra_fields', function($fields, $form_id) {
     if ($form_id === 'quote') $fields .= '
-        [seek label="Service Needed" id="user-service" label-pos="top"]
+        [seek label="Service Needed" id="user-service"]
             [bp-select name="user-service" first="— select —" options="AC Repair|Heating Repair|Maintenance" required="true"]
         [/seek]
     ';
@@ -267,18 +268,18 @@ The oldest hook, kept for the sites already using it. It appends after the **ent
 add_shortcode('site-application-form', function() {
     return do_shortcode('[bp-form id="application"]
         [layout grid="1-1"]
-            [col][seek label="Name" id="user-name" req="true" label-pos="top"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
-            [col][seek label="Email" id="user-email" req="true" label-pos="top"][bp-email name="user-email" required="true"][/seek][/col]
+            [col][seek label="Name" id="user-name" req="true"][bp-text name="user-name" required="true" autocomplete="name"][/seek][/col]
+            [col][seek label="Email" id="user-email" req="true"][bp-email name="user-email" required="true"][/seek][/col]
         [/layout]
-        [seek label="Phone" id="user-phone" req="true" label-pos="top"][bp-tel name="user-phone" required="true"][/seek]
-        [seek label="Address" id="user-address" req="true" label-pos="top"][bp-text name="user-address" required="true" autocomplete="street-address"][/seek]
-        [seek label="How old are you?" id="user-age" req="true" label-pos="top"]
+        [seek label="Phone" id="user-phone" req="true"][bp-tel name="user-phone" required="true"][/seek]
+        [seek label="Address" id="user-address" req="true"][bp-text name="user-address" required="true" autocomplete="street-address"][/seek]
+        [seek label="How old are you?" id="user-age" req="true"]
             [bp-select name="user-age" first="— select —" options="0-10|11-25|26-50" required="true"]
         [/seek]
-        [seek label="Do you speak English?" id="user-english" req="true" label-pos="top"]
+        [seek label="Do you speak English?" id="user-english" req="true"]
             [bp-radio name="user-english" options="Yes|No" required="true"]
         [/seek]
-        [seek label="Message" id="user-message" label-pos="top"][bp-textarea name="user-message" rows="5"][/seek]
+        [seek label="Message" id="user-message"][bp-textarea name="user-message" rows="5"][/seek]
         [seek label="button"][bp-submit]Submit Application[/bp-submit][/seek]
     [/bp-form]');
 });
@@ -511,6 +512,45 @@ add_filter('bp_primary_form_shortcode', fn() => '[paradise-tattoo-form]');
 The filters only reach the mobile-bar modal — the 404 page and the widget form column follow the *registration*, so prefer `bp_set_primary_form()` when the custom form should stand in everywhere.
 
 `bp_primary_form` still controls the mobile bar button's class (`mm-bar-quote` vs `mm-bar-contact`) and whether it shows at all (`'none'` hides button + modal). With a primary form registered it only selects that variant — the registered shortcode stays the form.
+
+### `script-pages.js` rewrites the DOM of every front-end page — two traps
+
+Two passes in `script-pages.js` run against the whole `document` on every front-end
+page, not just editor content. Both were silently breaking module markup until
+2026-11-05, and both fail the same way: an element vanishes or changes id, the code
+looking for it gets `null` instead of an exception, and the page does nothing at all
+with **nothing in the console**.
+
+**1. Inputs only get an id when they do not already have one.**
+
+```js
+getObjects('input[name]').forEach(input => {
+	if (!input.id) input.id = input.name;   // the guard is the whole point
+});
+```
+
+Without the guard it assigned unconditionally, so `<input id="sp-co-email" name="email">`
+became `id="email"` — orphaning the label's `for="sp-co-email"` (the exact thing the
+line exists to fix) and breaking every `getElementById('sp-co-email')`. Anything whose
+id and name differ on purpose was affected: the store checkout, Scheduling's member,
+supervisor, overtime and login screens, and the Site Pulse login.
+
+**2. An empty `<p>` survives if it carries a class, an id or `hidden`.**
+
+```js
+getObjects('p:empty:not([class]):not([id]):not([hidden]), …').forEach(el => el.remove());
+```
+
+`p:empty` is meant for the anonymous paragraphs wpautop and the editor leave behind. A
+paragraph with a class is a module's placeholder waiting to be filled — an error line, a
+running total. The store checkout's `<p class="store-checkout-error" data-store-co-error
+hidden></p>` was being deleted on load, so `showError()` returned early and a rejected
+order looked exactly like a dead button.
+
+**Writing a module with front-end markup:** do not assume the HTML you printed is the
+HTML in the DOM. If an element must survive, give it a class or an id, and if you depend
+on an id, check it is still there (`document.getElementById(x)` in the console on a real
+page) rather than trusting the source.
 
 ### When to add to functions-site.php vs the framework
 

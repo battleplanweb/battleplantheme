@@ -636,9 +636,17 @@ document.addEventListener("DOMContentLoaded", function () {
 	});
 
 
-	// Make sure form inputs have id, so that they can be correctly linked to labels
+	// Make sure form inputs have id, so that they can be correctly linked to labels.
+	//
+	// ONLY when one is missing. This used to assign unconditionally, which did the
+	// opposite of what it says on inputs that already had an id: <input id="sp-co-email"
+	// name="email"> became id="email", orphaning the label's for="sp-co-email" and
+	// breaking every getElementById() pointing at it. The store's checkout lost its
+	// email field that way — and because the lookup returned null rather than throwing,
+	// the page simply stopped working with nothing in the console. Any input whose id
+	// and name differ on purpose (the Scheduling module has dozens) was affected.
 	getObjects('input[name]').forEach(input => {
-		input.id = input.name;
+		if (!input.id) input.id = input.name;
 	});
 
 
@@ -1333,10 +1341,12 @@ document.addEventListener("DOMContentLoaded", function () {
 			let elementY = null;
 			let delay = 0;
 
+			// Queue now, not after initDelay: the head prehide (bp-anim-hide) lifts 4s after load,
+			// and anything not yet .animation-queued would pop visible, then blink out to animate in.
+			children.forEach(child => child.classList.add('animation-queued'));
+
 			setTimeout(() => {
 				children.forEach((child, index) => {
-					child.classList.add('animation-queued');
-
 					const effect = (index % 2 === 0) ? effect1 : effect2;
 
 					// Only increase delay when items are on the same row/line
@@ -1364,6 +1374,10 @@ document.addEventListener("DOMContentLoaded", function () {
 			if (!containerObj) return;
 
 			const children = Array.from(containerObj.children);
+
+			// Queue every column, not just the first: unqueued columns below the fold went visible
+			// when the head prehide (bp-anim-hide) lifted 4s after load, then blinked out to animate in.
+			children.forEach(child => child.classList.add('animation-queued'));
 			const spanAllChildren = children.filter(child => child.classList.contains('span-all'));
 			const otherChildren = children.filter(child => !child.classList.contains('span-all'));
 			const assignFX = {
@@ -1376,7 +1390,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 			setTimeout(() => {
 				spanAllChildren.forEach(child => {
-					child.classList.add('animation-queued');
 					const animationName = animationKeyframes(effect1);
 					applyAnimation(child, speed / 1000, eachDelay / 1000, easing, 'both');
 					observeVisibility(child, offset, animationName, initDelay);
@@ -1478,8 +1491,15 @@ document.addEventListener("DOMContentLoaded", function () {
 	/*--------------------------------------------------------------
    # Set up pages
    --------------------------------------------------------------*/
-	// Remove empty & restricted elements
-	getObjects('p:empty, .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu').forEach(el => {
+	// Remove empty & restricted elements.
+	//
+	// p:empty is for the stray paragraphs wpautop and the editor leave behind, which
+	// are anonymous. A paragraph carrying a class, an id or hidden is a module's
+	// placeholder waiting to be filled in — an error line, a running total — so those
+	// stay. Removing them left the store's checkout unable to show any error at all:
+	// its showError() returns early when the element is gone, so a rejected order was
+	// indistinguishable from a dead button.
+	getObjects('p:empty:not([class]):not([id]):not([hidden]), .archive-intro:empty, div.restricted, div.restricted + ul, li.menu-item + ul.sub-menu').forEach(el => {
 		if (!el.getAttribute('role') || el.getAttribute('role') !== "status") {
 			el.remove();
 		}
@@ -1567,34 +1587,6 @@ document.addEventListener("DOMContentLoaded", function () {
 		   }
 	   });
    */
-
-	// Ensure all form labels are same width per .flex group, so that the inputs line up.
-	// Form structure since 2026-05-19: .flex > .col > .col-inner > .form-input.width-default > label + .bp-control-wrap
-	window.formLabelWidth = () => {
-		getObjects('form').forEach(form => {
-			const flexGroups = getObjects('.flex', form);
-			(flexGroups.length ? flexGroups : [form]).forEach(group => {
-				const inputs = getObjects('.form-input.width-default', group);
-				if (!inputs.length) return;
-				// Reset prior inline widths so label.offsetWidth reads natural text width, not a previously-pinned column width
-				inputs.forEach(el => el.style.gridTemplateColumns = '');
-				let labelMaxWidth = 0;
-				inputs.forEach(el => {
-					const lbl = el.querySelector(':scope > label');
-					// Floating labels are position:absolute and stretch the full field width, so measuring
-					// them pins a label column as wide as the input itself. Float fields shrug that off
-					// (their CSS re-forces 1fr !important) but form-label-outside rows — radio, checkbox,
-					// file — obey it and get squeezed into a stack at the right edge. Skip them.
-					if (lbl && getComputedStyle(lbl).position !== 'absolute') labelMaxWidth = Math.max(labelMaxWidth, lbl.offsetWidth);
-				});
-				if (labelMaxWidth > 0) {
-					labelMaxWidth += 1;
-					inputs.forEach(el => el.style.gridTemplateColumns = `${labelMaxWidth}px 1fr`);
-				}
-			});
-			getObjects('abbr.required, em.required, span.required').forEach(el => el.textContent = "");
-		});
-	};
 
 	// Site navigation is a landmark of plain links, NOT an application menubar.
 	// Label the <nav> landmark and keep native <ul>/<li>/<a> semantics. We do NOT

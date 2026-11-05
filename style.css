@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v47.1
+Version: v47.2
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -293,13 +293,43 @@ body {
 	font-family:                                               var(--font-text);
 	color:                                                     var(--text-color);
 	font-size:                                                 var(--font-size-text);
-	font-weight:                                               border-top                                             normal;
+	font-weight:                                               normal;
 	line-height:                                               1.5;
 	text-underline-position:                                   under;
 	max-width:                                                 unset !important;
 	margin:                                                    0;
 	word-spacing:                                              0.1em;
 	background:                                                var(--black);
+}
+
+/* A minimum height for the content, so a page with little on it does not leave its
+   footer stranded mid-screen with a band of background below it.
+
+   Nothing here pins, fixes or floats the footer: #colophon keeps position relative
+   and scrolls with the page as always. The rule only says that #wrapper-content may
+   not be shorter than the window less the masthead and the footer. The flex column
+   is how that subtraction gets done -- the browser knows the real masthead and
+   colophon heights, which differ per site, so there is no magic number here to keep
+   in step with the footer's design.
+
+   A page already taller than the window is untouched, because the floor lands below
+   its content height: measured on a 1440-tall window, a short product page went from
+   a footer ending at 1134px (306px of background below it) to one ending at 1440px,
+   while the same page in an 880-tall window was identical either way, and a long page
+   rendered pixel-identical with and without the rule.
+
+   100dvh, not 100vh: on a phone, vh counts the space behind the browser's own
+   toolbars, so the footer would hide below the fold on exactly the short pages this
+   is for. flex-shrink 0 on the content keeps a tall page from being squashed into
+   the window instead of scrolling. */
+#page {
+	display:                                                   flex;
+	flex-direction:                                            column;
+	min-height:                                                100dvh;
+}
+
+#wrapper-content {
+	flex:                                                      1 0 auto;
 }
 
 *,

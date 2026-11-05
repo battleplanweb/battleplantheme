@@ -54,6 +54,10 @@ When a framework function is removed or renamed, grep every client `script-site.
 - Custom brand headline fonts — ALWAYS ship a metric-matched fallback → `docs/css.md`
 - Buttons are variable-driven — set `--button-*`, don't override `.button` directly → `docs/css.md`
 - Styled lists — use the framework `.bullet` system, don't hand-roll list CSS → `docs/css.md`
+- `class="unique"` opts a control OUT of the button system — icon controls only, never a real button → `docs/css.md`
+- `script-pages.js` rewrites every front-end page's DOM (input ids, empty `<p>` removal) — module markup must survive it → `docs/forms.md`
+- Overriding a button's look? List `:hover`/`:focus`/`:active`/`.tab-focus` too — the framework's hover rule is (0,2,1) and reclaims it under the cursor → `docs/css.md`
+- Short pages get a content floor from `#page` (flex column, 100dvh) so the footer isn't left mid-screen — the footer is NOT pinned, and `#page`'s children's margins don't collapse → `docs/css.md`
 - Page content has NO comment syntax → `docs/css.md`
 - Every `:hover` rule must also style `.active` and `.tab-focus` (ADA) → `docs/css.md`
 - Headings are variable-driven — style by `--h-*`, and use the tag for OUTLINE, not for size → `docs/css.md`

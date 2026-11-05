@@ -30,6 +30,7 @@ rename filters work on product images exactly as on uploads made in wp-admin.
 # Saving
 # Inventory
 # AJAX — Products
+# AJAX — Categories
 # AJAX — Inventory
 --------------------------------------------------------------*/
 
@@ -143,6 +144,87 @@ function sp_store_query_products( array $args ): array {
 		'pages'    => max( 1, (int) $query->max_num_pages ),
 		'total'    => (int) $query->found_posts,
 	];
+}
+
+/**
+ * Every category with the number of products in it, for Store → Categories.
+ *
+ * The count is worked out here rather than read from the term's own `count`, which
+ * WordPress maintains for PUBLISHED posts only. A shop owner reading this screen
+ * wants hidden (draft) products counted too, or the number will not agree with the
+ * one the Products screen shows them two clicks away.
+ */
+function sp_store_category_rows(): array {
+	global $wpdb;
+
+	$terms = get_terms( [ 'taxonomy' => 'bp_product_cat', 'hide_empty' => false, 'orderby' => 'name' ] );
+	if ( is_wp_error( $terms ) || ! $terms ) return [];
+
+	// One query for every count, rather than one per category.
+	$counts = [];
+	$rows   = $wpdb->get_results( $wpdb->prepare(
+		"SELECT tt.term_id AS term_id, COUNT( DISTINCT p.ID ) AS n
+		   FROM {$wpdb->term_taxonomy} tt
+		   INNER JOIN {$wpdb->term_relationships} tr ON tr.term_taxonomy_id = tt.term_taxonomy_id
+		   INNER JOIN {$wpdb->posts} p ON p.ID = tr.object_id
+		  WHERE tt.taxonomy = %s
+		    AND p.post_type = %s
+		    AND p.post_status IN ( 'publish', 'draft', 'pending', 'private' )
+		  GROUP BY tt.term_id",
+		'bp_product_cat',
+		SITE_PULSE_STORE_CPT
+	) );
+	foreach ( (array) $rows as $r ) $counts[ (int) $r->term_id ] = (int) $r->n;
+
+	$by_parent = [];
+	foreach ( $terms as $t ) $by_parent[ (int) $t->parent ][] = $t;
+
+	$out  = [];
+	$walk = static function ( int $parent, int $depth ) use ( &$walk, &$out, $by_parent, $counts ) {
+		foreach ( $by_parent[ $parent ] ?? [] as $t ) {
+			$id   = (int) $t->term_id;
+			$link = get_term_link( $t );
+			$out[] = [
+				'id'       => $id,
+				'name'     => (string) $t->name,
+				'parent'   => (int) $t->parent,
+				'depth'    => $depth,
+				'count'    => (int) ( $counts[ $id ] ?? 0 ),
+				'children' => count( $by_parent[ $id ] ?? [] ),
+				'link'     => is_wp_error( $link ) ? '' : (string) $link,
+			];
+			$walk( $id, $depth + 1 );
+		}
+	};
+	$walk( 0, 0 );
+	return $out;
+}
+
+/**
+ * Create ($id = 0) or rename a category. Returns the term id, or WP_Error.
+ *
+ * The SLUG is deliberately left alone on a rename. It is the category's public web
+ * address, and rewriting it would 404 every link already pointing there — from the
+ * site's own menus to anything Google has indexed. A shop owner fixing a typo in a
+ * name is not asking for that, so the screen says so in as many words.
+ */
+function sp_store_category_write( int $id, string $name, int $parent ) {
+	$name   = trim( sanitize_text_field( $name ) );
+	$parent = max( 0, $parent );
+	if ( $name === '' ) return new WP_Error( 'name', 'Type a name for the category.' );
+
+	if ( $id <= 0 ) return wp_insert_term( $name, 'bp_product_cat', [ 'parent' => $parent ] );
+
+	if ( ! term_exists( $id, 'bp_product_cat' ) ) return new WP_Error( 'gone', 'That category no longer exists.' );
+
+	// A category cannot sit inside itself or inside one of its own descendants —
+	// wp_update_term() does not check, and the loop would orphan the whole branch.
+	$kids = array_map( 'intval', (array) get_term_children( $id, 'bp_product_cat' ) );
+	if ( $parent === $id || in_array( $parent, $kids, true ) ) {
+		return new WP_Error( 'parent', 'A category cannot go inside itself.' );
+	}
+
+	return wp_update_term( $id, 'bp_product_cat', [ 'name' => $name, 'parent' => $parent ] );
 }
 
 /** Every category, for the picker. Flat, with depth for indenting. */
@@ -586,6 +668,10 @@ function sp_store_ajax_product_upload(): void {
 	wp_send_json_success( [ 'id' => (int) $aid, 'url' => (string) ( wp_get_attachment_image_url( $aid, 'medium' ) ?: $moved['url'] ) ] );
 }
 
+/*--------------------------------------------------------------
+# AJAX — Categories
+--------------------------------------------------------------*/
+
 add_action( 'wp_ajax_site_pulse_store_category_add', 'sp_store_ajax_category_add' );
 function sp_store_ajax_category_add(): void {
 	sp_store_products_gate();
@@ -598,6 +684,59 @@ function sp_store_ajax_category_add(): void {
 
 	wp_send_json_success( [
 		'id'         => (int) ( is_array( $term ) ? $term['term_id'] : $term ),
+		'categories' => sp_store_category_choices(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_store_categories', 'sp_store_ajax_categories' );
+function sp_store_ajax_categories(): void {
+	sp_store_products_gate();
+	wp_send_json_success( [ 'rows' => sp_store_category_rows() ] );
+}
+
+/** Add or rename, from Store → Categories. Replies with the whole list, so the
+ *  screen redraws from the server's truth rather than patching its own copy. */
+add_action( 'wp_ajax_site_pulse_store_category_save', 'sp_store_ajax_category_save' );
+function sp_store_ajax_category_save(): void {
+	sp_store_products_gate();
+
+	$res = sp_store_category_write(
+		(int) ( $_POST['id'] ?? 0 ),
+		(string) wp_unslash( $_POST['name'] ?? '' ),
+		(int) ( $_POST['parent'] ?? 0 )
+	);
+	if ( is_wp_error( $res ) ) {
+		// "A term with the name provided already exists…" is WordPress talking to a
+		// developer. Say it the way the person in front of the screen would.
+		$msg = 'term_exists' === $res->get_error_code()
+			? 'There is already a category with that name in the same place.'
+			: $res->get_error_message();
+		wp_send_json_error( [ 'message' => $msg ] );
+	}
+
+	wp_send_json_success( [
+		'id'         => (int) ( is_array( $res ) ? $res['term_id'] : $res ),
+		'rows'       => sp_store_category_rows(),
+		'categories' => sp_store_category_choices(),
+	] );
+}
+
+/** Delete a category. Products are NEVER deleted with it — WordPress unassigns them,
+ *  and any sub-categories move up to this one's parent. */
+add_action( 'wp_ajax_site_pulse_store_category_delete', 'sp_store_ajax_category_delete' );
+function sp_store_ajax_category_delete(): void {
+	sp_store_products_gate();
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id || ! term_exists( $id, 'bp_product_cat' ) ) {
+		wp_send_json_error( [ 'message' => 'That category no longer exists.' ] );
+	}
+
+	$res = wp_delete_term( $id, 'bp_product_cat' );
+	if ( is_wp_error( $res ) ) wp_send_json_error( [ 'message' => $res->get_error_message() ] );
+
+	wp_send_json_success( [
+		'rows'       => sp_store_category_rows(),
 		'categories' => sp_store_category_choices(),
 	] );
 }

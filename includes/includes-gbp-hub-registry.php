@@ -41,6 +41,29 @@ function bpgbp_registry_table(): string {
 	return $wpdb->prefix . 'bpgbp_sites';
 }
 
+/**
+ * Site keys retired from the hub (Site Pulse → Site Fleet → trash). Kept as a list rather than just
+ * a deleted row so a legacy bpgbp-sites.json entry can't merge the site back in and a still-live
+ * client can't re-pair itself into the pending queue. Saving the key in Tools → Agency Settings lifts it.
+ */
+function bpgbp_registry_blocked_sites(): array {
+	$list = get_option( 'bpgbp_removed_sites', [] );
+	return is_array( $list ) ? $list : [];
+}
+
+function bpgbp_registry_block_site( string $site_key ): void {
+	$list = bpgbp_registry_blocked_sites();
+	$list[ $site_key ] = time();
+	update_option( 'bpgbp_removed_sites', $list, false );
+}
+
+function bpgbp_registry_unblock_site( string $site_key ): void {
+	$list = bpgbp_registry_blocked_sites();
+	if ( ! isset( $list[ $site_key ] ) ) return;
+	unset( $list[ $site_key ] );
+	update_option( 'bpgbp_removed_sites', $list, false );
+}
+
 /** The flat-file path BPGBP_Hub uses (mirrors its private default_sites_path), for the one-time import. */
 function bpgbp_registry_file_path(): string {
 	if ( defined( 'BPGBP_SITES_FILE' ) ) return (string) BPGBP_SITES_FILE;
@@ -146,6 +169,9 @@ function bpgbp_registry_merge( $sites ) {
 	if ( ! bpgbp_registry_active() ) return $sites;
 	if ( ! is_array( $sites ) ) $sites = [];
 
+	// Retired sites drop out even when the legacy JSON file still lists them.
+	$sites = array_diff_key( $sites, bpgbp_registry_blocked_sites() );
+
 	global $wpdb;
 	$table = bpgbp_registry_table();
 	if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) return $sites;
@@ -179,7 +205,7 @@ function bpgbp_registry_merge( $sites ) {
 add_action( 'admin_menu', 'bpgbp_registry_admin_menu' );
 function bpgbp_registry_admin_menu(): void {
 	if ( ! bpgbp_registry_active() ) return;
-	add_management_page( 'Client Reviews', 'Client Reviews', 'manage_options', 'bpgbp-clients', 'bpgbp_registry_render_page' );
+	add_management_page( 'Agency Settings', 'Agency Settings', 'manage_options', 'bpgbp-clients', 'bpgbp_registry_render_page' );
 }
 
 function bpgbp_registry_locations_to_text( array $locs ): string {
@@ -272,6 +298,8 @@ function bpgbp_registry_handle_save(): void {
 		$data['created_at'] = $now;
 		$wpdb->insert( $table, $data );
 	}
+	// Adding a key by hand is the deliberate way back in for a site retired from the fleet.
+	bpgbp_registry_unblock_site( $site_key );
 
 	wp_safe_redirect( admin_url( 'tools.php?page=bpgbp-clients&msg=saved' ) );
 	exit;
@@ -288,7 +316,7 @@ function bpgbp_registry_render_page(): void {
 	}
 
 	echo '<div class="wrap">';
-	echo '<h1>Client Reviews</h1>';
+	echo '<h1>Agency Settings</h1>';
 	echo '<p>The hub\'s client registry — Google + Facebook. Each client maps to a Google location and/or a Facebook Page; a secret is generated automatically.</p>';
 	// Facebook connection controls (Connect / Reconnect / Disconnect) live here now, not on a separate tab.
 	if ( class_exists( 'BPFB_Hub' ) && method_exists( 'BPFB_Hub', 'render_connection_controls' ) ) {
@@ -333,7 +361,7 @@ function bpgbp_registry_render_page(): void {
 	if ( $pending ) {
 		echo '<div class="notice notice-warning"><p><strong>' . count( $pending ) . ' site(s) waiting to be approved.</strong> Approving activates the secret the site already generated and auto-fills its Google location from the website match below (you can change it with Edit).</p></div>';
 		$match_map = bpgbp_location_match_map();
-		echo '<table class="widefat striped" style="max-width:1000px;margin-bottom:10px"><thead><tr><th>Label</th><th>Site URL</th><th>Site key</th><th>Matched location</th><th></th></tr></thead><tbody>';
+		echo '<table class="widefat striped" style="max-width:1200px;margin-bottom:10px"><thead><tr><th>Label</th><th>Site URL</th><th>Site key</th><th>Matched location</th><th></th></tr></thead><tbody>';
 		foreach ( $pending as $r ) {
 			$hit = bpgbp_match_for_row( $r, $match_map );
 			echo '<tr>';
@@ -341,11 +369,17 @@ function bpgbp_registry_render_page(): void {
 			echo '<td>' . ( $r['site_url'] ? '<a href="' . esc_url( $r['site_url'] ) . '" target="_blank" rel="noopener">' . esc_html( $r['site_url'] ) . '</a>' : '—' ) . '</td>';
 			echo '<td><code>' . esc_html( $r['site_key'] ) . '</code></td>';
 			echo '<td>' . ( $hit ? '✓ ' . esc_html( $hit['title'] ?: $hit['location'] ) : '<em>no match — set with Edit</em>' ) . '</td>';
-			echo '<td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+			echo '<td style="white-space:nowrap"><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
 			wp_nonce_field( 'bpgbp_approve_client' );
 			echo '<input type="hidden" name="action" value="bpgbp_approve_client"><input type="hidden" name="id" value="' . (int) $r['id'] . '">';
 			echo '<button class="button button-primary button-small">Approve</button></form> ';
-			echo '<a class="button button-small" href="' . esc_url( admin_url( 'tools.php?page=bpgbp-clients&edit=' . (int) $r['id'] ) ) . '">Edit / set location</a></td>';
+			echo '<a class="button button-small" href="' . esc_url( admin_url( 'tools.php?page=bpgbp-clients&edit=' . (int) $r['id'] ) ) . '">Edit / set location</a> ';
+			// Flush a registration you don't recognise. A real site that's still live just re-registers within the hour.
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline" onsubmit="return confirm(\'Delete the pending request from &quot;' . esc_js( $r['label'] ?: $r['site_key'] ) . '&quot;?\');">';
+			wp_nonce_field( 'bpgbp_save_client' );
+			echo '<input type="hidden" name="action" value="bpgbp_save_client"><input type="hidden" name="id" value="' . (int) $r['id'] . '"><input type="hidden" name="delete" value="1">';
+			echo '<button type="submit" class="button button-small button-link-delete">Delete</button>';
+			echo '</form></td>';
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
@@ -415,7 +449,7 @@ function bpgbp_registry_render_page(): void {
 	echo '<tr><th><label>Secret</label></th><td>';
 	if ( $editing ) {
 		echo '<input name="secret" class="regular-text code" value="' . $e_sec . '"> <label style="margin-left:8px"><input type="checkbox" name="regenerate" value="1"> Regenerate</label>';
-		echo '<p class="description">The client stores this as BPGBP_SITE_SECRET.</p>';
+		echo '<p class="description">The client stores this as BPGBP_SITE_SECRET. Fingerprint: <code>' . esc_html( substr( hash( 'sha256', (string) $editing['secret'] ), 0, 8 ) ) . '</code>, ' . strlen( (string) $editing['secret'] ) . ' chars — a client\'s "Signature mismatch" error shows its own; they must match.</p>';
 	} else {
 		echo '<input type="hidden" name="secret" value="">';
 		echo '<p class="description">Generated automatically on save.</p>';
@@ -515,6 +549,11 @@ function bpgbp_pair_handle( WP_REST_Request $request ) {
 	$site_key = sanitize_title( (string) ( $p['site_key'] ?? '' ) );
 	if ( '' === $site_key && $site_url ) $site_key = bpgbp_key_from_url( $site_url );
 	if ( '' === $site_key || '' === $secret ) return new WP_Error( 'bpgbp_pair_bad', 'Missing site_key or secret.', [ 'status' => 400 ] );
+
+	// Retired from the fleet — don't let it walk back into the pending queue.
+	if ( isset( bpgbp_registry_blocked_sites()[ $site_key ] ) ) {
+		return new WP_REST_Response( [ 'status' => 'removed', 'site_key' => $site_key ], 200 );
+	}
 
 	$now = current_time( 'mysql' );
 	$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE site_key = %s", $site_key ), ARRAY_A );

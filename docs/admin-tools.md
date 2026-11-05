@@ -79,6 +79,8 @@ Loaded **unconditionally** (front-end + cron), because alt can be generated in t
 ### Alt → content sync
 WordPress bakes alt into post content at insert time and never updates it, so library alt and on-page alt drift. This hooks `updated_post_meta`/`added_post_meta` on `_wp_attachment_image_alt` (so it fires for manual edits, the sparkle icon, AND the cron generator) and pushes the new alt into every `<img class="wp-image-{ID}">` already in content.
 - **Force-overwrites** every matching tag by default (adds an `alt=""` if one is missing). Filter `bp_alt_sync_force_overwrite` → `false` to only fill empty/missing alts instead.
-- Matches on the exact `wp-image-{ID}` token (framework standard; not a prefix, so 12 ≠ 123). Hand-written tags lacking that class aren't touched.
+- Matches on the exact `wp-image-{ID}` token (framework standard; not a prefix, so 12 ≠ 123).
+- **Hand-written tags** without that class (`[img]` wraps a raw `<img src>`) are matched by file URL at any size (`bp_alt_src_regex()`: `teaser1.webp`, `teaser1-480x320.webp`, `-scaled`, a `.webp` sibling; never `teaser10.webp`). They are replaced **only when their current alt is weak** (`bp_alt_weak_reason()`: missing / filename / generic / short), so alt text written for that spot survives a library change.
+- `bp_alt_sync_to_content($id, $alt, $dry = false, &$touched)`: `$dry` reports without writing; `$touched` returns `[post, key, before, after]` per field (used by `wp bp alt` for its preview and undo, see `docs/cli.md`).
 - Scans **`post_content`** (main editor + Elements CPT) **and `postmeta`** — the Page Top / Page Bottom sections live in postmeta, so a hero image gets synced too. **Plain-string values only**, never inside serialized/JSON blobs. `srcset`/`sizes`/captions left alone.
 - Writes via raw `$wpdb` (no `save_post` side effects / no meta loop) and `clean_post_cache()`s each edited post.

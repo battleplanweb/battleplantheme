@@ -105,12 +105,14 @@ function sp_store_register_cpt(): void {
 	] );
 
 	// Rewrite rules are expensive to flush and must not be flushed on every request.
-	// Keying the flag on the SLUG means turning the module on flushes once, and changing
-	// the slug filter later flushes exactly once more — with no manual step and no
-	// "re-save your permalinks" instruction in a handover document.
-	if ( get_option( 'sp_store_rewrite_slug' ) !== $slug ) {
+	// Keying the flag on a SIGNATURE of every store slug means turning the module on
+	// flushes once, and changing any slug filter later — or the framework adding a route,
+	// which is what sp_store_rewrite_signature collects — flushes exactly once more, with
+	// no manual step and no "re-save your permalinks" instruction in a handover document.
+	$signature = implode( '|', array_map( 'strval', (array) apply_filters( 'sp_store_rewrite_signature', [ $slug ] ) ) );
+	if ( get_option( 'sp_store_rewrite_slug' ) !== $signature ) {
 		flush_rewrite_rules( false );
-		update_option( 'sp_store_rewrite_slug', $slug );
+		update_option( 'sp_store_rewrite_slug', $signature );
 	}
 }
 

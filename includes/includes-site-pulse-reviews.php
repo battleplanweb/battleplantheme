@@ -225,6 +225,16 @@ function sp_reviews_hub_request( string $method, string $path, ?array $body = nu
 
 	if ( $code < 200 || $code >= 300 ) {
 		$msg = ( is_array( $data ) && isset( $data['message'] ) ) ? $data['message'] : ( 'Hub returned ' . $code );
+		// An auth failure is a config mismatch between this site and the hub — name the key and hub it used
+		// so it can be matched against Tools → Agency Settings. (The key isn't secret; it rides every request.)
+		if ( 401 === $code || 403 === $code ) {
+			$msg .= sprintf( ' (site key "%s" at %s)', $site_key, (string) wp_parse_url( $hub_url, PHP_URL_HOST ) );
+			// A one-way fingerprint of the secret this site signs with — compare it to the one shown under the
+			// Secret field in Agency Settings. Any difference (a character, a space, a line break) changes it.
+			if ( is_array( $data ) && 'bpgbp_bad_signature' === ( $data['code'] ?? '' ) ) {
+				$msg .= sprintf( ' — secret fingerprint %s, %d chars', substr( hash( 'sha256', $site_secret ), 0, 8 ), strlen( $site_secret ) );
+			}
+		}
 		return new WP_Error( 'sp_reviews_hub', $msg, [ 'status' => $code ] );
 	}
 	return is_array( $data ) ? $data : [];
@@ -621,6 +631,7 @@ function site_pulse_ajax_get_reviews(): void {
 	// the backfill cursor, and Load Older + the cron walk the rest of the history.
 	if ( 1 === $page ) {
 		$deadline = time() + 22;
+		$relist   = false;
 		if ( function_exists( 'set_time_limit' ) ) @set_time_limit( 60 );
 		foreach ( $locations as $L ) {
 			if ( time() >= $deadline ) break;
@@ -630,7 +641,13 @@ function site_pulse_ajax_get_reviews(): void {
 			if ( ! $force && ! $stale && 0 !== $count ) continue;
 
 			$sync = sp_reviews_sync( $L['id'], $L['label'], $L['brand'], '', $never_loc ? 200 : 50 );
-			if ( is_wp_error( $sync ) ) { $error = $sync->get_error_message(); continue; }
+			if ( is_wp_error( $sync ) ) {
+				$error = $sync->get_error_message();
+				// The hub no longer owns this location — our day-cached list is out of date (the hub's list was
+				// edited). Re-ask now, so the next load syncs the corrected set instead of waiting out the day.
+				if ( false !== stripos( $error, 'location is not configured' ) ) $relist = true;
+				continue;
+			}
 
 			if ( $never_loc ) {
 				$lm['next_token'] = $sync['next_token'];                  // seed the backfill cursor once
@@ -640,6 +657,13 @@ function site_pulse_ajax_get_reviews(): void {
 			if ( null !== $sync['avg'] )   $lm['avg']   = $sync['avg'];
 			$lm['synced_at']         = time();
 			$meta['loc'][ $L['id'] ] = $lm;
+		}
+
+		// Refresh the location list into $meta too — this request saves $meta later, which would otherwise
+		// write the stale list straight back over the fresh one.
+		if ( $relist ) {
+			$fresh = sp_reviews_locations( true );
+			if ( $fresh ) { $meta['loc_list'] = $fresh; $meta['loc_list_at'] = time(); }
 		}
 
 		// Facebook recommendations: refresh at most hourly (or on a forced sync), stored under the
@@ -950,11 +974,20 @@ function site_pulse_ajax_reply_review(): void {
 
 	// Tell the hub which location this review belongs to (it validates against the site's allowlist).
 	global $wpdb;
-	$location = (string) $wpdb->get_var( $wpdb->prepare( 'SELECT location FROM ' . sp_reviews_table() . ' WHERE review_id = %s', $review_id ) );
+	$src      = $wpdb->get_row( $wpdb->prepare( 'SELECT location, store FROM ' . sp_reviews_table() . ' WHERE review_id = %s', $review_id ), ARRAY_A );
+	$location = (string) ( $src['location'] ?? '' );
 
 	// Empty comment = delete the existing reply (hub interprets it that way).
 	$res = sp_reviews_hub_request( 'POST', 'reply', [ 'review_id' => $review_id, 'comment' => $comment, 'location' => $location ] );
-	if ( is_wp_error( $res ) ) wp_send_json_error( [ 'message' => $res->get_error_message() ] );
+	if ( is_wp_error( $res ) ) {
+		$msg = $res->get_error_message();
+		// The hub rejected this review's location: name the store + id so the hub's location list
+		// (Tools → Agency Settings) can be checked for the missing or mistyped line.
+		if ( false !== stripos( $msg, 'location is not configured' ) ) {
+			$msg .= sprintf( ' Review is from %s — %s', ( $src['store'] ?? '' ) !== '' ? $src['store'] : 'an unlabelled store', '' !== $location ? $location : '(no location saved)' );
+		}
+		wp_send_json_error( [ 'message' => $msg ] );
+	}
 
 	// Internal credit: record WHO on the team posted the reply (effective user), shown in the panel only —
 	// Google has no concept of an internal author. `by` rides the response so the card updates immediately.

@@ -248,6 +248,11 @@ function bp_chat_handle_inbound_sms( WP_REST_Request $req ) {
 	if ( $from === bp_chat_reply_number( $o ) ) {
 		return bp_chat_handle_contractor_reply( $body, $customer, $o );
 	}
+	// Another module that texts this number's subscribers (Site Pulse alerts) can
+	// claim the reply — STOP/HELP for its own list — by returning a response.
+	$handled = apply_filters( 'bp_chat_inbound_sms_intercept', null, $from, $body );
+	if ( $handled !== null ) return $handled;
+
 	// A notification-only staff number texting in is not a customer lead — ignore
 	// it (only the reply line drives the two-way relay).
 	if ( in_array( $from, bp_chat_notify_numbers( $o ), true ) ) {

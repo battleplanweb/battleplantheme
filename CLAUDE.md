@@ -33,6 +33,7 @@ The detailed reference lives in `docs/` beside this file (from a client folder: 
 | Any CSS — `style-site.css` or framework `style-*.css`, plus the rendered-HTML selector map | `docs/css.md` |
 | Jobsite GEO (CPT, taxonomies, scoring, API, app) | `docs/jobsite-geo.md` |
 | AI Chat widget + Twilio SMS handoff | `docs/ai-chat.md` |
+| Editing a LIVE site's page content, Page Top/Bottom, SEO title/description or image alt text (`wp bp` over SSH) | `docs/cli.md` |
 
 When a framework function is removed or renamed, grep every client `script-site.js` / `functions-site.php` for callers before shipping.
 
@@ -60,6 +61,7 @@ When a framework function is removed or renamed, grep every client `script-site.
 - Font weight is `normal` or `bold` — never `400`/`500`/`600`/`700` → `docs/css.md`
 - Layout: default to `display: grid`, override to `flex` only with a reason → `docs/css.md`
 - Conversion tracking — name it `conversion-*` and it reports itself → `docs/shortcodes-content.md`
+- Live-site edits go through `bp-wp <install> bp …` — `bp get` first, `--dry-run` and show the diff before every write, HTML via stdin only; every SEO pass also runs `bp images` and fixes weak alt → `docs/cli.md`
 
 ---
 

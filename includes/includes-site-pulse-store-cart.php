@@ -97,6 +97,51 @@ function sp_store_cart_clear_cookie(): void {
 		'secure'  => is_ssl(), 'httponly' => true, 'samesite' => 'Lax',
 	] );
 	unset( $_COOKIE[ sp_store_cart_cookie_name() ] );
+	sp_store_cart_sync_cache_cookie( 0 );
+}
+
+/**
+ * The companion cookie that tells a host's page cache to stand aside.
+ *
+ * bp_store_cart is deliberately not a name any edge treats as "this visitor is
+ * special" -- that is what keeps the catalogue cacheable for everyone. The price of
+ * that choice is that WP Engine, and most hosts that cache at the edge, STRIP
+ * cookies they do not recognise from requests they think they may cache. PHP then
+ * never sees the cart on a front-end page, and the checkout tells a shopper holding
+ * two shirts that their cart is empty.
+ *
+ * So a second cookie rides along, but only while the cart actually holds something.
+ * Its name is one every major host allowlists as a reason to skip the cache, and
+ * carrying it is what lets bp_store_cart reach PHP. Emptying the cart clears it and
+ * the visitor is cacheable again. Shoppers mid-basket are served uncached pages --
+ * which is the standard trade and the only way the server can read a cart at all.
+ */
+function sp_store_cart_cache_cookie_name(): string {
+	return (string) apply_filters( 'sp_store_cart_cache_cookie_name', 'woocommerce_items_in_cart' );
+}
+
+function sp_store_cart_sync_cache_cookie( int $count ): void {
+	$name = sp_store_cart_cache_cookie_name();
+	// headers_sent() is the normal case on a rendered page, not an error: the cookie
+	// is set on the AJAX replies that change the cart, which is where it matters.
+	if ( $name === '' || headers_sent() ) return;
+
+	$have = isset( $_COOKIE[ $name ] ) ? (string) $_COOKIE[ $name ] : null;
+	$want = $count > 0 ? (string) $count : null;
+	if ( $have === $want ) return;
+
+	setcookie( $name, (string) $want, [
+		'expires'  => $want === null ? time() - 3600 : time() + sp_store_cart_lifetime(),
+		'path'     => '/',
+		'domain'   => COOKIE_DOMAIN ?: '',
+		'secure'   => is_ssl(),
+		// Not httponly: it carries no secret, only "this browser has a cart", and a
+		// script may want to read it to decide whether to ask for the cart at all.
+		'httponly' => false,
+		'samesite' => 'Lax',
+	] );
+
+	if ( $want === null ) unset( $_COOKIE[ $name ] ); else $_COOKIE[ $name ] = $want;
 }
 
 /**
@@ -384,6 +429,8 @@ function sp_store_cart_recalc( int $cart_id ): array {
 		'updated_at'     => current_time( 'mysql', true ),
 	], [ 'id' => $cart_id ] );
 
+	sp_store_cart_sync_cache_cookie( $count );
+
 	return [
 		'count'          => $count,
 		'subtotal_cents' => $subtotal,
@@ -422,6 +469,7 @@ function sp_store_checkout_blocked_note(): string {
 function sp_store_cart_payload(): array {
 	$cart = sp_store_current_cart();
 	if ( ! $cart ) {
+		sp_store_cart_sync_cache_cookie( 0 );
 		return [
 			'count' => 0, 'subtotal_cents' => 0, 'subtotal' => sp_store_money( 0 ),
 			'items' => [],
@@ -591,7 +639,7 @@ function sp_store_cart_drawer(): void {
 			<footer class="store-drawer-foot" data-store-cart-foot hidden>
 				<p class="store-drawer-subtotal"><span>Subtotal</span> <strong data-store-cart-subtotal></strong></p>
 				<p class="store-drawer-note">Shipping and tax are worked out at checkout.</p>
-				<a class="store-drawer-checkout" data-store-cart-checkout href="#">Checkout</a>
+				<a class="button store-drawer-checkout" data-store-cart-checkout href="#">Checkout</a>
 				<p class="store-drawer-staff" data-store-cart-note hidden></p>
 			</footer>
 		</aside>

@@ -107,7 +107,9 @@ function sp_agency_fetch_client_entry( string $site_key, array $cfg, bool $do_li
 
 	$fbid = (string) ( $cfg['facebook_page_id'] ?? '' );
 	if ( '' === $location && '' === $fbid ) {
-		$entry['error'] = 'No Google location or Facebook Page set — add one in Tools → Client Reviews.';
+		// Not a failure — just nothing to pull. Flagged so the panel lists these together at the bottom
+		// instead of one notice per site at the top.
+		$entry['unmapped'] = true;
 		return $entry;
 	}
 
@@ -466,8 +468,8 @@ function site_pulse_ajax_agency_push_testimonial(): void {
 	$location = $cfg['location'] ?? '';
 	$site_url = ! empty( $cfg['site_url'] ) ? rtrim( (string) $cfg['site_url'], '/' ) : '';
 	$secret   = $cfg['secret'] ?? '';
-	if ( '' === $site_url ) wp_send_json_error( [ 'message' => 'No Site URL set for this client — add it in Tools → Client Reviews.' ] );
-	if ( '' === $secret )   wp_send_json_error( [ 'message' => 'No secret set for this client — approve/pair it in Tools → Client Reviews.' ] );
+	if ( '' === $site_url ) wp_send_json_error( [ 'message' => 'No Site URL set for this client — add it in Tools → Agency Settings.' ] );
+	if ( '' === $secret )   wp_send_json_error( [ 'message' => 'No secret set for this client — approve/pair it in Tools → Agency Settings.' ] );
 
 	$with_photo = ! empty( $_POST['with_photo'] );
 	$is_fb      = strpos( $review_id, 'fb_' ) === 0;
@@ -528,7 +530,7 @@ function site_pulse_ajax_agency_push_testimonial(): void {
 			}
 		}
 		if ( ! $review ) {
-			wp_send_json_error( [ 'message' => 'That review is no longer on this Google location — it may have been deleted, or the wrong location is mapped for this client (check Tools → Client Reviews).' ] );
+			wp_send_json_error( [ 'message' => 'That review is no longer on this Google location — it may have been deleted, or the wrong location is mapped for this client (check Tools → Agency Settings).' ] );
 		}
 		$payload = [
 			'reviewId'   => (string) ( $review['reviewId'] ?? '' ),

@@ -885,10 +885,10 @@ function sp_member_locked_box( WP_Post $post ): string {
 	if ( $names ) $out .= '<p>It is included with ' . esc_html( implode( ' or ', $names ) ) . '.</p>';
 	$out .= '<p class="store-locked-actions">';
 	if ( is_user_logged_in() ) {
-		$out .= '<a class="store-btn" href="' . esc_url( $buy ?: sp_store_shop_url() ) . '">Get Access</a>';
+		$out .= '<a class="button store-btn" href="' . esc_url( $buy ?: sp_store_shop_url() ) . '">Get Access</a>';
 	} else {
-		$out .= '<a class="store-btn" href="' . esc_url( sp_member_account_url( [ 'redirect_to' => $here ] ) ) . '">Sign In</a> ';
-		if ( $buy ) $out .= '<a class="store-btn store-btn-secondary" href="' . esc_url( $buy ) . '">Join</a>';
+		$out .= '<a class="button store-btn" href="' . esc_url( sp_member_account_url( [ 'redirect_to' => $here ] ) ) . '">Sign In</a> ';
+		if ( $buy ) $out .= '<a class="button store-btn store-btn-secondary" href="' . esc_url( $buy ) . '">Join</a>';
 	}
 	$out .= '</p></div>';
 	return $out;
@@ -1043,13 +1043,13 @@ function sp_member_account_shortcode(): string {
 			. '<input type="hidden" name="sp_member_act" value="login"><input type="hidden" name="redirect_to" value="' . esc_attr( $redirect ) . '">'
 			. '<p><label>Email<br><input type="email" name="email" autocomplete="email" required></label></p>'
 			. '<p><label>Password<br><input type="password" name="password" autocomplete="current-password" required></label></p>'
-			. '<p><button type="submit" class="store-btn unique">Sign In</button></p></form>';
+			. '<p><button type="submit" class="store-btn">Sign In</button></p></form>';
 		$out .= '<form method="post" class="store-account-card"><h2>No password?</h2>'
 			. '<p>Forgot it, or never set one? We will email you a link that signs you straight in.</p>'
 			. wp_nonce_field( 'sp_member_link', '_spm', false, false )
 			. '<input type="hidden" name="sp_member_act" value="link">'
 			. '<p><label>Email<br><input type="email" name="email" autocomplete="email" required></label></p>'
-			. '<p><button type="submit" class="store-btn store-btn-secondary unique">Email Me a Sign-In Link</button></p></form>';
+			. '<p><button type="submit" class="store-btn store-btn-secondary">Email Me a Sign-In Link</button></p></form>';
 		$out .= '</div></div>';
 		return $out;
 	}
@@ -1083,7 +1083,7 @@ function sp_member_account_shortcode(): string {
 				$out .= '<form method="post" class="store-account-inline">'
 					. wp_nonce_field( 'sp_member_billing', '_spm', false, false )
 					. '<input type="hidden" name="sp_member_act" value="billing"><input type="hidden" name="membership" value="' . (int) $m['id'] . '">'
-					. '<button type="submit" class="store-btn store-btn-secondary unique">Manage Billing</button>'
+					. '<button type="submit" class="store-btn store-btn-secondary">Manage Billing</button>'
 					. '<span class="store-account-sub"> Change your card or cancel.</span></form>';
 			}
 			$out .= '</li>';
@@ -1126,7 +1126,7 @@ function sp_member_account_shortcode(): string {
 		. wp_nonce_field( 'sp_member_password', '_spm', false, false )
 		. '<input type="hidden" name="sp_member_act" value="password">'
 		. '<p><label>New password<br><input type="password" name="password" autocomplete="new-password" minlength="8" required></label></p>'
-		. '<p><button type="submit" class="store-btn unique">Save Password</button></p></form>';
+		. '<p><button type="submit" class="store-btn">Save Password</button></p></form>';
 
 	$out .= '</div>';
 	return $out;

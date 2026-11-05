@@ -128,6 +128,14 @@ function sp_store_query_products( array $args ): array {
 	$cat = (int) ( $args['category'] ?? 0 );
 	if ( $cat ) $q['tax_query'] = [ [ 'taxonomy' => 'bp_product_cat', 'field' => 'term_id', 'terms' => $cat ] ];
 
+	switch ( (string) ( $args['sort'] ?? '' ) ) {
+		case 'az':         $q['orderby'] = [ 'title' => 'ASC', 'ID' => 'ASC' ]; break;
+		case 'za':         $q['orderby'] = [ 'title' => 'DESC', 'ID' => 'DESC' ]; break;
+		case 'newest':     $q['orderby'] = [ 'date' => 'DESC', 'ID' => 'DESC' ]; break;
+		case 'price-low':  $q['meta_key'] = '_sp_store_sort_price'; $q['orderby'] = [ 'meta_value_num' => 'ASC', 'title' => 'ASC', 'ID' => 'ASC' ]; break;
+		case 'price-high': $q['meta_key'] = '_sp_store_sort_price'; $q['orderby'] = [ 'meta_value_num' => 'DESC', 'title' => 'ASC', 'ID' => 'ASC' ]; break;
+	}
+
 	$query = new WP_Query( $q );
 	return [
 		'products' => array_map( 'sp_store_product_row', $query->posts ),
@@ -455,6 +463,7 @@ function sp_store_ajax_products(): void {
 		'search'   => sanitize_text_field( wp_unslash( (string) ( $_POST['search'] ?? '' ) ) ),
 		'status'   => sanitize_key( (string) ( $_POST['status'] ?? '' ) ),
 		'category' => (int) ( $_POST['category'] ?? 0 ),
+		'sort'     => sanitize_key( (string) ( $_POST['sort'] ?? '' ) ),
 		'page'     => (int) ( $_POST['page'] ?? 1 ),
 	] );
 	$out['categories'] = sp_store_category_choices();

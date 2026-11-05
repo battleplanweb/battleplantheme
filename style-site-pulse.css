@@ -1053,7 +1053,7 @@ button.sp-stat { cursor: pointer; }
 
 .sp-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-space-2); }
 
-.sp-filter {
+.sp-filter, .sp-sort {
 	display:                                                   inline-flex;
 	align-items:                                               center;
 	gap:                                                       var(--sp-space-2);
@@ -1068,8 +1068,12 @@ button.sp-stat { cursor: pointer; }
 	font-weight:                                               bold;
 	cursor:                                                    pointer;
 }
-.sp-filter:hover { border-color: var(--sp-brand); }
-.sp-filter > .sp-icon:last-child { color: var(--sp-ink-3); }
+.sp-filter:hover, .sp-sort:hover, .sp-sort:focus-within { border-color: var(--sp-brand); }
+.sp-filter > .sp-icon:last-child, .sp-sort > .sp-icon:last-child { color: var(--sp-ink-3); }
+/* Sort: its own pill beside Filter. A native select (the phone's own picker) with the arrow drawn over it. (PHP $sp_sort.) */
+.sp-sort { position: relative; padding-right: 0; }
+.sp-sort > .sp-icon:last-child { position: absolute; right: var(--sp-space-3); pointer-events: none; }
+body.has-site-pulse .sp-sort__select, body.has-site-pulse .sp-sort__select:focus { -webkit-appearance: none; appearance: none; width: auto; min-height: 40px; height: auto; margin: 0; padding: 0 calc(var(--sp-space-3) + 26px) 0 0; border: 0; border-radius: 0; background: none; box-shadow: none; text-shadow: none; transform: none; filter: none; color: inherit; font: inherit; font-size: inherit; font-weight: inherit; cursor: pointer; outline: none; transition: none; }
 .sp-filter.is-active { border-color: var(--sp-brand); background: var(--sp-brand-soft); color: var(--sp-brand); }
 /* What's applied, on its own line under the Filter button: "Last 30 days · 5 stars · Google". Each item
    opens the same sheet as the button. (JS spSyncFilterSummaries.) */
@@ -1237,6 +1241,11 @@ textarea { --_pad: var(--sp-space-3) var(--sp-space-4); min-height: 104px; line-
 .sp-progress__track { height: 8px; overflow: hidden; border-radius: var(--sp-radius-pill); background: color-mix(in oklab, var(--sp-ink) 10%, var(--sp-surface)); }
 .sp-progress__fill { width: var(--sp-progress, 0%); height: 100%; border-radius: inherit; background: var(--sp-brand); transition: width 400ms ease; }
 .sp-progress__label { font-size: var(--sp-text-xs); color: var(--sp-ink-2); }
+.sp-agency-refresh-progress { margin: 0 0 var(--sp-space-3); }   /* Client Reviews: live "N of M clients" during a Refresh */
+/* Client Reviews: the one-line roll-call of sites with no Google/Facebook source, under the reviews */
+.sp-agency-unmapped { display: grid; gap: 6px; margin-top: var(--sp-space-5); padding-top: var(--sp-space-3); border-top: 1px solid var(--sp-line); color: var(--sp-ink-3); font-size: var(--sp-text-sm); }
+.sp-agency-unmapped__title { color: var(--sp-ink-2); font-weight: bold; }
+.sp-agency-unmapped__title a { font-weight: normal; }
 
 .sp-notice {
 	display:                                                   flex;
@@ -1954,7 +1963,7 @@ mark.sp-msg-search-hit.current { background: var(--sp-mark); color: var(--sp-mar
 .sp-reviews-stat-note { margin: 0; color: var(--sp-ink-2); font-size: var(--sp-text-sm); }
 
 /* Feedback stat tiles (Reviews, Comment cards): the figure on the left, its breakdown on the right. */
-.sp-survey-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: var(--sp-space-3); margin: 0; }
+.sp-survey-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr)); gap: var(--sp-space-3); margin: 0; }
 /* The words keep at least 120px; when the tile is too narrow for words + chart side by side, the chart
    drops below the words instead of sliding on top of them. */
 .sp-tile.sp-feedback-stat-tile {
@@ -2189,6 +2198,53 @@ body.sp-has-god-bar .sp-god-bar { display: grid; }
 	font-size:                                                 var(--font-size-text);
 	color:                                                     var(--sp-text-secondary);
 	margin:                                                    0;
+}
+
+/* Public document pages (Privacy Policy, Terms…) on a private app install — site_pulse_is_doc_page().
+   The page sits on the app canvas; the article is one card; the client site's empty header/footer go. */
+/* Doubled class on purpose: the generic body.has-site-pulse page rules further down this file (white body,
+   full-bleed padding-0 article) are the same specificity and would otherwise win on source order. */
+body.has-site-pulse.sp-doc-page { background: var(--sp-canvas); font-family: var(--sp-font); }
+body.has-site-pulse.sp-doc-page :is(#primary, .site-main-inner, #main-content) { background: transparent; }
+body.sp-doc-page :is(#masthead, #colophon) { display: none; }
+body.sp-doc-page #wrapper-content { padding: 0 16px 48px; }
+
+.sp-doc-brand {
+	display:                                                   grid;
+	grid-template-columns:                                     auto 1fr auto;
+	align-items:                                               center;
+	gap:                                                       12px;
+	max-width:                                                 860px;
+	margin:                                                    32px auto 16px;
+	padding:                                                   0 16px;
+}
+.sp-doc-brand__icon { width: 44px; height: 44px; border-radius: 12px; object-fit: cover; box-shadow: var(--sp-shadow-1); }
+.sp-doc-brand__name { grid-column: 2; font-size: 20px; font-weight: bold; color: var(--sp-ink); }
+
+body.has-site-pulse.sp-doc-page article[id^="post-"] {
+	max-width:                                                 860px;
+	margin:                                                    0 auto;
+	padding:                                                   40px 48px;
+	background:                                                var(--sp-surface);
+	border:                                                    1px solid var(--sp-line);
+	border-radius:                                             var(--sp-radius-lg);
+	box-shadow:                                                var(--sp-shadow-1);
+	color:                                                     var(--sp-ink-2);
+	font-size:                                                 16px;
+	line-height:                                               1.7;
+}
+/* Headings are variable-driven; --font-size-h1 comes from the client site CSS, which isn't loaded here.
+   px, not rem: the root font size is ALSO set by that site CSS, so 2rem computes to ~2px on these pages. */
+body.sp-doc-page article h1 { --h-font-size: 32px; --h-color: var(--sp-ink); --h-text-align: left; --h-line-height: 1.25; margin: 0 0 8px; }
+body.sp-doc-page article :is(strong, b) { color: var(--sp-ink); }
+body.sp-doc-page article p > strong:only-child { display: block; margin-top: 16px; font-size: 17px; letter-spacing: 0.02em; }
+body.sp-doc-page article a { color: var(--sp-brand); }
+
+@media (max-width: 576px) {
+	.sp-doc-brand { margin-top: 20px; }
+	body.sp-doc-page #wrapper-content { padding: 0 8px 32px; }
+	body.has-site-pulse.sp-doc-page article[id^="post-"] { padding: 24px 20px; }
+	body.sp-doc-page article h1 { --h-font-size: 26px; }
 }
 
 /* "Log out" link under the forced password-change form. */
@@ -2565,7 +2621,7 @@ input + span {
 	align-items:                                               center;
 	gap:                                                       12px;
 	width:                                                     100%;
-	padding:                                                   4px 6px;
+	padding:                                                   6px 6px;
 	border:                                                    none;
 	background:                                                none;
 	color:                                                     var(--sp-sidebar-text, var(--sp-primary-contrast));
@@ -2577,6 +2633,8 @@ input + span {
 	transition:                                                all var(--sp-transition);
 	position:                                                  relative;
 	text-align:                                                left;
+	margin-bottom:                                             0;
+
 }
 
 .sp-nav-item:hover {
@@ -2589,6 +2647,7 @@ input + span {
 	background:                                                var(--sp-sidebar-active-bg, var(--sp-accent-color));
 	color:                                                     var(--sp-sidebar-active-text, var(--sp-accent-contrast));
 	font-weight:                                               800;
+	margin-bottom:                                             10px;
 }
 
 .sp-nav-item.active::before {
@@ -2763,7 +2822,7 @@ input + span {
 	grid-template-columns:                                     1fr;
 	align-items:                                               center;
 	width:                                                     100%;
-	padding:                                                   4px 12px 4px 22px;
+	padding:                                                   6px 12px 7px 22px;
 	border:                                                    none;
 	background:                                                none;
 	color:                                                     var(--sp-primary-contrast);
@@ -4634,7 +4693,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-arole-head .sp-arole-module { flex: 0 0 auto; width: auto; }
 .sp-arole-head .sp-tier-count { flex: 0 0 auto; color: var(--sp-text-secondary); font-size: var(--font-size-sm); }
 .sp-arole-note { margin: 0; }
-.sp-arole-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 14px; }
+.sp-arole-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(305px, 100%), 1fr)); gap: 14px; }
 .sp-arole-modgroup {
 	border:                                                    1px solid var(--sp-border);
 	border-radius:                                             var(--sp-radius-sm);
@@ -4886,7 +4945,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 
 /* Comment cards: a grid of cards on wide screens, one column on phones. The head, comments and actions
    reuse the review card's parts (.sp-review-head / -body / -actions). */
-.sp-survey-list { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); align-items: start; }
+.sp-survey-list { grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); align-items: start; }
 .sp-survey-card { display: grid; gap: var(--sp-space-3); }
 .sp-survey-rates { display: grid; gap: 6px; padding: var(--sp-space-3) 0; border-block: 1px solid var(--sp-line); }
 .sp-survey-rate-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-space-3); }
@@ -6172,7 +6231,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	position:                                                  fixed;
 	top:                                                       calc(var(--sp-god-h) + 160px);
 	left:                                                      16px;
-	width:                                                     380px;
+	width:                                                     435px;
 	max-height:                                                500px;
 	background:                                                var(--sp-bg-white);
 	border:                                                    1px solid var(--sp-border);
@@ -6292,8 +6351,7 @@ input[type="file"].sp-input::file-selector-button:hover {
 	background:                                                var(--sp-secondary-lightest);
 	font-size:                                                 13px;
 }
-.sp-sms-optin { display: flex; align-items: flex-start; gap: 8px; font-weight: 600; color: var(--sp-text); cursor: pointer; }
-.sp-sms-optin input { margin-top: 2px; }
+.sp-sms-optin { font-weight: bold; color: var(--sp-text); }
 .sp-sms-body { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
 .sp-sms-body[hidden] { display: none; }
 .sp-sms-field { display: flex; flex-direction: column; gap: 4px; font-weight: 600; color: var(--sp-text-soft); }
@@ -6301,7 +6359,16 @@ input[type="file"].sp-input::file-selector-button:hover {
 .sp-sms-quiet-times { display: flex; gap: 12px; flex-wrap: wrap; }
 .sp-sms-quiet-times[hidden] { display: none; }
 .sp-sms-quiet-times label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sp-text-soft); }
-.sp-sms-actions { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+.sp-sms-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+.sp-sms-number { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--sp-text); }
+
+/* The A2P opt-in screen (modal). The disclosure must stay fully readable — no fine print — so it uses
+   body text colour at a readable size, sitting right beside its unchecked box. */
+.sp-sms-optin-screen { max-width: 520px; display: grid; gap: 14px; }
+.sp-sms-optin-lede { margin: 0; color: var(--sp-text); font-size: 15px; line-height: 1.5; }
+.sp-sms-consent { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; cursor: pointer; }
+.sp-sms-consent-text { color: var(--sp-text); font-size: 14px; line-height: 1.5; }
+.sp-sms-legal { font-size: 14px; padding-left: 26px; }
 
 /* Notifications routing matrix — recipient columns are narrow, centered checkboxes; the situation
    label stays left-aligned and readable. */
@@ -6777,6 +6844,27 @@ body.has-site-pulse .sp-msg-contact-pick {
 
 .sp-god-viewing {
 	color:                                                     rgba(255,255,255,0.8);
+}
+
+/* Back to wp-admin, pinned to the bar's last column. Same chip treatment as the Odin Mode label. */
+.sp-god-admin {
+	grid-column:                                               -2;
+	font-weight:                                               700;
+	text-transform:                                            uppercase;
+	letter-spacing:                                            1px;
+	font-size:                                                 var(--sp-text-xs);
+	color:                                                     var(--white);
+	text-decoration:                                           none;
+	background:                                                rgba(255,255,255,0.2);
+	padding:                                                   4px 10px;
+	border-radius:                                             var(--sp-radius-xs);
+	transition:                                                background 0.15s;
+}
+
+.sp-god-admin:hover,
+.sp-god-admin:focus-visible {
+	color:                                                     var(--white);
+	background:                                                rgba(255,255,255,0.35);
 }
 
 .sp-god-select {
@@ -8051,6 +8139,8 @@ body.sp-printing-mileage .sp-notification-panel {
 .sp-fleet-delta-neutral { color: var(--sp-trend-neutral); }
 .sp-fleet-metric-spark { color: var(--sp-brand); }
 .sp-fleet-spark { display: block; width: 90px; height: 24px; }
+/* Trash at the far right of the head; only rendered for manage_fleet. */
+.sp-fleet-head:has(.sp-fleet-remove) { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto; }
 /* Detail — closed by default, opened by .sp-fleet-open on the card. */
 .sp-fleet-detail { display: none; padding: 0 var(--sp-space-4) var(--sp-space-4); border-top: 1px solid var(--sp-line); }
 .sp-fleet-open .sp-fleet-detail { display: grid; gap: var(--sp-space-3); padding-top: var(--sp-space-3); }
@@ -8058,6 +8148,10 @@ body.sp-printing-mileage .sp-notification-panel {
 
 @media (max-width: 1024px) {
 	.sp-fleet-head { grid-template-columns: minmax(0, 1fr); }
+	/* Stacked: the trash stays top-right beside the name, metrics take the full row below. */
+	.sp-fleet-head:has(.sp-fleet-remove) { grid-template-columns: minmax(0, 1fr) auto; }
+	.sp-fleet-head:has(.sp-fleet-remove) .sp-fleet-metrics { grid-column: 1 / -1; grid-row: 2; }
+	.sp-fleet-head .sp-fleet-remove { grid-column: 2; grid-row: 1; align-self: start; }
 }
 @media (max-width: 576px) {
 	.sp-fleet-metric-spark { display: none; }

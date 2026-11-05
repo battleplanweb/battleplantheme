@@ -75,7 +75,34 @@ function bp_private_is_allowed_request(): bool {
  */
 function bp_private_is_home_request(): bool {
 	$path = trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH ), '/' );
-	return $path === '';
+	if ( $path !== '' ) return false;
+
+	// A query-var route sits at the bare path but is NOT the home page. The store's
+	// checkout and thank-you pages both hang off home_url('/') — deliberately, because
+	// a rewrite rule that gets flushed badly would lose orders — so treating them as
+	// "someone landed on the home page" sent the shopper to the app instead, and made
+	// checkout unreachable on every private site.
+	//
+	// Campaign parameters are NOT routes: /?utm_source=x really is the home page and
+	// must still redirect, which is why this is a named list and not "any query string".
+	foreach ( bp_private_route_vars() as $var ) {
+		if ( isset( $_GET[ $var ] ) ) return false;
+	}
+
+	return true;
+}
+
+/**
+ * Query vars that route to a page of their own at the bare path.
+ *
+ * Filterable so a module can add its own without editing this file.
+ */
+function bp_private_route_vars(): array {
+	return (array) apply_filters( 'bp_private_route_vars', [
+		'sp_store_checkout',
+		'sp_store_thanks',
+		'sp_store_webhook',
+	] );
 }
 
 /**

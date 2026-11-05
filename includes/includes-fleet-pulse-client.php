@@ -196,6 +196,13 @@ function bp_fleet_collect_keywords(): array {
 		'tracked' => 0, 'ranked' => 0, 'avg_rank' => null, 'top3' => 0, 'top10' => 0,
 		'improved' => 0, 'declined' => 0, 'last_check' => '',
 	];
+	// The keyword helpers only load in wp-admin or inside Chron D's own request. Chron E runs on
+	// a different front-end bot hit six nights out of seven, so without this every site reported
+	// "0 tracked" no matter how many keywords it had. The file self-guards against a double load.
+	if ( ! function_exists( 'bp_kw_tracked' ) ) {
+		$kw_file = get_template_directory() . '/functions-keyword-rankings.php';
+		if ( file_exists( $kw_file ) ) require_once $kw_file;
+	}
 	if ( ! function_exists( 'bp_kw_tracked' ) ) return $out;
 
 	$tracked = bp_kw_tracked();

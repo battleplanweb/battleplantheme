@@ -290,10 +290,18 @@ tr.active[data-plugin*="events-calendar-pro"] + tr.plugin-update-tr {
 /*#adminmenu .wp-submenu li a[href="options-permalink.php"]*/
 #adminmenu .wp-submenu li a[href="index.php?page=launch-site"],
 #adminmenu .wp-submenu li a[href="post-new.php?post_type=elements"],
-#adminmenu .wp-submenu li a[href="options-general.php?page=wp-mail-smtp"] {
+#adminmenu .wp-submenu li a[href="options-general.php?page=wp-mail-smtp"],
+#adminmenu .wp-submenu li a[href="tools.php?page=bpgbp-clients"] {
 	padding-bottom:                                            10px;
 	margin-bottom:                                             10px;
 	border-bottom:                                             1px solid var(--white-lowest);
+}
+
+/* On the hub, Agency Settings sits directly under Mail SMTP — the divider moves down to it. */
+#adminmenu .wp-submenu li:has(+ li a[href="tools.php?page=bpgbp-clients"]) a[href="options-general.php?page=wp-mail-smtp"] {
+	padding-bottom:                                            0;
+	margin-bottom:                                             0;
+	border-bottom:                                             0;
 }
 
 #dashboard-widgets .postbox-container .empty-container {

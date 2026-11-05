@@ -56,6 +56,13 @@ function sp_fleet_can_view(): bool {
 		|| site_pulse_is_god( $user_id );
 }
 
+/** Removing a site from the fleet is a manage action, not a view one. */
+function sp_fleet_can_manage(): bool {
+	if ( ! function_exists( 'site_pulse_effective_user_id' ) ) return false;
+	$user_id = site_pulse_effective_user_id();
+	return site_pulse_user_can( $user_id, 'manage_fleet' ) || site_pulse_is_god( $user_id );
+}
+
 function sp_fleet_table(): string {
 	global $wpdb;
 	return $wpdb->prefix . 'bp_fleet_snapshots';
@@ -535,5 +542,48 @@ function sp_fleet_ajax_get_fleet(): void {
 	}
 	$totals['traffic'] = $window_totals;
 
-	wp_send_json_success( [ 'sites' => $sites, 'totals' => $totals ] );
+	wp_send_json_success( [ 'sites' => $sites, 'totals' => $totals, 'can_manage' => sp_fleet_can_manage() ] );
+}
+
+/**
+ * Retire a cancelled client from everything the hub does for it, in one go:
+ *   - its registry row (wp_bpgbp_sites) — which also ends GBP posting, review fetching, the
+ *     testimonial push and Fleet Pulse auth, since all of them read the registry;
+ *   - its fleet snapshot history;
+ *   - its cached Google / Facebook reviews on the agency Reviews screen;
+ *   - and a block-list entry, because deleting the row alone isn't enough: a legacy entry in
+ *     bpgbp-sites.json would still merge back in, and a still-live client re-pairing would
+ *     drop straight back into the pending queue. Re-adding the key in Tools → Agency Settings
+ *     lifts the block.
+ */
+add_action( 'wp_ajax_site_pulse_fleet_remove_site', 'sp_fleet_ajax_remove_site' );
+function sp_fleet_ajax_remove_site(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! sp_fleet_can_manage() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
+	if ( ! sp_fleet_is_hub() )     wp_send_json_error( [ 'message' => 'This site is not the fleet hub.' ] );
+
+	$site_key = sanitize_text_field( wp_unslash( $_POST['site_key'] ?? '' ) );
+	if ( '' === $site_key ) wp_send_json_error( [ 'message' => 'Missing site.' ] );
+
+	// Gather its review sources BEFORE the row goes — the map is the only place they're recorded.
+	$cfg  = BPGBP_Hub::get_site_map()[ $site_key ] ?? [];
+	$keys = [];
+	foreach ( (array) ( $cfg['locations'] ?? [] ) as $loc ) {
+		if ( ! empty( $loc['id'] ) ) $keys[] = (string) $loc['id'];
+	}
+	if ( ! empty( $cfg['location'] ) )         $keys[] = (string) $cfg['location'];
+	if ( ! empty( $cfg['facebook_page_id'] ) ) $keys[] = 'fb:' . $cfg['facebook_page_id'];
+
+	global $wpdb;
+	$wpdb->delete( bpgbp_registry_table(), [ 'site_key' => $site_key ] );
+	$wpdb->delete( sp_fleet_table(), [ 'site_key' => $site_key ] );
+	bpgbp_registry_block_site( $site_key );
+
+	if ( $keys && function_exists( 'sp_agency_cache' ) ) {
+		$cache = sp_agency_cache();
+		foreach ( array_unique( $keys ) as $k ) unset( $cache[ $k ] );
+		sp_agency_cache_save( $cache );
+	}
+
+	wp_send_json_success( [ 'site_key' => $site_key ] );
 }

@@ -283,7 +283,7 @@ class BPGBP_Hub {
 		}
 
 		$sites = self::get_sites();
-		if ( empty( $sites[ $site_key ]['secret'] ) || empty( $sites[ $site_key ]['location'] ) ) {
+		if ( empty( $sites[ $site_key ]['secret'] ) ) {
 			return new WP_Error( 'bpgbp_unknown_site', 'Unknown site key.', array( 'status' => 403 ) );
 		}
 
@@ -293,6 +293,12 @@ class BPGBP_Hub {
 
 		if ( ! hash_equals( $expected, (string) $signature ) ) {
 			return new WP_Error( 'bpgbp_bad_signature', 'Signature mismatch.', array( 'status' => 403 ) );
+		}
+
+		// Checked only after the signature, so the more specific message reaches the real site alone
+		// (an unauthenticated caller still can't tell a known key from an unknown one).
+		if ( empty( $sites[ $site_key ]['location'] ) ) {
+			return new WP_Error( 'bpgbp_no_location', 'This site is registered on the hub but has no Google location set (Tools → Agency Settings).', array( 'status' => 403 ) );
 		}
 
 		// Stash the verified site key for the handler.

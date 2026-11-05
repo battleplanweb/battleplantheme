@@ -500,26 +500,14 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	text-align:                                                center;
 }
 
-.store-buy .store-add {
-	padding:                                                   14px 28px;
-	border:                                                    0;
-	border-radius:                                             var(--store-radius);
-	background:                                                var(--store-btn-bg);
-	color:                                                     var(--store-btn-color);
-	font-size:                                                 16px;
-	font-weight:                                               600;
-	line-height:                                               1.2;
-	cursor:                                                    pointer;
-	transition:                                                opacity 150ms ease;
-}
-
-.store-buy .store-add:hover,
-.store-buy .store-add.active,
-.store-buy .store-add.tab-focus {
-	background:                                                var(--store-btn-bg-hover);
-	color:                                                     var(--store-btn-color-hover);
-}
-
+/* NOTHING HERE PAINTS A BUTTON.
+   Every button in the shop is a framework button: the markup carries no `unique`
+   class (and the links carry `button`), so style-forms.css gives all of them the
+   site's own font, padding, radius, border, shadow and hover from the --button-*
+   tokens. A shop whose "Add to Cart" looked nothing like the buttons on the rest of
+   the site was the whole problem, and it came from each control re-implementing a
+   subset of that rule here. Only layout and disabled state belong in this file; a
+   site that wants its shop buttons to differ overrides them in style-site.css. */
 .store-buy .store-add[disabled] {
 	opacity:                                                   .45;
 	cursor:                                                    not-allowed;
@@ -536,7 +524,9 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-buy-joined .store-buy-pill {
 	display:                                                   inline-flex;
 	align-items:                                               stretch;
-	border-radius:                                             var(--store-radius);
+	/* The pill IS the button, so it takes the site's button radius, not the radius
+	   the shop uses for cards and inputs. */
+	border-radius:                                             var(--button-border-radius);
 	overflow:                                                  hidden;
 	background:                                                var(--store-btn-bg);
 	max-width:                                                 100%;
@@ -578,8 +568,10 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	border-radius:                                             0;
 	background:                                                transparent;
 	color:                                                     var(--store-btn-color);
+	/* Body font on purpose: a quantity is data, and a site whose button font is a
+	   display face renders "1" as an illegible stroke. */
 	font-size:                                                 16px;
-	font-weight:                                               600;
+	font-weight:                                               bold;
 	text-align:                                                center;
 	cursor:                                                    pointer;
 }
@@ -599,12 +591,16 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	justify-content:                                           center;
 	gap:                                                       2px;
 	padding:                                                   13px 32px;
+	/* The exception that proves the rule: here the button is not a button but a
+	   region of the pill, so the framework's own chrome is switched back off. */
 	border:                                                    0;
 	border-radius:                                             0;
+	box-shadow:                                                none;
+	text-shadow:                                               none;
 	background:                                                transparent;
 	color:                                                     var(--store-btn-color);
 	font-size:                                                 16px;
-	font-weight:                                               700;
+	font-weight:                                               bold;
 	line-height:                                               1.15;
 	cursor:                                                    pointer;
 }
@@ -836,15 +832,11 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	color:                                                     var(--store-muted);
 }
 
-.store-drawer-checkout {
+/* Scoped to the drawer so it outweighs a.button and can claim the full width --
+   the only thing that makes this different from any other button on the site. */
+.store-drawer-foot .store-drawer-checkout {
 	display:                                                   block;
-	padding:                                                   15px 24px;
-	border-radius:                                             var(--store-radius);
-	background:                                                var(--store-btn-bg);
-	color:                                                     var(--store-btn-color);
-	font-weight:                                               600;
-	text-align:                                                center;
-	text-decoration:                                           none;
+	width:                                                     100%;
 }
 
 .store-drawer-checkout.is-disabled {
@@ -901,32 +893,16 @@ body.store-drawer-open { overflow: hidden; }
 
 /*--------------------------------------------------------------
 # Members — the locked-content box and My Account
-# Built from the same --store-* tokens as the buy button, so a site that
-# restyles its shop restyles these with it.
+# These are framework buttons like every other button in the shop. .store-btn is
+# only a hook for a site to grab; the paint comes from style-forms.css.
 --------------------------------------------------------------*/
 
-.store-btn {
-	display:                                                   inline-block;
-	padding:                                                   12px 24px;
-	border:                                                    0;
-	border-radius:                                             var(--store-radius);
-	background:                                                var(--store-btn-bg);
-	color:                                                     var(--store-btn-color);
-	font-weight:                                               bold;
-	text-decoration:                                           none;
-	cursor:                                                    pointer;
-}
-
-.store-btn:hover,
-.store-btn:focus-visible {
-	background:                                                var(--store-btn-bg-hover);
-	color:                                                     var(--store-btn-color-hover);
-}
-
-.store-btn-secondary {
+/* Doubled class so the quiet variant outweighs the framework button it modifies. */
+.store-btn.store-btn-secondary {
 	background:                                                transparent;
 	color:                                                     var(--store-title-color);
 	box-shadow:                                                inset 0 0 0 1px currentColor;
+	text-shadow:                                               none;
 }
 
 .store-locked-teaser {
@@ -1461,21 +1437,12 @@ body.store-drawer-open { overflow: hidden; }
 # Placing the order
 --------------------------------------------------------------*/
 
-.store-place-order {
+.store-checkout .store-place-order {
+	display:                                                   block;
 	width:                                                     100%;
 	margin:                                                    8px 0 0;
-	padding:                                                   16px 24px;
-	border:                                                    0;
-	border-radius:                                             var(--store-radius);
-	background:                                                var(--store-btn-bg);
-	color:                                                     var(--store-btn-color);
-	font-size:                                                 17px;
-	font-weight:                                               700;
-	cursor:                                                    pointer;
-	transition:                                                opacity 150ms ease;
 }
 
-.store-place-order:hover         { opacity: .9; }
 .store-place-order[disabled]     { opacity: .5; cursor: not-allowed; }
 .store-place-order.is-busy::after { content: " …"; }
 

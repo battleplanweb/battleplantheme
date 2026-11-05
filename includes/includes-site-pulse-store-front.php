@@ -653,7 +653,7 @@ function sp_store_buy_control( int $product_id ): string {
 		$out .= '<label class="store-qty-label" for="' . esc_attr( $qty_id ) . '">Qty</label>';
 		$out .= '<input id="' . esc_attr( $qty_id ) . '" class="store-qty" type="number" value="1" min="1" step="1" inputmode="numeric">';
 		$out .= '</span>';
-		$out .= '<button type="button" class="unique store-add" data-store-add>' . esc_html( $label ) . '</button>';
+		$out .= '<button type="button" class="store-add" data-store-add>' . esc_html( $label ) . '</button>';
 		return $out . '</div>';
 	}
 
@@ -674,7 +674,7 @@ function sp_store_buy_control( int $product_id ): string {
 	$out .= '</select>';
 	$out .= '</span>';
 
-	$out .= '<button type="button" class="unique store-add" data-store-add>';
+	$out .= '<button type="button" class="store-add" data-store-add>';
 	$out .= '<span class="store-add-label">' . esc_html( $label ) . '</span>';
 	if ( $note !== '' ) $out .= '<span class="store-add-note">' . esc_html( $note ) . '</span>';
 	$out .= '</button>';

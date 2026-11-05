@@ -756,6 +756,9 @@ function bp_chat_send_sms( string $to, string $message ): bool {
 	$status = wp_remote_retrieve_response_code( $response );
 	if ( $status < 200 || $status >= 300 ) {
 		error_log( 'BP CHAT Twilio HTTP ' . $status . ': ' . wp_remote_retrieve_body( $response ) );
+		// 21610 = the recipient replied STOP. Let opt-in lists (Site Pulse alerts) switch themselves off.
+		$err = json_decode( wp_remote_retrieve_body( $response ), true );
+		if ( (int) ( $err['code'] ?? 0 ) === 21610 ) do_action( 'bp_sms_recipient_unsubscribed', $to );
 		return false;
 	}
 	return true;

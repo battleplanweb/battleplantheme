@@ -468,7 +468,9 @@ on-page alt drift apart. This keeps them in sync: whenever an
 attachment's _wp_attachment_image_alt changes — manually (media
 modal, edit screen, the inline-edit column), via the sparkle icon,
 or the cron generator — push the new value into every
-<img class="wp-image-{ID}"> already baked into content.
+<img class="wp-image-{ID}"> already baked into content, plus hand-written
+<img src> tags for the same file whose alt is weak (missing, the file
+name, or a few generic words).
 
 Lives here (not in functions-media-replace.php) because that file
 is admin-only, but alt can change during cron (bp_ai_alt_generate_cron),
@@ -504,32 +506,41 @@ function bp_alt_sync_meta_changed($meta_id, $object_id, $meta_key, $meta_value) 
 /**
  * Push an attachment's alt text into matching <img> tags in post content.
  *
+ * Matches tags two ways: the wp-image-{ID} class WordPress adds on insert, and — for
+ * hand-written tags (the [img] shortcode wraps a raw <img src>) — the attachment's
+ * file URL at any size. See bp_alt_update_img_alts() for how each is treated.
+ *
  * @param int    $attachment_id
  * @param string $new_alt
- * @return int   Number of posts updated.
+ * @param bool   $dry      true = report what would change, write nothing.
+ * @param array  $touched  Filled with [post, key, before, after] per changed field
+ *                         (key '' = post_content, otherwise the meta key).
+ * @return int   Number of fields updated (or that would be, when $dry).
  */
-function bp_alt_sync_to_content($attachment_id, $new_alt) {
+function bp_alt_sync_to_content($attachment_id, $new_alt, $dry = false, &$touched = null) {
 	global $wpdb;
 
-	$marker = 'wp-image-' . (int) $attachment_id;
-	$force  = (bool) apply_filters('bp_alt_sync_force_overwrite', true, $attachment_id);
-	$like   = '%' . $wpdb->esc_like($marker) . '%';
-	$count  = 0;
+	$touched = [];
+	$force   = (bool) apply_filters('bp_alt_sync_force_overwrite', true, $attachment_id);
+	$likes   = [ '%' . $wpdb->esc_like('wp-image-' . (int) $attachment_id) . '%' ];
+	if (($stem = bp_alt_file_stem($attachment_id)) !== '') $likes[] = '%' . $wpdb->esc_like($stem['base']) . '%';
+	$or = fn($col) => '(' . implode(' OR ', array_fill(0, count($likes), "$col LIKE %s")) . ')';
 
 	// Pass 1 — post_content: main editor body + Elements CPT (site-header, widgets, etc.).
 	$rows = $wpdb->get_results($wpdb->prepare(
 		"SELECT ID, post_content FROM {$wpdb->posts}
 		 WHERE post_status IN ('publish','future','draft','pending','private')
-		 AND post_content LIKE %s",
-		$like
+		 AND " . $or('post_content'),
+		$likes
 	), ARRAY_A);
 	foreach ((array) $rows as $row) {
 		if (is_serialized($row['post_content'])) continue; // never edit serialized blobs
 		$new = bp_alt_update_img_alts($row['post_content'], $attachment_id, $new_alt, $force);
 		if ($new !== $row['post_content']) {
+			$touched[] = [ (int) $row['ID'], '', $row['post_content'], $new ];
+			if ($dry) continue;
 			$wpdb->query($wpdb->prepare("UPDATE {$wpdb->posts} SET post_content = %s WHERE ID = %d", $new, $row['ID']));
 			clean_post_cache($row['ID']);
-			$count++;
 		}
 	}
 
@@ -537,49 +548,112 @@ function bp_alt_sync_to_content($attachment_id, $new_alt) {
 	//    HTML live here, NOT in post_content. Plain-string meta only; serialized
 	//    values like arrays or page-builder blobs are skipped to avoid corruption.
 	$rows = $wpdb->get_results($wpdb->prepare(
-		"SELECT pm.meta_id, pm.post_id, pm.meta_value
+		"SELECT pm.meta_id, pm.post_id, pm.meta_key, pm.meta_value
 		 FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
 		 WHERE p.post_status IN ('publish','future','draft','pending','private')
-		 AND pm.meta_value LIKE %s",
-		$like
+		 AND " . $or('pm.meta_value'),
+		$likes
 	), ARRAY_A);
 	foreach ((array) $rows as $row) {
 		if (is_serialized($row['meta_value'])) continue;
 		$new = bp_alt_update_img_alts($row['meta_value'], $attachment_id, $new_alt, $force);
 		if ($new !== $row['meta_value']) {
+			$touched[] = [ (int) $row['post_id'], $row['meta_key'], $row['meta_value'], $new ];
+			if ($dry) continue;
 			$wpdb->query($wpdb->prepare("UPDATE {$wpdb->postmeta} SET meta_value = %s WHERE meta_id = %d", $new, $row['meta_id']));
 			clean_post_cache($row['post_id']);
-			$count++;
 		}
 	}
 
-	return $count;
+	return count($touched);
+}
+
+/** An attachment's upload path split for matching: ['dir' => '2024/05' or '', 'base' => 'teaser1', 'ext' => 'webp']. */
+function bp_alt_file_stem($attachment_id) {
+	$file = (string) get_post_meta((int) $attachment_id, '_wp_attached_file', true);
+	if ($file === '') return '';
+	$dir = dirname($file);
+	return [
+		'dir'  => $dir === '.' ? '' : $dir,
+		'base' => preg_replace('/-scaled$/', '', pathinfo($file, PATHINFO_FILENAME)),
+		'ext'  => strtolower(pathinfo($file, PATHINFO_EXTENSION)),
+	];
 }
 
 /**
- * Rewrite the alt="" on every <img> in $html that carries the wp-image-{ID}
- * marker. Adds an alt attribute if one is missing. srcset/sizes left alone.
+ * Regex matching a src attribute value that points at this attachment at ANY size
+ * (teaser1.webp, teaser1-480x320.webp, x-scaled.jpg, a .webp sibling of a .jpg), but
+ * not a neighbour that shares a prefix (teaser10.webp). '' when the file is unknown.
+ */
+function bp_alt_src_regex($attachment_id) {
+	$s = bp_alt_file_stem($attachment_id);
+	if ($s === '') return '';
+	$path = '/wp-content/uploads/' . ($s['dir'] !== '' ? $s['dir'] . '/' : '') . $s['base'];
+	return '#' . preg_quote($path, '#') . '(?:-scaled)?(?:-\d+x\d+)?\.(?:jpe?g|png|gif|webp|avif)(?=$|[?"\'\s])#i';
+}
+
+/**
+ * Why an alt text is not doing its job, or '' when it's fine. Shared by the CLI image
+ * scan and the file-matched sync so both agree on what "needs fixing" means.
+ *   missing  — empty / no alt
+ *   filename — just the file name or attachment title ("Carrier Sidebar Logo")
+ *   generic  — camera/placeholder names ("IMG 2041", "logo", "2020")
+ *   short    — under 3 words or 20 characters
+ */
+function bp_alt_weak_reason($alt, $attachment_id = 0, $src = '') {
+	$alt = trim(html_entity_decode((string) $alt, ENT_QUOTES, 'UTF-8'));
+	if ($alt === '') return 'missing';
+
+	$norm = fn($s) => trim(preg_replace('/[^a-z0-9]+/', ' ', strtolower((string) $s)));
+	$a    = $norm($alt);
+
+	$names = [];
+	if ($src !== '')     $names[] = pathinfo((string) parse_url($src, PHP_URL_PATH), PATHINFO_FILENAME);
+	if ($attachment_id) {
+		$names[] = pathinfo((string) get_post_meta($attachment_id, '_wp_attached_file', true), PATHINFO_FILENAME);
+		$names[] = get_the_title($attachment_id);
+	}
+	foreach ($names as $n) {
+		$n = $norm(preg_replace('/(?:-scaled)?(?:-\d+x\d+)?$/', '', (string) $n));
+		if ($n !== '' && $a === $n) return 'filename';
+	}
+
+	if (preg_match('/^(?:img|image|dsc[nf]?|pxl|photo|pic|picture|screenshot|screen shot|untitled|logo|banner|icon|graphic)?\s*\d*$/', $a)) return 'generic';
+	if (str_word_count($a) < 3 || mb_strlen($alt) < 20) return 'short';
+	return '';
+}
+
+/**
+ * Rewrite the alt="" on every <img> in $html that belongs to this attachment. Adds an
+ * alt attribute if one is missing. srcset/sizes left alone.
+ *
+ * - Tags with the wp-image-{ID} class: overwritten (or only filled, when !$force).
+ * - Tags matched only by file URL are hand-written, and their alt was often written
+ *   for that spot ("We are proud to support…") — so those are replaced ONLY when the
+ *   current alt is weak (bp_alt_weak_reason). Good hand-written alt is never clobbered.
  *
  * @param bool $force  true = overwrite any alt; false = only fill empty/missing.
  */
 function bp_alt_update_img_alts($html, $attachment_id, $new_alt, $force) {
 	// Match the exact wp-image-{ID} token, not a prefix (so 12 doesn't match 123).
 	$class_re = '/wp-image-' . (int) $attachment_id . '(?![0-9])/';
-	if (!preg_match($class_re, $html)) return $html;
+	$src_re   = bp_alt_src_regex($attachment_id);
+	if (!preg_match($class_re, $html) && ($src_re === '' || !preg_match($src_re, $html))) return $html;
 
 	$new_attr = 'alt="' . esc_attr($new_alt) . '"';
 
-	return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($class_re, $new_attr, $force) {
-		$tag = $m[0];
-		if (!preg_match($class_re, $tag)) return $tag; // not this attachment
+	return preg_replace_callback('/<img\b[^>]*>/i', function ($m) use ($class_re, $src_re, $new_attr, $force, $attachment_id) {
+		$tag      = $m[0];
+		$by_class = (bool) preg_match($class_re, $tag);
+		$src      = preg_match('/\bsrc\s*=\s*("|\')(.*?)\1/i', $tag, $s) ? $s[2] : '';
+		if (!$by_class && ($src_re === '' || $src === '' || !preg_match($src_re, $src))) return $tag; // not this attachment
 
 		// (Spliced in by position, not preg_replace — a "$1" or "\1" in the alt text would be
 		// read as a backreference there.)
 		if (preg_match('/\balt\s*=\s*("|\')(.*?)\1/i', $tag, $a, PREG_OFFSET_CAPTURE)) {
-			if (!$force) {
-				$current = html_entity_decode($a[2][0], ENT_QUOTES);
-				if (trim($current) !== '') return $tag; // already has alt — leave it
-			}
+			$current = html_entity_decode($a[2][0], ENT_QUOTES);
+			if ($by_class && !$force && trim($current) !== '') return $tag;               // already has alt — leave it
+			if (!$by_class && bp_alt_weak_reason($current, $attachment_id, $src) === '') return $tag; // good hand-written alt
 			return substr_replace($tag, $new_attr, $a[0][1], strlen($a[0][0]));
 		}
 

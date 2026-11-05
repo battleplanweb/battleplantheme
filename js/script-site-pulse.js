@@ -22,6 +22,22 @@ const D = (typeof sitePulseData !== 'undefined') ? sitePulseData : {};
 const $ = (sel, ctx) => (ctx || document).querySelector(sel);
 const $$ = (sel, ctx) => [...(ctx || document).querySelectorAll(sel)];
 
+// Drag-select guard: pressing inside a field (or selecting text) and releasing over a modal
+// backdrop fires a click on the backdrop, which closes the modal. Swallow any click whose press
+// started in a field or ended with a text selection and landed on a different element.
+let spPressTarget = null;
+window.addEventListener('mousedown', (e) => { spPressTarget = e.target; }, true);
+window.addEventListener('click', (e) => {
+	const start = spPressTarget;
+	spPressTarget = null;
+	if (!start || start === e.target || !e.target.contains(start)) return;
+	const sel = window.getSelection ? String(window.getSelection()) : '';
+	if (start.closest('input, textarea, select, [contenteditable="true"]') || sel) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+	}
+}, true);
+
 // Shared edit/delete icons + a builder for the outlined icon-buttons used app-wide.
 const ICON_EDIT = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const ICON_DELETE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
@@ -2542,15 +2558,25 @@ function spSmsAlertsRender(d) {
 	const slot = $('#sp-sms-alerts');
 	if (!slot) return;
 	slot.hidden = false;
-	const on = !!d.optin;
-	const dirHint = (!d.phone && d.directory_phone) ? `Using your directory number ${esc(d.directory_phone)} — leave blank to keep it, or type a different one.` : '';
+
+	// Not opted in: a short pitch + the button that opens the consent screen. Consent never happens
+	// inline here — only on the opt-in screen, which carries the full A2P disclosure.
+	if (!d.optin) {
+		let h = '<div class="sp-sms-optin">Text alerts</div>';
+		h += d.legacy
+			? '<div class="sp-help-text">Text alerts have a new sign-up step. Confirm your number to keep getting texts.</div>'
+			: '<div class="sp-help-text">Get your alerts by text too, with a link back to the app.</div>';
+		h += `<div class="sp-sms-actions"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-sms-setup">${d.legacy ? 'Confirm text alerts' : 'Set up text alerts'}</button></div>`;
+		slot.innerHTML = h;
+		$('#sp-sms-setup', slot).addEventListener('click', () => spSmsOptinScreen(d));
+		return;
+	}
 
 	let h = '';
-	h += `<label class="sp-sms-optin"><input type="checkbox" id="sp-sms-optin"${on ? ' checked' : ''}> Text me for missed chats and important updates</label>`;
-	h += `<div class="sp-sms-body"${on ? '' : ' hidden'}>`;
-	h += `<span class="sp-help-text">A link back to the app — never message content. Which updates you get is set by your admin; you reply in the app.</span>`;
-	h += `<label class="sp-sms-field">Mobile number<input type="tel" id="sp-sms-phone" class="sp-input" value="${esc(d.phone || '')}" placeholder="${esc(d.directory_phone || '(555) 123-4567')}"></label>`;
-	if (dirHint) h += `<span class="sp-help-text">${dirHint}</span>`;
+	h += '<div class="sp-sms-optin">Text alerts are on</div>';
+	h += '<div class="sp-sms-body">';
+	h += `<div class="sp-sms-number">Texting ${esc(spSmsPretty(d.phone))} <button type="button" class="unique sp-btn sp-btn-ghost" id="sp-sms-change">Change number</button></div>`;
+	h += '<div class="sp-help-text">A link back to the app, never message content. Your admin picks which alerts are sent; reply in the app.</div>';
 	const winDefault = d.org_event_window ? spMins(d.org_event_window) : '1 hour';
 	h += `<label class="sp-sms-field">Bundle update texts — at most one every<select id="sp-sms-window" class="sp-select"><option value="">Company default (${winDefault})</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label>`;
 	h += `<label class="sp-sms-field">Missed chat — wait before texting<select id="sp-sms-delay" class="sp-select"><option value="">Company default (${spMins(d.org_delay)})</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`;
@@ -2559,7 +2585,8 @@ function spSmsAlertsRender(d) {
 	const quietDefault = d.org_quiet ? `${esc(d.org_quiet.start)}–${esc(d.org_quiet.end)}` : 'off';
 	h += `<label class="sp-sms-field">Quiet hours<select id="sp-sms-quiet" class="sp-select"><option value="">Company default (${quietDefault})</option><option value="0">Off</option><option value="1">On</option></select></label>`;
 	h += `<div class="sp-sms-quiet-times"${d.quiet_enabled === '1' ? '' : ' hidden'}><label>From <input type="time" id="sp-sms-quiet-start" class="sp-input" value="${esc(d.quiet_start || '21:00')}"></label><label>To <input type="time" id="sp-sms-quiet-end" class="sp-input" value="${esc(d.quiet_end || '07:00')}"></label></div>`;
-	h += `<div class="sp-sms-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-sms-save">Save</button> <span class="sp-help-text" id="sp-sms-status"></span></div>`;
+	h += `<div class="sp-sms-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-sms-save">Save</button> <button type="button" class="unique sp-btn sp-btn-ghost" id="sp-sms-off">Turn off text alerts</button></div>`;
+	h += '<div class="sp-help-text" id="sp-sms-status"></div>';
 	h += `</div>`;
 	slot.innerHTML = h;
 	markUniqueSpans(slot);
@@ -2578,9 +2605,67 @@ function spSmsAlertsRender(d) {
 	rs.value = d.renotify_min || '';
 	$('#sp-sms-quiet', slot).value = (d.quiet_enabled === '1' || d.quiet_enabled === '0') ? d.quiet_enabled : '';
 
-	$('#sp-sms-optin', slot).addEventListener('change', e => { $('.sp-sms-body', slot).hidden = !e.target.checked; });
 	$('#sp-sms-quiet', slot).addEventListener('change', e => { $('.sp-sms-quiet-times', slot).hidden = e.target.value !== '1'; });
 	$('#sp-sms-save', slot).addEventListener('click', spSmsAlertsSave);
+	// A new number is a new consent — it goes back through the opt-in screen.
+	$('#sp-sms-change', slot).addEventListener('click', () => spSmsOptinScreen(d));
+	$('#sp-sms-off', slot).addEventListener('click', async () => {
+		const status = $('#sp-sms-status', slot);
+		try {
+			const r = await spAjax('site_pulse_sms_optout', {});
+			if (r && r.success) { spSmsAlertsInit(); spToast(r.data.message); }
+			else if (status) status.textContent = r?.data?.message || 'Error.';
+		} catch (e) { if (status) status.textContent = 'Error saving.'; }
+	});
+}
+
+// "+15551234567" → "(555) 123-4567"
+function spSmsPretty(p) {
+	const m = String(p || '').match(/^\+1(\d{3})(\d{3})(\d{4})$/);
+	return m ? `(${m[1]}) ${m[2]}-${m[3]}` : String(p || '');
+}
+
+// The A2P opt-in screen. Twilio/CTIA want, beside an UNCHECKED box: who's texting, what about, that
+// it's optional, frequency, msg & data rates, HELP/STOP, and Privacy/Terms links. The disclosure text
+// comes from the server (sp_sms_consent_text) and is what gets stored with the consent, so never
+// reword it here. preview = admin screenshot mode: everything renders, nothing is saved or sent.
+function spSmsOptinScreen(d, preview = false) {
+	const backdrop = spFormModal();
+	const phone = d.phone ? spSmsPretty(d.phone) : (d.directory_phone || '');
+	let h = '<div class="sp-card sp-report-form-wrap sp-sms-optin-screen">';
+	h += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(d.program)} Text Alerts</h3></div>`;
+	if (preview) h += '<div class="sp-help-text">Preview: this is the opt-in screen your team sees. Nothing is saved or sent from here.</div>';
+	h += `<p class="sp-sms-optin-lede">Get ${esc(d.program)} alerts by text: reports, approvals, reminders and messages, anything that lands in your notification bell. Each text is a short note with a link back to the app.</p>`;
+	h += `<label class="sp-sms-field">Mobile number<input type="tel" id="sp-sms-optin-phone" class="sp-input" autocomplete="tel" inputmode="tel" value="${esc(phone)}" placeholder="(555) 123-4567"></label>`;
+	h += `<label class="sp-sms-consent"><input type="checkbox" id="sp-sms-consent"><div class="sp-sms-consent-text">${esc(d.consent_text)}</div></label>`;
+	h += `<div class="sp-sms-legal"><a href="${esc(d.privacy_url)}" target="_blank" rel="noopener">Privacy Policy</a> · <a href="${esc(d.terms_url)}" target="_blank" rel="noopener">Terms &amp; Conditions</a></div>`;
+	h += '<div class="sp-help-text" id="sp-sms-optin-status" role="status"></div>';
+	h += '<div class="sp-report-form-actions">';
+	h += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-sms-optin-cancel">Not now</button>';
+	h += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-sms-optin-agree" disabled>Turn on text alerts</button>';
+	h += '</div></div>';
+	backdrop.innerHTML = h;
+
+	const box = $('#sp-sms-consent', backdrop);
+	const btn = $('#sp-sms-optin-agree', backdrop);
+	const status = $('#sp-sms-optin-status', backdrop);
+	const phoneIn = $('#sp-sms-optin-phone', backdrop);
+	const ready = () => { btn.disabled = !(box.checked && phoneIn.value.replace(/\D/g, '').length >= 10); };
+	box.addEventListener('change', ready);
+	phoneIn.addEventListener('input', ready);
+	$('#sp-sms-optin-cancel', backdrop).addEventListener('click', closeFormModal);
+	btn.addEventListener('click', async () => {
+		if (preview) { status.textContent = 'Preview only: nothing was saved.'; return; }
+		btn.disabled = true;
+		status.textContent = 'Sending a confirmation text…';
+		try {
+			const r = await spAjax('site_pulse_sms_optin', { phone: phoneIn.value, consent: box.checked ? 1 : '' });
+			if (r && r.success) { closeFormModal(); spToast(r.data.message); spSmsAlertsInit(); return; }
+			status.textContent = r?.data?.message || 'Something went wrong.';
+		} catch (e) { status.textContent = 'Something went wrong. Try again.'; }
+		ready();
+	});
+	phoneIn.focus();
 }
 
 async function spSmsAlertsSave() {
@@ -2589,8 +2674,6 @@ async function spSmsAlertsSave() {
 	if (status) status.textContent = 'Saving…';
 	try {
 		const r = await spAjax('site_pulse_sms_save_settings', {
-			optin: $('#sp-sms-optin', slot).checked ? 1 : '',
-			phone: $('#sp-sms-phone', slot)?.value || '',
 			event_window_min: $('#sp-sms-window', slot)?.value || '',
 			delay_min: $('#sp-sms-delay', slot)?.value || '',
 			renotify_min: $('#sp-sms-renotify', slot)?.value || '',
@@ -2611,19 +2694,20 @@ async function spLoadOrgSmsNudge() {
 	if (!d) return;
 	let h = '<div class="sp-card sp-settings-card">';
 	h += '<h3>Text alerts (SMS)</h3>';
-	h += '<p class="sp-help-text" style="margin:0 0 12px;">Master switch for all texting: the <strong>Text</strong> column in the matrix above, plus the missed-chat nudge. Recipients still opt in (with their own quiet hours) from the bell. Texts carry a link, not message content.</p>';
+	h += '<p class="sp-help-text" style="margin:0 0 12px;">Company defaults for the <strong>Text</strong> column in the matrix above and the missed-chat nudge. Recipients still opt in (with their own quiet hours) from the bell. Texts carry a link, not message content.</p>';
 	if (!d.twilio_ready) h += `<div class="sp-notice sp-notice--danger">${spIcon('bolt')}<span class="sp-notice__text">No Twilio number is set up for this app yet, so texts won’t send until the number and A2P registration are in place.</span></div>`;
-	h += `<label class="sp-reminder-toggle" style="display:block;margin-bottom:12px;"><input type="checkbox" id="sp-orgsms-enabled"${d.enabled ? ' checked' : ''}> Enable text alerts for this organization</label>`;
 	h += `<label class="sp-sms-field">Notification digests — at most one text per person every<select id="sp-orgsms-window" class="sp-select"><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label>`;
 	h += `<div class="sp-help-text" style="margin:-4px 0 12px;">Bundles a burst of notifications (e.g. several reports at once) into one digest text.</div>`;
 	h += `<label class="sp-sms-field">Missed chat — wait before texting<select id="sp-orgsms-delay" class="sp-select"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`;
 	h += `<label class="sp-sms-field">Missed chat — re-notify if still unread<select id="sp-orgsms-renotify" class="sp-select"><option value="0">Off</option><option value="60">After 1 hour</option><option value="360">After 6 hours</option><option value="720">After 12 hours</option></select></label>`;
 	h += `<label class="sp-reminder-toggle" style="display:block;margin:12px 0 8px;"><input type="checkbox" id="sp-orgsms-quiet-en"${d.quiet_enabled ? ' checked' : ''}> Default quiet hours (no texts during this window)</label>`;
 	h += `<div class="sp-sms-quiet-times" id="sp-orgsms-quiet-wrap"${d.quiet_enabled ? '' : ' hidden'}><label>From <input type="time" id="sp-orgsms-quiet-start" class="sp-input" value="${esc(d.quiet_start || '21:00')}"></label><label>To <input type="time" id="sp-orgsms-quiet-end" class="sp-input" value="${esc(d.quiet_end || '07:00')}"></label></div>`;
-	h += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-orgsms-save">Save text alert settings</button> <span class="sp-help-text" id="sp-orgsms-status"></span></div>';
+	h += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-orgsms-save">Save text alert settings</button> <button type="button" class="unique sp-btn sp-btn-secondary" id="sp-orgsms-preview">Preview opt-in screen</button> <span class="sp-help-text" id="sp-orgsms-status"></span></div>';
 	h += '</div>';
 	host.innerHTML = h;
 	markUniqueSpans(host);
+	// Screenshot this for the Twilio campaign's Message Flow (the real screen sits behind a login).
+	$('#sp-orgsms-preview', host).addEventListener('click', () => spSmsOptinScreen(d.optin_preview, true));
 
 	const ws = $('#sp-orgsms-window', host);
 	if (!Array.from(ws.options).some(o => o.value === String(d.event_window_min))) { const o = document.createElement('option'); o.value = String(d.event_window_min); o.textContent = spMins(d.event_window_min); ws.appendChild(o); }
@@ -2640,7 +2724,6 @@ async function spLoadOrgSmsNudge() {
 		const st = $('#sp-orgsms-status', host); if (st) st.textContent = 'Saving…';
 		try {
 			const r = await spAjax('site_pulse_admin_save_sms_nudge', {
-				enabled: $('#sp-orgsms-enabled', host).checked ? 1 : '',
 				event_window_min: $('#sp-orgsms-window', host).value,
 				delay_min: $('#sp-orgsms-delay', host).value,
 				renotify_min: $('#sp-orgsms-renotify', host).value,
@@ -5799,7 +5882,8 @@ async function loadNotificationSettings() {
 	const routing = data.routing || {};
 	const emailOn = String(data.email_enabled) === '1';
 	const pushOn  = String(data.push_enabled) === '1';
-	const smsOn   = String(data.sms_enabled) === '1';
+	const smsOn   = String(data.sms_enabled) === '1';   // switch on AND Twilio ready (drives the Text column)
+	const smsSwitch = String(data.sms_switch) === '1';  // switch alone (drives the checkbox + the SMS card)
 	// Channel columns are hidden when their app-level switch is off (their per-event values are kept).
 	const colKeys = Object.keys(columns).filter(ck => (ck !== 'email' || emailOn) && (ck !== 'push' || pushOn) && (ck !== 'sms' || smsOn));
 
@@ -5810,9 +5894,10 @@ async function loadNotificationSettings() {
 	// Global notifications card — app-wide switches.
 	let html = '<div class="sp-card sp-settings-card">';
 	html += '<h3>Global notifications</h3>';
-	html += '<p class="sp-help-text" style="margin:0 0 12px;">App-wide switches. Turning one off hides its column below and stops every notification of that kind (including new-message emails). Each person still opts in to push per device from the bell.</p>';
+	html += '<p class="sp-help-text" style="margin:0 0 12px;">App-wide switches. Turning one off hides its column below and stops every notification of that kind (including new-message emails). Each person still opts in from the bell: push per device, texts once with their mobile number.</p>';
 	html += `<label class="sp-reminder-toggle" style="display:block;margin-bottom:8px;"><input type="checkbox" id="sp-gn-email"${emailOn ? ' checked' : ''}> Allow email notifications for this app</label>`;
-	html += `<label class="sp-reminder-toggle" style="display:block;"><input type="checkbox" id="sp-gn-push"${pushOn ? ' checked' : ''}> Allow push notifications for this app</label>`;
+	html += `<label class="sp-reminder-toggle" style="display:block;margin-bottom:8px;"><input type="checkbox" id="sp-gn-push"${pushOn ? ' checked' : ''}> Allow push notifications for this app</label>`;
+	html += `<label class="sp-reminder-toggle" style="display:block;"><input type="checkbox" id="sp-gn-sms"${smsSwitch ? ' checked' : ''}> Allow text notifications for this app</label>`;
 	html += '<span class="sp-help-text" id="sp-gn-status" style="display:block;margin-top:8px;"></span>';
 	if (pushOn) html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-push-test-btn">Send test notification to my devices</button> <span class="sp-help-text" id="sp-push-test-status" style="margin-left:12px;"></span></div>';
 	html += '</div>';
@@ -5844,11 +5929,11 @@ async function loadNotificationSettings() {
 	html += '<div style="margin-top:12px;"><span class="sp-help-text" id="sp-notif-status">Changes save automatically.</span></div>';
 	html += '</div>';
 
-	html += '<div id="sp-org-sms-nudge"></div>'; // org text-alert defaults, filled by spLoadOrgSmsNudge()
+	if (smsSwitch) html += '<div id="sp-org-sms-nudge"></div>'; // org text-alert defaults, filled by spLoadOrgSmsNudge()
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
-	spLoadOrgSmsNudge();
+	if (smsSwitch) spLoadOrgSmsNudge();
 
 	// Force every box to match the loaded routing (browsers cache checkbox state across reloads).
 	$$('.sp-notif-cb', wrap).forEach(cb => { cb.checked = isOn(routing[cb.dataset.event], cb.dataset.col); });
@@ -5883,11 +5968,13 @@ async function loadNotificationSettings() {
 		try {
 			await spAjax('site_pulse_admin_save_setting', { key, value: on ? '1' : '0' });
 			if (key === 'push_enabled' && typeof spPushInit === 'function') spPushInit();
+			if (key === 'sms_nudge_enabled') spSmsAlertsInit();
 			loadNotificationSettings();
 		} catch (e) { if (st) st.textContent = 'Could not save.'; }
 	};
 	$('#sp-gn-email', wrap)?.addEventListener('change', (e) => saveGlobal('notifications_email_enabled', e.target.checked));
 	$('#sp-gn-push', wrap)?.addEventListener('change', (e) => saveGlobal('push_enabled', e.target.checked));
+	$('#sp-gn-sms', wrap)?.addEventListener('change', (e) => saveGlobal('sms_nudge_enabled', e.target.checked));
 
 	// Diagnostic: push a test to the admin's own devices.
 	const pushTest = $('#sp-push-test-btn', wrap);
@@ -8024,7 +8111,7 @@ function initNotes() {
 	$('#sp-notes-search')?.addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(renderNotes, 150); });
 	$('#sp-add-note-btn')?.addEventListener('click', () => spOpenNote(0));
 
-	// All / Just me / Shared tabs drive the show filter; Filter opens label + order in a sheet.
+	// All / Just me / Shared tabs drive the show filter; Filter opens label in a sheet.
 	$$('[data-sp-note-show]').forEach(tab => tab.addEventListener('click', () => {
 		$$('[data-sp-note-show]').forEach(t => t.classList.toggle('is-active', t === tab));
 		const show = $('#sp-notes-filter-show');
@@ -10188,7 +10275,7 @@ function initStoreProducts() {
 		const sel = $('#sp-store-product-status');
 		if (sel) { sel.value = tab.dataset.spStoreProductStatus; loadStoreProducts(); }
 	}));
-	$('#sp-store-product-cat')?.addEventListener('change', () => loadStoreProducts());
+	['sp-store-product-cat', 'sp-store-product-sort'].forEach(id => document.getElementById(id)?.addEventListener('change', () => loadStoreProducts()));
 	$('[data-sp-store-product-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-store-product-filter-holder]'), {
 		clear: () => { const c = $('#sp-store-product-cat'); if (c) c.value = '0'; loadStoreProducts(); },
 	}));
@@ -10214,6 +10301,7 @@ async function loadStoreProducts(more) {
 			search: $('#sp-store-product-search')?.value || '',
 			status: $('#sp-store-product-status')?.value || '',
 			category: $('#sp-store-product-cat')?.value || 0,
+			sort: $('#sp-store-product-sort')?.value || '',
 			page: S.page,
 		});
 		if (seq !== S.seq) return;
@@ -10427,7 +10515,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 	// ---- Price, options, variants
 	html += '<div class="sp-store-section"><h4>Price and options</h4>';
 	html += `<label class="sp-check-row"><input type="checkbox" id="sp-pe-ships"${P.ships ? ' checked' : ''}> Ships to the customer</label>`;
-	html += '<p class="sp-help-text">Untick for anything that is not posted, like a download, a class or a membership. Checkout then asks for no address and adds no shipping.</p>';
+	html += '<p class="sp-help-text">Untick for downloads, memberships, or anything not shipped. No shipping charges will be applied.</p>';
 	html += '<div id="sp-pe-options"></div>';
 	html += '<div id="sp-pe-variants"></div>';
 	html += '</div>';
@@ -10573,7 +10661,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		let h = '<div class="sp-store-options">';
 		P.options.forEach((o, i) => {
 			h += `<div class="sp-store-option" data-oi="${i}">
-				<div class="sp-form-group"><label>${i === 0 ? 'Comes in different' : 'And different'}</label><input type="text" class="sp-input" data-of="name" value="${esc(o.name)}" placeholder="${['Size', 'Color', 'Material'][i]}"></div>
+				<div class="sp-form-group"><label>${i === 0 ? 'Variations' : 'And different'}</label><input type="text" class="sp-input" data-of="name" value="${esc(o.name)}" placeholder="${['Size', 'Color', 'Material'][i]}"></div>
 				<div class="sp-form-group sp-store-option-values"><label>Choices <span class="sp-field__hint">(separate with commas)</span></label><input type="text" class="sp-input" data-of="values" value="${esc(o.values)}" placeholder="${['Small, Medium, Large', 'Black, White', 'Cotton, Wool'][i]}"></div>
 				${P.options.length > 1 || o.name || o.values ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-store-option-x" data-act="option-remove" title="Remove this option" aria-label="Remove this option">${spIcon('x')}</button>` : ''}
 			</div>`;
@@ -10608,7 +10696,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 
 		h += '<div class="sp-store-variant-scroll"><table class="sp-table sp-store-variants"><thead><tr>';
 		names.forEach(n => { h += `<th>${esc(n)}</th>`; });
-		h += `<th>Price</th><th>Sale price</th><th>Count stock</th><th>In stock</th><th>SKU</th>${P.ships ? '<th>Weight (g)</th>' : ''}${multi ? '<th></th>' : ''}</tr></thead><tbody>`;
+		h += `<th>Price</th><th>Sale price</th><th>Count stock</th><th>In stock</th><th>SKU</th>${P.ships ? '<th>Weight</th>' : ''}${multi ? '<th></th>' : ''}</tr></thead><tbody>`;
 
 		P.variants.forEach((v, i) => {
 			const cls = v.orphan ? ' class="sp-store-orphan"' : '';
@@ -13107,7 +13195,7 @@ function initJobsites() {
 		if (sel) { sel.value = tab.dataset.spJobStatus; loadJobsites(); }
 	}));
 	$('[data-sp-job-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-job-filter-holder]'), {
-		clear: () => { const a = $('#sp-job-filter-author'), s = $('#sp-job-sort'); if (a) a.value = '0'; if (s) s.value = 'date'; loadJobsites(); },
+		clear: () => { const a = $('#sp-job-filter-author'); if (a) a.value = '0'; loadJobsites(); },
 		onClose: spJobFilterLabel,
 	}));
 	_spJobWired = true;
@@ -14839,8 +14927,28 @@ async function refreshAgencyClientsStepped() {
 	if (btn) btn.disabled = true;
 
 	const keys = spAgencyClients.map(c => c.site_key);
-	let done = 0;
-	const tick = () => { if (btn) btn.textContent = `Refreshing ${done}/${keys.length}…`; };
+	let done = 0, failed = 0;
+
+	// The button lives hidden behind the bar's More menu, so its label alone is never seen mid-sweep.
+	// A progress bar above the list shows where the sweep is and when it has finished.
+	const list = $('#sp-agency-reviews-list');
+	let prog = $('#sp-agency-refresh-progress');
+	if (!prog && list) {
+		prog = document.createElement('div');
+		prog.id = 'sp-agency-refresh-progress';
+		prog.className = 'sp-agency-refresh-progress';
+		list.parentNode.insertBefore(prog, list);
+	}
+	clearTimeout(prog?._spHide);
+	const tick = (finished = false) => {
+		if (btn) btn.textContent = `Refreshing ${done}/${keys.length}…`;
+		if (!prog) return;
+		const pct  = keys.length ? Math.round(done / keys.length * 100) : 100;
+		const fail = failed ? ` · ${failed} failed` : '';
+		const text = finished ? `Done — refreshed ${keys.length} clients${fail}` : `Refreshing reviews — ${done} of ${keys.length} clients${fail}`;
+		prog.hidden = false;
+		prog.innerHTML = `<div class="sp-progress"><div class="sp-progress__track"><div class="sp-progress__fill" style="--sp-progress:${pct}%"></div></div><span class="sp-progress__label unique">${esc(text)}</span></div>`;
+	};
 	tick();
 
 	for (const key of keys) {
@@ -14850,12 +14958,14 @@ async function refreshAgencyClientsStepped() {
 				const i = spAgencyClients.findIndex(c => c.site_key === key);
 				if (i >= 0) spAgencyClients[i] = res.data.client; else spAgencyClients.push(res.data.client);
 				renderAgencyReviews(false); // repaint with the newly-arrived reviews, keeping scroll position
-			}
-		} catch (e) { /* one client's failure can't stall the sweep */ }
+			} else failed++;
+		} catch (e) { failed++; /* one client's failure can't stall the sweep */ }
 		done++;
 		tick();
 	}
 
+	tick(true);
+	if (prog) prog._spHide = setTimeout(() => { prog.hidden = true; }, 8000);
 	if (btn) { btn.disabled = false; btn.textContent = label || 'Refresh'; }
 	_spAgencyRefreshing = false;
 	spFlash('Reviews refreshed');
@@ -14917,6 +15027,22 @@ function renderAgencyReviews(reset = true) {
 		.filter(c => c.error || c.fb_error)
 		.map(c => `<div class="sp-empty">${esc(c.label)}: ${esc(c.error || '')}${c.error && c.fb_error ? ' · ' : ''}${c.fb_error ? 'Facebook — ' + esc(c.fb_error) : ''}</div>`)
 		.join('');
+
+	// Sites with nothing to pull aren't errors — list them once, below the reviews (outside the list, so
+	// the infinite scroll keeps appending cards above it).
+	const unmapped = clients.filter(c => c.unmapped).map(c => c.label).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+	let foot = $('#sp-agency-unmapped');
+	if (!foot) {
+		foot = document.createElement('div');
+		foot.id = 'sp-agency-unmapped';
+		foot.className = 'sp-agency-unmapped';
+		list.parentNode.insertBefore(foot, list.nextSibling);
+	}
+	foot.hidden = !unmapped.length;
+	foot.innerHTML = unmapped.length
+		? `<div class="sp-agency-unmapped__title">These sites have no Google or Facebook location <a class="unique" href="/wp-admin/tools.php?page=bpgbp-clients">(set in Agency Settings)</a>:</div>`
+			+ `<div class="sp-agency-unmapped__list">${unmapped.map(esc).join(' · ')}</div>`
+		: '';
 
 	// Flatten every (filtered) client's reviews into one list, tagging each with its client, then sort
 	// across all companies (they interleave by date, which is intended).
@@ -16484,6 +16610,15 @@ async function spEnsurePeriodConfig() {
 	if (mileagePeriodLength || mileagePeriodAnchor || _spPeriodCfgLoaded) return;
 	_spPeriodCfgLoaded = true;
 	try { await loadMileageLocations(); } catch (e) {}
+}
+
+// The configured pay period containing today as {start,end} (ISO), or null when no pay period is set
+// up. Mirrors site_pulse_current_expense_period() on the server.
+async function spCurrentPayPeriod() {
+	await spEnsurePeriodConfig();
+	if (!(mileagePeriodLength > 0 && mileagePeriodAnchor)) return null;
+	const cur = computeMileagePeriods(mileagePeriodAnchor, mileagePeriodLength, 0, 0).find(p => p.current);
+	return cur ? { start: cur.start, end: cur.end } : null;
 }
 
 // Build + wire the toolbar into `container`. Defaults the selection to "This Period" and returns
@@ -18207,7 +18342,10 @@ function spShowReceiptThumb(wrap, src) {
 // photo, an explicit removal, or nothing). Called by every expense save*().
 function spReceiptPayload(wrap) {
 	const out = {};
-	if (wrap && wrap._receiptData) out.receipt = wrap._receiptData;
+	if (wrap && wrap._receiptData) {
+		out.receipt = wrap._receiptData;
+		if (wrap._receiptDate) out.receipt_date = wrap._receiptDate;   // server re-checks it's in the current pay period
+	}
 	else if (wrap && wrap._receiptRemove) out.receipt_remove = 1;
 	return out;
 }
@@ -18845,9 +18983,20 @@ function spWireReceiptScan(wrap, section, fill) {
 			// Scan first (best-effort) so we get the AI corners, then de-skew + crop with them.
 			let scan = null;
 			try { scan = await spScanReceiptFromDataURL(scanUrl, section); } catch (e) {}
+			// Only receipts dated inside the CURRENT pay period may be submitted (no old receipts).
+			// Reject before attaching; a previously attached receipt (if any) stays as it was.
+			if (scan && scan.date) {
+				const per = await spCurrentPayPeriod();
+				if (per && (scan.date < per.start || scan.date > per.end)) {
+					const msg = `This receipt is dated ${formatDate(scan.date)}, which is outside the current pay period (${formatDate(per.start)} – ${formatDate(per.end)}). Only receipts from the current pay period can be submitted.`;
+					say(msg, true); spAlert(msg);
+					return;
+				}
+			}
 			try {
 				const receipt = await spProcessReceipt(scanUrl, scan && scan.corners, 1000);
 				wrap._receiptData = receipt; wrap._receiptRemove = false;
+				wrap._receiptDate = (scan && scan.date) || '';
 				spShowReceiptThumb(wrap, receipt);
 			} catch (e) {}
 			if (scan) {
@@ -19417,7 +19566,7 @@ function showMealForm(x) {
 						<span class="sp-help-text">Personal (family) meals: the tip is removed from the reimbursed total — tips aren&rsquo;t reimbursed.</span>
 					</div>
 					<div class="sp-form-group"><label>Purpose</label><input type="text" id="sp-meal-purpose" class="sp-input" value="${esc(x ? (x.business_purpose || '') : '')}" placeholder="e.g. Vendor meeting, candidate interview"></div>
-				<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended"></div>
+				<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended (required)" required></div>
 				<div class="sp-form-group"><label>Charge To</label><select id="sp-meal-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : (spLastChargeTo() || '99'))}</select></div>
 			</div>
 			<div class="sp-vexp-form-actions sp-card-item">
@@ -19474,6 +19623,7 @@ async function saveMeal() {
 	const meal_type = $('#sp-meal-form-wrap')?.querySelector('.sp-meal-type-radio[value="personal"]')?.checked ? 'personal' : 'business';
 	if (!date) { spAlert('Please choose a date.'); return; }
 	if (!(amount > 0)) { spAlert('Please enter an amount greater than zero.'); return; }
+	if (dest.section === 'C' && !attendees.trim()) { spAlert('Please enter who attended this meal.'); $('#sp-meal-attendees')?.focus(); return; }
 	if (!spHasReceipt($('#sp-meal-form-wrap'))) { spAlert('A receipt photo is required for every expense. Use Take Photo or Upload to attach one.'); return; }
 	const btn = $('#sp-meal-save');
 	if (btn) btn.disabled = true;
@@ -22013,6 +22163,7 @@ function showMatrixCellModal(d, onSaved) {
 let spFleetSites  = [];
 let spFleetTotals = null;
 let spFleetLoaded = false;
+let spFleetCanManage = false;
 
 // Traffic window shown in every card's traffic cell + the fleet stat card. Clicking any
 // traffic cell steps all of them to the next one; the Traffic / Biggest change sorts follow it.
@@ -22032,13 +22183,15 @@ function initFleet() {
 	$('#sp-fleet-filter')?.addEventListener('change', renderFleet);
 	$('#sp-fleet-sort')?.addEventListener('change', renderFleet);
 	$('#sp-fleet-sort-dir')?.addEventListener('change', renderFleet);
-	// Show / order / direction open in a sheet.
+	// Show opens in a sheet; order and direction sit beside it.
 	$('[data-sp-fleet-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-fleet-filter-holder]'), {
-		clear: () => { [['#sp-fleet-filter', ''], ['#sp-fleet-sort', 'severity'], ['#sp-fleet-sort-dir', '']].forEach(([s, v]) => { const el = $(s); if (el) el.value = v; }); renderFleet(); },
+		clear: () => { const el = $('#sp-fleet-filter'); if (el) el.value = ''; renderFleet(); },
 		onClose: () => spSyncFilterSummaries(),
 	}));
 	$('#sp-fleet-list')?.addEventListener('click', (e) => {
 		if (e.target.closest('.sp-fleet-name a')) return;   // title link → that site's wp-admin
+		const remove = e.target.closest('.sp-fleet-remove');
+		if (remove) { removeFleetSite(remove.dataset.key); return; }
 		if (e.target.closest('.sp-fleet-metric-traffic')) {
 			spFleetPeriod = (spFleetPeriod + 1) % SP_FLEET_PERIODS.length;
 			renderFleet();
@@ -22061,8 +22214,31 @@ async function loadFleet(force = false) {
 	}
 	spFleetSites  = res.data.sites || [];
 	spFleetTotals = res.data.totals || null;
+	spFleetCanManage = !!res.data.can_manage;
 	spFleetLoaded = true;
 	renderFleet();
+}
+
+// Retire a cancelled client: the hub drops its registry row, snapshots and cached reviews.
+async function removeFleetSite(key) {
+	const site = spFleetSites.find(s => s.key === key);
+	if (!site) return;
+	if (!await spConfirm({
+		title: `Remove ${site.label}?`,
+		text: 'It comes off the Site Fleet and Reviews screens, and stops GBP posting and review gathering. Its snapshot history is deleted.\n\nTo bring it back later, add it again in Tools → Agency Settings.',
+		ok: 'Remove site',
+		danger: true,
+	})) return;
+
+	const res = await spAjax('site_pulse_fleet_remove_site', { site_key: key });
+	if (!res.success) { spToast(res.data?.message || 'Couldn\'t remove that site.'); return; }
+	spFleetSites = spFleetSites.filter(s => s.key !== key);
+	if (spFleetTotals) {
+		spFleetTotals.sites = Math.max(0, (spFleetTotals.sites || 0) - 1);
+		if (site.reporting) spFleetTotals.reporting = Math.max(0, (spFleetTotals.reporting || 0) - 1);
+	}
+	renderFleet();
+	spToast(`${site.label} removed.`);
 }
 
 function fleetNum(n) {
@@ -22190,6 +22366,7 @@ function renderFleet() {
 					</div>
 					<div class="sp-fleet-metric sp-fleet-metric-spark">${fleetSpark(s.spark)}</div>
 				</div>
+				${spFleetCanManage ? iconBtn('delete', 'sp-fleet-remove', `data-key="${esc(s.key)}"`) : ''}
 			</div>
 			<div class="sp-fleet-detail">
 				${s.summary ? `<p class="sp-fleet-summary">${esc(s.summary)}</p>` : ''}

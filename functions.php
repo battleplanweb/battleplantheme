@@ -1633,6 +1633,7 @@ if ( bp_module_on($workiz) ) {
 // active and takes over the moment Yoast is deactivated (per-site kill switch:
 // add_filter('bp_seo_enabled','__return_false')). See includes-seo.php header.
 require_once get_template_directory().'/includes/includes-seo.php';
+if ( defined('WP_CLI') && WP_CLI ) require_once get_template_directory().'/includes/includes-cli.php';
 if (file_exists(get_stylesheet_directory().'/functions-site.php')) require_once get_stylesheet_directory().'/functions-site.php';
 
 $schedules = get_option('schedules');
@@ -3297,6 +3298,28 @@ function battleplan_printOpenBanner() {
 	// .reveal-open (which never runs on mobile), and `.screen-mobile .currently-open-banner` is
 	// display:none in style.css.
 	echo is_biz_open() ? '<div class="currently-open-banner"><p>Call Us Now...<br>We\'re Open!</p></div>' : '';
+}
+
+/**
+ * Hide the queried page's Page Top / Page Bottom blocks for the rest of this request.
+ *
+ * A template that renders at the site root with a query argument (the store checkout and
+ * thank-you pages, for one) inherits the front page as its queried object, so the front
+ * page's own hero and closing sections print above and below it and the whole thing reads
+ * as the home page. Such a template calls this before get_header().
+ *
+ * It filters the meta rather than unhooking the renderers, so a child theme that prints
+ * the blocks itself — or footer.php, which prints #wrapper-bottom inline with no hook of
+ * its own — is covered too.
+ */
+function bp_hide_page_blocks(): void {
+	if ( ! empty( $GLOBALS['bp_hide_page_blocks'] ) ) return;
+	$GLOBALS['bp_hide_page_blocks'] = true;
+	add_filter( 'get_post_metadata', 'bp_hide_page_blocks_meta', 10, 3 );
+}
+function bp_hide_page_blocks_meta( $value, $object_id, $meta_key ) {
+	// [ '' ] short-circuits get_post_meta() to an empty string for either block.
+	return in_array( $meta_key, [ 'page-top_text', 'page-bottom_text' ], true ) ? [ '' ] : $value;
 }
 
 // Display #wrapper-top

@@ -36,14 +36,115 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 # The Page
 --------------------------------------------------------------*/
 
-/** Where the cart's checkout button goes. */
-function sp_store_checkout_page_url(): string {
-	return add_query_arg( 'sp_store_checkout', '1', home_url( '/' ) );
+/**
+ * The store's own addresses.
+ *
+ * Checkout and the receipt are real URLs -- /checkout/ and /order-received/{number}/ --
+ * and not query arguments on the site root. Rendering them at the root meant inheriting
+ * the front page: its Page Top and Page Bottom blocks printed around them, body_class()
+ * said `home`, and a site whose home page lives entirely in those blocks (so it hides
+ * #wrapper-content on body.home) swallowed the checkout whole.
+ */
+function sp_store_checkout_slug(): string {
+	return sanitize_title( (string) apply_filters( 'sp_store_checkout_slug', 'checkout' ) ) ?: 'checkout';
+}
+function sp_store_thanks_slug(): string {
+	return sanitize_title( (string) apply_filters( 'sp_store_thanks_slug', 'order-received' ) ) ?: 'order-received';
 }
 
-add_action( 'template_redirect', 'sp_store_checkout_page' );
+/** Where the cart's checkout button goes. */
+function sp_store_checkout_page_url(): string {
+	return get_option( 'permalink_structure' )
+		? home_url( user_trailingslashit( sp_store_checkout_slug() ) )
+		: add_query_arg( 'sp_store_checkout', '1', home_url( '/' ) );
+}
+
+/** Where a processor sends the shopper once it has their money. */
+function sp_store_thanks_url( string $number ): string {
+	return get_option( 'permalink_structure' )
+		? home_url( user_trailingslashit( sp_store_thanks_slug() . '/' . rawurlencode( $number ) ) )
+		: add_query_arg( 'sp_store_thanks', rawurlencode( $number ), home_url( '/' ) );
+}
+
+add_filter( 'query_vars', 'sp_store_route_query_vars' );
+function sp_store_route_query_vars( array $vars ): array {
+	$vars[] = 'sp_store_checkout';
+	$vars[] = 'sp_store_thanks';
+	return $vars;
+}
+
+// Priority 4: before sp_store_register_cpt() at 5, which is what flushes the rules.
+// Rules added after that flush would not be in the set it wrote.
+add_action( 'init', 'sp_store_route_rewrites', 4 );
+function sp_store_route_rewrites(): void {
+	if ( ! sp_store_active() ) return;
+	add_rewrite_rule( '^' . sp_store_checkout_slug() . '/?$', 'index.php?sp_store_checkout=1', 'top' );
+	add_rewrite_rule( '^' . sp_store_thanks_slug() . '/([^/]+)/?$', 'index.php?sp_store_thanks=$matches[1]', 'top' );
+}
+
+// Adding or renaming a route flushes the rules once, the same way the catalogue slug does.
+add_filter( 'sp_store_rewrite_signature', 'sp_store_route_rewrite_signature' );
+function sp_store_route_rewrite_signature( array $parts ): array {
+	$parts[] = sp_store_checkout_slug();
+	$parts[] = sp_store_thanks_slug();
+	return $parts;
+}
+
+/**
+ * A store route's value, from the pretty URL or the old query argument.
+ *
+ * The query arguments still work: a page cached before the rewrite rules were flushed
+ * may hold the old checkout link, and a processor may hold the old return URL against
+ * an order placed minutes before a deploy.
+ */
+function sp_store_route_value( string $var ): string {
+	$value = (string) get_query_var( $var, '' );
+	if ( $value === '' && isset( $_GET[ $var ] ) ) $value = (string) wp_unslash( $_GET[ $var ] );
+	return sanitize_text_field( $value );
+}
+
+/**
+ * Stop the main query claiming to be the front page, and label the body.
+ *
+ * A store route renders its own markup and exits, but header.php runs first and
+ * WordPress has already decided what this request is -- the rewrite resolves to
+ * index.php with no post of its own, so the query reads as the blog home and
+ * body_class() prints `home`. Child-theme CSS written for the real front page then
+ * applies to the checkout. Clearing the flags also empties the queried object, which
+ * is what stops the front page's Page Top / Page Bottom blocks printing around it.
+ */
+function sp_store_virtual_page( string $class ): void {
+	global $wp_query;
+
+	if ( $wp_query instanceof WP_Query ) {
+		$wp_query->is_home              = false;
+		$wp_query->is_posts_page        = false;
+		$wp_query->is_archive           = false;
+		$wp_query->is_post_type_archive = false;
+		$wp_query->is_404               = false;
+		$wp_query->queried_object       = null;
+		$wp_query->queried_object_id    = 0;
+	}
+
+	if ( function_exists( 'bp_hide_page_blocks' ) ) bp_hide_page_blocks();
+
+	add_filter( 'body_class', function ( $classes ) use ( $class ) {
+		// Dropped as well as unset: the flags above are enough for WordPress itself,
+		// but a child theme adding `home` by hand would hide this page all the same.
+		$classes   = array_values( array_diff( (array) $classes, [ 'home', 'blog' ] ) );
+		$classes[] = 'store-page';
+		$classes[] = $class;
+		return $classes;
+	} );
+}
+
+// Priority 5: ahead of WordPress's own redirect_canonical() at 10, which would otherwise
+// try to "correct" a URL that belongs to no post.
+add_action( 'template_redirect', 'sp_store_checkout_page', 5 );
 function sp_store_checkout_page(): void {
-	if ( ! sp_store_active() || empty( $_GET['sp_store_checkout'] ) ) return;
+	if ( ! sp_store_active() || sp_store_route_value( 'sp_store_checkout' ) === '' ) return;
+
+	sp_store_virtual_page( 'store-checkout-page' );
 
 	$cart  = sp_store_current_cart();
 	$lines = $cart ? sp_store_cart_lines( (int) $cart['id'] ) : [];
@@ -138,7 +239,7 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 	$out .= '<h2>Payment</h2>';
 	$out .= '<div class="store-pay-mount" data-store-pay></div>';
 	$out .= '<p class="store-checkout-error" data-store-co-error hidden></p>';
-	$out .= '<button type="button" class="unique store-place-order" data-store-place>Place order</button>';
+	$out .= '<button type="button" class="store-place-order" data-store-place>Place order</button>';
 	$out .= '<p class="store-field-note">Payment is handled by ' . esc_html( sp_store_provider_def()['label'] ?? 'our payment processor' ) . '. Card details never reach this website.</p>';
 	$out .= '</section>';
 

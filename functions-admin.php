@@ -1647,6 +1647,7 @@ function battleplan_customize_admin_menus() {
 		'import.php',
 		'export.php',
 		'options-general.php?page=wp-mail-smtp',     // Mail SMTP
+		'bpgbp-clients',                             // Agency Settings (hub only) — last before the divider
 		'clear-all',                                 // ⚙️ site-ops group, battleplanweb only
 		'clear-hvac',
 		'launch-site',

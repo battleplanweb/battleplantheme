@@ -104,6 +104,7 @@ $icons = [
 	'logout'    => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
 	'user'      => '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
 	'chevron'   => '<polyline points="6 9 12 15 18 9"/>',
+	'sort'      => '<line x1="7" y1="4" x2="7" y2="20"/><polyline points="3 8 7 4 11 8"/><line x1="17" y1="20" x2="17" y2="4"/><polyline points="13 16 17 20 21 16"/>',
 	'chevron-right' => '<polyline points="9 6 15 12 9 18"/>',
 	'plus'      => '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
 	'menu'      => '<line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>',
@@ -478,6 +479,8 @@ if ( $is_god ) {
 		$printPage .= '</optgroup>';
 	}
 	$printPage .=   '</select>';
+	// wp-admin links into Site Pulse; this is the way back.
+	$printPage .=   '<a class="unique sp-god-admin" href="' . esc_url( admin_url() ) . '">Admin</a>';
 	$printPage .= '</div>';
 }
 
@@ -716,6 +719,15 @@ $sp_bar_btn = function ( $order, $icon, $label, $does ) {
 		if ( in_array( $k, [ 'nav', 'action', 'focus', 'click' ], true ) ) $attrs .= ' data-sp-' . $k . '="' . esc_attr( $v ) . '"';
 	}
 	return '<button type="button" class="unique" hidden data-sp-bar="' . (int) $order . '" data-sp-extra data-sp-icon="' . esc_attr( $icon ) . '"' . $attrs . '>' . esc_html( $label ) . '</button>';
+};
+
+// A screen's sort, on its own beside the Filter button (a sort isn't a filter). $options is value => label.
+$sp_sort = function ( $id, $options, $selected = '', $aria = 'Sort' ) use ( $svg, $icons ) {
+	$html = '<label class="sp-sort">' . $svg( $icons['sort'] ) . '<select id="' . esc_attr( $id ) . '" class="sp-sort__select" aria-label="' . esc_attr( $aria ) . '">';
+	foreach ( $options as $value => $label ) {
+		$html .= '<option value="' . esc_attr( $value ) . '"' . ( (string) $value === (string) $selected ? ' selected' : '' ) . '>' . esc_html( $label ) . '</option>';
+	}
+	return $html . '</select>' . $svg( $icons['chevron'] ) . '</label>';
 };
 
 $sp_crumb = function ( $parent, $current ) {
@@ -978,6 +990,7 @@ if ( in_array( 'view_action_items', $caps, true ) ) {
 		.             '</div>';
 	$printPage .=     '<div class="sp-toolbar">'
 		.               '<button type="button" class="unique sp-filter" data-sp-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>'
+		.               $sp_sort( 'sp-action-sort', [ 'importance' => 'By importance', 'duedate' => 'By due date', 'custom' => 'My own order' ] )
 		// One column or two — desktop only (hidden below 1280px), remembered on this device.
 		.               '<div class="sp-seg sp-seg--end" role="group" aria-label="Layout" data-sp-cols="action-items">'
 		.                 '<button type="button" class="unique sp-seg__btn" data-n="1" title="One column" aria-label="One column">' . $svg( '<rect x="5" y="4" width="14" height="16" rx="2"/>' ) . '</button>'
@@ -996,7 +1009,6 @@ if ( in_array( 'view_action_items', $caps, true ) ) {
 	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Label</span><select id="sp-action-filter-category" class="sp-select"><option value="">All labels</option></select></label>';
 	// "Due" is anything still dated ahead, "Past due" anything already overdue.
 	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Due date</span><select id="sp-action-filter-due" class="sp-select"><option value="">Any due date</option><option value="due">Due</option><option value="overdue">Past due</option></select></label>';
-	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-action-sort" class="sp-select"><option value="importance">By importance</option><option value="duedate">By due date</option><option value="custom">My own order (drag to arrange)</option></select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-stack" id="sp-action-items-list"></div>';
 	$printPage .= '</div></section>';
@@ -1019,18 +1031,14 @@ if ( in_array( 'view_notes', $caps, true ) ) {
 		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-note-show="personal">Just me</button>'
 		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-note-show="shared">Shared</button>'
 		.             '</div>';
-	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-note-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-note-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-note-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-note-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>'
+		.               $sp_sort( 'sp-notes-sort', [ 'edited' => 'Last edited', 'created' => 'Newest', 'title' => 'Title', 'custom' => 'My own order' ] )
+		.             '</div>';
 	$printPage .=   '</div>';
 	// The filter controls. Not shown on the page: the tabs drive the show select, Filter opens the rest in a sheet.
 	$printPage .=   '<div hidden data-sp-notes-filter-holder>';
 	$printPage .=     '<select id="sp-notes-filter-show" class="sp-select"><option value="">All notes</option><option value="personal">Just me</option><option value="shared">Shared</option></select>';
 	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Label</span><select id="sp-notes-filter-label" class="sp-select"><option value="">All labels</option></select></label>';
-	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-notes-sort" class="sp-select">'
-		.               '<option value="edited">Last edited</option>'
-		.               '<option value="created">Newest</option>'
-		.               '<option value="title">Title</option>'
-		.               '<option value="custom">My own order (drag to arrange)</option>'
-		.             '</select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-stack" id="sp-notes-list"></div>';
 	$printPage .= '</div></section>';
@@ -1371,17 +1379,16 @@ if ( function_exists( 'sp_fleet_is_hub' ) && sp_fleet_is_hub()
 	$printPage .=   '<div class="sp-stack" id="sp-fleet-stats"></div>';
 	$printPage .=   '<div class="sp-stack">';
 	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-fleet-search" class="sp-input" placeholder="Search sites" autocomplete="off"></div>';
-	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-fleet-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-fleet-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button></div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-fleet-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-fleet-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>'
+		.               $sp_sort( 'sp-fleet-sort', [ 'severity' => 'Problems first', 'name' => 'Name', 'traffic' => 'Traffic', 'change' => 'Biggest change', 'audit' => 'Oldest audit' ], 'severity' )
+		.               $sp_sort( 'sp-fleet-sort-dir', [ '' => 'Normal order', 'reverse' => 'Reverse order' ], '', 'Direction' )
+		.             '</div>';
 	$printPage .=   '</div>';
-	// Show / order / direction, shown in the Filter sheet.
+	// Show, in the Filter sheet.
 	$printPage .=   '<div hidden data-sp-fleet-filter-holder>';
 	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Show</span><select id="sp-fleet-filter" class="sp-select">'
 		.               '<option value="">All sites</option><option value="alerts">Needs attention</option><option value="silent">Not reporting</option><option value="audit">Audit due</option>'
 		.             '</select></label>';
-	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-fleet-sort" class="sp-select">'
-		.               '<option value="severity" selected>Problems first</option><option value="name">Name</option><option value="traffic">Traffic</option><option value="change">Biggest change</option><option value="audit">Oldest audit</option>'
-		.             '</select></label>';
-	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Direction</span><select id="sp-fleet-sort-dir" class="sp-select"><option value="" selected>Normal order</option><option value="reverse">Reverse order</option></select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-stack" id="sp-fleet-list"></div>';
 	$printPage .= '</div></section>';
@@ -1522,14 +1529,15 @@ if ( $cap_jobsites ) {
 		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-job-status="publish">Live</button>'
 		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-job-status="draft">Drafts</button>'
 		.             '</div>';
-	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-job-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-job-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="sp-job-count"></span></div>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-job-filters>' . $svg( $icons['sliders'] ) . ' <span data-sp-job-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>'
+		.               $sp_sort( 'sp-job-sort', [ 'date' => 'Newest first', 'date_asc' => 'Oldest first', 'az' => 'A–Z', 'za' => 'Z–A' ], 'date' )
+		.               '<span class="sp-meta" id="sp-job-count"></span></div>';
 	$printPage .=   '</div>';
-	// Added by + order, shown in the Filter sheet; the tabs drive the status select.
+	// Added by, in the Filter sheet; the tabs drive the status select.
 	$printPage .=   '<div hidden data-sp-job-filter-holder>';
 	$printPage .=     '<select id="sp-job-filter-status" class="sp-select"><option value="all">All statuses</option><option value="publish">Live</option><option value="draft">Drafts</option></select>';
 	// Filled by JS from the list response: All, then the current user, then everyone else who added jobs.
 	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Added by</span><select id="sp-job-filter-author" class="sp-select"><option value="0">All users</option></select></label>';
-	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-summary-skip><span class="sp-field__label">Order</span><select id="sp-job-sort" class="sp-select"><option value="date">Newest first</option><option value="date_asc">Oldest first</option><option value="az">A–Z</option><option value="za">Z–A</option></select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-stack" id="sp-job-list"></div>';
 	$printPage .=   '<div class="sp-reviews-more" id="sp-job-more"></div>';
@@ -1619,9 +1627,9 @@ $sp_store_search = function ( $id, $placeholder ) use ( $svg, $icons ) {
 		. '<input type="search" id="' . esc_attr( $id ) . '" class="sp-input" placeholder="' . esc_attr( $placeholder ) . '" autocomplete="off"></div>';
 };
 // A screen's one Filter button: "Filter · N", the applied choices under it, and the count.
-$sp_store_filter = function ( $key, $count_id ) use ( $svg, $icons ) {
+$sp_store_filter = function ( $key, $count_id, $sort = '' ) use ( $svg, $icons ) {
 	return '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-' . $key . '-filters>' . $svg( $icons['sliders'] )
-		. ' <span data-sp-' . $key . '-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="' . esc_attr( $count_id ) . '"></span></div>';
+		. ' <span data-sp-' . $key . '-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>' . $sort . '<span class="sp-meta" id="' . esc_attr( $count_id ) . '"></span></div>';
 };
 if ( $cap_store_orders ) {
 	// No "New Order" button yet: entering an order by hand needs a product picker, and a button
@@ -1700,7 +1708,7 @@ if ( $cap_store_products ) {
 		$printPage .=   '<button type="button" class="unique sp-tab" role="tab" data-sp-store-product-status="' . esc_attr( $sp_sp_status ) . '">' . esc_html( 'draft' === $sp_sp_status ? 'Hidden' : $sp_sp_label ) . '</button>';
 	}
 	$printPage .=     '</div>';
-	$printPage .=     $sp_store_filter( 'store-product', 'sp-store-product-count' );
+	$printPage .=     $sp_store_filter( 'store-product', 'sp-store-product-count', $sp_sort( 'sp-store-product-sort', [ '' => 'Default order', 'az' => 'Name A–Z', 'za' => 'Name Z–A', 'price-low' => 'Price low to high', 'price-high' => 'Price high to low', 'newest' => 'Newly added' ] ) );
 	$printPage .=   '</div>';
 	// Category in the Filter sheet; the tabs drive the status select.
 	$printPage .=   '<div hidden data-sp-store-product-filter-holder>';

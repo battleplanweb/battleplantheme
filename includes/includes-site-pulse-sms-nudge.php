@@ -107,11 +107,11 @@ function sp_sms_time_in_window( string $start, string $end ): bool {
 # Phone resolution
 --------------------------------------------------------------*/
 
-// The user's SMS number: their own saved number first, else the Directory cell phone (if that module
-// is in use and linked to their account). Normalised to E.164 via the AI-chat helper.
+// The number the user CONSENTED on — never the Directory fallback. A2P consent is tied to the number
+// shown on the opt-in screen, so texts only ever go to a number the user typed/confirmed there. (The
+// Directory cell phone is used only to prefill that screen.)
 function sp_sms_phone_for( int $uid ): string {
 	$p = trim( (string) get_user_meta( $uid, 'sp_sms_phone', true ) );
-	if ( $p === '' ) $p = sp_sms_directory_phone( $uid );
 	if ( $p === '' ) return '';
 	return function_exists( 'bp_chat_normalize_phone' ) ? bp_chat_normalize_phone( $p ) : $p;
 }
@@ -128,9 +128,138 @@ function sp_sms_directory_phone( int $uid ): string {
 	return (string) ( $row ?: '' );
 }
 
+// Opted in = the flag AND a recorded consent (the A2P opt-in screen). A legacy opt-in from the old bare
+// checkbox has no consent record, so it doesn't count — those users are asked to confirm again.
 function sp_sms_user_opted_in( int $uid ): bool {
-	return get_user_meta( $uid, 'sp_sms_optin', true ) === '1';
+	return get_user_meta( $uid, 'sp_sms_optin', true ) === '1' && ! empty( get_user_meta( $uid, 'sp_sms_consent', true ) );
 }
+
+/*--------------------------------------------------------------
+# A2P consent — disclosure, confirmation, audit trail
+--------------------------------------------------------------
+The opt-in screen must show (Twilio / CTIA): who is texting, what about, that it's optional, message
+frequency, msg & data rates, HELP + STOP, and Privacy/Terms links — beside an UNCHECKED checkbox. The
+server owns that wording: the screen renders sp_sms_consent_text() and the opt-in handler stores the
+same server-built text with the timestamp, IP and number, so the record proves what the user saw.*/
+
+function sp_sms_program_name(): string {
+	return site_pulse_get_setting( 'app_name', 'Site Pulse' );
+}
+
+function sp_sms_company_name(): string {
+	return function_exists( 'bp_business_name' ) ? bp_business_name() : wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+}
+
+// "MyRovin (Rovin Restaurants)" — or just the one name when the app is named after the company.
+function sp_sms_sender_label(): string {
+	$app = sp_sms_program_name();
+	$co  = sp_sms_company_name();
+	return ( $co === '' || stripos( $app, $co ) !== false || stripos( $co, $app ) !== false ) ? $app : "{$app} ({$co})";
+}
+
+function sp_sms_legal_urls(): array {
+	return apply_filters( 'site_pulse_sms_legal_urls', [
+		'privacy' => get_privacy_policy_url() ?: home_url( '/privacy-policy/' ),
+		'terms'   => home_url( '/terms-conditions/' ),
+	] );
+}
+
+function sp_sms_consent_text(): string {
+	return sprintf(
+		'By checking this box, I agree to receive automated text alerts from %s at the mobile number above about activity in my account, such as reports, approvals, reminders and messages. Text alerts are optional; every alert still appears in the app. Message frequency varies. Message & data rates may apply. Reply HELP for help or STOP to cancel at any time.',
+		sp_sms_sender_label()
+	);
+}
+
+function sp_sms_confirmation_text(): string {
+	return sprintf( "%s: You're signed up for text alerts. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to cancel.", sp_sms_program_name() );
+}
+
+function sp_sms_help_text(): string {
+	$info  = function_exists( 'customer_info' ) ? customer_info() : [];
+	$phone = trim( ( $info['area'] ?? '' ) . '-' . ( $info['phone'] ?? '' ), '-' );
+	return sprintf( '%s alerts from %s. Manage alerts in the app: %s%s. Msg & data rates may apply. Reply STOP to cancel.',
+		sp_sms_program_name(), sp_sms_company_name(), home_url( '/site-pulse-dashboard/' ), $phone !== '' ? " or call {$phone}" : '' );
+}
+
+// Everything the opt-in screen needs. Also handed to admins (Settings → Notifications) so they can
+// preview/screenshot the screen for the Twilio campaign before texting is live.
+function sp_sms_optin_screen_data(): array {
+	$urls = sp_sms_legal_urls();
+	return [
+		'program'      => sp_sms_program_name(),
+		'consent_text' => sp_sms_consent_text(),
+		'privacy_url'  => $urls['privacy'],
+		'terms_url'    => $urls['terms'],
+	];
+}
+
+// Append-only audit trail (newest last, capped) — opt-ins, opt-outs and STOPs, with how they happened.
+function sp_sms_consent_log( int $uid, string $action, string $phone, string $via ): void {
+	$log   = get_user_meta( $uid, 'sp_sms_consent_log', true );
+	$log   = is_array( $log ) ? $log : [];
+	$log[] = [ 'action' => $action, 'phone' => $phone, 'via' => $via, 'at' => current_time( 'mysql' ) ];
+	update_user_meta( $uid, 'sp_sms_consent_log', array_slice( $log, -25 ) );
+}
+
+function sp_sms_opt_out( int $uid, string $via ): void {
+	update_user_meta( $uid, 'sp_sms_optin', '0' );
+	delete_user_meta( $uid, 'sp_sms_consent' );
+	sp_sms_consent_log( $uid, 'opt_out', (string) get_user_meta( $uid, 'sp_sms_phone', true ), $via );
+	global $wpdb;
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM ' . site_pulse_table( 'sms_queue' ) . ' WHERE user_id = %d AND sent_at IS NULL', $uid ) );
+}
+
+// Users whose consented number matches (STOP replies and carrier unsubscribes arrive as a number).
+function sp_sms_users_by_phone( string $e164 ): array {
+	if ( $e164 === '' ) return [];
+	return array_map( 'intval', get_users( [ 'meta_key' => 'sp_sms_phone', 'meta_value' => $e164, 'fields' => 'ID' ] ) );
+}
+
+/*--------------------------------------------------------------
+# Inbound replies from staff (STOP / HELP / anything else)
+--------------------------------------------------------------
+The alert number shares the AI-chat inbound webhook. A reply from a number that belongs to a Site Pulse
+user is handled HERE so it never opens a customer chat or gets an AI answer. Twilio's Advanced Opt-Out
+also blocks STOPped numbers at the carrier; mirroring it keeps the app's switch honest.*/
+
+add_filter( 'bp_chat_inbound_sms_intercept', 'sp_sms_inbound_intercept', 10, 3 );
+function sp_sms_inbound_intercept( $handled, string $from, string $body ) {
+	if ( $handled !== null ) return $handled;
+	$uids = sp_sms_users_by_phone( $from );
+	if ( ! $uids ) return null;
+
+	$kw = strtoupper( trim( $body ) );
+	if ( in_array( $kw, [ 'STOP', 'STOPALL', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT', 'OPTOUT', 'REVOKE' ], true ) ) {
+		foreach ( $uids as $uid ) sp_sms_opt_out( $uid, 'sms_stop' );
+		return bp_chat_twiml_response(); // Twilio sends the standard opt-out confirmation
+	}
+	if ( in_array( $kw, [ 'START', 'UNSTOP', 'YES' ], true ) ) {
+		// Re-subscribing by keyword is honoured by the carrier; in the app they re-confirm on the opt-in
+		// screen (so the consent record stays tied to that screen). Point them there.
+		bp_chat_send_sms( $from, sprintf( '%s: To turn text alerts back on, open the app and tap Text alerts in your notifications: %s', sp_sms_program_name(), home_url( '/site-pulse-dashboard/' ) ) );
+		return bp_chat_twiml_response();
+	}
+	if ( in_array( $kw, [ 'HELP', 'INFO' ], true ) ) {
+		bp_chat_send_sms( $from, sp_sms_help_text() );
+		return bp_chat_twiml_response();
+	}
+	// Any other reply: this line doesn't take replies. Tell them once an hour, not on every text.
+	$k = 'sp_sms_noreply_' . md5( $from );
+	if ( ! get_transient( $k ) ) {
+		set_transient( $k, 1, HOUR_IN_SECONDS );
+		bp_chat_send_sms( $from, sprintf( '%s: This number only sends alerts, so replies aren\'t read. Open the app to respond: %s Reply HELP for help, STOP to cancel.', sp_sms_program_name(), home_url( '/site-pulse-dashboard/' ) ) );
+	}
+	return bp_chat_twiml_response();
+}
+
+// Twilio refused a send because the number already replied STOP (error 21610) — e.g. the STOP reached
+// Twilio but not our webhook. Switch the app off to match.
+add_action( 'bp_sms_recipient_unsubscribed', function ( string $to ) {
+	foreach ( sp_sms_users_by_phone( $to ) as $uid ) {
+		if ( get_user_meta( $uid, 'sp_sms_optin', true ) === '1' ) sp_sms_opt_out( $uid, 'carrier_21610' );
+	}
+} );
 
 /*--------------------------------------------------------------
 # The sweep
@@ -231,12 +360,13 @@ function site_pulse_ajax_sms_get_settings(): void {
 	$saved   = trim( (string) get_user_meta( $uid, 'sp_sms_phone', true ) );
 	$dirPhone = sp_sms_directory_phone( $uid );
 
-	wp_send_json_success( [
+	wp_send_json_success( sp_sms_optin_screen_data() + [
 		'available'      => sp_sms_nudge_enabled(),                       // org on + Twilio ready
 		'optin'          => sp_sms_user_opted_in( $uid ),
+		// Old bare-checkbox opt-in with no consent record — asked to confirm on the new screen.
+		'legacy'         => get_user_meta( $uid, 'sp_sms_optin', true ) === '1' && ! sp_sms_user_opted_in( $uid ),
 		'phone'          => $saved,
-		'directory_phone'=> $dirPhone,                                     // shown as the fallback if no saved number
-		'has_number'     => ( $saved !== '' || $dirPhone !== '' ),
+		'directory_phone'=> $dirPhone,                                     // prefills the opt-in screen when no saved number
 		'delay_min'      => (string) get_user_meta( $uid, 'sp_sms_delay_min', true ),
 		'renotify_min'   => (string) get_user_meta( $uid, 'sp_sms_renotify_min', true ),
 		'event_window_min' => (string) get_user_meta( $uid, 'sp_sms_event_window_min', true ),
@@ -253,25 +383,62 @@ function site_pulse_ajax_sms_get_settings(): void {
 	] );
 }
 
+// The opt-in screen's "Turn on text alerts". Consent is recorded ONLY here, ONLY with the box ticked,
+// and only for the user themself — an impersonating god can't consent on someone's behalf.
+add_action( 'wp_ajax_site_pulse_sms_optin', 'site_pulse_ajax_sms_optin' );
+function site_pulse_ajax_sms_optin(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = site_pulse_effective_user_id();
+	if ( $uid !== (int) get_current_user_id() ) {
+		wp_send_json_error( [ 'message' => 'Only the account owner can agree to text alerts.' ] );
+	}
+	if ( ! sp_sms_nudge_enabled() ) {
+		wp_send_json_error( [ 'message' => 'Text alerts aren’t turned on for this app.' ] );
+	}
+	if ( empty( $_POST['consent'] ) ) {
+		wp_send_json_error( [ 'message' => 'Check the box to agree to text alerts.' ] );
+	}
+	$raw   = trim( (string) wp_unslash( $_POST['phone'] ?? '' ) );
+	$phone = function_exists( 'bp_chat_normalize_phone' ) ? bp_chat_normalize_phone( $raw ) : '';
+	if ( $phone === '' ) {
+		wp_send_json_error( [ 'message' => "That doesn't look like a valid US mobile number." ] );
+	}
+
+	// Confirmation text first: it's required by A2P, and a failed send means a bad number — don't
+	// record an opt-in we can't deliver to.
+	if ( ! sp_sms_send_raw( $phone, sp_sms_confirmation_text() ) ) {
+		wp_send_json_error( [ 'message' => "We couldn't send a text to that number. Check it and try again." ] );
+	}
+
+	update_user_meta( $uid, 'sp_sms_phone', $phone );
+	update_user_meta( $uid, 'sp_sms_optin', '1' );
+	update_user_meta( $uid, 'sp_sms_consent', [
+		'at'    => current_time( 'mysql' ),
+		'phone' => $phone,
+		'ip'    => function_exists( 'bp_chat_client_ip' ) ? bp_chat_client_ip() : (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ),
+		'ua'    => substr( sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ?? '' ) ), 0, 255 ),
+		'text'  => sp_sms_consent_text(),   // exactly what the screen showed
+		'urls'  => sp_sms_legal_urls(),
+	] );
+	sp_sms_consent_log( $uid, 'opt_in', $phone, 'optin_screen' );
+
+	wp_send_json_success( [ 'message' => 'Text alerts are on. We just sent a confirmation text.' ] );
+}
+
+// "Turn off text alerts" in the app (the same as replying STOP).
+add_action( 'wp_ajax_site_pulse_sms_optout', 'site_pulse_ajax_sms_optout' );
+function site_pulse_ajax_sms_optout(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	sp_sms_opt_out( site_pulse_effective_user_id(), 'app' );
+	wp_send_json_success( [ 'message' => 'Text alerts are off.' ] );
+}
+
+// Personal delivery preferences only. Opt-in/out and the number go through the endpoints above, so the
+// consent record can't be changed without passing through the opt-in screen.
 add_action( 'wp_ajax_site_pulse_sms_save_settings', 'site_pulse_ajax_sms_save_settings' );
 function site_pulse_ajax_sms_save_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	$uid = site_pulse_effective_user_id();
-
-	$optin = ! empty( $_POST['optin'] );
-
-	// Phone: keep whatever they typed (normalised); fall back to Directory when blank.
-	$rawPhone = trim( (string) wp_unslash( $_POST['phone'] ?? '' ) );
-	$phone    = $rawPhone === '' ? '' : ( function_exists( 'bp_chat_normalize_phone' ) ? bp_chat_normalize_phone( $rawPhone ) : $rawPhone );
-	if ( $rawPhone !== '' && $phone === '' ) {
-		wp_send_json_error( [ 'message' => "That doesn't look like a valid mobile number." ] );
-	}
-	// Can't opt in with no number anywhere.
-	if ( $optin && $phone === '' && sp_sms_directory_phone( $uid ) === '' ) {
-		wp_send_json_error( [ 'message' => 'Add a mobile number to turn on text alerts.' ] );
-	}
-	update_user_meta( $uid, 'sp_sms_phone', $phone );
-	update_user_meta( $uid, 'sp_sms_optin', $optin ? '1' : '0' );
 
 	// Personal overrides — blank string clears the override (= follow the company default).
 	$delay = isset( $_POST['delay_min'] ) ? trim( (string) $_POST['delay_min'] ) : '';
@@ -410,6 +577,7 @@ function site_pulse_ajax_admin_get_sms_nudge(): void {
 		'quiet_start'   => site_pulse_get_setting( 'sms_nudge_quiet_start', '21:00' ),
 		'quiet_end'     => site_pulse_get_setting( 'sms_nudge_quiet_end', '07:00' ),
 		'twilio_ready'  => sp_sms_nudge_twilio_ready(),
+		'optin_preview' => sp_sms_optin_screen_data(),  // "Preview opt-in screen" — for the A2P screenshots
 	] );
 }
 
@@ -418,7 +586,7 @@ function site_pulse_ajax_admin_save_sms_nudge(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
 
-	site_pulse_set_setting( 'sms_nudge_enabled', ! empty( $_POST['enabled'] ) ? '1' : '0' );
+	// The on/off switch lives in Global notifications (saved via site_pulse_admin_save_setting).
 	site_pulse_set_setting( 'sms_nudge_delay_min', (string) max( 1, (int) ( $_POST['delay_min'] ?? 10 ) ) );
 	site_pulse_set_setting( 'sms_nudge_renotify_min', (string) max( 0, (int) ( $_POST['renotify_min'] ?? 0 ) ) );
 	site_pulse_set_setting( 'sms_event_window_min', (string) max( 5, (int) ( $_POST['event_window_min'] ?? 60 ) ) );

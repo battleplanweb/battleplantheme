@@ -47,13 +47,13 @@ class BPFB_Hub {
 
 	public static function init() {
 		add_action( 'rest_api_init', array( __CLASS__, 'register_routes' ) );
-		// No standalone "Facebook" tab — the Connect controls render inside Tools → Client Reviews.
+		// No standalone "Facebook" tab — the Connect controls render inside Tools → Agency Settings.
 		add_action( 'admin_post_bpfb_connect', array( __CLASS__, 'handle_connect' ) );
 		add_action( 'admin_post_bpfb_disconnect', array( __CLASS__, 'handle_disconnect' ) );
 		add_action( 'admin_post_bpfb_subscribe', array( __CLASS__, 'handle_subscribe' ) );
 	}
 
-	// Where the OAuth round-trip returns to (now the consolidated Client Reviews screen).
+	// Where the OAuth round-trip returns to (now the consolidated Agency Settings screen).
 	public static function admin_return_url() { return admin_url( 'tools.php?page=bpgbp-clients' ); }
 
 	/* ─────────────── Config ─────────────── */
@@ -528,9 +528,9 @@ class BPFB_Hub {
 		);
 	}
 
-	/* ─────────────── Facebook connection controls (rendered inside Tools → Client Reviews) ─────────────── */
+	/* ─────────────── Facebook connection controls (rendered inside Tools → Agency Settings) ─────────────── */
 
-	// A compact Connect / Reconnect / Disconnect block, embedded at the top of the Client Reviews screen.
+	// A compact Connect / Reconnect / Disconnect block, embedded at the top of the Agency Settings screen.
 	// No Pages list — Page IDs live in the client registry's Facebook column now.
 	public static function render_connection_controls() {
 		// Flashes from the OAuth round-trip.

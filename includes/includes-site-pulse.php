@@ -2017,6 +2017,59 @@ add_filter( 'bp_inline_site_css', function( $inline ) {
 	return $inline;
 } );
 
+/*--------------------------------------------------------------
+# Public document pages (Privacy Policy, Terms…) on a private app install
+--------------------------------------------------------------
+A private Site Pulse install (site_private) has no public website, but some pages must stay public —
+the legal pages Twilio/A2P reviewers and app stores check. Those are the site_private `allow_slugs`.
+They'd otherwise render in the bare client-site styling; here they wear the Site Pulse look instead:
+the SP stylesheet + company color scheme, no client site CSS/JS, the article as a card, and an
+app-name bar on top. Nothing to configure — listing a slug in allow_slugs is enough.*/
+
+function site_pulse_is_doc_page(): bool {
+	$post = get_queried_object();
+	if ( ! $post instanceof WP_Post || strpos( (string) $post->post_name, 'site-pulse' ) === 0 ) return false;
+	$opts = get_option( 'site_private', [] );
+	if ( ! bp_module_on( $opts ) ) return false;
+	$allow = array_map( fn( $s ) => trim( (string) $s, '/' ), (array) ( $opts['allow_slugs'] ?? [] ) );
+	return in_array( $post->post_name, $allow, true );
+}
+
+add_filter( 'body_class', function( $classes ) {
+	if ( site_pulse_is_doc_page() ) array_push( $classes, 'has-site-pulse', 'sp-doc-page' );
+	return $classes;
+} );
+
+add_filter( 'bp_inline_site_css', fn( $inline ) => site_pulse_is_doc_page() ? false : $inline );
+
+add_action( 'wp_enqueue_scripts', function() {
+	if ( ! site_pulse_is_doc_page() ) return;
+	$style_path = get_template_directory() . '/style-site-pulse.css';
+	if ( file_exists( $style_path ) ) {
+		wp_enqueue_style( 'site-pulse-style', get_template_directory_uri() . '/style-site-pulse.css', [], filemtime( $style_path ) );
+	}
+}, 20 );
+
+add_action( 'wp_enqueue_scripts', function() {
+	if ( site_pulse_is_doc_page() ) wp_dequeue_script( 'battleplan-script-site' );
+}, 99999 );
+
+add_action( 'wp_head', function() {
+	if ( site_pulse_is_doc_page() ) echo site_pulse_color_scheme_css();
+}, 99 );
+
+// App icon + name above the card, linking back to sign-in — so the page reads as part of the app.
+add_action( 'wp_body_open', function() {
+	if ( ! site_pulse_is_doc_page() ) return;
+	$app  = site_pulse_get_setting( 'app_name', 'Site Pulse' );
+	$icon = function_exists( 'site_pulse_pwa_preview_url' ) ? site_pulse_pwa_preview_url() : '';
+	echo '<div class="sp-doc-brand">';
+	if ( $icon ) echo '<img src="' . esc_url( $icon ) . '" alt="" class="sp-doc-brand__icon" width="44" height="44">';
+	echo '<div class="sp-doc-brand__name">' . esc_html( $app ) . '</div>';
+	echo '<a class="sp-btn sp-btn-secondary sp-doc-brand__signin" href="' . esc_url( home_url( '/site-pulse-login/' ) ) . '">' . ( is_user_logged_in() ? 'Back to app' : 'Sign in' ) . '</a>';
+	echo '</div>';
+} );
+
 function site_pulse_enqueue_assets(): void {
 	$sp_slugs = [ 'site-pulse-login', 'site-pulse-dashboard' ];
 
@@ -5094,6 +5147,7 @@ function site_pulse_ajax_get_notification_settings(): void {
 		'email_enabled' => site_pulse_get_setting( 'notifications_email_enabled', '0' ),
 		'push_enabled'  => site_pulse_get_setting( 'push_enabled', '0' ),
 		'sms_enabled'   => ( site_pulse_get_setting( 'sms_nudge_enabled', '0' ) === '1' && function_exists( 'sp_sms_nudge_twilio_ready' ) && sp_sms_nudge_twilio_ready() ) ? '1' : '0',
+		'sms_switch'    => site_pulse_get_setting( 'sms_nudge_enabled', '0' ),   // the raw "Allow text" switch (Twilio may still be missing)
 	] );
 }
 
@@ -7007,7 +7061,7 @@ function site_pulse_ajax_admin_save_setting(): void {
 		$booking_secret_keys,
 		$store_secret_keys
 	);
-	$notif_keys     = [ 'push_enabled', 'messages_email_enabled', 'notifications_email_enabled', 'push_contact_email' ];
+	$notif_keys     = [ 'push_enabled', 'messages_email_enabled', 'notifications_email_enabled', 'push_contact_email', 'sms_nudge_enabled' ];
 	$required_cap   = in_array( $key, $api_key_keys, true ) ? 'manage_api_keys'
 		: ( in_array( $key, $notif_keys, true ) ? 'manage_notifications' : 'manage_settings' );
 	if ( ! site_pulse_admin_check( $required_cap ) ) return;
@@ -11380,6 +11434,24 @@ function site_pulse_ajax_save_expense(): void {
 	$keeps_existing_receipt = $id && $old_receipt !== '' && empty( $_POST['receipt_remove'] );
 	if ( ! $has_new_receipt && ! $keeps_existing_receipt ) {
 		wp_send_json_error( [ 'code' => 'receipt_required', 'message' => 'A receipt photo is required for every expense. Please attach one before saving.' ] );
+	}
+
+	// A NEWLY uploaded receipt must belong to the CURRENT pay period (no old receipts). Checks the
+	// date the scanner read off the receipt (when it read one) and the expense date. Existing
+	// receipts on edits aren't re-checked. Skipped when no pay period is configured; god can override.
+	if ( $has_new_receipt && ! site_pulse_god_can_override() && ( $period = site_pulse_current_expense_period() ) ) {
+		$receipt_date = sanitize_text_field( wp_unslash( $_POST['receipt_date'] ?? '' ) );
+		foreach ( [ $receipt_date, $date ] as $d ) {
+			if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $d ) ) continue;
+			if ( $d < $period['start'] || $d > $period['end'] ) {
+				wp_send_json_error( [ 'code' => 'receipt_out_of_period', 'message' => sprintf(
+					'Only receipts from the current pay period (%s – %s) can be submitted. This one is dated %s.',
+					date_i18n( 'M j, Y', strtotime( $period['start'] ) ),
+					date_i18n( 'M j, Y', strtotime( $period['end'] ) ),
+					date_i18n( 'M j, Y', strtotime( $d ) )
+				) ] );
+			}
+		}
 	}
 
 	// Duplicate-receipt guard: on a NEW line (not an edit), block one that exactly matches an expense

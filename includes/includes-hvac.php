@@ -67,6 +67,8 @@ function battleplan_product_overview( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'american-standard-customer-care', 'battleplan_american_standard_customer_care' );
 function battleplan_american_standard_customer_care( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-customer-care-dealer.php";
 }
 
@@ -75,6 +77,8 @@ function battleplan_american_standard_customer_care( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'rheem-pro-partner', 'battleplan_rheem_pro_partner' );
 function battleplan_rheem_pro_partner( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-rheem-pro-partner.php";
 }
 
@@ -83,6 +87,8 @@ function battleplan_rheem_pro_partner( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'ruud-pro-partner', 'battleplan_ruud_pro_partner' );
 function battleplan_ruud_pro_partner( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-ruud-pro-partner.php";
 }
 
@@ -91,6 +97,8 @@ function battleplan_ruud_pro_partner( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'comfortmaker-elite-dealer', 'battleplan_comfortmaker_elite_dealer' );
 function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-comfortmaker-elite-dealer.php";
 }
 
@@ -99,6 +107,8 @@ function battleplan_comfortmaker_elite_dealer( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'york-cert-comfort-expert', 'battleplan_york_cert_comfort_expert' );
 function battleplan_york_cert_comfort_expert( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-york-cert-comfort-expert.php";
 }
 
@@ -107,6 +117,8 @@ function battleplan_york_cert_comfort_expert( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'tempstar-elite-dealer', 'battleplan_tempstar_elite_dealer' );
 function battleplan_tempstar_elite_dealer( $atts, $content = null ) {
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-tempstar-elite-dealer.php";
 }
 
@@ -144,7 +156,8 @@ function battleplan_why_choose_us( $atts, $content = null ) {
 --------------------------------------------------------------*/
 add_shortcode( 'hvac-maintenance-tips', 'battleplan_hvac_maintenance_tips' );
 function battleplan_hvac_maintenance_tips( $atts, $content = null ) {
-
+	$a = shortcode_atts( array( 'type'=>'', ), $atts );
+	$type = esc_attr($a['type']);
 	return include get_template_directory()."/pages/page-hvac-maintenance-tips.php";
 }
 
@@ -338,10 +351,15 @@ function battleplan_getWellsFargo($atts, $content = null) {
 	$rand = rand(1,2);
 	if ($rand == "1") : $ad = $graphic1; endif;
 	if ($rand == "2") : $ad = $graphic2; endif;
-	if ($ad=="Wells-Fargo-A.webp" || $ad=="Wells-Fargo-B.webp") : $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
-	if ($ad=="Wells-Fargo-C.webp" || $ad=="Wells-Fargo-D.webp") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
-	if ($ad=="Wells-Fargo-E.webp") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;
-	if ($ad=="Wells-Fargo-Splash-A.webp" || $ad=="Wells-Fargo-Splash-B.webp" || $ad=="Wells-Fargo-Splash-C.webp" || $ad=="Wells-Fargo-Splash-D.webp") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;
+	// Older sites pass the .png name (Universal Elements Widgets.txt did); matching only .webp
+	// left them with alt="" and no width/height. Match the stem, always serve the .webp.
+	$ad  = pathinfo($ad, PATHINFO_FILENAME);
+	$alt = ''; $width = ''; $height = '';
+	if ($ad=="Wells-Fargo-A" || $ad=="Wells-Fargo-B") : $alt = "Looking for financing options? Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
+	if ($ad=="Wells-Fargo-C" || $ad=="Wells-Fargo-D") : $alt = "Special financing available. This credit card is issued with approved credit by Wells Fargo Bank, N.A. Equal Housing Lender. Learn more."; $width="300"; $height="250"; endif;
+	if ($ad=="Wells-Fargo-E") : $alt = "Financing available through Wells Fargo Bank, NA. This credit card is issued with approved credit.  Equal Housing Lender."; $width="200"; $height="152"; endif;
+	if ($ad=="Wells-Fargo-Splash-A" || $ad=="Wells-Fargo-Splash-B" || $ad=="Wells-Fargo-Splash-C" || $ad=="Wells-Fargo-Splash-D") : $alt = "Buy today, pay over time with this Wells Fargo credit card. Learn more."; $width="600"; $height="300"; endif;
+	$ad .= '.webp';
 	$output = '<a href="'.$link.'" title="Click to learn more about Wells Fargo financing options." target="_blank"><img src="/wp-content/themes/battleplantheme/common/financing/'.$ad.'" loading="lazy" alt="'.$alt.'" class="tracking'.$class.'" data-track="financing" width="'.$width.'" height="'.$height.'" style="aspect-ratio:'.$width.'/'.$height.'" ></a>';
 	return $output;
 }

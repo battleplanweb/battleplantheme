@@ -90,6 +90,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-store-mem
 require_once get_template_directory() . '/includes/includes-site-pulse-store-agreements.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-downloads.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-import-woo.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-clover.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-admin.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-front.php';
 

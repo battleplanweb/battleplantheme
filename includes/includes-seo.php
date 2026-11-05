@@ -1469,8 +1469,7 @@ function bp_seo_ai_script( $post ) {
 					if ( ! json.success ) throw new Error(json.data && json.data.message ? json.data.message : 'Generation failed');
 					f.value = json.data.value;
 					f.dispatchEvent(new Event('input', { bubbles: true }));   // refreshes counter + "Google sees"
-					warn.textContent = json.data.warning ? '⚠ ' + json.data.warning + ' Edit before saving.' : '';
-					note.classList.toggle('is-warn', !! json.data.warning);
+					if ( warn ) warn.textContent = json.data.warning ? '⚠ ' + json.data.warning + ' Edit before saving.' : '';
 				})
 				.catch(function(err){ alert('AI SEO writer failed: ' + err.message); })
 				.finally(function(){ b.textContent = label; b.disabled = false; });

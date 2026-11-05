@@ -343,10 +343,10 @@ function sp_store_stripe_begin( int $order_id ) {
 		'client_reference_id'  => $order['number'],
 		'metadata'             => [ 'order_id' => $order_id, 'order_number' => $order['number'] ],
 		'payment_intent_data'  => [ 'metadata' => [ 'order_id' => $order_id, 'order_number' => $order['number'] ] ],
-		'success_url'          => add_query_arg( [
-			'sp_store_thanks' => $order['number'],
-			'session_id'      => '{CHECKOUT_SESSION_ID}',
-		], home_url( '/' ) ),
+		'success_url'          => add_query_arg(
+			[ 'session_id' => '{CHECKOUT_SESSION_ID}' ],
+			sp_store_thanks_url( (string) $order['number'] )
+		),
 		'cancel_url'           => home_url( '/' ),
 		// Expire the hold in about half an hour: long enough to go and find a card, short
 		// enough that an abandoned checkout is not sitting on stock all afternoon.
@@ -915,11 +915,11 @@ function sp_store_handle_webhook(): void {
 # Return Page
 --------------------------------------------------------------*/
 
-add_action( 'template_redirect', 'sp_store_thanks_page' );
+add_action( 'template_redirect', 'sp_store_thanks_page', 5 );
 function sp_store_thanks_page(): void {
-	if ( ! sp_store_active() || empty( $_GET['sp_store_thanks'] ) ) return;
+	if ( ! sp_store_active() || sp_store_route_value( 'sp_store_thanks' ) === '' ) return;
 
-	$number = sanitize_text_field( wp_unslash( (string) $_GET['sp_store_thanks'] ) );
+	$number = sp_store_route_value( 'sp_store_thanks' );
 	$order  = sp_store_get_order_by_number( $number );
 
 	// THE SAFETY NET. The customer is standing here, so if the webhook has not landed
@@ -936,6 +936,7 @@ function sp_store_thanks_page(): void {
 
 	status_header( 200 );
 	nocache_headers();
+	sp_store_virtual_page( 'store-thanks-page' );
 	get_header();
 	?>
 	<div id="primary" class="site-main" role="main" aria-label="main content">

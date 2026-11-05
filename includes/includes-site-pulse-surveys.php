@@ -242,7 +242,9 @@ function site_pulse_ajax_get_surveys(): void {
 	}
 
 	$where_sql = implode( ' AND ', $where );
-	$sql       = "SELECT * FROM $table WHERE $where_sql ORDER BY created_at DESC LIMIT 1000";
+	// Newest first by the date the card SHOWS (visit date, else when it came in), so imported or
+	// edited cards whose visit date differs from their entry time still land in date order.
+	$sql       = "SELECT * FROM $table WHERE $where_sql ORDER BY COALESCE(visit_date, DATE(created_at)) DESC, created_at DESC LIMIT 1000";
 	$rows      = $params ? $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ) : $wpdb->get_results( $sql, ARRAY_A );
 	$rows      = $rows ?: [];
 

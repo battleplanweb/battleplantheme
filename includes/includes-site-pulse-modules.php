@@ -107,7 +107,7 @@ function site_pulse_modules(): array {
 		'booking' => [
 			'label'   => 'Booking',
 			'desc'    => 'Online booking — appointments, classes, and rentals on one calendar. Customers book and pay from the public site or the Customer Connect app; staff get the calendar, manual booking, availability rules, passes and memberships.',
-			'caps'    => [ 'view_bookings', 'view_own_bookings', 'manage_bookings', 'manage_booking_services', 'manage_booking_payments', 'manage_booking_settings' ],
+			'caps'    => [ 'view_bookings', 'view_own_bookings', 'manage_bookings', 'delete_bookings', 'manage_booking_services', 'manage_booking_payments', 'manage_booking_settings' ],
 			'default' => false,
 		],
 		'store' => [
@@ -120,6 +120,18 @@ function site_pulse_modules(): array {
 			'label'   => 'Shift Scheduling',
 			'desc'    => 'Shift / overtime scheduling — claim OT, PDO and coverage requests, duty assignments, and the member roster. Members added on its Members screen become Site Pulse users on the Shift Member / Supervisor / Admin tiers.',
 			'caps'    => [ 'use_shift_scheduling', 'manage_shift_schedules', 'manage_shift_settings' ],
+			'default' => false,
+		],
+		'events' => [
+			'label'   => 'Events',
+			'desc'    => 'Add, edit and delete the website&rsquo;s Events (the public calendar, event pages and event teasers) without going into WordPress — dates, repeating schedules, venue, photo. Still editable in WordPress too. Switched on automatically where Events is installed.',
+			'caps'    => [ 'view_events', 'manage_events' ],
+			'default' => false,
+		],
+		'content' => [
+			'label'   => 'Website Content',
+			'desc'    => 'Add, edit and delete the website&rsquo;s pages and posts (and any other content types the site turns on) without going into WordPress. Layout pages keep their design: only the text is editable. Writers without publish rights submit for review.',
+			'caps'    => [],   // dynamic, one set per content type: see site_pulse_cap_module_map()
 			'default' => false,
 		],
 		'jobsites' => [
@@ -168,6 +180,10 @@ function site_pulse_cap_module_map(): array {
 			$map[ site_pulse_report_view_cap( (string) $t['slug'] ) ]   = 'reports';
 		}
 	}
+	// The per-type Website Content caps belong to the Website Content module.
+	if ( function_exists( 'sp_content_caps_catalog' ) ) {
+		foreach ( array_keys( sp_content_caps_catalog() ) as $cap ) $map[ $cap ] = 'content';
+	}
 	return $map;
 }
 
@@ -212,6 +228,7 @@ function site_pulse_new_install_modules(): array {
 	$opt = get_option( 'site_pulse' );
 	$on  = ( is_array( $opt ) && isset( $opt['start_modules'] ) && is_array( $opt['start_modules'] ) ) ? array_values( $opt['start_modules'] ) : [ 'notes' ];
 	if ( function_exists( 'bp_module_on' ) && bp_module_on( get_option( 'jobsite_geo' ) ) ) $on[] = 'jobsites';
+	if ( function_exists( 'bp_module_on' ) && bp_module_on( get_option( 'event_calendar' ) ) ) $on[] = 'events';
 	return array_unique( $on );
 }
 
@@ -273,7 +290,16 @@ function site_pulse_ajax_get_modules(): void {
 			'enabled' => site_pulse_module_on( $slug ),
 		];
 	}
-	wp_send_json_success( [ 'modules' => $modules ] );
+	wp_send_json_success( [ 'modules' => $modules, 'superadmin_visible' => site_pulse_superadmin_visible() ] );
+}
+
+add_action( 'wp_ajax_site_pulse_save_superadmin_visible', 'site_pulse_ajax_save_superadmin_visible' );
+function site_pulse_ajax_save_superadmin_visible(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_modules_gate() ) return;
+	$on = ( (string) ( $_POST['visible'] ?? '' ) === '1' );
+	update_option( 'site_pulse_superadmin_visible', $on ? '1' : '0', false );
+	wp_send_json_success( [ 'visible' => $on ] );
 }
 
 add_action( 'wp_ajax_site_pulse_save_modules', 'site_pulse_ajax_save_modules' );

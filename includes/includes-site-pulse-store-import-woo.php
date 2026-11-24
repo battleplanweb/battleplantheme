@@ -98,15 +98,16 @@ function sp_store_woo_item_meta( int $item_id ): array {
 	return $out;
 }
 
-/** A Woo product's category names, straight from the term tables (no taxonomy registration needed). */
-function sp_store_woo_product_cats( int $product_id ): array {
+/** A Woo product's category (or, with 'product_tag', tag) names, straight from the term tables (no taxonomy registration needed). */
+function sp_store_woo_product_cats( int $product_id, string $taxonomy = 'product_cat' ): array {
 	global $wpdb;
 	return $wpdb->get_col( $wpdb->prepare(
 		"SELECT t.name FROM {$wpdb->term_relationships} tr
 		   JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id
 		   JOIN {$wpdb->terms} t ON t.term_id = tt.term_id
-		  WHERE tr.object_id = %d AND tt.taxonomy = 'product_cat'",
-		$product_id
+		  WHERE tr.object_id = %d AND tt.taxonomy = %s",
+		$product_id,
+		$taxonomy
 	) ) ?: [];
 }
 
@@ -207,6 +208,16 @@ function sp_store_import_woo_products( bool $dry, array &$map, array &$r ): void
 				if ( ! is_wp_error( $t ) ) $ids[] = (int) ( is_array( $t ) ? $t['term_id'] : $t );
 			}
 			if ( $ids ) wp_set_object_terms( $new, $ids, 'bp_product_cat' );
+		}
+
+		// ---- Tags, the same way.
+		if ( taxonomy_exists( 'bp_product_tag' ) ) {
+			$ids = [];
+			foreach ( sp_store_woo_product_cats( $wid, 'product_tag' ) as $name ) {
+				$t = term_exists( $name, 'bp_product_tag' ) ?: wp_insert_term( $name, 'bp_product_tag' );
+				if ( ! is_wp_error( $t ) ) $ids[] = (int) ( is_array( $t ) ? $t['term_id'] : $t );
+			}
+			if ( $ids ) wp_set_object_terms( $new, $ids, 'bp_product_tag' );
 		}
 
 		// ---- Photos: featured image first, then the gallery.
@@ -586,10 +597,10 @@ function sp_store_import_woo_settings( bool $dry, array &$r ): void {
 		if ( ! $dry ) {
 			sp_store_set_setting( 'tax_mode', 'flat' );
 			sp_store_set_setting( 'tax_flat_rate', (string) (float) $rates[0]['tax_rate'] );
-			sp_store_set_setting( 'tax_shipping', $rates[0]['tax_rate_shipping'] ? '1' : '' );
+			sp_store_set_setting( 'tax_shipping', $rates[0]['tax_rate_shipping'] ? '1' : '0' );
 		}
 	} elseif ( $rates ) {
-		$r['notes'][] = 'Woo had ' . count( $rates ) . ' tax rates; set tax by hand in Settings → Store.';
+		$r['notes'][] = 'Woo had ' . count( $rates ) . ' tax rates; set tax by hand in Settings → E-Commerce.';
 	}
 
 	$coupons = $wpdb->get_col( "SELECT post_title FROM {$wpdb->posts} WHERE post_type = 'shop_coupon' AND post_status = 'publish'" ) ?: [];

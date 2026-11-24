@@ -1266,49 +1266,58 @@ document.addEventListener("DOMContentLoaded", function () {
 	}
 
 
-	// Setting up an observer for animated objects
-	function observeVisibility(elementObj, offset, animationName, initDelay = 0) {
-		const pxOffset =
-			(typeof offset === 'string' && offset.includes('%'))
-				? convertOffset(offset)
-				: offset;
+	// Scroll-triggered animation. offset follows the old Waypoints convention: the element
+	// fires when its TOP reaches that point of the viewport, measured from the top
+	// ("100%" = as soon as it peeks in at the bottom, "80%" = a fifth of the way up,
+	// "15%" = nearly at the top).
+	//
+	// One shared, rAF-throttled scroll/resize check instead of an IntersectionObserver per
+	// element, because IO missed three cases:
+	//   - the old on-load check fired anything with a single pixel on screen, ignoring offset;
+	//   - an element that jumps from below the line to above the viewport in one frame
+	//     (anchor link, fast fling, scroll restore) never "intersects", so it stayed hidden;
+	//   - an element near the page bottom that can never scroll up to its line never fired.
+	//     Hitting the bottom of the page now fires everything still waiting.
+	//
+	// initDelay is no longer applied here: animateDivs/animateGrid/animateCharacters already
+	// wait initDelay before calling this, so it was doubled on load and also added lag to every
+	// element revealed later by scrolling. It is a page-load delay, not a per-reveal one.
+	const pendingReveals = new Set();
+	let revealCheckQueued = false;
 
-		const observer = new IntersectionObserver((entries) => {
-			entries.forEach(entry => {
-				if (entry.isIntersecting) {
-					if (animationName !== false) {
-						setTimeout(() => {
-							beginAnimation(entry.target, animationName);
-						}, initDelay);
-					} else {
-						entry.target.classList.remove('animation-queued');
-						entry.target.classList.add('animate', 'animation-complete');
-					}
-					observer.unobserve(entry.target);
-					//observer.disconnect();
-				}
-			});
-		}, {
-			root: null,
-			rootMargin: `0px 0px -${pxOffset}px 0px`,
-			threshold: 0
+	function fireReveal(item) {
+		pendingReveals.delete(item);
+		if (item.animationName !== false) {
+			beginAnimation(item.el, item.animationName);
+		} else {
+			item.el.classList.remove('animation-queued');
+			item.el.classList.add('animate', 'animation-complete');
+		}
+	}
+
+	function checkReveals() {
+		revealCheckQueued = false;
+		if (!pendingReveals.size) return;
+		const viewH = window.innerHeight;
+		const atBottom = (window.scrollY + viewH) >= (document.documentElement.scrollHeight - 2);
+		pendingReveals.forEach(item => {
+			if (atBottom || item.el.getBoundingClientRect().top < viewH - item.pxOffset) fireReveal(item);
 		});
+	}
 
-		observer.observe(elementObj);
+	function queueRevealCheck() {
+		if (revealCheckQueued) return;
+		revealCheckQueued = true;
+		requestAnimationFrame(checkReveals);
+	}
 
-		// Immediate visibility check
-		requestAnimationFrame(() => {
-			const rect = elementObj.getBoundingClientRect();
-			if (rect.top < window.innerHeight && rect.bottom > 0) {
-				if (animationName !== false) {
-					setTimeout(() => beginAnimation(elementObj, animationName), initDelay);
-				} else {
-					elementObj.classList.remove('animation-queued');
-					elementObj.classList.add('animate', 'animation-complete');
-				}
-				observer.unobserve(elementObj);
-			}
-		});
+	window.addEventListener('scroll', queueRevealCheck, { passive: true });
+	window.addEventListener('resize', queueRevealCheck, { passive: true });
+
+	function observeVisibility(elementObj, offset, animationName) {
+		const pxOffset = Math.max(0, convertOffset(offset));
+		pendingReveals.add({ el: elementObj, pxOffset, animationName });
+		queueRevealCheck();
 	}
 
 	// Animate single element
@@ -1356,7 +1365,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 					const animationName = animationKeyframes(effect);
 					applyAnimation(child, speed / 1000, delay / 1000, easing, 'both');
-					observeVisibility(child, offset, animationName, initDelay);
+					observeVisibility(child, offset, animationName);
 				});
 			}, initDelay);
 		});
@@ -1392,7 +1401,7 @@ document.addEventListener("DOMContentLoaded", function () {
 				spanAllChildren.forEach(child => {
 					const animationName = animationKeyframes(effect1);
 					applyAnimation(child, speed / 1000, eachDelay / 1000, easing, 'both');
-					observeVisibility(child, offset, animationName, initDelay);
+					observeVisibility(child, offset, animationName);
 				});
 
 				const num = otherChildren.length;
@@ -1408,7 +1417,7 @@ document.addEventListener("DOMContentLoaded", function () {
 					elementY = childT;
 
 					applyAnimation(child, speed / 1000, delay / 1000, easing, 'both');
-					observeVisibility(child, offset, animationName, initDelay);
+					observeVisibility(child, offset, animationName);
 				});
 			}, initDelay);
 		});

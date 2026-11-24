@@ -57,6 +57,7 @@ input[type="number"] {
 	background:                                                var(--input-background);
 	border:                                                    var(--input-border);
 	box-shadow:                                                var(--input-box-shadow);
+	outline:                                                   var(--input-outline);
 	border-radius:                                             var(--input-border-radius);
 	text-shadow:                                               var(--input-text-shadow);
 	transform:                                                 var(--input-transform);
@@ -74,6 +75,7 @@ input[type="number"] {
 	background:                                                var(--input-background-focus);
 	border:                                                    var(--input-border-focus);
 	box-shadow:                                                var(--input-box-shadow-focus);
+	outline:                                                   var(--input-outline-focus);
 	border-radius:                                             var(--input-border-radius-focus);
 	text-shadow:                                               var(--input-text-shadow-focus);
 	transform:                                                 var(--input-transform-focus);

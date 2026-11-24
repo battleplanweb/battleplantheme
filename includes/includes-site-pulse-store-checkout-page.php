@@ -235,9 +235,12 @@ function sp_store_checkout_html( array $cart, array $lines ): string {
 
 	$out .= '<section class="store-checkout-section">';
 	$out .= '<h2>Payment</h2>';
-	$out .= '<div class="store-pay-mount" data-store-pay></div>';
+	// An embedded provider's id on the mount lets the script start loading its library
+	// while the shopper is still typing, so the card form appears without a wait.
+	$embedded = sp_store_provider_shape() === 'embedded';
+	$out .= '<div class="store-pay-mount" data-store-pay="' . esc_attr( $embedded ? sp_store_provider() : '' ) . '"></div>';
 	$out .= '<p class="store-checkout-error" data-store-co-error hidden></p>';
-	$out .= '<button type="button" class="store-place-order" data-store-place>Place order</button>';
+	$out .= '<button type="button" class="store-place-order" data-store-place>' . ( $embedded ? 'Continue to payment' : 'Place order' ) . '</button>';
 	$out .= '<p class="store-field-note">Payment is handled by ' . esc_html( sp_store_provider_def()['label'] ?? 'our payment processor' ) . '. Card details never reach this website.</p>';
 	$out .= '</section>';
 
@@ -331,6 +334,10 @@ function sp_store_totals_html( array $quote ): string {
 	$q = sp_store_quote_display( $quote );
 
 	$out  = '<p><span>Subtotal</span><span>' . $q['subtotal'] . '</span></p>';
+
+	if ( ! empty( $quote['fee_cents'] ) ) {
+		$out .= '<p><span>Service fee</span><span>' . $q['fee'] . '</span></p>';
+	}
 
 	if ( $quote['needs_shipping'] ) {
 		$out .= '<p><span>Shipping</span><span>'
@@ -506,6 +513,7 @@ function sp_store_ajax_place_order(): void {
 	// rather than after someone has paid.
 	$reserved = [];
 	foreach ( $lines as $line ) {
+		if ( ( $line['kind'] ?? 'product' ) !== 'product' ) continue;     // seats are held below, once the order exists
 		if ( sp_store_commit_stock( (int) $line['variant_id'], (int) $line['qty'] ) ) {
 			$reserved[ (int) $line['variant_id'] ] = (int) $line['qty'];
 			continue;
@@ -522,6 +530,15 @@ function sp_store_ajax_place_order(): void {
 	if ( ! $order_id ) {
 		foreach ( $reserved as $vid => $qty ) sp_store_release_stock( $vid, $qty );
 		wp_send_json_error( [ 'message' => 'We could not start your order. Please try again.' ] );
+	}
+
+	// Booking seats: held as pending bookings against this order (released if it's never paid).
+	if ( function_exists( 'sp_store_bookings_hold' ) ) {
+		$held = sp_store_bookings_hold( $order_id, $email, (string) ( $address['name'] ?? '' ) );
+		if ( is_wp_error( $held ) ) {
+			sp_store_cancel_pending_order( $order_id, $held->get_error_message() );
+			wp_send_json_error( [ 'message' => $held->get_error_message() ] );
+		}
 	}
 
 	$note = trim( sanitize_textarea_field( wp_unslash( (string) ( $_POST['note'] ?? '' ) ) ) );

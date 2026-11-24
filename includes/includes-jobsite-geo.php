@@ -105,208 +105,8 @@ function bp_match_key_from_title($title) {
 	return $key ?: '';
 }
 
-// Orient uploaded photos correctly
-add_filter('wp_handle_upload_prefilter', function($file) {
-
-	if (!empty($GLOBALS['bp_skip_exif_rotation'])) {
-		return $file;
-	}
-
-	if (!isset($file['tmp_name']) || !file_exists($file['tmp_name'])) {
-		return $file;
-	}
-
-	$mime = $file['type'] ?? '';
-	if (!str_starts_with($mime, 'image/')) {
-		return $file;
-	}
-
-	// HEIC/HEIF store orientation in container metadata, not standard EXIF.
-	// Re-saving them through wp_get_image_editor here corrupts the source
-	// before the WebP step can read it. Skip — WebP conversion handles them.
-	if ($mime === 'image/heic' || $mime === 'image/heif') {
-		return $file;
-	}
-
-	$exif = @exif_read_data($file['tmp_name']);
-	if (empty($exif['Orientation']) || (int)$exif['Orientation'] === 1) {
-		return $file;
-	}
-
-	$image = wp_get_image_editor($file['tmp_name']);
-	if (is_wp_error($image)) {
-		return $file;
-	}
-
-	switch ((int)$exif['Orientation']) {
-		case 3: $image->rotate(180); break;
-		case 6: $image->rotate(-90); break;
-		case 8: $image->rotate(90);  break;
-		default: return $file;
-	}
-
-	$saved = $image->save($file['tmp_name']);
-	if (is_wp_error($saved)) {
-		return $file;
-	}
-
-	return $file;
-});
-
-
-
-
-add_filter('wp_handle_upload',   function($u, $c) { error_log('BP-WHU FIRED:   ' . ($u['file'] ?? 'none')); return $u; }, 1, 2);
-add_filter('wp_handle_sideload', function($u, $c) { error_log('BP-WHSL FIRED: ' . ($u['file'] ?? 'none')); return $u; }, 1, 2);
-
-
-
-
-
-// Convert uploaded images to WebP at 80%, resize to 1000px max side.
-// Uses wp_handle_upload (post-filter) — fires after WP has moved the file to the
-// uploads directory, where it has a real filename/extension and can be freely modified.
-add_filter('wp_handle_upload', function($upload, $context) {
-
-	// Skip conversion for battleplanweb's own admin uploads — but NOT when the
-	// upload is targeted at a jobsite_geo post. Jobsite photos should always
-	// go through the WebP/resize pipeline regardless of who's uploading.
-	if (defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb') {
-		$target_post_id = 0;
-
-		// Try $_REQUEST first (standard WP media uploader passes post_id here)
-		if (!empty($_REQUEST['post_id'])) {
-			$target_post_id = (int) $_REQUEST['post_id'];
-		}
-
-		// Fallback to HTTP_REFERER (some upload flows don't pass post_id)
-		if (!$target_post_id && !empty($_SERVER['HTTP_REFERER'])) {
-			if (preg_match('/[?&]post=(\d+)/', $_SERVER['HTTP_REFERER'], $m)) {
-				$target_post_id = (int) $m[1];
-			}
-		}
-
-		$is_jobsite_target = $target_post_id && get_post_type($target_post_id) === 'jobsite_geo';
-		if (!$is_jobsite_target) {
-			return $upload;
-		}
-	}
-
-	if (empty($upload['file']) || !file_exists($upload['file'])) {
-		return $upload;
-	}
-
-	if (!str_starts_with($upload['type'] ?? '', 'image/')) {
-		return $upload; // not an image
-	}
-
-	// HEIC/HEIF arrive from iPhones with the orientation stored as a flag, not
-	// baked into the pixels — and the prefilter skips them. wp_get_image_editor
-	// can't auto-orient, so transcode HEIC with raw Imagick: autoOrient() bakes
-	// the rotation into the pixels, then stripImage() drops the leftover flag so
-	// every browser shows it upright. Falls through to the editor on any failure.
-	if (in_array($upload['type'], ['image/heic', 'image/heif'], true) && class_exists('Imagick')) {
-		try {
-			$im = new Imagick($upload['file']);
-			if ($im->valid()) {
-				$im->autoOrient();
-
-				$w = $im->getImageWidth();
-				$h = $im->getImageHeight();
-				if (max($w, $h) > 1000) {
-					$scale = 1000 / max($w, $h);
-					$im->resizeImage((int) round($w * $scale), (int) round($h * $scale), Imagick::FILTER_LANCZOS, 1);
-				}
-
-				$im->setImageFormat('webp');
-				$im->setImageCompressionQuality(80);
-				$im->stripImage();
-
-				$heic_webp_file = preg_replace('/\.[^.\/]+$/', '.webp', $upload['file']);
-				$heic_webp_url  = preg_replace('/\.[^.\/]+$/', '.webp', $upload['url']);
-				$im->writeImage($heic_webp_file);
-				$im->clear();
-				$im->destroy();
-
-				if (file_exists($heic_webp_file) && filesize($heic_webp_file) > 100) {
-					if ($heic_webp_file !== $upload['file']) @unlink($upload['file']);
-					$upload['file'] = $heic_webp_file;
-					$upload['url']  = $heic_webp_url;
-					$upload['type'] = 'image/webp';
-					return $upload;
-				}
-				@unlink($heic_webp_file);
-			}
-		} catch (Exception $e) {
-			error_log('HEIC autoOrient transcode failed: ' . $e->getMessage());
-		}
-		// fall through to the editor path below if the Imagick path failed
-	}
-
-	$image = wp_get_image_editor($upload['file']);
-	if (is_wp_error($image)) {
-		return $upload;
-	}
-
-	// Resize so the longest side is ≤ 1000px (no upscaling).
-	$size = $image->get_size();
-	$needs_resize = !is_wp_error($size) && !empty($size['width']) && !empty($size['height'])
-	                && max($size['width'], $size['height']) > 1000;
-
-	if ($needs_resize) {
-		$w = (int) $size['width'];
-		$h = (int) $size['height'];
-		$scale = 1000 / max($w, $h);
-		$image->resize((int) round($w * $scale), (int) round($h * $scale), false);
-	}
-
-	$image->set_quality(80);
-
-	if ($upload['type'] === 'image/webp') {
-		// Already WebP — only re-save if we resized
-		if ($needs_resize) {
-			$image->save($upload['file'], 'image/webp');
-		}
-		return $upload;
-	}
-
-	// Convert non-WebP to WebP
-	if (!$image->supports_mime_type('image/webp')) {
-		return $upload; // server doesn't support WebP output — leave as-is
-	}
-
-	$webp_file = preg_replace('/\.[^.\/]+$/', '.webp', $upload['file']);
-	$webp_url  = preg_replace('/\.[^.\/]+$/', '.webp', $upload['url']);
-
-	$saved = $image->save($webp_file, 'image/webp');
-	if (is_wp_error($saved)) {
-		return $upload;
-	}
-
-	// Verify the saved WebP is a real image — some inputs produce a 0-byte /
-	// unreadable file without raising a WP_Error. If output is bad, keep the original.
-	$webp_ok = file_exists($webp_file) && filesize($webp_file) > 100;
-	if ($webp_ok) {
-		$dims = @getimagesize($webp_file);
-		$webp_ok = is_array($dims) && !empty($dims[0]) && !empty($dims[1]);
-	}
-	if (!$webp_ok) {
-		if ($webp_file !== $upload['file']) @unlink($webp_file);
-		return $upload;
-	}
-
-	// Remove the original (jpg/png/heic/etc) now that WebP is saved
-	if ($webp_file !== $upload['file']) {
-		@unlink($upload['file']);
-	}
-
-	$upload['file'] = $webp_file;
-	$upload['url']  = $webp_url;
-	$upload['type'] = 'image/webp';
-
-	return $upload;
-
-}, 10, 2);
+// Upload orientation, WebP conversion and the size cap live in functions.php
+// (# Upload optimization) so they run on every site, not only jobsite sites.
 
 
 function bp_jobsite_setup($post_id, $user) {
@@ -932,7 +732,7 @@ function battleplan_view_jobsite_geo_pages() {
 		<select name="view_jobsite_geo_pages" id="view_jobsite_geo_pages">
 			<option value=""><?php _e('View Jobsite GEO Pages', 'battleplan'); ?></option>
 			<?php foreach ($terms as $term) {
-				$parts = explode('--', $term->slug);
+				$parts = explode('--', bp_geo_service_term_key($term));
 				if (count($parts) === 2) {
 					$service_part  = bp_format_service($parts[0]);
 					$location_part = bp_format_location($parts[1]);
@@ -1033,6 +833,48 @@ function battleplan_add_jobsite_geo_acf_fields() {
 		'key'   => 'group_jobsite_details',
 		'title' => 'Jobsite Details',
 		'fields' => [
+			[
+				'key'          => 'field_jobsite_headline',
+				'label'        => 'Project Headline',
+				'name'         => 'jobsite_headline',
+				'type'         => 'text',
+				'required'     => 0,
+				'instructions' => 'Written by AI with the description. Edit freely — shown as the H3 on the /service/ page.',
+				'wrapper'      => ['width' => '60%', 'class' => '', 'id' => ''],
+			],
+			[
+				'key'          => 'field_jobsite_link_phrase',
+				'label'        => 'Service Link Phrase',
+				'name'         => 'jobsite_link_phrase',
+				'type'         => 'text',
+				'required'     => 0,
+				'instructions' => 'Words from the description linked to the service page. Must match the description exactly.',
+				'wrapper'      => ['width' => '40%', 'class' => '', 'id' => ''],
+			],
+			[
+				'key'           => 'field_jobsite_link_page',
+				'label'         => 'Service Link Page',
+				'name'          => 'jobsite_link_page',
+				'type'          => 'post_object',
+				'post_type'     => ['page'],
+				'post_status'   => ['publish'],
+				'return_format' => 'id',
+				'multiple'      => 0,
+				'allow_null'    => 1,
+				'ui'            => 1,
+				'required'      => 0,
+				'instructions'  => 'The service page the link phrase points to. Picked by AI from the "Our Services" menu.',
+			],
+			[
+				'key'          => 'field_jobsite_also_mentions',
+				'label'        => 'Other Services Mentioned',
+				'name'         => 'jobsite_also_mentions',
+				'type'         => 'textarea',
+				'rows'         => 2,
+				'new_lines'    => '',
+				'required'     => 0,
+				'instructions' => 'One per line: service-slug | exact words from the description. Linked to that service\'s page in the same town, if one exists.',
+			],
 			[
 				'key'            => 'field_date',
 				'label'          => 'Date',
@@ -1424,6 +1266,11 @@ function battleplan_jobsite_template($template) {
 					if (!empty($area_terms))  $jobsite_location = $area_terms[0];
 				}
 
+				if (strpos($jobsite_location, '--') !== false) {
+					[$slug_service, $jobsite_location] = explode('--', $jobsite_location, 2);
+					if (!$jobsite_service) $jobsite_service = $slug_service;
+				}
+
 				if ($jobsite_service) {
 					$GLOBALS['jobsite_geo-service'] = bp_format_service($jobsite_service);
 				}
@@ -1477,12 +1324,12 @@ function battleplan_jobsite_template($template) {
 			$term_desc = get_term_meta( $jobsite_term->term_id, 'bp_geo_service_intro', true );
 			if ( $term_desc ) {
 				$GLOBALS['jobsite_geo-content']   = do_shortcode( wp_kses_post( bp_fix_entities( $term_desc ) ) );
-				$GLOBALS['jobsite_geo-page_desc'] = wp_trim_words( bp_decode_text( strip_tags( $term_desc ) ), 30, '...' );
 				$GLOBALS['mapGrid']               = '3-2';
 			} else {
 				$GLOBALS['jobsite_geo-content'] = '';
 				$GLOBALS['mapGrid']             = '1';
 			}
+			$GLOBALS['jobsite_geo-page_desc'] = bp_geo_meta_desc( $jobsite_term, $GLOBALS['jobsite_geo-service'], $GLOBALS['jobsite_geo-city-state'] );
 			$GLOBALS['jobsite_geo-page_title'] = $GLOBALS['jobsite_geo-service'] . ' in ' . $GLOBALS['jobsite_geo-city'] . ', ' . $GLOBALS['jobsite_geo-state'] . $sep . get_bloginfo( 'name' );
 
 		}
@@ -1702,6 +1549,14 @@ function bp_geo_area_slugs_by_length() {
 	return $slugs;
 }
 
+// WordPress collapses '--' to '-' in every term slug (sanitize_title runs on pre_term_slug, even for
+// an explicit slug), so /service/ URLs are always single-dash. The canonical 'service--city-st' lives
+// in the term NAME — parse that when it has the '--', the slug otherwise.
+function bp_geo_service_term_key( $term ) {
+	$name = strtolower( trim( (string) ( $term->name ?? '' ) ) );
+	return strpos( $name, '--' ) !== false ? $name : (string) ( $term->slug ?? '' );
+}
+
 // Split a jobsite_geo-services term slug into {service, city, state}. Three tiers, because
 // slug format varies by site age and this runs on the FRONT END, where the keyword module
 // (and its equivalent parser) is not loaded:
@@ -1762,13 +1617,13 @@ function bp_geo_related_services_html( $current = null, $limit = 8 ) {
 	$terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => true ] );
 	if ( is_wp_error( $terms ) || count( $terms ) < 2 ) return '';
 
-	$here = bp_geo_parse_service_slug( $current->slug );
+	$here = bp_geo_parse_service_slug( bp_geo_service_term_key( $current ) );
 	if ( ! $here['service'] || ! $here['city'] ) return '';
 
 	$same_service = $same_city = [];
 	foreach ( $terms as $t ) {
 		if ( (int) $t->term_id === (int) $current->term_id ) continue;
-		$p = bp_geo_parse_service_slug( $t->slug );
+		$p = bp_geo_parse_service_slug( bp_geo_service_term_key( $t ) );
 		if ( ! $p['service'] || ! $p['city'] ) continue;
 
 		$link = get_term_link( $t );
@@ -1794,6 +1649,423 @@ function bp_geo_related_services_html( $current = null, $limit = 8 ) {
 		$out .= '<h2>' . esc_html( ucwords( $here['service'] ) ) . ' in nearby areas</h2><ul>' . implode( '', $same_service ) . '</ul>';
 	}
 	return $out . '</div>';
+}
+
+// The site's own service page for a service-type slug (e.g. /air-conditioner-repair/), matched on
+// page slug at any depth. Sites whose page slug differs from the service-type slug map it with the
+// bp_geo_service_page_url filter. '' when there is no such page — the caller then skips the link.
+function bp_geo_service_page_url( $type_slug ) {
+	static $cache = [];
+	$type_slug = sanitize_title( (string) $type_slug );
+	if ( $type_slug === '' ) return '';
+	if ( isset( $cache[ $type_slug ] ) ) return $cache[ $type_slug ];
+
+	$url  = '';
+	$page = get_posts( [
+		'post_type'      => 'page',
+		'name'           => $type_slug,
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+	] );
+	if ( $page ) $url = get_permalink( $page[0] );
+
+	return $cache[ $type_slug ] = (string) apply_filters( 'bp_geo_service_page_url', $url, $type_slug );
+}
+
+// The site's own service pages — the page children of any top-level menu item with "service" in its
+// title (the "Our Services" dropdown), from every assigned menu location. [ page_id => title ]
+function bp_geo_site_service_pages() {
+	static $pages = null;
+	if ( $pages !== null ) return $pages;
+
+	$pages = [];
+	foreach ( array_unique( array_filter( (array) get_nav_menu_locations() ) ) as $menu_id ) {
+		$items = wp_get_nav_menu_items( $menu_id );
+		if ( ! $items ) continue;
+		$parents = [];
+		foreach ( $items as $item ) {
+			if ( ! (int) $item->menu_item_parent && stripos( $item->title, 'service' ) !== false ) $parents[ (int) $item->ID ] = true;
+		}
+		foreach ( $items as $item ) {
+			if ( isset( $parents[ (int) $item->menu_item_parent ] ) && $item->object === 'page' && get_post_status( (int) $item->object_id ) === 'publish' ) {
+				$pages[ (int) $item->object_id ] = wp_strip_all_tags( $item->title );
+			}
+		}
+	}
+	return $pages = (array) apply_filters( 'bp_geo_service_pages', $pages );
+}
+
+// "slug — Title" lines for the AI prompts.
+function bp_geo_service_pages_prompt_str() {
+	$lines = [];
+	foreach ( bp_geo_site_service_pages() as $id => $title ) $lines[] = get_post_field( 'post_name', $id ) . ' — ' . $title;
+	return $lines ? implode( "\n", $lines ) : '';
+}
+
+// AI-returned page slug → page ID, only if it is one of the site's service pages.
+function bp_geo_service_page_id_from_slug( $slug ) {
+	$slug = sanitize_title( (string) $slug );
+	if ( $slug === '' ) return 0;
+	foreach ( bp_geo_site_service_pages() as $id => $title ) {
+		if ( get_post_field( 'post_name', $id ) === $slug ) return (int) $id;
+	}
+	return 0;
+}
+
+// Where a job's in-text service link points: the page the AI picked for it, else a page whose slug
+// matches the job's service type.
+function bp_geo_job_service_url( $post_id, $type_slug = '' ) {
+	$page = (int) get_post_meta( $post_id, BP_GEO_FIELD_LINK_PAGE, true );
+	if ( $page && get_post_status( $page ) === 'publish' ) return get_permalink( $page );
+	return $type_slug ? bp_geo_service_page_url( $type_slug ) : '';
+}
+
+function bp_geo_contact_url() {
+	$url = '';
+	foreach ( [ 'contact-us', 'contact' ] as $path ) {
+		$page = get_page_by_path( $path );
+		if ( $page && $page->post_status === 'publish' ) { $url = get_permalink( $page ); break; }
+	}
+	return (string) apply_filters( 'bp_geo_contact_url', $url );
+}
+
+// Inspection / contact call-to-action shown after the project examples on /service/ pages.
+function bp_geo_cta_html() {
+	$service = $GLOBALS['jobsite_geo-service'] ?? '';
+	$city    = $GLOBALS['jobsite_geo-city'] ?? '';
+	$contact = bp_geo_contact_url();
+
+	$headline = ( $service && $city && $service !== 'Recent Jobsites' )
+		? 'Need ' . $service . ' in ' . $city . '?'
+		: 'Want Results Like These at Your Home?';
+
+	$out  = '<div class="jobsite_geo-cta">';
+	$out .= '<h2>' . esc_html( $headline ) . '</h2>';
+	$out .= '<p>Tell us what is going on and we will schedule a visit to inspect it, explain what we find, and give you a clear price before any work begins.</p>';
+	if ( $contact ) $out .= '[btn link="' . esc_url( $contact ) . '" class="jobsite_geo-cta-btn"]Schedule an Inspection[/btn]';
+	$out .= '<p class="jobsite_geo-cta-phone">Prefer to talk? Call <strong>[get-biz info="phone-link"]</strong></p>';
+	$out .= '</div>';
+
+	return apply_filters( 'bp_geo_cta_html', $out, $service, $city );
+}
+
+// Regex for a link phrase inside description HTML: case-insensitive, any run of whitespace between
+// words, and straight/curly/entity apostrophes and quotes treated alike.
+function bp_geo_phrase_regex( $phrase ) {
+	$words = preg_split( '/\s+/u', trim( bp_decode_text( (string) $phrase ) ) );
+	$words = array_filter( $words, 'strlen' );
+	if ( ! $words ) return '';
+
+	$parts = [];
+	foreach ( $words as $w ) {
+		$w = preg_quote( $w, '/' );
+		$w = preg_replace( "/['’‘]/u", "(?:'|’|‘|&#8217;|&#8216;|&rsquo;|&lsquo;|&#039;)", $w );
+		$w = preg_replace( '/["“”]/u', '(?:"|“|”|&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;)', $w );
+		$parts[] = $w;
+	}
+	return '/' . implode( '\s+', $parts ) . '/iu';
+}
+
+function bp_geo_find_phrase( $html, $phrase ) {
+	$re = bp_geo_phrase_regex( $phrase );
+	return $re !== '' && preg_match( $re, wp_strip_all_tags( (string) $html ) );
+}
+
+// Wrap the first occurrence of $phrase in $html with a link — text nodes only, never inside an
+// existing <a>. Returns $html unchanged when the phrase isn't there.
+function bp_geo_link_phrase( $html, $phrase, $url ) {
+	$re = bp_geo_phrase_regex( $phrase );
+	if ( $re === '' || ! $url ) return $html;
+
+	$chunks = preg_split( '/(<[^>]+>)/', (string) $html, -1, PREG_SPLIT_DELIM_CAPTURE );
+	$inLink = false;
+	foreach ( $chunks as $i => $chunk ) {
+		if ( $chunk === '' ) continue;
+		if ( $chunk[0] === '<' ) {
+			if ( preg_match( '/^<a\b/i', $chunk ) ) $inLink = true;
+			elseif ( preg_match( '/^<\/a>/i', $chunk ) ) $inLink = false;
+			continue;
+		}
+		if ( $inLink ) continue;
+		$linked = preg_replace( $re, '<a href="' . esc_url( $url ) . '">$0</a>', $chunk, 1, $count );
+		if ( $count ) {
+			$chunks[ $i ] = $linked;
+			return implode( '', $chunks );
+		}
+	}
+	return $html;
+}
+
+// Backfill for jobs rewritten before headlines / link phrases existed. The /service/ template queues
+// this for any listed job missing either; the card shows the old location label and no in-text link
+// until it lands. Fills only what's missing, so a hand-edited headline or phrase is never replaced.
+function bp_geo_generate_headline( $post_id ) {
+	$post_id = (int) $post_id;
+	if ( get_post_type( $post_id ) !== BP_GEO_CPT ) return new WP_Error( 'invalid_post', 'Not a jobsite_geo post.' );
+	if ( ! defined( 'BP_ANTHROPIC_API_KEY' ) || empty( BP_ANTHROPIC_API_KEY ) ) return new WP_Error( 'no_api_key', 'BP_ANTHROPIC_API_KEY is not defined.' );
+
+	$has_headline = (string) get_post_meta( $post_id, BP_GEO_FIELD_HEADLINE, true ) !== '';
+	$has_phrase   = (string) get_post_meta( $post_id, BP_GEO_FIELD_LINK_PHRASE, true ) !== '';
+	$has_mentions = trim( (string) get_post_meta( $post_id, BP_GEO_FIELD_MENTIONS, true ) ) !== '';
+	$has_page     = ! bp_geo_site_service_pages() || (int) get_post_meta( $post_id, BP_GEO_FIELD_LINK_PAGE, true );
+	if ( $has_headline && $has_phrase && $has_mentions && $has_page ) return '';
+
+	$content     = get_post_field( 'post_content', $post_id );
+	$description = trim( bp_decode_text( wp_strip_all_tags( $content ) ) );
+	if ( $description === '' ) return new WP_Error( 'empty_content', 'Job has no description.' );
+
+	$types     = wp_get_post_terms( $post_id, 'jobsite_geo-service-types', [ 'fields' => 'slugs' ] );
+	$type_slug = ( ! is_wp_error( $types ) && $types ) ? $types[0] : '';
+	$service   = $type_slug ? bp_format_service( $type_slug ) : '';
+	$city      = (string) get_post_meta( $post_id, BP_GEO_FIELD_CITY, true );
+	$state     = strtoupper( (string) get_post_meta( $post_id, BP_GEO_FIELD_STATE, true ) );
+	$all_types = get_terms( [ 'taxonomy' => 'jobsite_geo-service-types', 'hide_empty' => false, 'fields' => 'slugs' ] );
+	$types_str = ( ! is_wp_error( $all_types ) && $all_types ) ? implode( ', ', $all_types ) : 'No existing slugs.';
+
+	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
+		'timeout' => 30,
+		'headers' => [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => BP_ANTHROPIC_API_KEY,
+			'anthropic-version' => '2023-06-01',
+		],
+		'body' => wp_json_encode( [
+			'model'      => BP_GEO_AI_MODEL,
+			'max_tokens' => 400,
+			'messages'   => [ [ 'role' => 'user', 'content' => bp_geo_prompt_headline( $service, $city, $state, $description, $types_str, bp_geo_service_pages_prompt_str(), $has_phrase ? (string) get_post_meta( $post_id, BP_GEO_FIELD_LINK_PHRASE, true ) : '' ) ] ],
+		] ),
+	] );
+	if ( is_wp_error( $response ) ) {
+		error_log( "bp_geo_generate_headline: post={$post_id} " . $response->get_error_message() );
+		return $response;
+	}
+
+	$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+	$status  = (int) wp_remote_retrieve_response_code( $response );
+	if ( $status !== 200 ) {
+		$msg = "Anthropic API error ({$status}): " . ( $decoded['error']['message'] ?? 'Unknown API error.' );
+		error_log( "bp_geo_generate_headline: post={$post_id} {$msg}" );
+		if ( function_exists( 'bp_ai_model_alert' ) ) bp_ai_model_alert( $status, $decoded, BP_GEO_AI_MODEL, 'Jobsite GEO headline' );
+		return new WP_Error( 'api_error', $msg );
+	}
+	$text    = trim( $decoded['content'][0]['text'] ?? '' );
+	$text    = preg_replace( '/^```(?:json)?\s*/i', '', $text );
+	$text    = preg_replace( '/\s*```$/', '', $text );
+	$parsed  = json_decode( $text, true );
+
+	if ( ! is_array( $parsed ) ) {
+		error_log( "bp_geo_generate_headline: post={$post_id} unparseable response: " . substr( $text, 0, 200 ) );
+		return new WP_Error( 'parse_error', 'Could not parse JSON from API: ' . substr( $text, 0, 200 ) );
+	}
+	update_post_meta( $post_id, BP_GEO_FIELD_CARD_RAN, 1 );
+
+	$headline = sanitize_text_field( bp_decode_text( $parsed['headline'] ?? '' ) );
+	if ( ! $has_headline && $headline !== '' ) update_post_meta( $post_id, BP_GEO_FIELD_HEADLINE, $headline );
+
+	$phrase = sanitize_text_field( bp_decode_text( $parsed['link_phrase'] ?? '' ) );
+	if ( ! $has_phrase && $phrase !== '' && bp_geo_find_phrase( $content, $phrase ) ) update_post_meta( $post_id, BP_GEO_FIELD_LINK_PHRASE, $phrase );
+
+	if ( ! $has_mentions ) update_post_meta( $post_id, BP_GEO_FIELD_MENTIONS, bp_geo_clean_mentions( $parsed['also_mentions'] ?? [], $content, $type_slug ) );
+
+	if ( ! $has_page && ( $page = bp_geo_service_page_id_from_slug( $parsed['link_page'] ?? '' ) ) ) update_post_meta( $post_id, BP_GEO_FIELD_LINK_PAGE, $page );
+
+	return $headline;
+}
+
+// AI also_mentions → stored text, one "service-slug | phrase" per line (editable as a plain textarea).
+// Drops the job's own service, duplicates, and any phrase that isn't really in the description.
+function bp_geo_clean_mentions( $mentions, $content, $own_type = '' ) {
+	$lines = [];
+	$seen  = [];
+	foreach ( is_array( $mentions ) ? $mentions : [] as $m ) {
+		$svc    = sanitize_title( (string) ( $m['service'] ?? '' ) );
+		$phrase = trim( str_replace( '|', ' ', sanitize_text_field( bp_decode_text( (string) ( $m['phrase'] ?? '' ) ) ) ) );
+		if ( $svc === '' || $phrase === '' || $svc === $own_type || isset( $seen[ $svc ] ) ) continue;
+		if ( ! bp_geo_find_phrase( $content, $phrase ) ) continue;
+		$seen[ $svc ] = true;
+		$lines[]      = $svc . ' | ' . $phrase;
+		if ( count( $lines ) >= 3 ) break;
+	}
+	return implode( "\n", $lines );
+}
+
+function bp_geo_parse_mentions( $raw ) {
+	$out = [];
+	foreach ( preg_split( '/\r\n|\r|\n/', (string) $raw ) as $line ) {
+		$parts = array_map( 'trim', explode( '|', $line, 2 ) );
+		if ( count( $parts ) !== 2 || $parts[0] === '' || $parts[1] === '' ) continue;
+		$out[] = [ 'service' => sanitize_title( $parts[0] ), 'phrase' => $parts[1] ];
+	}
+	return $out;
+}
+
+// Other /service/ pages in the SAME town as $current: [ service-type slug => url ]. Only pages that
+// exist (hide_empty), so a mention never points at — or implies — a page without real jobs behind it.
+function bp_geo_town_service_urls( $current = null ) {
+	static $cache = [];
+	if ( ! $current ) $current = get_queried_object();
+	if ( ! $current || empty( $current->term_id ) ) return [];
+	if ( isset( $cache[ $current->term_id ] ) ) return $cache[ $current->term_id ];
+
+	$here = bp_geo_parse_service_slug( bp_geo_service_term_key( $current ) );
+	$urls = [];
+	if ( $here['city'] ) {
+		$terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => true ] );
+		foreach ( ( is_wp_error( $terms ) ? [] : $terms ) as $t ) {
+			if ( (int) $t->term_id === (int) $current->term_id ) continue;
+			$p = bp_geo_parse_service_slug( bp_geo_service_term_key( $t ) );
+			if ( $p['city'] !== $here['city'] || $p['state'] !== $here['state'] ) continue;
+			$link = get_term_link( $t );
+			if ( ! is_wp_error( $link ) ) $urls[ sanitize_title( $p['service'] ) ] = $link;
+		}
+	}
+	return $cache[ $current->term_id ] = $urls;
+}
+
+add_action( 'bp_geo_headline_cron', 'bp_geo_generate_headline' );
+
+// Published jobs still missing card data. Returns [ ids to do (capped at $limit), total missing ].
+function bp_geo_backfill_todo( $limit = 0 ) {
+	$ids  = get_posts( [ 'post_type' => BP_GEO_CPT, 'post_status' => 'publish', 'numberposts' => -1, 'fields' => 'ids' ] );
+	$todo = [];
+	foreach ( $ids as $id ) {
+		if ( get_post_meta( $id, BP_GEO_FIELD_CARD_RAN, true ) ) continue;
+		if ( ! bp_geo_job_needs_card_data( $id ) ) continue;
+		$todo[] = $id;
+	}
+	return [ $limit ? array_slice( $todo, 0, $limit ) : $todo, count( $todo ) ];
+}
+
+function bp_geo_job_needs_card_data( $id ) {
+	return get_post_meta( $id, BP_GEO_FIELD_HEADLINE, true ) === ''
+		|| get_post_meta( $id, BP_GEO_FIELD_LINK_PHRASE, true ) === ''
+		|| ! metadata_exists( 'post', $id, BP_GEO_FIELD_MENTIONS )
+		|| ( bp_geo_site_service_pages() && ! (int) get_post_meta( $id, BP_GEO_FIELD_LINK_PAGE, true ) );
+}
+
+// Run the backfill on $ids now. Rows for display + the service types that have no service page.
+function bp_geo_backfill_run( array $ids ) {
+	$rows   = [];
+	$noPage = [];
+	foreach ( $ids as $id ) {
+		$res    = bp_geo_generate_headline( $id );
+		$rows[] = [
+			'id'       => $id,
+			'job'      => get_the_title( $id ),
+			'result'   => is_wp_error( $res ) ? 'ERROR: ' . $res->get_error_message() : 'ok',
+			'headline' => (string) get_post_meta( $id, BP_GEO_FIELD_HEADLINE, true ),
+			'phrase'   => (string) get_post_meta( $id, BP_GEO_FIELD_LINK_PHRASE, true ),
+			'page'     => ( $p = (int) get_post_meta( $id, BP_GEO_FIELD_LINK_PAGE, true ) ) ? get_the_title( $p ) : '',
+			'mentions' => str_replace( "\n", '; ', (string) get_post_meta( $id, BP_GEO_FIELD_MENTIONS, true ) ),
+		];
+		$types = wp_get_post_terms( $id, 'jobsite_geo-service-types', [ 'fields' => 'slugs' ] );
+		$slug  = ( ! is_wp_error( $types ) && $types ) ? $types[0] : '';
+		if ( ! bp_geo_job_service_url( $id, $slug ) ) $noPage[ $slug ?: '(no service type)' ] = true;
+	}
+	return [ $rows, array_keys( $noPage ) ];
+}
+
+function bp_geo_queue_headline( $post_id ) {
+	if ( get_post_meta( $post_id, BP_GEO_FIELD_CARD_RAN, true ) ) return;
+	if ( ! wp_next_scheduled( 'bp_geo_headline_cron', [ (int) $post_id ] ) ) {
+		wp_schedule_single_event( time() + 30, 'bp_geo_headline_cron', [ (int) $post_id ] );
+	}
+}
+
+// Meta description for a /service/ page: an AI summary of the jobs listed there + a fixed call to
+// action. Until the summary exists (queued on first view), a clean templated sentence stands in.
+define( 'BP_GEO_META_SUMMARY', 'bp_geo_meta_summary' );
+define( 'BP_GEO_META_RAN', 'bp_geo_meta_summary_ran' );
+
+function bp_geo_meta_desc_cta() {
+	return (string) apply_filters( 'bp_geo_meta_desc_cta', 'Contact ' . bp_business_name() . ' to schedule an inspection.' );
+}
+
+function bp_geo_meta_desc( $term, $service, $city_state ) {
+	$summary = ( $term && ! empty( $term->term_id ) ) ? trim( (string) get_term_meta( $term->term_id, BP_GEO_META_SUMMARY, true ) ) : '';
+	if ( $summary === '' ) {
+		if ( $term && ! empty( $term->term_id ) && $term->taxonomy === 'jobsite_geo-services' ) bp_geo_queue_meta_summary( $term->term_id );
+		if ( ! $service || ! $city_state || $service === 'Recent Jobsites' ) return '';
+		$summary = 'Explore recent ' . $service . ' projects in ' . $city_state . '.';
+	}
+	return $summary . ' ' . bp_geo_meta_desc_cta();
+}
+
+function bp_geo_generate_meta_summary( $term_id ) {
+	$term_id = (int) $term_id;
+	if ( ! defined( 'BP_ANTHROPIC_API_KEY' ) || empty( BP_ANTHROPIC_API_KEY ) ) return new WP_Error( 'no_api_key', 'BP_ANTHROPIC_API_KEY is not defined.' );
+	$term = get_term( $term_id, 'jobsite_geo-services' );
+	if ( ! $term || is_wp_error( $term ) ) return new WP_Error( 'invalid_term', 'Term not found.' );
+
+	$parsed_slug = bp_geo_parse_service_slug( bp_geo_service_term_key( $term ) );
+	if ( ! $parsed_slug['city'] ) return new WP_Error( 'bad_slug', 'Could not parse service/city from ' . $term->slug );
+	$service = bp_format_service( sanitize_title( $parsed_slug['service'] ) );
+	$city    = ucwords( $parsed_slug['city'] );
+	$state   = strtoupper( $parsed_slug['state'] );
+
+	$ids  = get_posts( [
+		'post_type'   => BP_GEO_CPT,
+		'post_status' => 'publish',
+		'numberposts' => 8,
+		'fields'      => 'ids',
+		'tax_query'   => [ [ 'taxonomy' => 'jobsite_geo-services', 'terms' => $term_id ] ],
+	] );
+	$jobs = [];
+	foreach ( $ids as $i => $id ) {
+		$text = trim( preg_replace( '/\s+/', ' ', bp_decode_text( wp_strip_all_tags( get_post_field( 'post_content', $id ) ) ) ) );
+		if ( $text !== '' ) $jobs[] = ( $i + 1 ) . '. ' . mb_substr( $text, 0, 700 );
+	}
+	if ( ! $jobs ) return new WP_Error( 'no_jobs', 'No published jobs with descriptions.' );
+
+	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
+		'timeout' => 30,
+		'headers' => [
+			'Content-Type'      => 'application/json',
+			'x-api-key'         => BP_ANTHROPIC_API_KEY,
+			'anthropic-version' => '2023-06-01',
+		],
+		'body' => wp_json_encode( [
+			'model'      => BP_GEO_AI_MODEL,
+			'max_tokens' => 200,
+			'messages'   => [ [ 'role' => 'user', 'content' => bp_geo_prompt_meta_summary( $service, $city, $state, implode( "\n\n", $jobs ) ) ] ],
+		] ),
+	] );
+	if ( is_wp_error( $response ) ) {
+		error_log( "bp_geo_generate_meta_summary: term={$term_id} " . $response->get_error_message() );
+		return $response;
+	}
+
+	$decoded = json_decode( wp_remote_retrieve_body( $response ), true );
+	$status  = (int) wp_remote_retrieve_response_code( $response );
+	if ( $status !== 200 ) {
+		$msg = "Anthropic API error ({$status}): " . ( $decoded['error']['message'] ?? 'Unknown API error.' );
+		error_log( "bp_geo_generate_meta_summary: term={$term_id} {$msg}" );
+		if ( function_exists( 'bp_ai_model_alert' ) ) bp_ai_model_alert( $status, $decoded, BP_GEO_AI_MODEL, 'Jobsite GEO meta description' );
+		return new WP_Error( 'api_error', $msg );
+	}
+	$text   = trim( $decoded['content'][0]['text'] ?? '' );
+	$text   = preg_replace( '/^```(?:json)?\s*/i', '', $text );
+	$text   = preg_replace( '/\s*```$/', '', $text );
+	$parsed = json_decode( $text, true );
+	update_term_meta( $term_id, BP_GEO_META_RAN, 1 );
+
+	$summary = trim( sanitize_text_field( bp_decode_text( $parsed['summary'] ?? '' ) ) );
+	if ( $summary === '' ) {
+		error_log( "bp_geo_generate_meta_summary: term={$term_id} unparseable response: " . substr( $text, 0, 200 ) );
+		return new WP_Error( 'parse_error', 'Could not parse JSON from API: ' . substr( $text, 0, 200 ) );
+	}
+	if ( ! preg_match( '/[.!?]$/', $summary ) ) $summary .= '.';
+	update_term_meta( $term_id, BP_GEO_META_SUMMARY, $summary );
+	return $summary;
+}
+add_action( 'bp_geo_meta_summary_cron', 'bp_geo_generate_meta_summary' );
+
+function bp_geo_queue_meta_summary( $term_id ) {
+	if ( get_term_meta( $term_id, BP_GEO_META_RAN, true ) ) return;
+	if ( ! wp_next_scheduled( 'bp_geo_meta_summary_cron', [ (int) $term_id ] ) ) {
+		wp_schedule_single_event( time() + 30, 'bp_geo_meta_summary_cron', [ (int) $term_id ] );
+	}
 }
 
 // Legacy bare-city URLs (/plano-tx/) → straight to the best service page.
@@ -1842,7 +2114,7 @@ function bp_geo_best_service_for_type( $type_slug ) {
 	if ( is_wp_error( $services ) ) return null;
 
 	foreach ( $services as $t ) {
-		if ( explode( '--', $t->slug )[0] === $type_slug ) return $t;
+		if ( explode( '--', bp_geo_service_term_key( $t ) )[0] === $type_slug ) return $t;
 	}
 	return null;
 }
@@ -2004,6 +2276,113 @@ function bp_geo_area_slug_map() {
 	return $map;
 }
 
+// Reduce any service slug to the canonical service--city-st, repairing a
+// location that got doubled into the service half. Handles every observed
+// form: clean (air-conditioner-repair--quitman-tx), single-dash legacy
+// (air-conditioner-repair-quitman-tx), single-dash doubled
+// (air-conditioner-repair-quitman-tx-quitman-tx), and double-dash doubled
+// (air-conditioner-repair-quitman-tx--quitman-tx). The doubled-location
+// strip runs for BOTH the legacy and double-dash paths.
+function bp_geo_canonical_service_slug( $slug, $area_map ) {
+
+	$base = null;
+	$loc  = null;
+
+	if ( strpos( $slug, '--' ) !== false ) {
+		// Double-dash: service half is left of '--', location half is right.
+		$parts = explode( '--', $slug, 2 );
+		$base  = $parts[0];
+		$loc   = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
+	} else {
+		// Single-dash legacy: find the area suffix (longest match first).
+		foreach ( $area_map as $needle => $full ) {
+			$suffix = '-' . $needle;
+			if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) {
+				$base = substr( $slug, 0, -strlen( $suffix ) );
+				$loc  = $full;
+				break;
+			}
+		}
+		if ( $base === null ) return $slug; // service-only term, no location detected
+	}
+
+	// Strip every trailing copy of the location ('-city-st' or just '-city')
+	// left clinging to the service half, so service-city-st[-city-st]…
+	// collapses to a bare service. Guarded so the service half is never emptied.
+	$city_only = preg_replace( '/-[a-z]{2}$/', '', $loc );
+	$dups      = array_values( array_unique( array_filter( [ $loc, $city_only ] ) ) );
+	$stripping = true;
+	while ( $stripping ) {
+		$stripping = false;
+		foreach ( $dups as $dup ) {
+			$suffix = '-' . $dup;
+			if ( strlen( $base ) > strlen( $suffix ) && substr( $base, -strlen( $suffix ) ) === $suffix ) {
+				$base      = substr( $base, 0, -strlen( $suffix ) );
+				$stripping = true;
+				break;
+			}
+		}
+	}
+
+	return $base . '--' . $loc;
+}
+
+// Canonical 'service--city-st' for a services term. Reads the name first (where the '--' survives),
+// then the slug against the service-area terms, and finally — when no area term matches, which is
+// what used to strand multi-word cities like bonita-springs-fl — the city/state fields on the term's
+// own jobs. Returns the slug unchanged (no '--') when no location can be found.
+function bp_geo_service_term_canonical( $term, $area_map ) {
+	$key = bp_geo_service_term_key( $term );
+	$c   = bp_geo_canonical_service_slug( $key, $area_map );
+	if ( strpos( $c, '--' ) !== false ) return $c;
+
+	$pid = get_posts( [
+		'post_type'      => 'jobsite_geo',
+		'post_status'    => 'any',
+		'posts_per_page' => 1,
+		'fields'         => 'ids',
+		'tax_query'      => [ [ 'taxonomy' => 'jobsite_geo-services', 'field' => 'term_id', 'terms' => (int) $term->term_id ] ],
+	] );
+	if ( ! $pid ) return $c;
+	$city  = sanitize_title( (string) get_post_meta( $pid[0], 'city', true ) );
+	$state = bp_geo_normalize_state( (string) get_post_meta( $pid[0], 'state', true ) );
+	if ( '' === $city || ! preg_match( '/^[a-z]{2}$/', (string) $state ) ) return $c;
+	$loc = $city . '-' . $state;
+
+	$c = bp_geo_canonical_service_slug( $term->slug, [ $loc => $loc, $city => $loc ] );
+	return strpos( $c, '--' ) !== false ? $c : (string) $term->slug;
+}
+
+// Give every services term its 'service--city-st' NAME. Names only — never a slug, so no URL ever
+// changes and nothing is merged or deleted (that stays in the manual Taxonomy Cleanup). New terms are
+// created with the right name already; this catches legacy terms and anything a stray code path
+// renames. A term whose canonical form would need a different slug (e.g. a doubled location) is left
+// for the manual cleanup. Returns [ term_id => new name ].
+function bp_geo_repair_service_names( $dry_run = false ) {
+	$terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => false ] );
+	if ( is_wp_error( $terms ) || ! $terms ) return [];
+
+	$area_map = bp_geo_area_slug_map();
+	$fixed    = [];
+	foreach ( $terms as $t ) {
+		if ( strpos( $t->name, '--' ) !== false ) continue;
+		$name = bp_geo_service_term_canonical( $t, $area_map );
+		if ( strpos( $name, '--' ) === false || sanitize_title( $name ) !== $t->slug ) continue;
+		if ( ! $dry_run ) wp_update_term( $t->term_id, 'jobsite_geo-services', [ 'name' => $name ] );
+		$fixed[ $t->term_id ] = $name;
+	}
+	if ( $fixed && ! $dry_run ) error_log( 'bp_geo_repair_service_names: named ' . count( $fixed ) . ' services terms' );
+	return $fixed;
+}
+
+// Run the name repair automatically: once per day on whatever request comes first. One get_terms()
+// when there's nothing to fix.
+add_action( 'init', function () {
+	if ( ! taxonomy_exists( 'jobsite_geo-services' ) || get_transient( 'bp_geo_name_repair' ) ) return;
+	set_transient( 'bp_geo_name_repair', 1, DAY_IN_SECONDS );
+	bp_geo_repair_service_names();
+}, 99 );
+
 // Run the full taxonomy cleanup. Returns an array of result sections:
 // [ ['title'=>, 'summary'=>, 'lines'=>[]], ... ]
 function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
@@ -2060,75 +2439,36 @@ function bp_geo_run_taxonomy_cleanup( $dry_run = true ) {
 	/* ---- STEP 2: Canonicalize jobsite_geo-services → service--city-st + merge ---- */
 	$service_terms = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => false ] );
 
-	// Reduce any service slug to the canonical service--city-st, repairing a
-	// location that got doubled into the service half. Handles every observed
-	// form: clean (air-conditioner-repair--quitman-tx), single-dash legacy
-	// (air-conditioner-repair-quitman-tx), single-dash doubled
-	// (air-conditioner-repair-quitman-tx-quitman-tx), and double-dash doubled
-	// (air-conditioner-repair-quitman-tx--quitman-tx). The doubled-location
-	// strip runs for BOTH the legacy and double-dash paths.
-	$canonical_service = function ( $slug ) use ( $area_map ) {
-
-		$base = null;
-		$loc  = null;
-
-		if ( strpos( $slug, '--' ) !== false ) {
-			// Double-dash: service half is left of '--', location half is right.
-			$parts = explode( '--', $slug, 2 );
-			$base  = $parts[0];
-			$loc   = isset( $area_map[ $parts[1] ] ) ? $area_map[ $parts[1] ] : $parts[1];
-		} else {
-			// Single-dash legacy: find the area suffix (longest match first).
-			foreach ( $area_map as $needle => $full ) {
-				$suffix = '-' . $needle;
-				if ( substr( $slug, -strlen( $suffix ) ) === $suffix ) {
-					$base = substr( $slug, 0, -strlen( $suffix ) );
-					$loc  = $full;
-					break;
-				}
-			}
-			if ( $base === null ) return $slug; // service-only term, no location detected
-		}
-
-		// Strip every trailing copy of the location ('-city-st' or just '-city')
-		// left clinging to the service half, so service-city-st[-city-st]…
-		// collapses to a bare service. Guarded so the service half is never emptied.
-		$city_only = preg_replace( '/-[a-z]{2}$/', '', $loc );
-		$dups      = array_values( array_unique( array_filter( [ $loc, $city_only ] ) ) );
-		$stripping = true;
-		while ( $stripping ) {
-			$stripping = false;
-			foreach ( $dups as $dup ) {
-				$suffix = '-' . $dup;
-				if ( strlen( $base ) > strlen( $suffix ) && substr( $base, -strlen( $suffix ) ) === $suffix ) {
-					$base      = substr( $base, 0, -strlen( $suffix ) );
-					$stripping = true;
-					break;
-				}
-			}
-		}
-
-		return $base . '--' . $loc;
-	};
-
 	$lines   = [];
 	$renamed = 0;
 	$merged  = 0;
 	if ( ! is_wp_error( $service_terms ) && $service_terms ) {
 
 		$groups = [];
-		foreach ( $service_terms as $t ) $groups[ $canonical_service( $t->slug ) ][] = $t;
+		foreach ( $service_terms as $t ) $groups[ bp_geo_service_term_canonical( $t, $area_map ) ][] = $t;
 
 		foreach ( $groups as $canonical => $terms ) {
 
+			// The slug can never hold '--' (WordPress collapses it), so the target slug is the
+			// single-dash form and the '--' goes in the name. Comparing the slug to the '--' form
+			// used to flag every term for a "rename" that never stuck.
+			$want_slug = sanitize_title( $canonical );
+
 			// Prefer the term already matching canonical as the keeper
 			$keep = null;
-			foreach ( $terms as $t ) if ( $t->slug === $canonical ) { $keep = $t; break; }
+			foreach ( $terms as $t ) if ( $t->slug === $want_slug ) { $keep = $t; break; }
 			if ( ! $keep ) $keep = $terms[0];
 
-			if ( $keep->slug !== $canonical || $keep->name !== $canonical ) {
-				$lines[] = '<strong>RENAME</strong> [' . $keep->term_id . '] <code>' . esc_html( $keep->slug ) . '</code> → <code>' . esc_html( $canonical ) . '</code>';
-				if ( ! $dry_run ) wp_update_term( $keep->term_id, 'jobsite_geo-services', [ 'slug' => $canonical, 'name' => $canonical ] );
+			// No location could be found for this term: leave its name alone rather than
+			// overwrite a good 'service--city-st' name with the single-dash slug.
+			if ( strpos( $canonical, '--' ) !== false && ( $keep->slug !== $want_slug || $keep->name !== $canonical ) ) {
+				if ( $keep->slug !== $want_slug ) {
+					$lines[] = '<strong>RENAME</strong> [' . $keep->term_id . '] <code>' . esc_html( $keep->slug ) . '</code> → <code>' . esc_html( $want_slug ) . '</code> (URL changes)';
+					if ( ! $dry_run ) wp_update_term( $keep->term_id, 'jobsite_geo-services', [ 'slug' => $want_slug, 'name' => $canonical ] );
+				} else {
+					$lines[] = '<strong>NAME</strong> [' . $keep->term_id . '] <code>' . esc_html( $keep->name ) . '</code> → <code>' . esc_html( $canonical ) . '</code> (URL unchanged)';
+					if ( ! $dry_run ) wp_update_term( $keep->term_id, 'jobsite_geo-services', [ 'name' => $canonical ] );
+				}
 				$renamed++;
 			}
 
@@ -2275,6 +2615,11 @@ define( 'BP_GEO_FIELD_CITY',     'city' );
 define( 'BP_GEO_FIELD_STATE',    'state' );
 define( 'BP_GEO_FIELD_ZIP',      'zip' );
 define( 'BP_GEO_FIELD_JOB_DATE', 'job_date' );
+define( 'BP_GEO_FIELD_HEADLINE', 'jobsite_headline' );
+define( 'BP_GEO_FIELD_LINK_PHRASE', 'jobsite_link_phrase' );
+define( 'BP_GEO_FIELD_MENTIONS', 'jobsite_also_mentions' );
+define( 'BP_GEO_FIELD_LINK_PAGE', 'jobsite_link_page' );
+define( 'BP_GEO_FIELD_CARD_RAN', 'bp_geo_card_meta_ran_v2' );         // backfill attempted — stops re-queueing every view (v2: + link page)
 
 
 // ---------------------------------------------------------
@@ -2841,6 +3186,27 @@ function bp_geo_run_ai_rewrite( $post_id ) {
 	// Record timestamp of last AI run
 	update_post_meta( $post_id, BP_GEO_FIELD_AI_RAN, current_time( 'mysql' ) );
 
+	$headline = sanitize_text_field( bp_decode_text( $api_result['headline'] ?? '' ) );
+	if ( $headline !== '' ) update_post_meta( $post_id, BP_GEO_FIELD_HEADLINE, $headline );
+
+	// On a keep_text run the phrase came from the AI's own rewrite, not the text that was kept — only
+	// store it if it's really in there. Otherwise clear the backfill flag so the template asks again
+	// against the saved description.
+	$phrase = sanitize_text_field( bp_decode_text( $api_result['link_phrase'] ?? '' ) );
+	if ( $phrase !== '' && bp_geo_find_phrase( get_post_field( 'post_content', $post_id ), $phrase ) ) {
+		update_post_meta( $post_id, BP_GEO_FIELD_LINK_PHRASE, $phrase );
+		update_post_meta( $post_id, BP_GEO_FIELD_CARD_RAN, 1 );
+	} else {
+		delete_post_meta( $post_id, BP_GEO_FIELD_LINK_PHRASE );
+		delete_post_meta( $post_id, BP_GEO_FIELD_CARD_RAN );
+	}
+
+	$link_page = bp_geo_service_page_id_from_slug( $api_result['link_page'] ?? '' );
+	$link_page ? update_post_meta( $post_id, BP_GEO_FIELD_LINK_PAGE, $link_page ) : delete_post_meta( $post_id, BP_GEO_FIELD_LINK_PAGE );
+
+	$own_type = sanitize_title( (string) $base_service );
+	update_post_meta( $post_id, BP_GEO_FIELD_MENTIONS, bp_geo_clean_mentions( $api_result['also_mentions'] ?? [], get_post_field( 'post_content', $post_id ), $own_type ) );
+
 	// Assign taxonomy term (runs AFTER wp_update_post and guard is cleared)
 	$term_slug = '';
 	if ( ! empty( $base_service ) && ! empty( $city ) && ! empty( $state ) ) {
@@ -3049,7 +3415,7 @@ function bp_geo_call_anthropic( $data ) {
 		? "Use the company name '{}' naturally once in this post. Do not use it more than once."
 		: "Do NOT use the company name in this post. Write entirely in first-person team voice: 'Our technician...', 'We diagnosed...', 'The team found...'";
 
-	$prompt = bp_geo_prompt_rewrite_description( $company_clean, $company_name_instruction, $location_note, $existing_terms_str, $data['raw_description'] );
+	$prompt = bp_geo_prompt_rewrite_description( $company_clean, $company_name_instruction, $location_note, $existing_terms_str, $data['raw_description'], bp_geo_service_pages_prompt_str() );
 
 	$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', [
 		'timeout' => 30,

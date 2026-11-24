@@ -23,14 +23,13 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 --------------------------------------------------------------*/
 
 :root {
-	--store-gap:                                               24px;
-	--store-radius:                                            8px;
+	--store-gap:                                               var(--space-6);
+	--store-radius:                                            var(--radius-sm);
 
 	--store-border:                                            1px solid var(--lightest-grey);
 	--store-border-active:                                     1px solid var(--medium-grey);
 
 	--product-img-border:                                      var(--store-border);
-	--product-img-border-active:                               var(--store-border-active);
 
 	--variation-tile-border:                                   2px solid var(--lightest-grey);
 	--variation-tile-border-active:                            2px solid var(--medium-grey);
@@ -107,11 +106,13 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	border-right:                                              none;
 }
 
+/* contain, not cover: a tall or wide product photo shows whole inside the square
+   frame (the frame's grey fills the gap) instead of losing its ends to a crop. */
 .store-card-img,
 .store-card-media img {
 	width:                                                     100%;
 	height:                                                    100%;
-	object-fit:                                                cover;
+	object-fit:                                                contain;
 	display:                                                   block;
 }
 
@@ -126,8 +127,8 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	position:                                                  absolute;
 	top:                                                       12px;
 	left:                                                      12px;
-	padding:                                                   4px 10px;
-	border-radius:                                             4px;
+	padding:                                                   var(--space-1) var(--space-2);
+	border-radius:                                             var(--radius-xs);
 	background:                                                var(--store-soldout-bg);
 	color:                                                     var(--store-soldout-color);
 	font-size:                                                 12px;
@@ -148,7 +149,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	flex-direction:                                            column;
 	flex:                                                      1;
 	gap:                                                       0;
-	padding:                                                   8px;
+	padding:                                                   var(--space-2);
 }
 
 .store-card-title,
@@ -171,7 +172,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	color:                                                     var(--store-was-color);
 	font-weight:                                               normal;
 	font-size:                                                 16px;
-	margin-right:                                              4px;
+	margin-right:                                              var(--space-1);
 }
 
 .store-price-now {
@@ -189,6 +190,14 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	font-size:                                                 20px;
 }
 
+.store-card-field {
+	margin:                                                    0;
+	font-family:                                               var(--font-text);
+	font-size:                                                 15px;
+	text-align:                                                right;
+	color:                                                     var(--store-muted);
+}
+
 .store-card-price {
 	color:                                                     var(--store-price-color);
 	font-size:                                                 22px;
@@ -202,9 +211,9 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-single {
 	display:                                                   grid;
 	grid-template-columns:                                     minmax(0, 1fr) minmax(0, 2fr);
-	gap:                                                       40px;
+	gap:                                                       var(--space-7);
 	align-items:                                               start;
-	margin:                                                    0 0 48px;
+	margin:                                                    0 0 var(--space-8);
 }
 
 .store-single-media img,
@@ -245,7 +254,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-slide img {
 	width:                                                     100%;
 	height:                                                    100%;
-	object-fit:                                                cover;
+	object-fit:                                                contain;
 	display:                                                   block;
 }
 
@@ -265,8 +274,8 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-gallery-thumbs {
 	display:                                                   flex;
 	flex-wrap:                                                 wrap;
-	gap:                                                       6px;
-	margin:                                                    12px 0 0;
+	gap:                                                       var(--space-1);
+	margin:                                                    var(--space-3) 0 0;
 }
 
 .store-gallery-thumb {
@@ -310,8 +319,8 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-gallery-dots {
 	display:                                                   none;
 	justify-content:                                           center;
-	gap:                                                       6px;
-	margin:                                                    10px 0 0;
+	gap:                                                       var(--space-1);
+	margin:                                                    var(--space-2) 0 0;
 }
 
 .store-dot {
@@ -404,7 +413,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 }
 
 .store-single-title {
-	margin:                                                    0 0 10px 0;
+	margin:                                                    0 0 var(--space-2) 0;
 	font-size:                                                 var(--font-size-h1);
 	line-height:                                               1.15;
 	text-align:                                                left;
@@ -413,7 +422,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-single-price {
 	margin:                                                    0;
 	font-size:                                                 24px;
-	font-weight:                                               700;
+	font-weight:                                               bold;
 }
 
 .store-single-was {
@@ -422,11 +431,30 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	text-decoration:                                           line-through;
 }
 
-.store-single-excerpt { margin-top: 24px; }
+.store-single-excerpt { margin-top: var(--space-6); }
+
+/* Site-defined product fields (sp_store_product_setup): label beside value. */
+.store-single-fields {
+	display:                                                   grid;
+	grid-template-columns:                                     auto 1fr;
+	gap:                                                       var(--space-1) var(--space-4);
+	margin:                                                    0 0 var(--space-4) 0;
+}
+
+/* Scoped to the product's field list: checkout fields also carry .store-field (.form-input.store-field),
+   and display: contents there removes the box their floating labels are positioned against. */
+.store-single-fields .store-field { display: contents; }
+
+.store-single-fields dt {
+	margin:                                                    0;
+	font-weight:                                               bold;
+}
+
+.store-single-fields dd { margin: 0; }
 
 .store-empty,
 .store-notice {
-	padding:                                                   12px 16px;
+	padding:                                                   var(--space-3) var(--space-4);
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	color:                                                     var(--store-muted);
@@ -437,36 +465,36 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 # Options & Buy
 --------------------------------------------------------------*/
 
-.store-options { margin: 20px 0; }
+.store-options { margin: var(--space-5) 0; }
 
 .store-option {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       12px;
-	margin:                                                    0 0 12px;
+	gap:                                                       var(--space-3);
+	margin:                                                    0 0 var(--space-3);
 }
 
 .store-option label {
 	min-width:                                                 90px;
-	font-weight:                                               600;
+	font-weight:                                               bold;
 }
 
 .store-option-select {
 	flex:                                                      1;
 	max-width:                                                 260px;
-	padding:                                                   8px 10px;
+	padding:                                                   var(--space-2) var(--space-2);
 	border:                                                    var(--store-border);
-	border-radius:                                             4px;
+	border-radius:                                             var(--radius-xs);
 	background:                                                var(--white);
 }
 
 .store-stock {
-	margin:                                                    0 0 16px;
+	margin:                                                    0 0 var(--space-4);
 	min-height:                                                22px;
 	color:                                                     var(--store-muted);
 }
 
-.store-stock.is-out    { color: var(--warning); font-weight: 600; }
+.store-stock.is-out    { color: var(--warning); font-weight: bold; }
 .store-stock.is-low    { color: var(--warning); }
 
 /* Standard: label stacked over a small quantity box, button alongside.
@@ -476,25 +504,31 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-buy {
 	display:                                                   flex;
 	align-items:                                               flex-end;
-	gap:                                                       12px;
+	gap:                                                       var(--space-3);
 	flex-wrap:                                                 wrap;
 }
 
 .store-qty-wrap {
 	display:                                                   flex;
 	flex-direction:                                            column;
-	gap:                                                       4px;
+	gap:                                                       var(--space-1);
+}
+
+/* Only one available: no quantity to choose, just the button. */
+.store-qty-wrap[hidden],
+.store-buy-joined .store-qty-pick[hidden] {
+	display:                                                   none;
 }
 
 .store-qty-label {
-	font-weight:                                               600;
+	font-weight:                                               bold;
 }
 
 .store-buy .store-qty {
 	width:                                                     72px;
 	min-width:                                                 0;
 	margin:                                                    0;
-	padding:                                                   12px 10px;
+	padding:                                                   var(--space-3) var(--space-2);
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	text-align:                                                center;
@@ -565,7 +599,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	width:                                                     auto;
 	min-width:                                                 0;
 	margin:                                                    0;
-	padding:                                                   0 26px 0 16px;
+	padding:                                                   0 var(--space-6) 0 var(--space-4);
 	border:                                                    0;
 	border-radius:                                             0;
 	background:                                                transparent;
@@ -604,7 +638,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	align-items:                                               center;
 	justify-content:                                           center;
 	gap:                                                       2px;
-	padding:                                                   13px 32px;
+	padding:                                                   var(--space-3) var(--space-7);
 	/* The exception that proves the rule: here the button is not a button but a
 	   region of the pill, so the framework's own chrome is switched back off. */
 	border:                                                    0;
@@ -658,11 +692,11 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 
 .store-add-note {
 	font-size:                                                 12px;
-	font-weight:                                               400;
+	font-weight:                                               normal;
 	opacity:                                                   .85;
 }
 
-.store-buy-joined .store-add[disabled] {
+.store-buy-joined .store-add[disabled], .store-place-order[disabled] {
 	opacity:                                                   .5;
 	cursor:                                                    not-allowed;
 }
@@ -688,12 +722,12 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	right:                                                     -10px;
 	min-width:                                                 18px;
 	height:                                                    18px;
-	padding:                                                   0 5px;
-	border-radius:                                             9px;
+	padding:                                                   0 var(--space-1);
+	border-radius:                                             var(--radius-sm);
 	background:                                                var(--accent-color);
 	color:                                                     var(--white);
 	font-size:                                                 11px;
-	font-weight:                                               700;
+	font-weight:                                               bold;
 	line-height:                                               18px;
 	text-align:                                                center;
 }
@@ -734,8 +768,8 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	display:                                                   flex;
 	align-items:                                               center;
 	justify-content:                                           space-between;
-	gap:                                                       12px;
-	padding:                                                   20px 24px;
+	gap:                                                       var(--space-3);
+	padding:                                                   var(--space-5) var(--space-6);
 	border-bottom:                                             var(--store-border);
 }
 
@@ -748,24 +782,24 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	line-height:                                               1;
 	cursor:                                                    pointer;
 	color:                                                     inherit;
-	padding:                                                   0 4px;
+	padding:                                                   0 var(--space-1);
 }
 
 .store-drawer-body {
 	flex:                                                      1;
 	overflow-y:                                                auto;
-	padding:                                                   16px 24px;
+	padding:                                                   var(--space-4) var(--space-6);
 }
 
 .store-drawer-empty,
-.store-drawer-error { padding: 12px 0; color: var(--store-muted); }
-.store-drawer-error { color: var(--warning); font-weight: 600; }
+.store-drawer-error { padding: var(--space-3) 0; color: var(--store-muted); }
+.store-drawer-error { color: var(--warning); font-weight: bold; }
 
 .store-line {
 	display:                                                   grid;
 	grid-template-columns:                                     64px 1fr auto;
-	gap:                                                       14px;
-	padding:                                                   16px 0;
+	gap:                                                       var(--space-3);
+	padding:                                                   var(--space-4) 0;
 	border-bottom:                                             var(--store-border);
 }
 
@@ -775,16 +809,15 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	width:                                                     64px;
 	height:                                                    64px;
 	object-fit:                                                cover;
-	border-radius:                                             4px;
+	border-radius:                                             var(--radius-xs);
 	background:                                                var(--lightest-grey);
 }
 
 .store-line-detail  { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.store-line-title   { font-weight: 600; text-decoration: none; color: inherit; }
-.store-line-variant,
-.store-line-unit    { font-size: 13px; color: var(--store-muted); }
+.store-line-title   { font-weight: bold; text-decoration: none; color: inherit; }
+.store-line-variant, .store-line-unit, .store-summary-variant, .store-summary-note    { font-size: 13px; color: var(--store-muted); }
 .store-line-limit   { font-size: 12px; color: var(--warning); }
-.store-line-total   { font-weight: 700; white-space: nowrap; }
+.store-line-total   { font-weight: bold; white-space: nowrap; }
 
 /* Minus, quantity, plus, Remove -- one row.
    Every rule here is a DESCENDANT selector on purpose. style-forms.css sizes every
@@ -794,8 +827,8 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-line-controls {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       6px;
-	margin-top:                                                8px;
+	gap:                                                       var(--space-1);
+	margin-top:                                                var(--space-2);
 	flex-wrap:                                                 wrap;
 }
 
@@ -807,7 +840,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	margin:                                                    0;
 	padding:                                                   0;
 	border:                                                    var(--store-border);
-	border-radius:                                             4px;
+	border-radius:                                             var(--radius-xs);
 	background:                                                var(--white);
 	color:                                                     inherit;
 	font-size:                                                 16px;
@@ -825,9 +858,9 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 	width:                                                     52px;
 	min-width:                                                 0;
 	margin:                                                    0;
-	padding:                                                   6px 4px;
+	padding:                                                   var(--space-1) var(--space-1);
 	border:                                                    var(--store-border);
-	border-radius:                                             4px;
+	border-radius:                                             var(--radius-xs);
 	text-align:                                                center;
 	/* No native spinner arrows: the - and + buttons ARE the control, and the browser's
 	   own arrows both duplicate them and widen the box. */
@@ -862,7 +895,7 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 }
 
 .store-drawer-foot {
-	padding:                                                   20px 24px;
+	padding:                                                   var(--space-5) var(--space-6);
 	border-top:                                                var(--store-border);
 }
 
@@ -871,12 +904,12 @@ Breakpoints follow the framework standard: 1280 / 1024 / 860 / 576.
 .store-drawer-subtotal {
 	display:                                                   flex;
 	justify-content:                                           space-between;
-	margin:                                                    0 0 4px;
+	margin:                                                    0 0 var(--space-1);
 	font-size:                                                 18px;
 }
 
 .store-drawer-note {
-	margin:                                                    0 0 16px;
+	margin:                                                    0 0 var(--space-4);
 	font-size:                                                 13px;
 	color:                                                     var(--store-muted);
 }
@@ -904,17 +937,17 @@ body.store-drawer-open { overflow: hidden; }
 
 @media screen and (max-width: 1024px) {
 	.store-grid   { grid-template-columns: repeat(min(var(--store-cols), 3), minmax(0, 1fr)); }
-	.store-single { gap: 32px; }
+	.store-single { gap: var(--space-7); }
 }
 
 @media screen and (max-width: 860px) {
 	.store-grid {
 		grid-template-columns:                                    repeat(2, minmax(0, 1fr));
-		gap:                                                      16px;
+		gap:                                                      var(--space-4);
 	}
 	.store-single {
 		grid-template-columns:                                    minmax(0, 1fr);
-		gap:                                                      24px;
+		gap:                                                      var(--space-6);
 	}
 
 }
@@ -922,21 +955,21 @@ body.store-drawer-open { overflow: hidden; }
 @media screen and (max-width: 576px) {
 	/* Spacing is the wrapper's job now, so the phone override is one padding change
 	   instead of a margin on each element. */
-	.store-card-body  { padding: 12px; }
+	.store-card-body  { padding: var(--space-3); }
 	.store-card-title { font-size: 15px; }
 
-	.store-option { flex-wrap: wrap; gap: 6px; }
+	.store-option { flex-wrap: wrap; gap: var(--space-1); }
 	.store-option label { min-width: 0; width: 100%; }
 	.store-option-select { max-width: none; width: 100%; }
 
 	/* Must match the .store-buy .store-add specificity above, or this never applies —
 	   a media query adds no weight of its own. */
-	.store-buy { gap: 8px; }
+	.store-buy { gap: var(--space-2); }
 	.store-buy .store-add { flex: 1; text-align: center; }
 	.store-buy-joined .store-buy-pill { display: flex; width: 100%; }
 }
 
-.store-notice-error { border-color: var(--warning); color: var(--warning); margin: 0 0 24px; }
+.store-notice-error { border-color: var(--warning); color: var(--warning); margin: 0 0 var(--space-6); }
 .store-thanks { max-width: 640px; }
 .store-thanks-total { font-size: 18px; }
 
@@ -977,8 +1010,8 @@ body.store-drawer-open { overflow: hidden; }
 }
 
 .store-locked {
-	margin:                                                    24px 0;
-	padding:                                                   24px;
+	margin:                                                    var(--space-6) 0;
+	padding:                                                   var(--space-6);
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--store-card-bg);
@@ -987,15 +1020,15 @@ body.store-drawer-open { overflow: hidden; }
 
 .store-locked-title {
 	font-size:                                                 18px;
-	margin:                                                    0 0 6px;
+	margin:                                                    0 0 var(--space-1);
 }
 
 .store-locked-actions {
 	display:                                                   flex;
 	flex-wrap:                                                 wrap;
 	justify-content:                                           center;
-	gap:                                                       10px;
-	margin:                                                    16px 0 0;
+	gap:                                                       var(--space-2);
+	margin:                                                    var(--space-4) 0 0;
 }
 
 .store-account {
@@ -1011,14 +1044,14 @@ body.store-drawer-open { overflow: hidden; }
 
 .store-account-card {
 	margin:                                                    0 0 var(--store-gap);
-	padding:                                                   20px 24px;
+	padding:                                                   var(--space-5) var(--space-6);
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--store-card-bg);
 }
 
 .store-account-card h2 {
-	margin:                                                    0 0 12px;
+	margin:                                                    0 0 var(--space-3);
 	text-align:                                                left;
 }
 
@@ -1029,7 +1062,7 @@ body.store-drawer-open { overflow: hidden; }
 }
 
 .store-account-msg {
-	padding:                                                   12px 16px;
+	padding:                                                   var(--space-3) var(--space-4);
 	border-radius:                                             var(--store-radius);
 	border:                                                    var(--store-border-active);
 }
@@ -1038,14 +1071,14 @@ body.store-drawer-open { overflow: hidden; }
 	border-color:                                              var(--store-sale-color);
 }
 
-.store-account-list {
+.store-account-list, .store-downloads ul {
 	margin:                                                    0;
 	padding:                                                   0;
 	list-style:                                                none;
 }
 
-.store-account-list li {
-	padding:                                                   10px 0;
+.store-account-list li, .store-downloads li {
+	padding:                                                   var(--space-2) 0;
 	border-top:                                                var(--store-border);
 }
 
@@ -1060,9 +1093,9 @@ body.store-drawer-open { overflow: hidden; }
 
 .store-account-state {
 	display:                                                   inline-block;
-	margin-left:                                               6px;
-	padding:                                                   1px 8px;
-	border-radius:                                             10px;
+	margin-left:                                               var(--space-1);
+	padding:                                                   1px var(--space-2);
+	border-radius:                                             var(--radius-sm);
 	font-size:                                                 12px;
 	box-shadow:                                                inset 0 0 0 1px currentColor;
 }
@@ -1075,11 +1108,11 @@ body.store-drawer-open { overflow: hidden; }
 /* Checkout agreements: the text scrolls in a fixed box so a long waiver never pushes
    the Pay button off the page, and the "I agree" line sits right under what it agrees to. */
 .store-agreement {
-	margin:                                                    0 0 18px;
+	margin:                                                    0 0 var(--space-4);
 }
 
 .store-agreement h3 {
-	margin:                                                    0 0 8px;
+	margin:                                                    0 0 var(--space-2);
 	font-size:                                                 16px;
 	text-align:                                                left;
 }
@@ -1087,7 +1120,7 @@ body.store-drawer-open { overflow: hidden; }
 .store-agreement-text {
 	max-height:                                                220px;
 	overflow-y:                                                auto;
-	padding:                                                   12px 14px;
+	padding:                                                   var(--space-3) var(--space-3);
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--store-card-bg);
@@ -1102,21 +1135,10 @@ body.store-drawer-open { overflow: hidden; }
 
 .store-agreement-check {
 	display:                                                   flex;
-	gap:                                                       8px;
+	gap:                                                       var(--space-2);
 	align-items:                                               flex-start;
-	margin:                                                    10px 0 0;
+	margin:                                                    var(--space-2) 0 0;
 	font-weight:                                               bold;
-}
-
-.store-downloads ul {
-	margin:                                                    0;
-	padding:                                                   0;
-	list-style:                                                none;
-}
-
-.store-downloads li {
-	padding:                                                   8px 0;
-	border-top:                                                var(--store-border);
 }
 
 .store-downloads li:first-child {
@@ -1128,11 +1150,11 @@ body.store-drawer-open { overflow: hidden; }
 }
 
 .store-account-inline {
-	margin:                                                    8px 0 0;
+	margin:                                                    var(--space-2) 0 0;
 }
 
 .store-account-inline .store-btn {
-	padding:                                                   6px 14px;
+	padding:                                                   var(--space-1) var(--space-3);
 	font-size:                                                 14px;
 }
 
@@ -1148,7 +1170,7 @@ body.store-drawer-open { overflow: hidden; }
 
 .store-account-orders th,
 .store-account-orders td {
-	padding:                                                   8px 6px;
+	padding:                                                   var(--space-2) var(--space-1);
 	border-top:                                                var(--store-border);
 	text-align:                                                left;
 }
@@ -1159,27 +1181,27 @@ body.store-drawer-open { overflow: hidden; }
 --------------------------------------------------------------*/
 
 .store-option-group {
-	margin:                                                    0 0 20px;
+	margin:                                                    0 0 var(--space-5);
 }
 
 .store-option-label {
 	display:                                                   block;
-	margin:                                                    0 0 8px;
+	margin:                                                    0 0 var(--space-2);
 	font-weight:                                               normal;
 }
 
 .store-tiles {
 	display:                                                   flex;
 	flex-wrap:                                                 wrap;
-	gap:                                                       10px;
+	gap:                                                       var(--space-2);
 }
 
 .store-tile {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       10px;
+	gap:                                                       var(--space-2);
 	min-height:                                                56px;
-	padding:                                                   8px 14px 8px 8px;
+	padding:                                                   var(--space-2) var(--space-3) var(--space-2) var(--space-2);
 	border:                                                    var(--variation-tile-border);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--white);
@@ -1206,7 +1228,7 @@ body.store-drawer-open { overflow: hidden; }
 	width:                                                     40px;
 	height:                                                    40px;
 	object-fit:                                                cover;
-	border-radius:                                             4px;
+	border-radius:                                             var(--radius-xs);
 }
 
 .store-tile-label {
@@ -1234,7 +1256,7 @@ body.store-drawer-open { overflow: hidden; }
 
 /* Heading above the long description, wording set in Settings → Store. */
 .store-single-body-title {
-	margin:                                                    0 0 12px;
+	margin:                                                    0 0 var(--space-3);
 	line-height:                                               1.2;
 	text-align:                                                left;
 }
@@ -1247,7 +1269,7 @@ body.store-drawer-open { overflow: hidden; }
 @media screen and (max-width: 860px) {
 	.store-gallery-track {
 		display:                                                  flex;
-		gap:                                                      8px;
+		gap:                                                      var(--space-2);
 		overflow-x:                                               auto;
 		scroll-snap-type:                                         x mandatory;
 		-webkit-overflow-scrolling:                               touch;
@@ -1279,11 +1301,11 @@ body.store-drawer-open { overflow: hidden; }
 --------------------------------------------------------------*/
 
 .store-checkout-main {
-	padding:                                                   40px 0 80px;
+	padding:                                                   var(--space-7) 0 80px;
 }
 
 .store-checkout-title {
-	margin:                                                    0 0 28px;
+	margin:                                                    0 0 var(--space-6);
 }
 
 /* Form on the left, summary on the right. The summary sticks, so the total stays
@@ -1291,24 +1313,24 @@ body.store-drawer-open { overflow: hidden; }
 .store-checkout-grid {
 	display:                                                   grid;
 	grid-template-columns:                                     minmax(0, 1.4fr) minmax(0, 1fr);
-	gap:                                                       48px;
+	gap:                                                       var(--space-8);
 	align-items:                                               start;
 }
 
 .store-checkout-section {
-	margin:                                                    0 0 36px;
+	margin:                                                    0 0 var(--space-7);
 }
 
 .store-checkout-section h2 {
-	margin:                                                    0 0 14px;
-	font-size:                                                 1.1rem;
+	margin:                                                    0 0 var(--space-3);
+	font-size:                                                 var(--font-size-h5);
 }
 
 /* Checkout fields are framework form fields (.form-input.store-field, built by
    sp_store_field()), so the in-field floating label, field icon and padding all
    come from style-forms.css. Only the store's own box look is set here. */
 .store-field {
-	margin:                                                    0 0 14px;
+	margin:                                                    0 0 var(--space-3);
 }
 
 /* Descendant selectors because style-forms.css sizes every bare input in the
@@ -1344,11 +1366,44 @@ body.store-drawer-open { overflow: hidden; }
 .store-field-row {
 	display:                                                   grid;
 	grid-template-columns:                                     2fr 1.4fr 1fr;
-	gap:                                                       12px;
+	gap:                                                       var(--space-3);
+}
+
+/* One field height for every one-line control, so the City / State / ZIP row lines up (a select
+   is otherwise sized differently from the inputs beside it). #primary is there to outrank the
+   floating-label rules in style-forms.css, whose :has() selectors carry a lot of specificity. */
+#primary .store-checkout .store-field :is(input, select) {
+	box-sizing:                                                border-box;
+	height:                                                    48px;
+	min-height:                                                48px;
+}
+
+/* The in-field label (the "placeholder"): regular weight, centred in the taller field. The email
+   icon is pinned 10px from the top by default, so it's re-centred too. Textareas keep the
+   framework's first-line placement. */
+#primary .store-checkout .store-field:has(> .bp-control-wrap > :is(input, select)) {
+	--field-icon-top:                                          calc(50% - 8px);
+}
+
+#primary .store-checkout .store-field > label {
+	font-weight:                                               normal;
+}
+
+#primary .store-checkout .store-field:has(> .bp-control-wrap > :is(input, select)) > label {
+	top:                                                       50%;
+	transform:                                                 translateY(-50%);
+}
+
+/* …and floated above the field once it's focused or filled, exactly as style-forms.css does it. */
+#primary .store-checkout .store-field:has(> .bp-control-wrap > :is(input, select, textarea)):focus-within > label,
+#primary .store-checkout .store-field:has(> .bp-control-wrap > :is(input, textarea):not(:placeholder-shown)) > label,
+#primary .store-checkout .store-field:has(> .bp-control-wrap > select option:checked:not([value=""])) > label {
+	top:                                                       0;
+	transform:                                                 translateY(-60%) scale(0.8);
 }
 
 .store-field-note {
-	margin:                                                    6px 0 0;
+	margin:                                                    var(--space-1) 0 0;
 	font-size:                                                 13px;
 	color:                                                     var(--store-muted);
 }
@@ -1360,14 +1415,14 @@ body.store-drawer-open { overflow: hidden; }
 .store-ship-options {
 	display:                                                   flex;
 	flex-direction:                                            column;
-	gap:                                                       10px;
+	gap:                                                       var(--space-2);
 }
 
 .store-ship-option {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       12px;
-	padding:                                                   14px 16px;
+	gap:                                                       var(--space-3);
+	padding:                                                   var(--space-3) var(--space-4);
 	border:                                                    2px solid var(--lightest-grey);
 	border-radius:                                             var(--store-radius);
 	cursor:                                                    pointer;
@@ -1389,7 +1444,7 @@ body.store-drawer-open { overflow: hidden; }
 }
 
 .store-ship-price {
-	font-weight:                                               700;
+	font-weight:                                               bold;
 }
 
 /*--------------------------------------------------------------
@@ -1399,15 +1454,15 @@ body.store-drawer-open { overflow: hidden; }
 .store-checkout-summary {
 	position:                                                  sticky;
 	top:                                                       24px;
-	padding:                                                   24px;
+	padding:                                                   var(--space-6);
 	border:                                                    var(--store-border);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--store-card-bg);
 }
 
 .store-checkout-summary h2 {
-	margin:                                                    0 0 18px;
-	font-size:                                                 1.1rem;
+	margin:                                                    0 0 var(--space-4);
+	font-size:                                                 var(--font-size-h5);
 }
 
 /* Dimmed while a new quote is in flight, so a changing number reads as "being
@@ -1419,8 +1474,8 @@ body.store-drawer-open { overflow: hidden; }
 .store-summary-line {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       12px;
-	padding:                                                   0 0 14px;
+	gap:                                                       var(--space-3);
+	padding:                                                   0 0 var(--space-3);
 }
 
 .store-summary-img {
@@ -1434,7 +1489,7 @@ body.store-drawer-open { overflow: hidden; }
 	height:                                                    52px;
 	object-fit:                                                cover;
 	border:                                                    var(--store-border);
-	border-radius:                                             6px;
+	border-radius:                                             var(--radius-xs);
 }
 
 /* The quantity badge, so the summary says "2" rather than repeating a line. */
@@ -1444,13 +1499,13 @@ body.store-drawer-open { overflow: hidden; }
 	right:                                                     -7px;
 	min-width:                                                 20px;
 	height:                                                    20px;
-	padding:                                                   0 5px;
-	border-radius:                                             10px;
+	padding:                                                   0 var(--space-1);
+	border-radius:                                             var(--radius-sm);
 	background:                                                var(--store-soldout-bg);
 	color:                                                     var(--store-soldout-color);
 	font-size:                                                 12px;
 	font-style:                                                normal;
-	font-weight:                                               700;
+	font-weight:                                               bold;
 	line-height:                                               20px;
 	text-align:                                                center;
 }
@@ -1460,19 +1515,14 @@ body.store-drawer-open { overflow: hidden; }
 	min-width:                                                 0;
 }
 
-.store-summary-variant {
-	font-size:                                                 13px;
-	color:                                                     var(--store-muted);
-}
-
 .store-summary-amount {
 	flex:                                                      0 0 auto;
-	font-weight:                                               600;
+	font-weight:                                               bold;
 }
 
 .store-summary-totals {
-	margin:                                                    8px 0 0;
-	padding:                                                   16px 0 0;
+	margin:                                                    var(--space-2) 0 0;
+	padding:                                                   var(--space-4) 0 0;
 	border-top:                                                var(--store-border);
 	transition:                                                opacity 150ms ease;
 }
@@ -1480,21 +1530,16 @@ body.store-drawer-open { overflow: hidden; }
 .store-summary-totals p {
 	display:                                                   flex;
 	justify-content:                                           space-between;
-	gap:                                                       16px;
-	margin:                                                    0 0 10px;
-}
-
-.store-summary-note {
-	font-size:                                                 13px;
-	color:                                                     var(--store-muted);
+	gap:                                                       var(--space-4);
+	margin:                                                    0 0 var(--space-2);
 }
 
 .store-summary-total {
-	margin:                                                    14px 0 0;
-	padding:                                                   14px 0 0;
+	margin:                                                    var(--space-3) 0 0;
+	padding:                                                   var(--space-3) 0 0;
 	border-top:                                                var(--store-border);
 	font-size:                                                 20px;
-	font-weight:                                               700;
+	font-weight:                                               bold;
 }
 
 /*--------------------------------------------------------------
@@ -1504,15 +1549,13 @@ body.store-drawer-open { overflow: hidden; }
 .store-checkout .store-place-order {
 	display:                                                   block;
 	width:                                                     100%;
-	margin:                                                    8px 0 0;
+	margin:                                                    var(--space-2) 0 0;
 }
-
-.store-place-order[disabled]     { opacity: .5; cursor: not-allowed; }
 .store-place-order.is-busy::after { content: " …"; }
 
 .store-checkout-error {
-	margin:                                                    0 0 14px;
-	padding:                                                   12px 14px;
+	margin:                                                    0 0 var(--space-3);
+	padding:                                                   var(--space-3) var(--space-3);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--store-sale-color);
 	color:                                                     var(--white);
@@ -1527,7 +1570,7 @@ body.store-drawer-open { overflow: hidden; }
 	   sticky panel in a single column would just hover over the inputs. */
 	.store-checkout-grid {
 		grid-template-columns:                                    minmax(0, 1fr);
-		gap:                                                      32px;
+		gap:                                                      var(--space-7);
 	}
 	.store-checkout-summary {
 		position:                                                 static;
@@ -1541,8 +1584,8 @@ body.store-drawer-open { overflow: hidden; }
 /* Staff-only explanation under a disabled checkout button. Customers never
    receive the text, so this styling is only ever seen by someone logged in. */
 .store-drawer-staff {
-	margin:                                                    10px 0 0;
-	padding:                                                   10px 12px;
+	margin:                                                    var(--space-2) 0 0;
+	padding:                                                   var(--space-2) var(--space-3);
 	border-radius:                                             var(--store-radius);
 	background:                                                var(--lightest-grey);
 	color:                                                     var(--store-muted);
@@ -1560,9 +1603,9 @@ body.store-drawer-open { overflow: hidden; }
 	align-items:                                               center;
 	justify-content:                                           space-between;
 	flex-wrap:                                                 wrap;
-	gap:                                                       16px;
-	margin:                                                    0 0 24px;
-	padding:                                                   0 0 16px;
+	gap:                                                       var(--space-4);
+	margin:                                                    0 0 var(--space-6);
+	padding:                                                   0 0 var(--space-4);
 	border-bottom:                                             var(--store-border);
 }
 
@@ -1576,13 +1619,13 @@ form p:last-of-type.store-toolbar-count {
 .store-toolbar-controls {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       16px;
+	gap:                                                       var(--space-4);
 }
 
 .store-toolbar-field {
 	display:                                                   flex;
 	align-items:                                               center;
-	gap:                                                       8px;
+	gap:                                                       var(--space-2);
 	margin:                                                    0;
 	font-size:                                                 15px;
 	white-space:                                               nowrap;
@@ -1594,7 +1637,7 @@ form p:last-of-type.store-toolbar-count {
 
 .store-toolbar-field select {
 	margin:                                                    0;
-	padding:                                                   6px 32px 6px 10px;
+	padding:                                                   var(--space-1) var(--space-7) var(--space-1) var(--space-2);
 	border:                                                    var(--store-border-active);
 	border-radius:                                             var(--store-radius);
 	background-color:                                          var(--store-card-bg);

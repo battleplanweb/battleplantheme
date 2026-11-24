@@ -1424,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		var data = payload.indexGroups, s = data ? indexSlice(container) : null;
 		if (!s) {
 			var em = document.createElement('p'); em.className = 'bp-an-empty';
-			em.textContent = (data && data.status) || 'The trend lines for this page type start with the next weekly check — the donut shows the current status.';
+			em.textContent = (data && data.status) || 'The trend lines for this page type start with the next nightly stats run — the donut shows the current status.';
 			container.innerHTML = ''; container.appendChild(em); return;
 		}
 		var defs = [

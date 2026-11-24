@@ -217,6 +217,12 @@ function sp_store_clover_begin( int $order_id ) {
 		$sum += (int) $order['shipping_cents'];
 	}
 
+	$fee = (int) $order['fee_card_cents'] + (int) $order['fee_platform_cents'];
+	if ( $fee > 0 ) {
+		$lines[] = [ 'name' => 'Service fee', 'price' => $fee, 'unitQty' => 1 ];
+		$sum += $fee;
+	}
+
 	if ( (int) $order['tax_cents'] > 0 ) {
 		$lines[] = [ 'name' => 'Sales tax', 'price' => (int) $order['tax_cents'], 'unitQty' => 1 ];
 		$sum += (int) $order['tax_cents'];

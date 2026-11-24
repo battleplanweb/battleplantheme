@@ -172,7 +172,8 @@ function bp_fleet_collect_audit(): array {
 	$latest = end( $hist );
 	if ( ! is_array( $latest ) ) return $out;
 
-	$scores = is_array( $latest['scores'] ?? null ) ? $latest['scores'] : [];
+	// null = "not assessed this run" — left out so it can't drag the average to 0.
+	$scores = array_filter( is_array( $latest['scores'] ?? null ) ? $latest['scores'] : [], static fn( $v ) => null !== $v );
 	$out['scores']    = array_map( 'intval', $scores );
 	$out['avg_score'] = $scores ? (int) round( array_sum( array_map( 'intval', $scores ) ) / max( 1, count( $scores ) ) ) : null;
 	$out['last_date'] = (string) ( $latest['date'] ?? (string) key( array_slice( $hist, -1, 1, true ) ) );

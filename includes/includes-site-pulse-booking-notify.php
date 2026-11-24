@@ -53,7 +53,7 @@ function sp_book_notification_templates(): array {
 			'to'      => 'customer',
 			'default' => true,
 			'subject' => 'Your {service} is booked for {date}',
-			'body'    => "Hi {customer_first},\n\nYou're booked in for {service} on {date} at {time}.\n\n{with_line}{address_line}Reference: {code}\n\nIf you need to change anything, just reply to this message.\n\n{business}",
+			'body'    => "Hi {customer_first},\n\nYou're booked in for {service} on {date} at {time}.\n\n{dates_line}{with_line}{address_line}Reference: {code}\n\nIf you need to change anything, just reply to this message.\n\n{business}",
 		],
 		'reminder' => [
 			'label'   => 'Reminder',
@@ -77,7 +77,7 @@ function sp_book_notification_templates(): array {
 			'to'      => 'customer',
 			'default' => true,
 			'subject' => 'Your {service} on {date} has been cancelled',
-			'body'    => "Hi {customer_first},\n\nYour {service} on {date} at {time} has been cancelled.\n\nIf that wasn't expected, get in touch and we'll sort it out.\n\n{business}",
+			'body'    => "Hi {customer_first},\n\nYour {service} on {date} at {time} has been cancelled.\n\n{dates_line}If that wasn't expected, get in touch and we'll sort it out.\n\n{business}",
 		],
 		'followup' => [
 			'label'   => 'Follow-up',
@@ -93,7 +93,7 @@ function sp_book_notification_templates(): array {
 			'to'      => 'staff',
 			'default' => true,
 			'subject' => 'New booking: {customer} — {date} {time}',
-			'body'    => "{customer} booked {service} on {date} at {time}.\n\n{with_line}{address_line}{phone_line}{email_line}Reference: {code}",
+			'body'    => "{customer} booked {service} on {date} at {time}.\n\n{dates_line}{with_line}{address_line}{phone_line}{email_line}Reference: {code}",
 		],
 	];
 }
@@ -185,7 +185,20 @@ function sp_book_tokens( array $booking ): array {
 		'{address_line}'   => $address !== '' ? 'Where: ' . $address . "\n" : '',
 		'{phone_line}'     => $booking['customer_phone'] !== '' ? 'Phone: ' . $booking['customer_phone'] . "\n" : '',
 		'{email_line}'     => $booking['customer_email'] !== '' ? 'Email: ' . $booking['customer_email'] . "\n" : '',
+		// A series enrollment lists every date; empty for a single booking.
+		'{dates_line}'     => sp_book_dates_line( $booking ),
 	];
+}
+
+/** "All dates:" plus one line per date, for a series lead; '' otherwise. */
+function sp_book_dates_line( array $booking ): string {
+	$members = function_exists( 'sp_book_series_members' ) ? sp_book_series_members( $booking ) : [];
+	if ( ! $members ) return '';
+	$out = "All dates:\n";
+	foreach ( array_merge( [ $booking ], $members ) as $b ) {
+		$out .= '- ' . sp_book_to_local( (string) $b['starts_at'], 'l, F j' ) . ' at ' . sp_book_to_local( (string) $b['starts_at'], 'g:i A' ) . "\n";
+	}
+	return $out . "\n";
 }
 
 function sp_book_render( string $text, array $tokens ): string {
@@ -256,19 +269,33 @@ function sp_book_notify_created( array $booking ): void {
 	$email = (string) $booking['customer_email'];
 	$phone = (string) $booking['customer_phone'];
 
+	// A series enrollment: ONE confirmation (its {dates_line} lists every date), a reminder before
+	// EACH class (queued on that date's own booking, so cancelling one date drops only its reminder),
+	// and the follow-up after the LAST class.
+	$members = function_exists( 'sp_book_series_members' ) ? sp_book_series_members( $booking ) : [];
+	$remind  = [ [ $id, $start ] ];
+	foreach ( $members as $m ) {
+		$remind[] = [ (int) $m['id'], sp_book_utc_ts( (string) $m['starts_at'] ) ];
+		$end      = max( $end, sp_book_utc_ts( (string) $m['ends_at'] ) );
+	}
+
 	if ( is_email( $email ) ) {
 		sp_book_queue( $id, 'confirmation', sp_book_now(), 'email', $email );
 
-		$due = $start - sp_book_reminder_hours() * HOUR_IN_SECONDS;
-		if ( $due > $now ) sp_book_queue( $id, 'reminder', gmdate( 'Y-m-d H:i:s', $due ), 'email', $email );
+		foreach ( $remind as [ $rid, $rstart ] ) {
+			$due = $rstart - sp_book_reminder_hours() * HOUR_IN_SECONDS;
+			if ( $due > $now ) sp_book_queue( $rid, 'reminder', gmdate( 'Y-m-d H:i:s', $due ), 'email', $email );
+		}
 
 		$follow = $end + sp_book_followup_hours() * HOUR_IN_SECONDS;
 		sp_book_queue( $id, 'followup', gmdate( 'Y-m-d H:i:s', $follow ), 'email', $email );
 	}
 
 	if ( $phone !== '' && sp_book_sms_available() ) {
-		$due = $start - sp_book_reminder_hours() * HOUR_IN_SECONDS;
-		if ( $due > $now ) sp_book_queue( $id, 'reminder', gmdate( 'Y-m-d H:i:s', $due ), 'sms', $phone );
+		foreach ( $remind as [ $rid, $rstart ] ) {
+			$due = $rstart - sp_book_reminder_hours() * HOUR_IN_SECONDS;
+			if ( $due > $now ) sp_book_queue( $rid, 'reminder', gmdate( 'Y-m-d H:i:s', $due ), 'sms', $phone );
+		}
 	}
 
 	$staff = sp_book_staff_email( sp_book_get_resource( (int) $booking['resource_id'] ) );

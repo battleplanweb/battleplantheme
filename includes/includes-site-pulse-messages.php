@@ -789,8 +789,9 @@ function sp_msg_notify_participants( int $conv_id, int $sender_id, string $body 
 
 	foreach ( sp_msg_participant_ids( $conv_id ) as $uid ) {
 		if ( $uid === $sender_id ) continue;
-		if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
-		if ( site_pulse_get_setting( 'notifications_email_enabled', '0' ) === '1' ) sp_msg_email_recipient( $uid, $prefix ); // follows the app-wide Allow email switch
+		// Each recipient's own Chat messages choices (Settings → Notifications), within the app switches.
+		if ( site_pulse_user_wants( $uid, 'message', 'push' ) && function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
+		if ( site_pulse_user_wants( $uid, 'message', 'email' ) ) sp_msg_email_recipient( $uid, $prefix );
 	}
 }
 
@@ -982,8 +983,7 @@ function site_pulse_ajax_messages_action_create(): void {
 			] );
 			$created++;
 			if ( $uid !== $me ) {
-				site_pulse_notify( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), (int) $wpdb->insert_id, 'action_item' );
-					if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid ); // bell notification → also wake their devices
+				site_pulse_deliver( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), (int) $wpdb->insert_id, 'action_item' );
 			}
 		}
 	}

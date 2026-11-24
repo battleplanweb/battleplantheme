@@ -1016,6 +1016,12 @@ function bp_handle_form_submission(WP_REST_Request $request) {
 	// --- run spam pipeline (mutates $ctx['spam']) ---
 	if ($spam_reason === '') $ctx = bp_spam_check($ctx);
 
+	// --- babescatering.com: spam filtering off, every submission goes to the client ---
+	if (stripos((string)wp_parse_url(home_url(), PHP_URL_HOST), 'babescatering.com') !== false) $ctx['spam'] = '';
+
+	// --- Elevate Technology: "Event RSVP" submissions always go to the client ---
+	if (stripos((string)wp_parse_url(home_url(), PHP_URL_HOST), 'elevatemytech.com') !== false &&stripos(ltrim($ctx['subject']), 'Event RSVP') === 0) $ctx['spam'] = '';
+
 	// --- build email ---
 	$email = bp_build_email($ctx);
 	$email['attachments'] = $attachments;
@@ -1868,7 +1874,7 @@ function bp_is_test_submission($fields) {
 }
 
 function bp_blocklist_emails() {
-	return [$_SERVER['HTTP_HOST'] ?? '', 'testing.com', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices.com', 'ismael57morenozvm@outlook.com', 'vasdirect.com', 'webmai.co', 'hdsupply.com', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp.com', 'getoffyourhighhorse', 'advancedbodyscan.com', 'clientcaf.info', 'brucesilverman.outsourcing', 'chemtreat.com', 'astoundz.com', 'xinyisolar.online', 'BISHOPKNIGHTLLC.COM', 'rezult.org', 'casey.swiftt@aol.com', 'aecom-usa.com', 'academicproductions.com', 'houseflippers.biz', 'virtualhandsupport.com', 'pursuitind.com', 'magwitch.com', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy.com', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat.com', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'virtualeaseservice', 'humanwebdesign', 'dwbytes', 'onlinereviewfixer', 'archtri', 'aircoolsupply','restorecalls', 'businessbrokersleads', 'leaddesire', 'delphiconstructions', 'vettedvas', 'facilitiesfirstcall', 'smith-tanks', 'pathwaybuild.com', 'garrisonconstructions.com', 'boxedup.info', 'Ringboost.com', 'reachpiperich.com', 'springfieldsolutionsllc.com', 'sevenforone.com', 'miasoltan.com', 'govcrest.com', 'offer.aibusinesssites.com', 'almshib.com', 'shellprocurement-uae', 'allstar-estimation.com', 'net2phone.com', 'usefirstcallmechanical.com', 'fleetuckertn.com', 'crunchtimecapital.com', 'growthaspire.agency', 'vellops.com', 'kaletechsllc.com', 'disasterprepared.info', 'logangrowthcapital.com', 'tidalconstructionsgroup', 'onehello.site', 'dgridsenergy.com', 'exitlogangrowth', 'uselogangrowth.com', 'goodchoicedevelopment', 'grinderhaizlips', 'tidyhome.info', 'moritzmuench.dev', 'bookr.page', 'fieldpulse.com', 'growpiperich.com', 'mariasites.com', 'mariaranks.com', 'scalelogangrowth.com', 'relomoving.com', 'msecomllc.com', 'sharngroup.com', 'draftrise.com', 'bitwisebuilt.com', 'powerhopper.energy', 'mandlsinc.com', 'sterlingcooper.us', 'automaxrevenue.com', 'getdandynow.com', 'raven.work', 'thornfieldgrowth.com', 'servicefirstgrowth.com', 'agentmail.to', 'gopiperich.com', 'seepiperich.com'];
+	return [$_SERVER['HTTP_HOST'] ?? '', 'testing', 'test@', 'b2blistbuilding', 'amy.wilsonmkt@gmail', 'agency.leads.fish', 'landrygeorge8@gmail', 'digitalconciergeservice', 'themerchantlendr', 'fluidbusinessresources', 'focal-pointcoaching.net', 'zionps', 'rddesignsllc', 'domainworld', 'marketing.ynsw@gmail', 'seoagetechnology@gmail', 'excitepreneur.net', 'bullmarket.biz', 'tworld', 'garywhi777@gmail', 'ronyisthebest16@gmail', 'ronythomas611@gmail', 'ronythomasrecruiter@gmail', 'ideonagency.net', 'axiarobbie20@gmail', 'hyper-tidy', 'readyjob.org', 'thefranchisecreatornetwork', 'franchisecreatormarketing', 'legendarygfx', 'hitachi-metal-jp', 'expresscommerce.co', 'zaphyrpro', 'erjconsult', 'christymkts@gmail', 'theheritageseo', 'freedomwebdesigns', 'wesavesmallbusinesses@gmail', 'bimservicesllc.net', 'spamhunter.co', 'myspamburner.co', 'spamshield.co', 'excelestimation.net', 'dmccreativesolutions', 'mdhmx', 'digitalmarketingvas', 'rushmoreblueprint.co', 'answeraide', 'servicesuite.io', 'webtechxpress', 'medicopostura', 'anna.cramer@outlook', 'stephania.sander@yahoo', 'yourmarketingagencyfuture@gmail', '.pawsafer.sale', 'wexinc', 'erjsolutions', 'frequentlyonline', 'thawkingo', 'podiatristusa', 'besocialworldwide', 'taylah.jordan@gmail', 'garzagaragedoors', 'westholtmed.net', 'agape1life', 'bayougraphics', 'betterfinancialsolution', 'betterbusinessedge', 'econnectlocal', 'sbiestimationll', 'zentrades.pro', 'appfactoryhub', 'caredogbest', 'w-bmason', 'vibrantestimation', 'tylersupplycompany', 'steinerseo', 'foxmail', 'posicionamientoparapymes', 'testeurpascher', 'sbi-estimation', 'est.sbiestimation', 'jebcapitalpartners', 'bestcontractorsites', 'secondestimationllc', 'ipayperlead', 'difusionagencia', 'seedranchflavor', 'grupoiasa', 'hedgestone', '6pmarketing', 'sowsustainability', 'xruma', 'businesscoachvas', 'costestimating', 'theubique-group', 'earnmillions', 'logodesignsteam', 'gracegroupsllc', 'rushmoreblueprintpartners', 'wiseins1', 'cleaning-dallas', 'financingmycustomers', 'innovenservices', 'ismael57morenozvm@outlook', 'vasdirect', 'webmai.co', 'hdsupply', 'automisly', 'flinnrgs32', '.co.uk', 'OYOapp', 'getoffyourhighhorse', 'advancedbodyscan', 'clientcaf.info', 'brucesilverman.outsourcing', 'chemtreat', 'astoundz', 'xinyisolar.online', 'BISHOPKNIGHTLLC', 'rezult.org', 'casey.swiftt@aol', 'aecom-usa', 'academicproductions', 'houseflippers.biz', 'virtualhandsupport', 'pursuitind', 'magwitch', 'toptalentvas', 'mzfederal', 'moneysquad', 'dadknowsdiy', 'cahillestimating', 'bestaitools', 'dynamicvirtualmanager', 'expertcellent', 'dctechnolabs', 'ip-advocaat', 'bizbuydave', 'trustedvirtualteam', 'thevirtualsalesgroup', 'servicecallsaver', 'tile-stonecraetions', 'catehvac', 'bovafoodsco', 'usestateboilerinspector', 'kunal-kakkar', 'globalpartfinder', 'vladislavdev', 'frontierenergy', 'insuretuckertn', 'doanything', 'virtualeaseservice', 'humanwebdesign', 'dwbytes', 'onlinereviewfixer', 'archtri', 'aircoolsupply','restorecalls', 'businessbrokersleads', 'leaddesire', 'delphiconstructions', 'vettedvas', 'facilitiesfirstcall', 'smith-tanks', 'pathwaybuild', 'garrisonconstructions', 'boxedup.info', 'Ringboost', 'reachpiperich', 'springfieldsolutionsllc', 'sevenforone', 'miasoltan', 'govcrest', 'offer.aibusinesssites', 'almshib', 'shellprocurement-uae', 'allstar-estimation', 'net2phone', 'usefirstcallmechanical', 'fleetuckertn', 'crunchtimecapital', 'growthaspire.agency', 'vellops', 'kaletechsllc', 'disasterprepared.info', 'logangrowthcapital', 'tidalconstructionsgroup', 'onehello.site', 'dgridsenergy', 'exitlogangrowth', 'uselogangrowth', 'goodchoicedevelopment', 'grinderhaizlips', 'tidyhome.info', 'moritzmuench.dev', 'bookr.page', 'fieldpulse', 'growpiperich', 'mariasites', 'mariaranks', 'scalelogangrowth', 'relomoving', 'msecomllc', 'sharngroup', 'draftrise', 'bitwisebuilt', 'powerhopper.energy', 'mandlsinc', 'sterlingcooper.us', 'automaxrevenue', 'getdandynow', 'raven.work', 'thornfieldgrowth', 'servicefirstgrowth', 'agentmail.to', 'gopiperich', 'seepiperich', 'sercogrps', 'getpiperich', 'irongatedatacenter', 'hollandwicksystems', 'langdaleadvisory', 'tbcdevelopment', 'generation-freedom', 'enghouseteam', 'amstedrails-co', 'concord-corps', 'lfsadigital', 'tokenbanditstudio', 'hoffmancorps', 'bakemeawebsite', 'rosedale-recruiting', 'koubakmoop', 'viscongc', 'haloarchitect', 'premierecognison', 'drvnweb', 'sitehypedesigns', 'receptyv', 'grace-wels', 'badoutdoors'];
 }
 
 function bp_blocklist_words() {
@@ -1900,20 +1906,28 @@ function bp_blocklist_words() {
         'https://',
         'www.',
         'Dear Customer',
+	   'New York Savings, NYC',
         'Dear Sales',
         'Sir/Madam',
         'Hello Business Owner',
+	   'doubling your Google calls',
+	   'refreshing your website',
+	   'top 3 Google Map Pack',
+	   'more calls from Google',
         'HELLO SALES',
         'xxx',
         'bitcoin',
 	   'AI receptionist',
         'mаlwаre',
 	   'would you be interested in',
+	   'if your team is available',
         'antivirus',
+	   'share details about your experience',
 	   'verified B2B contact',
         'Wordpress',
 	   'Kindly share details',
         'completely Free',
+		'The main issue holding the profile back',
         'Dear Receptionist',
         'Franchise Creator',
         'rebrand your business',
@@ -1922,11 +1936,16 @@ function bp_blocklist_words() {
         'appeal to more clients',
         'improve your sales',
         'free estimate from our company',
+	   'your website looks like',
         'blocks spam leads',
         'block spam messages',
         'In order to get a better idea of our work',
+	   'retain your professional services',
         'If you\'ve made it this far',
+	   'Robotics companies pay',
+	   'built a website',
         'home services advertising',
+		'We are currently sourcing',
         'cooperate with your company',
         'influencers on Instagram',
         'procuring below items',
@@ -1937,15 +1956,20 @@ function bp_blocklist_words() {
         'boost your business',
 	   'Reply no and I won\'t contact you again',
         'targeted Customers',
+		'we would be happy to review',
+		'currently accepting new projects',
         'We help you get',
         'designing and development',
         'create your Website',
         'contact form blasting',
+		'helping businesses grow',
+		'We build websites',
         'make money online',
         'audit on your',
         'send a free audit',
         'Are you in need of',
         'kingcontacts',
+	   'We are flexible and open',
         'Using Google Adsense',
         'very profitable business matter',
         'needs of business owners',
@@ -1961,16 +1985,19 @@ function bp_blocklist_words() {
         'collaborate with your company',
         'partner with you',
         'business brokers that represent buyers',
+	   'costing you money and leads',
         'a company based in the Philippines',
         'prefer not to hear from me again',
         'short term investment',
         'review provider',
+	   'No obligation to buy the full build',
         'Myspace group',
         'penning this article',
         'abide by your requests',
         'premium databases',
         'UncoverHiddenProfits',
         'helping your business make money',
+	   'you have great reviews on google',
         'opportunity to provide you',
         'build business credit',
         'eliminate personal guarantees',
@@ -1982,6 +2009,7 @@ function bp_blocklist_words() {
         'excellent option for prospective entrepreneurs',
         'Kegel Devices',
         'web development company',
+	   'Want to restore your online reputation',
         'Mary Kay Sales Director',
         'Odena',
         'Kouvach',

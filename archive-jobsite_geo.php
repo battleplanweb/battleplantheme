@@ -26,6 +26,11 @@ get_header(); ?>
 
 			$buildUpdate = "";
 			$lat_lng = array();
+			$projects = array();
+			$linkedServices = array();
+			$townServiceUrls = is_tax('jobsite_geo-services') ? bp_geo_town_service_urls() : array();
+			$pageUrl = is_tax() ? get_term_link( get_queried_object() ) : get_post_type_archive_link( 'jobsite_geo' );
+			if ( is_wp_error( $pageUrl ) || ! $pageUrl ) $pageUrl = home_url( '/' );
 
 			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }
 
@@ -75,7 +80,36 @@ get_header(); ?>
 				$buildUpdate .= '[col]';
 				$buildUpdate .= '<div class="jobsite-entry count-'.$imgNum.'">';
 				$buildUpdate .= '<div class="jobsite-description'.( $imgNum >= 3 ? ' span-all' : '' ).'">';
-				$buildUpdate .= '<div class="jobsite_geo-job_meta"><p>'.$location.'</p></div>';
+				$headline   = trim( (string) get_post_meta( get_the_ID(), BP_GEO_FIELD_HEADLINE, true ) );
+				$linkPhrase = trim( (string) get_post_meta( get_the_ID(), BP_GEO_FIELD_LINK_PHRASE, true ) );
+				if ( bp_geo_job_needs_card_data( get_the_ID() ) ) bp_geo_queue_headline( get_the_ID() );
+
+				$typeSlugs   = wp_get_post_terms( get_the_ID(), 'jobsite_geo-service-types', array( 'fields' => 'slugs' ) );
+				$typeSlug    = ( ! is_wp_error( $typeSlugs ) && $typeSlugs ) ? $typeSlugs[0] : '';
+				$serviceName = $typeSlug ? bp_format_service( $typeSlug ) : '';
+				$serviceUrl  = bp_geo_job_service_url( get_the_ID(), $typeSlug );
+				if ( $serviceUrl && $linkPhrase !== '' && ! isset( $linkedServices[ $serviceUrl ] ) ) {
+					$linkedDesc = bp_geo_link_phrase( $jobDesc, $linkPhrase, $serviceUrl );
+					if ( $linkedDesc !== $jobDesc ) {
+						$jobDesc = $linkedDesc;
+						$linkedServices[ $serviceUrl ] = true;
+					}
+				}
+
+				if ( $townServiceUrls ) {
+					foreach ( bp_geo_parse_mentions( get_post_meta( get_the_ID(), BP_GEO_FIELD_MENTIONS, true ) ) as $mention ) {
+						$mentionUrl = $townServiceUrls[ $mention['service'] ] ?? '';
+						if ( ! $mentionUrl || isset( $linkedServices[ $mentionUrl ] ) ) continue;
+						$linkedDesc = bp_geo_link_phrase( $jobDesc, $mention['phrase'], $mentionUrl );
+						if ( $linkedDesc !== $jobDesc ) {
+							$jobDesc = $linkedDesc;
+							$linkedServices[ $mentionUrl ] = true;
+						}
+					}
+				}
+
+				if ( $headline !== '' ) $buildUpdate .= '<h3 class="jobsite_geo-job_headline">'.esc_html($headline).'</h3>';
+				$buildUpdate .= '<div class="jobsite_geo-job_meta"><p>'.( $serviceName !== '' ? esc_html($serviceName).' · ' : '' ).$location.'</p></div>';
 				// bp_wpautop, not a hand-wrapped <p>: the framework removes wpautop from
 				// the_content globally (functions.php), so a multi-paragraph description
 				// arrives as one blob of newlines and collapsed into a single paragraph.
@@ -83,42 +117,36 @@ get_header(); ?>
 				// once more when the whole $buildUpdate renders at the bottom of the file.
 				$buildUpdate .= bp_wpautop( $jobDesc ).'</div>';
 				$cleanedJobDesc = trim( bp_decode_text( wp_strip_all_tags( $jobDesc ) ) );
-				$customer_info = customer_info();
 				$img = $imgs ? wp_get_attachment_image_src( reset($imgs), 'full' ) : array('');
 
-				// --- Structured data values (built defensively) -----------------
-				// Google flags "Incorrect value type" when a property comes through
-				// empty (e.g. blank lat/lng = expected Number, blank startDate =
-				// expected Date). So we resolve each value first and only emit a
-				// property below when it's actually present and the right type.
+				// Each job is a completed piece of work, not an event or a check-in: a CreativeWork
+				// (project record) whose subject is the Service and whose creator is the business.
+				// Locality only — the street address and exact coordinates are a customer's home.
+				// Only emit a property when it's present and the right type (Google flags blanks).
 				$zip        = trim( (string) get_field( 'zip' ) );
-				$fullAddr   = bp_decode_text( trim( $address.', '.$city.', '.$state.' '.$zip ) );
-				$rawDate    = get_field( 'job_date' );                       // ACF date: Ymd or Y-m-d
+				$rawDate    = get_field( 'job_date' );
 				$jobIsoDate = $rawDate ? date( 'Y-m-d', strtotime( $rawDate ) ) : '';
-				$lat = ( isset($geocode[0]['lat']) && is_numeric($geocode[0]['lat']) ) ? (float) $geocode[0]['lat'] : null;
-				$lng = ( isset($geocode[0]['lng']) && is_numeric($geocode[0]['lng']) ) ? (float) $geocode[0]['lng'] : null;
-				$geoNode = ( $lat !== null && $lng !== null )
-					? array( '@type' => 'GeoCoordinates', 'latitude' => $lat, 'longitude' => $lng )
-					: null;
 
-				$checkin = array(
-					'@context'    => 'https://schema.org',
-					'@type'       => 'UserCheckins',
-					'name'        => bp_decode_text( $customer_info['name'] ?? '' ),
-					'description' => $cleanedJobDesc,
-					'location'    => array(
-						'@type'   => 'Place',
-						'address' => array( '@type' => 'PostalAddress', 'name' => $fullAddr ),
-					),
+				$placeAddr = array( '@type' => 'PostalAddress', 'addressCountry' => 'US' );
+				if ( $city !== '' )  $placeAddr['addressLocality'] = bp_decode_text( $city );
+				if ( $state !== '' ) $placeAddr['addressRegion']   = $state;
+				if ( $zip !== '' )   $placeAddr['postalCode']      = $zip;
+
+				$project = array(
+					'@type'           => 'CreativeWork',
+					'@id'             => $pageUrl . '#jobsite-' . get_the_ID(),
+					'name'            => $headline !== '' ? $headline : trim( ( $serviceName ? $serviceName.' in ' : '' ).$location ),
+					'description'     => $cleanedJobDesc,
+					'contentLocation' => array( '@type' => 'Place', 'address' => $placeAddr ),
+					'creator'         => array( '@id' => home_url('#organization') ),
 				);
-				if ( $jobIsoDate )        $checkin['startDate']      = $jobIsoDate;
-				if ( $geoNode )           $checkin['location']['geo'] = $geoNode;
-				if ( ! empty($img[0]) )   $checkin['image']          = $img[0];
-		?>
-				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">
-				<?php echo wp_json_encode( $checkin, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); ?>
-				</script>
-		<?php
+				if ( $serviceName !== '' ) {
+					$project['about'] = array( '@type' => 'Service', 'serviceType' => $serviceName, 'provider' => array( '@id' => home_url('#organization') ) );
+					if ( $serviceUrl ) $project['about']['url'] = $serviceUrl;
+				}
+				if ( $jobIsoDate )      $project['dateCreated'] = $jobIsoDate;
+				if ( ! empty($img[0]) ) $project['image']       = $img[0];
+				$projects[] = $project;
 
 
 				// Card grid: the description sits in the 1fr column and each photo
@@ -190,6 +218,7 @@ get_header(); ?>
 					if ( $testimonialRate ) $buildCredentials .= "<div class='testimonials-credential testimonials-rating'>".$testimonialStars."</div>";
 
 					$buildUpdate .= '<div class="jobsite-review">';
+					$buildUpdate .= '<h4 class="jobsite-review-label">Homeowner Review</h4>';
 
 					if ( $meta ) :
 						$buildUpdate .= '[img order="1" size="'.$picSize.'" class="image-testimonials"]'.get_the_post_thumbnail( $review, 'thumbnail', array( 'loading' => 'lazy', 'class'=>'img-archive img-testimonials', 'style'=>'aspect-ratio:'.$thumbW.'/'.$thumbH )).'[/img]';
@@ -199,43 +228,29 @@ get_header(); ?>
 
 					$buildUpdate .= '<div style="order: '.$testImgOrder.'" class="block block-group span-'.convertSize(getTextSize( $picSize )).'">[txt class="testimonials-quote"][p]'.$testimonialContent.'[/p][/txt][txt size="11/12" class="testimonials-credentials"]'.$buildCredentials.'[/txt][txt size="1/12" class="testimonials-platform testimonials-platform-'.$testimonialPlatform.'"][/txt]</div>';
 
-				// $fullAddr and $geoNode were resolved above in this same loop pass.
-				$rating = is_numeric( $testimonialRate ) ? (float) $testimonialRate : null;
-
-				$review_ld = array(
-					'@context' => 'https://schema.org',
-					'@type'    => 'UserReview',
-					'author'   => array(
-						'@type'   => 'Person',
-						'name'    => $testimonialName,
-						'address' => $fullAddr,
-					),
-					'itemReviewed' => array(
-						'@type' => 'HomeAndConstructionBusiness',
-						'name'  => $customer_info['name'],
-					),
-					'reviewBody' => trim( wp_strip_all_tags( $testimonialContent ) ),
-					'contentLocation' => array(
-						'@type'   => 'Place',
-						'address' => array( '@type' => 'PostalAddress', 'name' => $fullAddr ),
-					),
-				);
-				if ( $rating !== null ) $review_ld['reviewRating'] = array(
-					'@type' => 'Rating', 'ratingValue' => $rating, 'worstRating' => 1, 'bestRating' => 5,
-				);
-				if ( $geoNode ) $review_ld['contentLocation']['geo'] = $geoNode;
-		?>
-				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">
-				<?php echo wp_json_encode( $review_ld, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); ?>
-				</script>
-		<?php
-
+					// Shown for trust only — no Review markup. Reviews of the business hosted on its own
+					// site are self-serving and can't earn LocalBusiness review stars.
 					$buildUpdate .= '</div>';
 				endif;
 
 				$buildUpdate .= '[/col][/layout][/section]';
 
 			endwhile;
+
+			if ( $projects ) :
+				$projectList = array(
+					'@context'        => 'https://schema.org',
+					'@type'           => 'ItemList',
+					'name'            => $GLOBALS['jobsite_geo-bottom-headline'] ?? '',
+					'itemListElement' => array(),
+				);
+				foreach ( $projects as $i => $project ) $projectList['itemListElement'][] = array( '@type' => 'ListItem', 'position' => $i + 1, 'item' => $project );
+		?>
+				<script nonce="<?php echo _BP_NONCE; ?>" type="application/ld+json">
+				<?php echo wp_json_encode( $projectList, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ); ?>
+				</script>
+		<?php
+			endif;
 
 			// One shared lightbox overlay for the whole archive. Every job's photo
 			// grid carries the .lightbox class; the JS scopes prev/next to the grid
@@ -493,9 +508,11 @@ get_header(); ?>
 
 <main id="wrapper-bottom">
 	<div>
-		<section id="<?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?>" class="section section-default archive-content archive-jobsite_geo"><div class="flex grid-1 valign-start"><div class="col"><div class="col-inner"><h2 style="margin:0"><?php echo $GLOBALS['jobsite_geo-bottom-headline']; ?></h2></div></div></div></section>
-
 		<?php echo do_shortcode($buildUpdate); ?>
+
+		<?php if ( function_exists('bp_geo_cta_html') ) : ?>
+		<section class="section section-default archive-content archive-jobsite_geo-cta"><div class="flex grid-1 valign-start"><div class="col"><div class="col-inner"><?php echo do_shortcode( bp_geo_cta_html() ); ?></div></div></div></section>
+		<?php endif; ?>
 
 		<?php // Cross-links to the sibling /service/ pages — these landing pages are otherwise
 		      // one inbound link deep, which is what keeps them out of the index.

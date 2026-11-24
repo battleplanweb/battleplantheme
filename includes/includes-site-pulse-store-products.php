@@ -31,6 +31,7 @@ rename filters work on product images exactly as on uploads made in wp-admin.
 # Inventory
 # AJAX — Products
 # AJAX — Categories
+# AJAX — Tags
 # AJAX — Inventory
 --------------------------------------------------------------*/
 
@@ -89,6 +90,7 @@ function sp_store_low_threshold( array $variant ): int {
 function sp_store_product_row( WP_Post $post ): array {
 	$id    = (int) $post->ID;
 	$terms = get_the_terms( $id, 'bp_product_cat' );
+	$tags  = get_the_terms( $id, 'bp_product_tag' );
 	$thumb = 0;
 	$gallery = sp_store_gallery( $id );
 	if ( $gallery ) $thumb = (int) $gallery[0]['id'];
@@ -105,6 +107,7 @@ function sp_store_product_row( WP_Post $post ): array {
 		'stock'      => sp_store_stock_summary( $id ),
 		'variants'   => count( sp_store_get_variants( $id, true ) ),
 		'categories' => ( $terms && ! is_wp_error( $terms ) ) ? wp_list_pluck( $terms, 'name' ) : [],
+		'tags'       => ( $tags && ! is_wp_error( $tags ) ) ? wp_list_pluck( $tags, 'name' ) : [],
 		'url'        => (string) get_permalink( $id ),
 	];
 }
@@ -126,8 +129,12 @@ function sp_store_query_products( array $args ): array {
 	$search = trim( (string) ( $args['search'] ?? '' ) );
 	if ( $search !== '' ) $q['s'] = $search;
 
+	$tax = [];
 	$cat = (int) ( $args['category'] ?? 0 );
-	if ( $cat ) $q['tax_query'] = [ [ 'taxonomy' => 'bp_product_cat', 'field' => 'term_id', 'terms' => $cat ] ];
+	if ( $cat ) $tax[] = [ 'taxonomy' => 'bp_product_cat', 'field' => 'term_id', 'terms' => $cat ];
+	$tag = (int) ( $args['tag'] ?? 0 );
+	if ( $tag ) $tax[] = [ 'taxonomy' => 'bp_product_tag', 'field' => 'term_id', 'terms' => $tag ];
+	if ( $tax ) $q['tax_query'] = array_merge( [ 'relation' => 'AND' ], $tax );
 
 	switch ( (string) ( $args['sort'] ?? '' ) ) {
 		case 'az':         $q['orderby'] = [ 'title' => 'ASC', 'ID' => 'ASC' ]; break;
@@ -147,20 +154,11 @@ function sp_store_query_products( array $args ): array {
 }
 
 /**
- * Every category with the number of products in it, for Store → Categories.
- *
- * The count is worked out here rather than read from the term's own `count`, which
- * WordPress maintains for PUBLISHED posts only. A shop owner reading this screen
- * wants hidden (draft) products counted too, or the number will not agree with the
- * one the Products screen shows them two clicks away.
+ * term_id => number of products carrying it, hidden (draft) ones included. One query
+ * for every count rather than one per term; the term's own `count` is published-only.
  */
-function sp_store_category_rows(): array {
+function sp_store_term_counts( string $taxonomy ): array {
 	global $wpdb;
-
-	$terms = get_terms( [ 'taxonomy' => 'bp_product_cat', 'hide_empty' => false, 'orderby' => 'name' ] );
-	if ( is_wp_error( $terms ) || ! $terms ) return [];
-
-	// One query for every count, rather than one per category.
 	$counts = [];
 	$rows   = $wpdb->get_results( $wpdb->prepare(
 		"SELECT tt.term_id AS term_id, COUNT( DISTINCT p.ID ) AS n
@@ -171,10 +169,26 @@ function sp_store_category_rows(): array {
 		    AND p.post_type = %s
 		    AND p.post_status IN ( 'publish', 'draft', 'pending', 'private' )
 		  GROUP BY tt.term_id",
-		'bp_product_cat',
+		$taxonomy,
 		SITE_PULSE_STORE_CPT
 	) );
 	foreach ( (array) $rows as $r ) $counts[ (int) $r->term_id ] = (int) $r->n;
+	return $counts;
+}
+
+/**
+ * Every category with the number of products in it, for Store → Categories.
+ *
+ * The count is worked out here rather than read from the term's own `count`, which
+ * WordPress maintains for PUBLISHED posts only. A shop owner reading this screen
+ * wants hidden (draft) products counted too, or the number will not agree with the
+ * one the Products screen shows them two clicks away.
+ */
+function sp_store_category_rows(): array {
+	$terms = get_terms( [ 'taxonomy' => 'bp_product_cat', 'hide_empty' => false, 'orderby' => 'name' ] );
+	if ( is_wp_error( $terms ) || ! $terms ) return [];
+
+	$counts = sp_store_term_counts( 'bp_product_cat' );
 
 	$by_parent = [];
 	foreach ( $terms as $t ) $by_parent[ (int) $t->parent ][] = $t;
@@ -247,6 +261,44 @@ function sp_store_category_choices(): array {
 }
 
 /**
+ * Every tag with the number of products carrying it, for Store → Tags. Flat — tags
+ * have no parents — and counted the same way as categories (hidden products included).
+ */
+function sp_store_tag_rows(): array {
+	$terms = get_terms( [ 'taxonomy' => 'bp_product_tag', 'hide_empty' => false, 'orderby' => 'name' ] );
+	if ( is_wp_error( $terms ) || ! $terms ) return [];
+
+	$counts = sp_store_term_counts( 'bp_product_tag' );
+	$out    = [];
+	foreach ( $terms as $t ) {
+		$link  = get_term_link( $t );
+		$out[] = [
+			'id'    => (int) $t->term_id,
+			'name'  => (string) $t->name,
+			'count' => (int) ( $counts[ (int) $t->term_id ] ?? 0 ),
+			'link'  => is_wp_error( $link ) ? '' : (string) $link,
+		];
+	}
+	return $out;
+}
+
+/** Create ($id = 0) or rename a tag. Slug left alone on rename, as with categories. */
+function sp_store_tag_write( int $id, string $name ) {
+	$name = trim( sanitize_text_field( $name ) );
+	if ( $name === '' ) return new WP_Error( 'name', 'Type a name for the tag.' );
+	if ( $id <= 0 ) return wp_insert_term( $name, 'bp_product_tag' );
+	if ( ! term_exists( $id, 'bp_product_tag' ) ) return new WP_Error( 'gone', 'That tag no longer exists.' );
+	return wp_update_term( $id, 'bp_product_tag', [ 'name' => $name ] );
+}
+
+/** Every tag, for the picker. Same shape as the category choices (depth always 0). */
+function sp_store_tag_choices(): array {
+	$terms = get_terms( [ 'taxonomy' => 'bp_product_tag', 'hide_empty' => false, 'orderby' => 'name' ] );
+	if ( is_wp_error( $terms ) ) return [];
+	return array_map( static fn( $t ) => [ 'id' => (int) $t->term_id, 'name' => (string) $t->name, 'depth' => 0 ], $terms );
+}
+
+/**
  * Everything the editor needs for one product. $id 0 is a blank new product, so the
  * editor has one shape to render whether it is creating or editing.
  */
@@ -267,6 +319,7 @@ function sp_store_product_for_editor( int $id ): array {
 			'stock'           => (int) $v['stock'],
 			'committed'       => (int) $v['stock_committed'],
 			'track_stock'     => (int) $v['track_stock'] === 1,
+			'show_stock'      => (int) ( $v['show_stock'] ?? 1 ) === 1,
 			'allow_backorder' => (int) $v['allow_backorder'] === 1,
 			'weight_grams'    => (int) $v['weight_grams'],
 			'archived'        => $v['status'] === 'archived',
@@ -289,18 +342,21 @@ function sp_store_product_for_editor( int $id ): array {
 	}
 
 	$terms = $id ? wp_get_object_terms( $id, 'bp_product_cat', [ 'fields' => 'ids' ] ) : [];
+	$tags  = $id ? wp_get_object_terms( $id, 'bp_product_tag', [ 'fields' => 'ids' ] ) : [];
 
 	return [
 		'id'          => $id,
 		'title'       => $post ? (string) $post->post_title : '',
-		'status'      => $post ? ( $post->post_status === 'publish' ? 'publish' : 'draft' ) : 'draft',
+		'status'      => $post ? ( $post->post_status === 'publish' ? 'publish' : 'draft' ) : 'publish',   // a new product starts For Sale (was Hidden until 2026-11-21)
 		'content'     => $post ? (string) $post->post_content : '',
 		'menu_order'  => $post ? (int) $post->menu_order : 0,
 		'categories'  => is_wp_error( $terms ) ? [] : array_map( 'intval', $terms ),
+		'tags'        => is_wp_error( $tags ) ? [] : array_map( 'intval', $tags ),
 		'options'     => $id ? sp_store_options( $id ) : [],
 		'variants'    => $variants,
 		'gallery'     => $gallery,
 		'ships'       => $id ? sp_store_product_ships( $id ) : true,
+		'kind'        => sp_store_product_kind( $id ),
 		'seo_title'   => $id && defined( 'BP_SEO_TITLE' ) ? (string) get_post_meta( $id, BP_SEO_TITLE, true ) : '',
 		'seo_desc'    => $id && defined( 'BP_SEO_DESC' ) ? (string) get_post_meta( $id, BP_SEO_DESC, true ) : '',
 		'url'         => $id ? (string) get_permalink( $id ) : '',
@@ -314,7 +370,148 @@ function sp_store_product_for_editor( int $id ): array {
 		// Extras, each present only while its feature is on — the editor draws an Extras
 		// section only when something is here.
 		'extras'      => sp_store_product_extras( $id ),
+		// This site's own layout and product fields (sp_store_product_setup filter).
+		'setup'       => sp_store_setup_for_editor( $id ),
 	];
+}
+
+/*--------------------------------------------------------------
+# Per-site customization (sp_store_product_setup)
+--------------------------------------------------------------*/
+
+/**
+ * One store's own editor layout and product fields, set from the SITE's code, never here.
+ * Every shop sells something different (an art gallery wants Artist / Size / Date and no
+ * description box; a T-shirt shop wants none of that), so the framework only provides the
+ * hook. In the child theme's functions-site.php:
+ *
+ *   add_filter( 'sp_store_product_setup', function ( $setup ) {
+ *       $setup['hide']   = [ 'description' ];   // description | categories | tags | seo
+ *       $setup['fields'] = [
+ *           'artist' => [ 'label' => 'Artist', 'card' => true ],
+ *           'size'   => [ 'label' => 'Size', 'placeholder' => '24 x 36 in' ],
+ *           'year'   => [ 'label' => 'Date' ],
+ *       ];
+ *       return $setup;
+ *   } );
+ *
+ * Field keys: label (required), type text|textarea|number|date|select, options (select:
+ * value => label, or a plain list), placeholder, hint, page (show on the product page,
+ * default true), card (show under the title on shop cards, default false).
+ * Values live in post meta _sp_store_field_{key}. Hiding a section never deletes what is
+ * in it: a hidden description keeps its saved text.
+ *
+ * $setup['terms'] = [ 'tags' => 'Media' ] (or 'categories' => '...') moves that list off
+ * the bottom of the product page and into the details list, under that label, after the
+ * fields. Links still go to the tag/category archive.
+ */
+function sp_store_product_setup(): array {
+	static $setup = null;
+	if ( $setup !== null ) return $setup;
+
+	$raw   = (array) apply_filters( 'sp_store_product_setup', [ 'hide' => [], 'fields' => [] ] );
+	$hide  = array_values( array_intersect( array_map( 'strval', (array) ( $raw['hide'] ?? [] ) ), [ 'description', 'categories', 'tags', 'seo' ] ) );
+	$types = [ 'text', 'textarea', 'number', 'date', 'select' ];
+
+	$fields = [];
+	foreach ( (array) ( $raw['fields'] ?? [] ) as $key => $f ) {
+		$key = sanitize_key( (string) $key );
+		if ( $key === '' || ! is_array( $f ) || trim( (string) ( $f['label'] ?? '' ) ) === '' ) continue;
+		$type    = (string) ( $f['type'] ?? 'text' );
+		if ( ! in_array( $type, $types, true ) ) $type = 'text';
+		// A plain list ['Oil','Acrylic'] stores the text; a map [ 12 => 'Name' ] stores the key.
+		$raw_opts = (array) ( $f['options'] ?? [] );
+		$is_list  = array_values( $raw_opts ) === $raw_opts;
+		$options  = [];
+		foreach ( $raw_opts as $k => $v ) {
+			$options[ $is_list ? (string) $v : (string) $k ] = (string) $v;
+		}
+		$fields[ $key ] = [
+			'key'         => $key,
+			'label'       => (string) $f['label'],
+			'type'        => $type,
+			'options'     => $options,
+			'placeholder' => (string) ( $f['placeholder'] ?? '' ),
+			'hint'        => (string) ( $f['hint'] ?? '' ),
+			'page'        => ! array_key_exists( 'page', $f ) || ! empty( $f['page'] ),
+			'card'        => ! empty( $f['card'] ),
+		];
+	}
+	$terms = [];
+	foreach ( (array) ( $raw['terms'] ?? [] ) as $which => $label ) {
+		$tax = [ 'tags' => 'bp_product_tag', 'categories' => 'bp_product_cat' ][ $which ] ?? '';
+		if ( $tax !== '' && trim( (string) $label ) !== '' ) $terms[ $tax ] = (string) $label;
+	}
+
+	return $setup = [ 'hide' => $hide, 'fields' => $fields, 'terms' => $terms ];
+}
+
+/** Has the site moved this taxonomy's list into the product details (so the page skips its usual line)? */
+function sp_store_terms_moved( string $taxonomy ): bool {
+	return isset( sp_store_product_setup()['terms'][ $taxonomy ] );
+}
+
+/** A product's stored value for one custom field (raw, as saved). */
+function sp_store_field_value( int $product_id, string $key ): string {
+	return (string) get_post_meta( $product_id, '_sp_store_field_' . $key, true );
+}
+
+/** A value made fit for display: dates in the site's format, select values as their label. */
+function sp_store_field_display( array $field, string $value ): string {
+	if ( $value === '' ) return '';
+	if ( $field['type'] === 'date' ) {
+		$ts = strtotime( $value );
+		return $ts ? date_i18n( get_option( 'date_format' ), $ts ) : $value;
+	}
+	if ( $field['type'] === 'select' ) return $field['options'][ $value ] ?? $value;
+	return $value;
+}
+
+/** Clean one submitted value by its field type. */
+function sp_store_field_clean( array $field, $value ): string {
+	$value = wp_unslash( (string) $value );
+	switch ( $field['type'] ) {
+		case 'textarea': return sanitize_textarea_field( $value );
+		case 'number':   return is_numeric( trim( $value ) ) ? (string) ( trim( $value ) + 0 ) : '';
+		case 'date':     return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) ? $value : '';
+		case 'select':   return array_key_exists( $value, $field['options'] ) ? $value : '';
+		default:         return sanitize_text_field( $value );
+	}
+}
+
+/** The editor's copy: what to hide, and each field with this product's value. */
+function sp_store_setup_for_editor( int $id ): array {
+	$setup  = sp_store_product_setup();
+	$fields = [];
+	foreach ( $setup['fields'] as $key => $f ) {
+		$fields[] = [
+			'key'         => $key,
+			'label'       => $f['label'],
+			'type'        => $f['type'],
+			'options'     => array_map( static fn( $v, $l ) => [ 'value' => (string) $v, 'label' => $l ], array_keys( $f['options'] ), $f['options'] ),
+			'placeholder' => $f['placeholder'],
+			'hint'        => $f['hint'],
+			'value'       => $id ? sp_store_field_value( $id, $key ) : '',
+		];
+	}
+	return [ 'hide' => $setup['hide'], 'fields' => $fields ];
+}
+
+/**
+ * What sort of thing a product is: product (tangible) | membership | download.
+ *
+ * Only a label for the editor's radio. Shipping is still the `ships` flag on its own, so
+ * a tangible product that is picked up in store (unticked Ships) stays a product. Products
+ * saved before the radio existed are read from what they already have.
+ */
+function sp_store_product_kind( int $id ): string {
+	if ( ! $id ) return 'product';
+	$kind = (string) get_post_meta( $id, '_sp_store_kind', true );
+	if ( in_array( $kind, [ 'product', 'membership', 'download' ], true ) ) return $kind;
+	if ( sp_store_product_ships( $id ) ) return 'product';
+	if ( function_exists( 'sp_member_product_plan' ) && sp_member_product_plan( $id ) ) return 'membership';
+	if ( function_exists( 'sp_store_downloads_for_editor' ) && sp_store_downloads_for_editor( $id ) ) return 'download';
+	return 'product';
 }
 
 /** The Extras the editor should offer for this product, keyed by feature. Empty = no Extras section. */
@@ -353,7 +550,7 @@ function sp_store_product_extras( int $id ): array {
  * The post fields are written here; everything commercial goes to
  * sp_store_save_product_data(), the same function wp-admin's metaboxes call.
  *
- * @param array $data id, title, status, content, menu_order, categories[], seo_title,
+ * @param array $data id, title, status, content, menu_order, categories[], tags[], seo_title,
  *                    seo_desc, ships, options[], variants[], gallery[]
  * @return array|WP_Error [ 'id' => int, 'warnings' => string[] ]
  */
@@ -389,6 +586,24 @@ function sp_store_save_product_from_site_pulse( array $data, int $user_id ) {
 	// ---- Categories
 	$cats = array_values( array_filter( array_map( 'intval', (array) ( $data['categories'] ?? [] ) ) ) );
 	wp_set_object_terms( $id, $cats, 'bp_product_cat', false );
+
+	// ---- Tags. Only touched when the editor sent them, so an older cached editor
+	// (no Tags section yet) saving a product cannot wipe its tags.
+	if ( array_key_exists( 'tags', $data ) && $data['tags'] !== null ) {
+		$tags = array_values( array_filter( array_map( 'intval', (array) $data['tags'] ) ) );
+		wp_set_object_terms( $id, $tags, 'bp_product_tag', false );
+	}
+
+	// ---- This site's custom fields. Only touched when the editor sent them, and only the
+	// keys the site defines, so a field removed from the setup keeps its old meta untouched.
+	if ( isset( $data['fields'] ) && is_array( $data['fields'] ) ) {
+		foreach ( sp_store_product_setup()['fields'] as $key => $f ) {
+			if ( ! array_key_exists( $key, $data['fields'] ) ) continue;
+			$value = sp_store_field_clean( $f, $data['fields'][ $key ] );
+			if ( $value === '' ) delete_post_meta( $id, '_sp_store_field_' . $key );
+			else                 update_post_meta( $id, '_sp_store_field_' . $key, wp_slash( $value ) );
+		}
+	}
 
 	// ---- SEO: a product made here must not ship with default meta, which would undo
 	// the whole reason products are a post type.
@@ -427,6 +642,10 @@ function sp_store_save_product_from_site_pulse( array $data, int $user_id ) {
 	if ( array_key_exists( 'grants_plan', $data ) ) $commerce['grants_plan'] = (int) $data['grants_plan'];
 	if ( array_key_exists( 'agreements', $data ) )  $commerce['agreements']  = (array) $data['agreements'];
 	$warnings = sp_store_save_product_data( $id, $commerce );
+
+	if ( in_array( $data['kind'] ?? '', [ 'product', 'membership', 'download' ], true ) ) {
+		update_post_meta( $id, '_sp_store_kind', $data['kind'] );
+	}
 
 	// The first photo doubles as the Featured Image, so cards, search results and
 	// social shares all show the same picture as the product page.
@@ -545,10 +764,12 @@ function sp_store_ajax_products(): void {
 		'search'   => sanitize_text_field( wp_unslash( (string) ( $_POST['search'] ?? '' ) ) ),
 		'status'   => sanitize_key( (string) ( $_POST['status'] ?? '' ) ),
 		'category' => (int) ( $_POST['category'] ?? 0 ),
+		'tag'      => (int) ( $_POST['tag'] ?? 0 ),
 		'sort'     => sanitize_key( (string) ( $_POST['sort'] ?? '' ) ),
 		'page'     => (int) ( $_POST['page'] ?? 1 ),
 	] );
 	$out['categories'] = sp_store_category_choices();
+	$out['tags']       = sp_store_tag_choices();
 	$out['shop_url']   = sp_store_shop_url();
 	wp_send_json_success( $out );
 }
@@ -561,6 +782,7 @@ function sp_store_ajax_product_get(): void {
 	wp_send_json_success( [
 		'product'    => $product,
 		'categories' => sp_store_category_choices(),
+		'tags'       => sp_store_tag_choices(),
 		'statuses'   => sp_store_product_statuses(),
 	] );
 }
@@ -591,12 +813,15 @@ function sp_store_ajax_product_save(): void {
 		'content'    => wp_unslash( (string) ( $_POST['content'] ?? '' ) ),
 		'menu_order' => (int) ( $_POST['menu_order'] ?? 0 ),
 		'categories' => $json( 'categories' ),
+		'tags'       => isset( $_POST['tags'] ) ? $json( 'tags' ) : null,
 		'seo_title'  => wp_unslash( (string) ( $_POST['seo_title'] ?? '' ) ),
 		'seo_desc'   => wp_unslash( (string) ( $_POST['seo_desc'] ?? '' ) ),
 		'ships'      => ! empty( $_POST['ships'] ),
+		'kind'       => sanitize_key( (string) ( $_POST['kind'] ?? '' ) ),
 		'options'    => $json( 'options' ),
 		'variants'   => $json( 'variants' ),
 		'gallery'    => $json( 'gallery' ),
+		'fields'     => isset( $_POST['fields'] ) ? $json( 'fields' ) : null,
 	], $me );
 
 	if ( is_wp_error( $result ) ) wp_send_json_error( [ 'message' => $result->get_error_message() ] );
@@ -620,6 +845,18 @@ function sp_store_ajax_product_trash(): void {
 	wp_trash_post( $id );
 	if ( function_exists( 'site_pulse_log' ) ) site_pulse_log( 'store_product', 'Removed product "' . $post->post_title . '".', [ 'product_id' => $id, 'user_id' => $me ] );
 	wp_send_json_success( [ 'message' => 'Product removed. It can be brought back from the Trash in WordPress.' ] );
+}
+
+// Product photos go in the "Products" image category. A site adds more names with
+// add_filter( 'sp_store_image_categories', fn( $c ) => array_merge( $c, [ 'Artwork' ] ) );
+function sp_store_tag_product_image( int $aid ): void {
+	if ( ! taxonomy_exists( 'image-categories' ) ) return;
+	foreach ( (array) apply_filters( 'sp_store_image_categories', [ 'Products' ] ) as $term ) {
+		$term = trim( (string) $term );
+		if ( $term === '' ) continue;
+		if ( ! term_exists( $term, 'image-categories' ) ) wp_insert_term( $term, 'image-categories' );
+		wp_set_object_terms( $aid, $term, 'image-categories', true );
+	}
 }
 
 add_action( 'wp_ajax_site_pulse_store_product_upload', 'sp_store_ajax_product_upload' );
@@ -664,6 +901,8 @@ function sp_store_ajax_product_upload(): void {
 	], $moved['file'] );
 	if ( is_wp_error( $aid ) || ! $aid ) wp_send_json_error( [ 'message' => 'Could not save the photo.' ] );
 	wp_update_attachment_metadata( $aid, wp_generate_attachment_metadata( $aid, $moved['file'] ) );
+
+	sp_store_tag_product_image( (int) $aid );
 
 	wp_send_json_success( [ 'id' => (int) $aid, 'url' => (string) ( wp_get_attachment_image_url( $aid, 'medium' ) ?: $moved['url'] ) ] );
 }
@@ -739,6 +978,65 @@ function sp_store_ajax_category_delete(): void {
 		'rows'       => sp_store_category_rows(),
 		'categories' => sp_store_category_choices(),
 	] );
+}
+
+
+/*--------------------------------------------------------------
+# AJAX — Tags
+--------------------------------------------------------------*/
+
+/** From the product editor: add (or reuse, by name) a tag and return the picker list. */
+add_action( 'wp_ajax_site_pulse_store_tag_add', 'sp_store_ajax_tag_add' );
+function sp_store_ajax_tag_add(): void {
+	sp_store_products_gate();
+	$name = trim( sanitize_text_field( wp_unslash( (string) ( $_POST['name'] ?? '' ) ) ) );
+	if ( $name === '' ) wp_send_json_error( [ 'message' => 'Type a name for the tag.' ] );
+
+	$term = term_exists( $name, 'bp_product_tag' ) ?: wp_insert_term( $name, 'bp_product_tag' );
+	if ( is_wp_error( $term ) ) wp_send_json_error( [ 'message' => $term->get_error_message() ] );
+
+	wp_send_json_success( [
+		'id'   => (int) ( is_array( $term ) ? $term['term_id'] : $term ),
+		'tags' => sp_store_tag_choices(),
+	] );
+}
+
+add_action( 'wp_ajax_site_pulse_store_tags', 'sp_store_ajax_tags' );
+function sp_store_ajax_tags(): void {
+	sp_store_products_gate();
+	wp_send_json_success( [ 'rows' => sp_store_tag_rows() ] );
+}
+
+/** Add or rename, from Store → Tags. Replies with the whole list. */
+add_action( 'wp_ajax_site_pulse_store_tag_save', 'sp_store_ajax_tag_save' );
+function sp_store_ajax_tag_save(): void {
+	sp_store_products_gate();
+
+	$res = sp_store_tag_write( (int) ( $_POST['id'] ?? 0 ), (string) wp_unslash( $_POST['name'] ?? '' ) );
+	if ( is_wp_error( $res ) ) {
+		$msg = 'term_exists' === $res->get_error_code() ? 'There is already a tag with that name.' : $res->get_error_message();
+		wp_send_json_error( [ 'message' => $msg ] );
+	}
+
+	wp_send_json_success( [
+		'id'   => (int) ( is_array( $res ) ? $res['term_id'] : $res ),
+		'rows' => sp_store_tag_rows(),
+		'tags' => sp_store_tag_choices(),
+	] );
+}
+
+/** Delete a tag. Products are never deleted with it; they just lose the tag. */
+add_action( 'wp_ajax_site_pulse_store_tag_delete', 'sp_store_ajax_tag_delete' );
+function sp_store_ajax_tag_delete(): void {
+	sp_store_products_gate();
+
+	$id = (int) ( $_POST['id'] ?? 0 );
+	if ( ! $id || ! term_exists( $id, 'bp_product_tag' ) ) wp_send_json_error( [ 'message' => 'That tag no longer exists.' ] );
+
+	$res = wp_delete_term( $id, 'bp_product_tag' );
+	if ( is_wp_error( $res ) ) wp_send_json_error( [ 'message' => $res->get_error_message() ] );
+
+	wp_send_json_success( [ 'rows' => sp_store_tag_rows(), 'tags' => sp_store_tag_choices() ] );
 }
 
 

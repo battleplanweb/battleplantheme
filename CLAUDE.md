@@ -32,7 +32,9 @@ The detailed reference lives in `docs/` beside this file (from a client folder: 
 | Media replace, DB search & replace, AI alt text | `docs/admin-tools.md` |
 | Any CSS — `style-site.css` or framework `style-*.css`, plus the rendered-HTML selector map | `docs/css.md` |
 | Jobsite GEO (CPT, taxonomies, scoring, API, app) | `docs/jobsite-geo.md` |
+| Events + Booking (Booking Types = live-linked templates → Offerings / Reservations / Customers screens, sessions, events as an offering's website page — booking owns the dates; each date or all dates together — paid seats via Store checkout) | `docs/events-booking.md` |
 | AI Chat widget + Twilio SMS handoff | `docs/ai-chat.md` |
+| HVAC replacement price estimator `[hvac-estimator]` (per-site prices in the `hvac_estimator` option) | `docs/hvac-estimator.md` |
 | Editing a LIVE site's page content, Page Top/Bottom, SEO title/description or image alt text (`wp bp` over SSH) | `docs/cli.md` |
 
 When a framework function is removed or renamed, grep every client `script-site.js` / `functions-site.php` for callers before shipping.
@@ -66,6 +68,15 @@ When a framework function is removed or renamed, grep every client `script-site.
 - Layout: default to `display: grid`, override to `flex` only with a reason → `docs/css.md`
 - Conversion tracking — name it `conversion-*` and it reports itself → `docs/shortcodes-content.md`
 - Live-site edits go through `bp-wp <install> bp …` — `bp get` first, `--dry-run` and show the diff before every write, HTML via stdin only; every SEO pass also runs `bp images` and fixes weak alt → `docs/cli.md`
+
+---
+
+## CSS & Styling Rules
+- Always apply the `theme-css-system` skill when creating or editing any CSS file or PHP template.
+- Never invent section-specific classes (e.g., `.billing-card`, `.settings-input`) when an existing shared component class or `:root` CSS variable achieves the same layout or style.
+- Never write arbitrary pixel values for spacing, sizing, or border-radius; always snap to existing `--space-*` or `--radius-*` variables (framework `:root` in `style.css`; fixed whole-pixel — never make them fluid) → `docs/css.md`
+- **Class naming = `<base> <base>-<module>`** (Glendon, 2026-11-20), e.g. `sp-section sp-section-store`, `sp-card sp-card-review`. Every element carries the base component class, so it defaults to the base look. The module class goes on the component's root only, and exists only to override. Its children keep their base classes (`.sp-card-review .sp-card__title` when one needs a tweak). Generic variants keep `--` (`sp-card--flush`, `sp-options--inline`).
+- **Condense into the base.** Put as much as possible in the base rule. A module rule exists only when there's a real reason (a layout that screen needs), never to re-state or nudge the base (a 14px pad where the base is 16). A new module should need no CSS at all until it has a reason. Choices are `.sp-options` + `.sp-check-row`, never a toolbar; toolbars are only bars of controls.
 
 ---
 
@@ -297,7 +308,8 @@ unaffected either way.
 ## Available `includes/` Modules (opt-in)
 - `includes-hvac.php` — HVAC-specific functionality
 - `includes-jobsite-geo.php` / `-api.php` — Jobsite location tracking
-- `includes-events.php` — Events calendar
+- `includes-events.php` — Events calendar (gate on `bp_events_on()` / `bp_calendar_on()`, never the option — see `docs/events-booking.md`)
+- `includes-hvac-estimator.php` — `[hvac-estimator]` replacement price tool; `update_option( 'hvac_estimator', [ 'install' => 'true', … ] )` in functions-site.php (see `docs/hvac-estimator.md`)
 - `includes-pedigree.php` — Dog breeding/pedigree
 - `includes-timeline.php` — Timeline component
 - `includes-woocommerce.php` — WooCommerce integration
@@ -323,6 +335,49 @@ American Standard, Amana, Bryant, Carrier, Comfortmaker, Goodman, Heil, Honeywel
 - EverCache caches pages including nonces — use `DONOTCACHEPAGE` + `nocache_headers()` on `template_redirect` for any page with user-specific content
 - WAF (ModSecurity) strips POST fields named `password` on non-login endpoints — use an alternative field name (e.g. `member_pass`)
 - `bp_enqueue_script` prefers `.min.js` — if a `.min.js` exists on the server, changes to the `.js` file are ignored until re-minified
+
+---
+
+## Site Pulse Store — one shop's customizations go in the SITE, never the framework
+When a client wants their store to work differently (extra product fields, a section they don't need), add it in the child theme's `functions-site.php` through a filter. Don't edit the Store module for one shop.
+- **`sp_store_product_setup`**: `hide` (`description` | `categories` | `tags` | `seo`) removes sections from the Site Pulse product editor. Hidden content is kept, not deleted. `fields` adds custom product fields: `label`, `type` (`text` | `textarea` | `number` | `date` | `select` with `options`), `placeholder`, `hint`, `page` (on the product page, default on), `card` (under the title on shop cards, default off). Values are stored in post meta `_sp_store_field_{key}`. Full doc block on `sp_store_product_setup()` in `includes-site-pulse-store-products.php`. On the page they render as `dl.store-single-fields`, and on cards as `p.store-card-field`; each item has a `store-field-{key}` class for site CSS. Example: Soil & Oil (Artist / Size / Date). `terms` (`[ 'tags' => 'Media' ]` or `'categories' => '…'`) moves that list from the bottom of the product page into the details list under that label. List products by a field with `[store-products field="artist" value="123"]`; only keys the site defines are accepted, and a blank value shows nothing.
+- **Service fee** (2026-11-22, store DB 1.10): every cart, including paid bookings, gets one "Service fee" line. It is charged on subtotal less discount, before shipping and tax, and is never itself taxed. It is two stored shares:
+  - `fee_card_cents` / `fee_card_rate`: setting `fee_card_rate`, client-editable in Settings → E-Commerce → Service fee.
+  - `fee_platform_cents` / `fee_platform_rate`: setting `fee_platform_rate`. It is Battle Plan's share, invoiced by hand; its definition is only added for `site_pulse_is_god()`, so clients can't see or save it.
+  - Both rates default to 0, so each store is set up by hand. They clamp to 0–10, and 0 turns a share off.
+  - Math: `sp_store_fees_for()` in `includes-site-pulse-store-totals.php`, called by `sp_store_quote()`. Stripe gets the fee as a line item (tax code `txcd_00000000` under Stripe Tax); Clover gets it as a cart line.
+  - **Memberships** pay it unless the `fee_memberships` toggle ("Charge it on memberships", default on) is off. Off leaves membership products out of the fee base entirely.
+  - A renewing membership's share is stored on the order as `fee_renew_card_cents` / `fee_renew_platform_cents`. Stripe charges it as a recurring "Service fee" line, and the rest of the fee stays a one-off on the first invoice. Each `invoice.paid` renewal payment row gets those shares in `meta` (`sp_member_renewal_fee_meta()`).
+  - Store toggles save off as `'0'`, never `''`, because `wpdb::get_var()` returns null for an empty string and the setting would fall back to its default. Read toggles with `=== '1'`.
+  - Receipts use `{fee_line}`, which is auto-inserted before `{shipping_line}` in saved templates that predate it.
+  - E-Commerce → **Revenue** (`sp_store_ajax_fees`, was Service Fees; 2026-11-22) is the whole money report for a range: what sold by kind (products / downloads / memberships incl. renewals / bookings, from line subtotals), discounts, both fee shares, shipping, tax, collected, refunds, net, best sellers and a by-month list. It counts paid, partly refunded and fully refunded orders by placed date (refunds subtract), plus renewal payments.
+- **Stripe on-site checkout** (2026-11-23): Settings → E-Commerce → Payment processor → "Where customers pay" = `embedded` (default; Stripe Embedded Checkout mounted in `/checkout/`) or `hosted` (redirect). The publishable key lives on Settings → API Keys (`store_stripe_publishable` = the Store's `stripe_publishable` setting, or wp-config `BP_STORE_STRIPE_PUBLISHABLE`). `sp_store_stripe_embedded()` falls back to the redirect when the pk is missing or its mode disagrees with the secret key. Same Checkout Session + `ui_mode=embedded` + `return_url`; webhook, return page and key permissions unchanged. Stripe.js is injected by `script-store.js` (`BPStorePay.stripe`), allowed by the CSP's `strict-dynamic`.
+- Other existing per-site store filters: `sp_store_catalog_header` (markup printed under the catalog heading, with or without results; Soil & Oil uses it for search + A–Z), `sp_store_empty_message` (the no-products text), `sp_store_image_categories` (image categories given to product photos, default `[ 'Products' ]`; Soil & Oil adds "Artwork"), `sp_store_price_variants` (which of a product's active variants set its card/list price and price sort, default all = a range; Soil & Oil keeps only the first, the original painting), `sp_store_base_slug`, `sp_store_picker_style`, `sp_store_sort_options`, `sp_store_per_page_choices`, `sp_store_catalog_is_home`, `sp_store_cart_lifetime`, `sp_store_checkout_slug`.
+- **What a business calls its things** (2026-11-22): `site_pulse_term( 'product' | 'service', 'one' | 'many' )`, and `spTerm(key, many, lower)` in JS from `sitePulseData.terms`. Products are set in Settings → E-Commerce (`store_name_one` / `_many`, e.g. Artwork); services in Settings → Booking → What You Call Them (`booking_name_one` / `_many`, e.g. Retreats). Blank = Product(s) / Service(s). Use it for every new user-facing "product"/"service" word in Site Pulse. It is Site Pulse only; the public catalog title is still `post_type_archive_title` / `sp_store_base_slug`.
+- If a customization a client asks for has no hook yet, add a **generic** filter to the framework, then use it from the site.
+
+---
+
+## Site Pulse Website Content (module `content`, off by default)
+Add, edit and delete the site's pages and posts from Site Pulse (`includes/includes-site-pulse-content.php`). wp-admin keeps working, and WordPress revisions are kept as usual.
+- **Content types:** posts and pages by default. A site adds others in `functions-site.php` with `add_filter( 'sp_content_types', fn( $t ) => $t + [ 'testimonials' => true, 'artists' => 'Artists' ] );`. `true` uses the post type's own label.
+- **Permissions:** five levels per type, generated like the per-report caps: `content_{type}_write`, `_publish`, `_edit_all`, `_delete_own`, `_delete_all`. They appear in the Roles grid under "Website Content". When the module is switched on, owner, admin and system-admin are granted every level for every type, including types added later. A writer without `publish` can only Save Draft or Submit for Review. Reviewers (people with `edit_all` for that type) get a `content_review` notification, and the writer gets `content_published` when it goes live. Without `edit_all`, people see only their own items.
+- **Layout pages:** only the inside of each `[txt]` block is editable; every other part of the markup is kept byte-for-byte. Shortcodes inside a text block become locked `<code class="sp-wc-chip" data-sc="N">` chips that carry only an index back to the original. They can be moved or deleted, but not edited or forged. Only changed blocks are rewritten. A save is refused if the page changed on the server since it was opened (fingerprint). Page Top / Page Bottom (`page-top_text` / `page-bottom_text`) are edited the same way when a page has them. Editor HTML must be filled **after** `markUniqueSpans()`, or that function's span rewrites get saved into the page.
+- The home page and the blog page can't be deleted from here.
+
+---
+
+## Site Pulse lists of many items get the 1 / 2 / cards toggle
+Every Site Pulse screen that lists many items (orders, products, categories, tags, customers, services…) offers the one-column / two-column / cards layout toggle (Glendon, 2026-11-22). It's automatic: add the list container's id to `SP_COL_LISTS` in `script-site-pulse.js`, and render the rows as `.sp-card.sp-card--flush > .sp-list > .sp-row` (the split and the cards CSS work on that shape). `initListColumns()` adds the toggle to the toolbar or tabs right above the list, defaults to two columns, and remembers each screen's choice on the device. Below 1280px it is always one column. A list with drag grips (`[data-sp-reorder]`) stays one column. Never use a `<table>` for a list of records; use rows with a search and sort select, as Users does. Exempt: two-pane inboxes (Messages, Customer Messages), where the list sits beside the open thread.
+
+## Site Pulse rows that open an editor end in the round pencil, never an arrow
+A row you click to edit something you set up (a product, service, template, event, page, plan) ends with `spEditMark()`, the round pencil, placed before its trash button (Glendon, 2026-11-22). The arrow (`spIcon('chev-r')`) is only for opening a record to view it (an order, a booking, a report, a mileage day) or picking from a list. A thing's whole setup lives in its one editor: no separate buttons on the row for parts of it, so a service's Dates are a section inside the service editor.
+
+## Site Pulse inputs with a default show it as the placeholder
+Any Site Pulse input that falls back to a default when left blank must show that default as its `placeholder` (Glendon, 2026-11-22), so people can see what blank means. Store settings do it automatically: `sp_store_setting_defs()` entries send `placeholder` (their own `placeholder` key, else `default`).
+
+## Site Pulse ⓘ help (use it, don't add visible hint text)
+Explanations live behind an ⓘ button that opens a short panel under the label (Glendon, 2026-11-21) — so hints can be real instructions without cluttering screens. New code builds the pair with `spInfoPair(text)` → `[buttonHTML, panelHTML]` (button inside the `<label>`/heading, panel right after it). Existing screens convert automatically in `markUniqueSpans()` → `spInfoize()`: a `.sp-form-group > .sp-help-text` and a `.sp-settings-card > h3 + .sp-help-text` become ⓘ. Opt out with `.sp-help-text--keep` (status/warnings that must be seen); hints with an `id` (JS-updated) and empty ones are skipped. Styles: `.sp-info`, `.sp-info__text` in style-site-pulse.css. The button is the same filled "?" disc as `.sp-help` (2026-11-22), so every hint looks alike.
 
 ---
 

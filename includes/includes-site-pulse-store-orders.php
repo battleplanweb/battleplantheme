@@ -170,7 +170,7 @@ function sp_store_order_detail( array $o ): array {
 	}
 
 	$payments = $wpdb->get_results( $wpdb->prepare(
-		"SELECT kind, amount_cents, status, description, reason, created_at FROM " . sp_store_table( 'payments' ) . "
+		"SELECT kind, amount_cents, status, description, reason, provider_object, created_at FROM " . sp_store_table( 'payments' ) . "
 		  WHERE order_id = %d ORDER BY id ASC",
 		(int) $o['id']
 	), ARRAY_A ) ?: [];
@@ -182,6 +182,7 @@ function sp_store_order_detail( array $o ): array {
 			'status' => (string) $p['status'],
 			'note'   => (string) ( $p['reason'] ?: $p['description'] ),
 			'when'   => sp_store_local_time( $p['created_at'] ),
+			'ref'    => (string) $p['provider_object'],
 		];
 	}
 
@@ -208,6 +209,12 @@ function sp_store_order_detail( array $o ): array {
 		'shipping'       => sp_store_money_text( (int) $o['shipping_cents'], $cur ),
 		'shipping_method'=> (string) $o['shipping_method'],
 		'tax'            => (int) $o['tax_cents'] ? sp_store_money_text( (int) $o['tax_cents'], $cur ) : '',
+		'fee'            => (int) $o['fee_card_cents'] + (int) $o['fee_platform_cents'] ? sp_store_money_text( (int) $o['fee_card_cents'] + (int) $o['fee_platform_cents'], $cur ) : '',
+		'fee_split'      => (int) $o['fee_card_cents'] + (int) $o['fee_platform_cents']
+			? sprintf( 'Card %s (%s%%) · Site Pulse %s (%s%%)',
+				sp_store_money_text( (int) $o['fee_card_cents'], $cur ), rtrim( rtrim( (string) $o['fee_card_rate'], '0' ), '.' ),
+				sp_store_money_text( (int) $o['fee_platform_cents'], $cur ), rtrim( rtrim( (string) $o['fee_platform_rate'], '0' ), '.' ) )
+			: '',
 		'paid'           => sp_store_money_text( (int) $o['paid_cents'], $cur ),
 		'refunded'       => (int) $o['refunded_cents'] ? sp_store_money_text( (int) $o['refunded_cents'], $cur ) : '',
 		'refundable'     => number_format( sp_store_refundable_cents( $o ) / 100, 2, '.', '' ),
@@ -222,12 +229,54 @@ function sp_store_order_detail( array $o ): array {
 		'staff_notes'    => (string) $o['staff_notes'],
 		'cancel_reason'  => (string) $o['cancel_reason'],
 		'payments'       => $ledger,
+		'processor'      => sp_store_order_processor( $o ),
 		'agreements'     => function_exists( 'sp_store_order_agreements_display' ) ? sp_store_order_agreements_display( (int) $o['id'] ) : [],
 		'downloads'      => function_exists( 'sp_store_order_downloads' ) ? array_map( static fn( $d ) => $d['name'], sp_store_order_downloads( $o ) ) : [],
 		'download_count' => (int) ( $o['downloads'] ?? 0 ),
 		'can_refund'     => in_array( $o['payment_status'], [ 'paid', 'partially_refunded' ], true )
 			&& sp_store_refundable_cents( $o ) > 0
 			&& sp_store_provider_can_refund( (string) $o['provider'] ),
+	];
+}
+
+/**
+ * The payment processor's own ids for an order, to look it up there (Stripe dashboard)
+ * when something needs cross-checking. Test or live comes from the checkout session id
+ * (cs_test_ / cs_live_), falling back to the mode of the key in use now.
+ */
+function sp_store_order_processor( array $o ): array {
+	$provider  = (string) $o['provider'];
+	$session   = (string) $o['provider_checkout'];
+	$is_stripe = $provider === 'stripe';
+	$mode      = '';
+	if ( $is_stripe ) {
+		if ( strpos( $session, 'cs_test_' ) === 0 ) $mode = 'test';
+		elseif ( strpos( $session, 'cs_live_' ) === 0 ) $mode = 'live';
+		elseif ( function_exists( 'sp_store_stripe_mode' ) ) $mode = sp_store_stripe_mode();
+	}
+	$base  = 'https://dashboard.stripe.com/' . ( $mode === 'test' ? 'test/' : '' );
+	$pages = [ 'pi_' => 'payments', 'ch_' => 'payments', 'py_' => 'payments', 'in_' => 'invoices', 'cus_' => 'customers', 'sub_' => 'subscriptions' ];
+
+	$refs = [];
+	foreach ( [
+		'Payment'      => (string) $o['provider_payment'],
+		'Customer'     => (string) $o['provider_customer'],
+		'Subscription' => (string) $o['provider_subscription'],
+		'Checkout'     => $session,
+	] as $label => $id ) {
+		if ( $id === '' ) continue;
+		$url = '';
+		if ( $is_stripe ) {
+			foreach ( $pages as $prefix => $page ) {
+				if ( strpos( $id, $prefix ) === 0 ) { $url = $base . $page . '/' . rawurlencode( $id ); break; }
+			}
+		}
+		$refs[] = [ 'label' => $label, 'id' => $id, 'url' => $url ];
+	}
+	return [
+		'name' => [ 'stripe' => 'Stripe', 'clover' => 'Clover' ][ $provider ] ?? ucfirst( $provider ),
+		'mode' => $mode,
+		'refs' => $refs,
 	];
 }
 
@@ -551,6 +600,9 @@ function sp_store_recount_refunds( int $order_id ): void {
 		'payment_status' => $status,
 		'updated_at'     => current_time( 'mysql', true ),
 	], [ 'id' => $order_id ] );
+
+	/** Refunds changed (from Site Pulse or the processor's dashboard). A full refund cancels booked seats. */
+	do_action( 'sp_store_refunds_recounted', $order_id, $status );
 }
 
 
@@ -658,6 +710,175 @@ function sp_store_ajax_orders(): void {
 	$out['to_ship']    = sp_store_count_to_ship();
 	$out['can_manage'] = sp_store_can_manage_orders( $me );
 	wp_send_json_success( $out );
+}
+
+add_action( 'wp_ajax_site_pulse_store_fees', 'sp_store_ajax_fees' );
+/**
+ * E-Commerce → Revenue: the whole money picture for a period, all at once.
+ *
+ * - What sold, by kind: products, downloads, memberships (first purchase + renewals) and bookings.
+ *   Line subtotals, before discounts, fees, shipping and tax.
+ * - Order-level money: discounts given, service fees (card share + Site Pulse share), shipping, tax.
+ * - Collected (what customers paid), refunds, and net (collected less refunds).
+ * - Month by month, and the best sellers (products and bookings) by revenue.
+ *
+ * Counts paid, partly refunded and fully refunded orders by when they were placed — a refunded order still
+ * shows what was taken and what went back. Membership renewals are their own payments (sp_member_renewal_fee_meta).
+ */
+function sp_store_ajax_fees(): void {
+	sp_store_orders_gate( 'sp_store_can_view' );
+	global $wpdb;
+
+	$range = sanitize_key( wp_unslash( (string) ( $_POST['range'] ?? 'month' ) ) );
+	$tz    = wp_timezone();
+	$now   = new DateTimeImmutable( 'now', $tz );
+	$from  = null;
+	$to    = null;
+	switch ( $range ) {
+		case 'last_month': $from = $now->modify( 'first day of last month' )->setTime( 0, 0 ); $to = $now->modify( 'first day of this month' )->setTime( 0, 0 ); break;
+		case 'year':       $from = $now->setDate( (int) $now->format( 'Y' ), 1, 1 )->setTime( 0, 0 ); break;
+		case 'last_year':  $from = $now->setDate( (int) $now->format( 'Y' ) - 1, 1, 1 )->setTime( 0, 0 ); $to = $now->setDate( (int) $now->format( 'Y' ), 1, 1 )->setTime( 0, 0 ); break;
+		case 'all':        break;
+		default:           $range = 'month'; $from = $now->modify( 'first day of this month' )->setTime( 0, 0 );
+	}
+
+	$utc   = new DateTimeZone( 'UTC' );
+	$where = "payment_status IN ('paid','partially_refunded','refunded')";
+	if ( $from ) $where .= $wpdb->prepare( ' AND COALESCE(placed_at, created_at) >= %s', $from->setTimezone( $utc )->format( 'Y-m-d H:i:s' ) );
+	if ( $to )   $where .= $wpdb->prepare( ' AND COALESCE(placed_at, created_at) < %s', $to->setTimezone( $utc )->format( 'Y-m-d H:i:s' ) );
+
+	$orders = $wpdb->get_results(
+		"SELECT id, COALESCE(placed_at, created_at) AS at, discount_cents, shipping_cents, tax_cents, fee_card_cents, fee_platform_cents, paid_cents, refunded_cents
+		   FROM " . sp_store_table( 'orders' ) . " WHERE $where",
+		ARRAY_A
+	) ?: [];
+
+	// What each order sold, by kind. A product's own kind (membership / download) splits the product lines.
+	$items = [];
+	if ( $orders ) {
+		$ids = implode( ',', array_map( 'intval', array_column( $orders, 'id' ) ) );
+		foreach ( $wpdb->get_results( "SELECT order_id, product_id, name, kind, qty, subtotal_cents FROM " . sp_store_table( 'order_items' ) . " WHERE order_id IN ($ids)", ARRAY_A ) ?: [] as $it ) {
+			$items[ (int) $it['order_id'] ][] = $it;
+		}
+	}
+	$kinds = [];
+	$kind_of = static function ( array $it ) use ( &$kinds ): string {
+		if ( $it['kind'] === 'booking' ) return 'bookings';
+		$pid = (int) $it['product_id'];
+		if ( ! isset( $kinds[ $pid ] ) ) {
+			$k = function_exists( 'sp_store_product_kind' ) ? sp_store_product_kind( $pid ) : 'product';
+			$kinds[ $pid ] = [ 'membership' => 'memberships', 'download' => 'downloads' ][ $k ] ?? 'products';
+		}
+		return $kinds[ $pid ];
+	};
+
+	$blank = [ 'orders' => 0, 'products' => 0, 'downloads' => 0, 'memberships' => 0, 'bookings' => 0, 'discounts' => 0,
+		'card' => 0, 'platform' => 0, 'shipping' => 0, 'tax' => 0, 'paid' => 0, 'refunds' => 0, 'units' => 0, 'seats' => 0, 'renewals' => 0 ];
+	$sum    = $blank;
+	$months = [];
+	$top    = [ 'products' => [], 'bookings' => [] ];
+	$month_of = static fn( string $at ): string => ( new DateTimeImmutable( $at, $utc ) )->setTimezone( $tz )->format( 'Y-m' );
+
+	$add = static function ( array &$b, array $o, array $lines, callable $kind_of ): void {
+		$b['orders']++;
+		foreach ( $lines as $it ) {
+			$k = $kind_of( $it );
+			$b[ $k ] += (int) $it['subtotal_cents'];
+			if ( $k === 'bookings' ) $b['seats'] += (int) $it['qty']; else $b['units'] += (int) $it['qty'];
+		}
+		$b['discounts'] += (int) $o['discount_cents'];
+		$b['card']      += (int) $o['fee_card_cents'];
+		$b['platform']  += (int) $o['fee_platform_cents'];
+		$b['shipping']  += (int) $o['shipping_cents'];
+		$b['tax']       += (int) $o['tax_cents'];
+		$b['paid']      += (int) $o['paid_cents'];
+		$b['refunds']   += (int) $o['refunded_cents'];
+	};
+
+	foreach ( $orders as $o ) {
+		$lines = $items[ (int) $o['id'] ] ?? [];
+		$key   = $month_of( (string) $o['at'] );
+		$add( $sum, $o, $lines, $kind_of );
+		$months[ $key ] = $months[ $key ] ?? $blank;
+		$add( $months[ $key ], $o, $lines, $kind_of );
+		foreach ( $lines as $it ) {
+			$k = $kind_of( $it ) === 'bookings' ? 'bookings' : 'products';
+			$name = trim( (string) $it['name'] ) ?: '(unnamed)';
+			$top[ $k ][ $name ] = $top[ $k ][ $name ] ?? [ 'qty' => 0, 'cents' => 0 ];
+			$top[ $k ][ $name ]['qty']   += (int) $it['qty'];
+			$top[ $k ][ $name ]['cents'] += (int) $it['subtotal_cents'];
+		}
+	}
+
+	// Renewals: a payment row on the original order, its fee in meta; the rest is membership revenue.
+	$pwhere = "kind = 'renewal' AND status = 'succeeded'";
+	if ( $from ) $pwhere .= $wpdb->prepare( ' AND created_at >= %s', $from->setTimezone( $utc )->format( 'Y-m-d H:i:s' ) );
+	if ( $to )   $pwhere .= $wpdb->prepare( ' AND created_at < %s', $to->setTimezone( $utc )->format( 'Y-m-d H:i:s' ) );
+	foreach ( $wpdb->get_results( "SELECT created_at, amount_cents, meta FROM " . sp_store_table( 'payments' ) . " WHERE $pwhere", ARRAY_A ) ?: [] as $p ) {
+		$meta = json_decode( (string) $p['meta'], true );
+		$card = (int) ( $meta['fee_card_cents'] ?? 0 );
+		$plat = (int) ( $meta['fee_platform_cents'] ?? 0 );
+		$amt  = (int) $p['amount_cents'];
+		$key  = $month_of( (string) $p['created_at'] );
+		$months[ $key ] = $months[ $key ] ?? $blank;
+		foreach ( [ &$sum, &$months[ $key ] ] as &$b ) {
+			$b['renewals']++;
+			$b['memberships'] += $amt - $card - $plat;
+			$b['card']        += $card;
+			$b['platform']    += $plat;
+			$b['paid']        += $amt;
+		}
+		unset( $b );
+	}
+
+	$cur = sp_store_currency();
+	$m   = static fn( int $c ): string => sp_store_money_text( $c, $cur );
+	$fmt = static function ( array $b ) use ( $m ): array {
+		$sales = $b['products'] + $b['downloads'] + $b['memberships'] + $b['bookings'];
+		return [
+			'orders'      => $b['orders'],
+			'renewals'    => $b['renewals'],
+			'units'       => $b['units'],
+			'seats'       => $b['seats'],
+			'products'    => $m( $b['products'] ),
+			'downloads'   => $m( $b['downloads'] ),
+			'memberships' => $m( $b['memberships'] ),
+			'bookings'    => $m( $b['bookings'] ),
+			'has'         => [ 'products' => $b['products'] > 0, 'downloads' => $b['downloads'] > 0, 'memberships' => $b['memberships'] > 0 || $b['renewals'] > 0, 'bookings' => $b['bookings'] > 0 || $b['seats'] > 0 ],
+			'sales'       => $m( $sales ),
+			'discounts'   => $b['discounts'] ? $m( $b['discounts'] ) : '',
+			'card'        => $m( $b['card'] ),
+			'platform'    => $m( $b['platform'] ),
+			'fees'        => $m( $b['card'] + $b['platform'] ),
+			'shipping'    => $m( $b['shipping'] ),
+			'tax'         => $m( $b['tax'] ),
+			'paid'        => $m( $b['paid'] ),
+			'refunds'     => $b['refunds'] ? $m( $b['refunds'] ) : '',
+			'net'         => $m( $b['paid'] - $b['refunds'] ),
+		];
+	};
+
+	$list = [];
+	krsort( $months );
+	foreach ( $months as $key => $b ) {
+		$list[] = [ 'label' => wp_date( 'F Y', ( new DateTimeImmutable( $key . '-15', $tz ) )->getTimestamp() ) ] + $fmt( $b );
+	}
+
+	$best = static function ( array $rows ) use ( $m ): array {
+		uasort( $rows, static fn( $a, $b ) => $b['cents'] <=> $a['cents'] );
+		$out = [];
+		foreach ( array_slice( $rows, 0, 5, true ) as $name => $r ) $out[] = [ 'name' => (string) $name, 'qty' => $r['qty'], 'total' => $m( $r['cents'] ) ];
+		return $out;
+	};
+
+	$rates = sp_store_fee_rates();
+	wp_send_json_success( [
+		'range'  => $range,
+		'totals' => $fmt( $sum ),
+		'months' => $list,
+		'top'    => [ 'products' => $best( $top['products'] ), 'bookings' => $best( $top['bookings'] ) ],
+		'rates'  => [ 'card' => $rates['card'], 'platform' => $rates['platform'] ],
+	] );
 }
 
 add_action( 'wp_ajax_site_pulse_store_order_get', 'sp_store_ajax_order_get' );

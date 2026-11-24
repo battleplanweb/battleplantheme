@@ -127,7 +127,11 @@ get_header(); ?>
 
 				$displayFooter = '<footer class="entry-footer">';
 
-					if ( get_post_type() == "events" ) $displayFooter .= '<div class="calender-btn-row">[btn link="/calendar/"]Calender View[/btn][btn link="/events/"]List View[/btn]</div>';
+					// One way back: the calendar when the site has one, else the list.
+					if ( get_post_type() == "events" ) :
+						$eventsBack = bp_calendar_page_url() ?: (string) get_post_type_archive_link( 'events' );
+						if ( $eventsBack ) $displayFooter .= '<div class="calender-btn-row">[btn link="'.esc_url( $eventsBack ).'"]All Events[/btn]</div>';
+					endif;
 
 					if ( $facebookBtn == "true" && ( $facebookBtnPos == "below" || $facebookBtnPos == "both") ) $displayFooter .= $facebookBtnCode;
 

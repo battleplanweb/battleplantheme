@@ -299,6 +299,7 @@ function sp_sms_nudge_sweep(): void {
 		$uid = (int) $r['user_id'];
 
 		if ( ! sp_sms_user_opted_in( $uid ) ) continue;
+		if ( function_exists( 'site_pulse_user_wants' ) && ! site_pulse_user_wants( $uid, 'message', 'sms' ) ) continue; // turned Text off for Chat messages
 		$phone = sp_sms_phone_for( $uid );
 		if ( $phone === '' ) continue;
 
@@ -567,7 +568,7 @@ function sp_sms_compose_digest( array $rows ): string {
 add_action( 'wp_ajax_site_pulse_admin_get_sms_nudge', 'site_pulse_ajax_admin_get_sms_nudge' );
 function site_pulse_ajax_admin_get_sms_nudge(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
+	if ( ! site_pulse_can_manage_global_notifications() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 	wp_send_json_success( [
 		'enabled'       => site_pulse_get_setting( 'sms_nudge_enabled', '0' ) === '1',
 		'delay_min'     => (int) site_pulse_get_setting( 'sms_nudge_delay_min', '0' ) ?: 10,
@@ -584,7 +585,7 @@ function site_pulse_ajax_admin_get_sms_nudge(): void {
 add_action( 'wp_ajax_site_pulse_admin_save_sms_nudge', 'site_pulse_ajax_admin_save_sms_nudge' );
 function site_pulse_ajax_admin_save_sms_nudge(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
+	if ( ! site_pulse_can_manage_global_notifications() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	// The on/off switch lives in Global notifications (saved via site_pulse_admin_save_setting).
 	site_pulse_set_setting( 'sms_nudge_delay_min', (string) max( 1, (int) ( $_POST['delay_min'] ?? 10 ) ) );

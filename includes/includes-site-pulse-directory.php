@@ -45,7 +45,14 @@ function sp_directory_can_manage( int $user_id = 0 ): bool {
 // aren't tied to a user account. Used by every face in Site Pulse (chat, action items, notes, pickers).
 // Every directory photo is read in ONE query per request and matched in memory, so a list of fifty
 // people costs no more than one; the earliest entry (lowest id) wins, as before.
+// A person's face anywhere in Site Pulse: their own Profile photo first, else the Directory photo.
 function site_pulse_user_photo( int $user_id ): string {
+	if ( ! $user_id ) return '';
+	$own = function_exists( 'sp_profile_photos_all' ) ? ( sp_profile_photos_all()[ $user_id ] ?? '' ) : '';
+	return '' !== $own ? $own : sp_directory_user_photo( $user_id );
+}
+
+function sp_directory_user_photo( int $user_id ): string {
 	static $cache = [], $by_user = null, $by_name = null;
 	if ( ! $user_id ) return '';
 	if ( isset( $cache[ $user_id ] ) ) return $cache[ $user_id ];
@@ -83,6 +90,27 @@ function site_pulse_user_photo( int $user_id ): string {
 	return $cache[ $user_id ] = $url;
 }
 
+// The picture a directory card shows: the linked (or same-named) user's own Profile photo when they've
+// set one, otherwise the directory entry's photo.
+function sp_directory_entry_face( array $r ): string {
+	static $by_name = null;
+	$own = function_exists( 'sp_profile_photos_all' ) ? sp_profile_photos_all() : [];
+	if ( $own ) {
+		$uid = (int) ( $r['user_id'] ?? 0 );
+		if ( $uid && isset( $own[ $uid ] ) ) return $own[ $uid ];
+		if ( null === $by_name ) {
+			$by_name = [];
+			foreach ( $own as $id => $url ) {
+				$u = get_userdata( $id );
+				if ( $u ) $by_name[ strtolower( trim( (string) $u->first_name ) ) . '|' . strtolower( trim( (string) $u->last_name ) ) ] = $url;
+			}
+		}
+		$key = strtolower( trim( (string) ( $r['first_name'] ?? '' ) ) ) . '|' . strtolower( trim( (string) ( $r['last_name'] ?? '' ) ) );
+		if ( $key !== '|' && isset( $by_name[ $key ] ) ) return $by_name[ $key ];
+	}
+	return (string) ( $r['photo_url'] ?? '' );
+}
+
 // Normalize whatever date string we're handed (Y-m-d, m/d/Y, or ACF's stored Ymd) to Y-m-d, or ''.
 function sp_directory_clean_date( $v ): string {
 	$v = trim( (string) $v );
@@ -105,7 +133,8 @@ function sp_directory_format_row( array $r ): array {
 		'status'        => $r['status'] ?? 'active',
 		'first_name'    => (string) ( $r['first_name'] ?? '' ),
 		'last_name'     => (string) ( $r['last_name'] ?? '' ),
-		'photo_url'     => (string) ( $r['photo_url'] ?? '' ),
+		'photo_url'     => (string) ( $r['photo_url'] ?? '' ),        // the directory's own photo (what the editor edits)
+		'face_url'      => sp_directory_entry_face( $r ),               // what's SHOWN: their profile photo wins
 		'position'      => (string) ( $r['position'] ?? '' ),
 		'brand'         => (string) ( $r['brand'] ?? '' ),
 		'location'      => (string) ( $r['location'] ?? '' ),

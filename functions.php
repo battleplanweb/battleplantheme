@@ -1388,8 +1388,7 @@ function battleplan_enqueue_footer_scripts() {
 
 	bp_enqueue_script( 'battleplan-script-tracking', 'script-tracking' );
 
-	$event_calendar = get_option('event_calendar');
-	if ( bp_module_on($event_calendar) ) { bp_enqueue_script( 'battleplan-script-events', 'script-events' ); }
+	if ( bp_calendar_on() ) { bp_enqueue_script( 'battleplan-script-events', 'script-events' ); }
 
 	if ( is_plugin_active( 'woocommerce/woocommerce.php' ) ) bp_enqueue_script( 'battleplan-script-woocommerce', 'script-woocommerce', ['jquery'] );
 
@@ -1644,6 +1643,65 @@ $site_pulse = get_option('site_pulse');
 if ( bp_module_on($site_pulse) ) {
 	require_once get_template_directory().'/includes/includes-site-pulse.php';
 }
+// Events is also a Site Pulse module: switching it on there loads Events on an install that doesn't
+// carry the event_calendar option (which still loads it above, on its own, for sites without Site Pulse).
+if ( ! function_exists( 'battleplan_registerEventPostType' ) && function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'events' ) ) {
+	require_once get_template_directory().'/includes/includes-events.php';
+}
+/** Is Events loaded on this site — by the event_calendar option or the Site Pulse Events module? */
+function bp_events_on(): bool {
+	return function_exists( 'battleplan_registerEventPostType' );
+}
+/** Does this site have the public calendar — Events, or Site Pulse Booking (its classes go on the same calendar)? */
+function bp_calendar_on(): bool {
+	return bp_events_on() || ( function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'booking' ) );
+}
+/** The published calendar's URL, or '' when the site has none: Chron B's universal "calendar" post, or a page of that slug. */
+function bp_calendar_page_url(): string {
+	foreach ( [ 'universal', 'page' ] as $type ) {
+		$page = get_page_by_path( 'calendar', OBJECT, $type );
+		if ( $page && $page->post_status === 'publish' ) return (string) get_permalink( $page );
+	}
+	return '';
+}
+/**
+ * The Calendar | List switch, shown only when BOTH views exist ($active = 'calendar' or 'list').
+ * The events archive is the list; the /calendar/ page is the calendar.
+ */
+function bp_calendar_views( string $active ): string {
+	$cal  = bp_calendar_page_url();
+	$list = bp_events_on() ? (string) get_post_type_archive_link( 'events' ) : '';
+	if ( $cal === '' || $list === '' ) return '';
+	$icons = [
+		'calendar' => '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+		'list'     => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+	];
+	$out = '<nav class="calendar-views" aria-label="Event views">';
+	foreach ( [ 'calendar' => [ 'Calendar', $cal ], 'list' => [ 'List', $list ] ] as $key => [ $label, $url ] ) {
+		$out .= $key === $active
+			? '<span class="calendar-view is-active" aria-current="page">' . $icons[ $key ] . $label . '</span>'
+			: '<a class="calendar-view" href="' . esc_url( $url ) . '">' . $icons[ $key ] . $label . '</a>';
+	}
+	return $out . '</nav>';
+}
+/** The calendar shell: month title with arrows + Today on top, the grid, and (phones) the tapped day's events. */
+function bp_calendar_markup( string $headline ): string {
+	$arrow = static fn( string $d ) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' . $d . '"/></svg>';
+	$out  = '<h1 class="page-headline calendar-headline events-headline">' . esc_html( $headline ) . '</h1>';
+	$out .= '<div class="calendar-wrap">';
+	$out .= '<div class="calendar-toolbar">';
+	$out .= '<div class="calendar-nav">';
+	$out .= '<button type="button" class="unique calendar-arrow" id="prevButton" aria-label="Previous month">' . $arrow( 'M15 6l-6 6 6 6' ) . '</button>';
+	$out .= '<h2 class="calendar-month" id="calendar-month" aria-live="polite"></h2>';
+	$out .= '<button type="button" class="unique calendar-arrow" id="nextButton" aria-label="Next month">' . $arrow( 'M9 6l6 6-6 6' ) . '</button>';
+	$out .= '<button type="button" class="unique calendar-today" id="currentButton" hidden>Today</button>';
+	$out .= '</div>';
+	$out .= bp_calendar_views( 'calendar' );
+	$out .= '</div>';
+	$out .= '<div id="calendar"></div>';
+	$out .= '</div>';
+	return $out;
+}
 $site_private = get_option('site_private');
 if ( bp_module_on($site_private) ) {
 	require_once get_template_directory().'/includes/includes-site-private.php';
@@ -1660,6 +1718,13 @@ if ( bp_module_on($ai_chat) ) {
 $customer_connect = get_option( 'customer_connect' );
 if ( bp_module_on( $customer_connect ) ) {
 	require_once get_template_directory().'/includes/includes-customer-connect.php';
+}
+// HVAC replacement price estimator — installed like site_pulse / jobsite_geo: update_option( 'hvac_estimator',
+// [ 'install' => 'true', …prices/tiers… ] ) in functions-site.php's battleplan_updateSiteOptions(). (The
+// bp_hvac_estimator_config filter also turns it on, for a site that configures it in code.) See docs/hvac-estimator.md.
+$hvac_estimator = get_option( 'hvac_estimator' );
+if ( bp_module_on( $hvac_estimator ) || has_filter( 'bp_hvac_estimator_config' ) ) {
+	require_once get_template_directory().'/includes/includes-hvac-estimator.php';
 }
 $customer_info['site-type'] = $customer_info['site-type'] ?? '';
 
@@ -1955,12 +2020,6 @@ function battleplan_disable_upload_sizes( $sizes, $metadata ) {
     return $sizes;
 }
 
-add_filter('big_image_size_threshold', 'battleplan_limit_non_admin_uploads', 999, 1);
-function battleplan_limit_non_admin_uploads( $threshold ) {
-    if ( defined('_USER_LOGIN') && _USER_LOGIN === 'battleplanweb' ) return false;
-    if ( !current_user_can( 'manage_options' ) ) return 1000;
-}
-
 // Strip EXIF data from images upon upload
 add_action('wp_handle_upload', 'battleplan_strip_EXIF_data' );
 function battleplan_strip_EXIF_data($upload) {
@@ -2056,10 +2115,10 @@ function bp_fix_heic_filetype( $data, $file, $filename, $mimes ) {
 // Transcode HEIC/HEIF uploads to JPEG once WP has moved the file into place.
 // wp_handle_upload applies this as a FILTER on its return array, so updating
 // file/url/type here is seen by every caller (Media Library + Site Pulse's
-// wp_handle_upload photo fields). Priority 20 so it runs AFTER jobsite-geo's own
-// HEIC→WebP converter (priority 10, scoped to jobsite posts) — on a jobsite upload
-// the type is already image/webp by now and this no-ops; everywhere else it catches
-// the HEIC and hands back a .jpg.
+// wp_handle_upload photo fields). Priority 20 so it runs AFTER the HEIC→WebP
+// converter in # Upload optimization (priority 10) — normally the type is already
+// image/webp by now and this no-ops; it only catches HEIC that converter skipped
+// (battleplanweb uploads, or a failed WebP save) and hands back a .jpg.
 add_filter( 'wp_handle_upload', 'bp_transcode_heic_upload', 20 );
 function bp_transcode_heic_upload( $upload ) {
     if ( empty( $upload['file'] ) || empty( $upload['type'] ) ) return $upload;
@@ -2091,6 +2150,218 @@ function bp_transcode_heic_upload( $upload ) {
     }
     return $upload;
 }
+
+/*--------------------------------------------------------------
+# Upload optimization (site-wide)
+#
+# Every image upload — Media Library and every Site Pulse photo field — is turned
+# upright, resized so its longest side is at most the cap (never upscaled), and
+# saved as WebP at 80%. The cap is 1000px, or 1250px for a Site Pulse Store
+# product photo. The ONE exemption is the battleplanweb login, so full-size hero
+# images can still go in untouched — except uploads aimed at a jobsite_geo post,
+# which always go through the pipeline.
+--------------------------------------------------------------*/
+
+// True when this upload should be left exactly as uploaded.
+function bp_upload_skip_optimize(): bool {
+	if ( ! defined( '_USER_LOGIN' ) || _USER_LOGIN !== 'battleplanweb' ) return false;
+
+	// Jobsite photos are optimized whoever uploads them. The standard media uploader
+	// passes post_id; some flows only leave it in the referer.
+	$target = ! empty( $_REQUEST['post_id'] ) ? (int) $_REQUEST['post_id'] : 0;
+	if ( ! $target && ! empty( $_SERVER['HTTP_REFERER'] ) && preg_match( '/[?&]post=(\d+)/', (string) $_SERVER['HTTP_REFERER'], $m ) ) {
+		$target = (int) $m[1];
+	}
+	return ! ( $target && get_post_type( $target ) === 'jobsite_geo' );
+}
+
+// Longest side, in px, an upload is resized to.
+function bp_upload_max_side(): int {
+	$side = ( ( $_REQUEST['action'] ?? '' ) === 'site_pulse_store_product_upload' ) ? 1250 : 1000;
+	return (int) apply_filters( 'bp_upload_max_side', $side );
+}
+
+// WordPress's own "-scaled" fallback, for any image the WebP step below cannot
+// process: same cap, same exemption.
+add_filter( 'big_image_size_threshold', 'bp_upload_size_threshold', 999, 1 );
+function bp_upload_size_threshold( $threshold ) {
+	return bp_upload_skip_optimize() ? false : bp_upload_max_side();
+}
+
+// Orient uploaded photos correctly (bakes the EXIF rotation into the pixels before the
+// WebP step and EXIF strip throw the orientation flag away).
+add_filter('wp_handle_upload_prefilter', function($file) {
+
+	if (!empty($GLOBALS['bp_skip_exif_rotation'])) {
+		return $file;
+	}
+
+	if (!isset($file['tmp_name']) || !file_exists($file['tmp_name'])) {
+		return $file;
+	}
+
+	$mime = $file['type'] ?? '';
+	if (!str_starts_with($mime, 'image/')) {
+		return $file;
+	}
+
+	// HEIC/HEIF store orientation in container metadata, not standard EXIF.
+	// Re-saving them through wp_get_image_editor here corrupts the source
+	// before the WebP step can read it. Skip — WebP conversion handles them.
+	if ($mime === 'image/heic' || $mime === 'image/heif') {
+		return $file;
+	}
+
+	$exif = @exif_read_data($file['tmp_name']);
+	if (empty($exif['Orientation']) || (int)$exif['Orientation'] === 1) {
+		return $file;
+	}
+
+	$image = wp_get_image_editor($file['tmp_name']);
+	if (is_wp_error($image)) {
+		return $file;
+	}
+
+	switch ((int)$exif['Orientation']) {
+		case 3: $image->rotate(180); break;
+		case 6: $image->rotate(-90); break;
+		case 8: $image->rotate(90);  break;
+		default: return $file;
+	}
+
+	$saved = $image->save($file['tmp_name']);
+	if (is_wp_error($saved)) {
+		return $file;
+	}
+
+	return $file;
+});
+
+// Convert uploaded images to WebP at 80%, longest side capped at bp_upload_max_side().
+// Uses wp_handle_upload (post-filter) — fires after WP has moved the file to the
+// uploads directory, where it has a real filename/extension and can be freely modified.
+add_filter('wp_handle_upload', function($upload, $context) {
+
+	if (bp_upload_skip_optimize()) {
+		return $upload;
+	}
+
+	if (empty($upload['file']) || !file_exists($upload['file'])) {
+		return $upload;
+	}
+
+	if (!str_starts_with($upload['type'] ?? '', 'image/')) {
+		return $upload; // not an image
+	}
+
+	$max = bp_upload_max_side();
+	// HEIC/HEIF arrive from iPhones with the orientation stored as a flag, not
+	// baked into the pixels — and the prefilter skips them. wp_get_image_editor
+	// can't auto-orient, so transcode HEIC with raw Imagick: autoOrient() bakes
+	// the rotation into the pixels, then stripImage() drops the leftover flag so
+	// every browser shows it upright. Falls through to the editor on any failure.
+	if (in_array($upload['type'], ['image/heic', 'image/heif'], true) && class_exists('Imagick')) {
+		try {
+			$im = new Imagick($upload['file']);
+			if ($im->valid()) {
+				$im->autoOrient();
+
+				$w = $im->getImageWidth();
+				$h = $im->getImageHeight();
+				if (max($w, $h) > $max) {
+					$scale = $max / max($w, $h);
+					$im->resizeImage((int) round($w * $scale), (int) round($h * $scale), Imagick::FILTER_LANCZOS, 1);
+				}
+
+				$im->setImageFormat('webp');
+				$im->setImageCompressionQuality(80);
+				$im->stripImage();
+
+				$heic_webp_file = preg_replace('/\.[^.\/]+$/', '.webp', $upload['file']);
+				$heic_webp_url  = preg_replace('/\.[^.\/]+$/', '.webp', $upload['url']);
+				$im->writeImage($heic_webp_file);
+				$im->clear();
+				$im->destroy();
+
+				if (file_exists($heic_webp_file) && filesize($heic_webp_file) > 100) {
+					if ($heic_webp_file !== $upload['file']) @unlink($upload['file']);
+					$upload['file'] = $heic_webp_file;
+					$upload['url']  = $heic_webp_url;
+					$upload['type'] = 'image/webp';
+					return $upload;
+				}
+				@unlink($heic_webp_file);
+			}
+		} catch (Exception $e) {
+			error_log('HEIC autoOrient transcode failed: ' . $e->getMessage());
+		}
+		// fall through to the editor path below if the Imagick path failed
+	}
+
+	$image = wp_get_image_editor($upload['file']);
+	if (is_wp_error($image)) {
+		return $upload;
+	}
+
+	// Resize so the longest side is ≤ $max (no upscaling).
+	$size = $image->get_size();
+	$needs_resize = !is_wp_error($size) && !empty($size['width']) && !empty($size['height'])
+	                && max($size['width'], $size['height']) > $max;
+
+	if ($needs_resize) {
+		$w = (int) $size['width'];
+		$h = (int) $size['height'];
+		$scale = $max / max($w, $h);
+		$image->resize((int) round($w * $scale), (int) round($h * $scale), false);
+	}
+
+	$image->set_quality(80);
+
+	if ($upload['type'] === 'image/webp') {
+		// Already WebP — only re-save if we resized
+		if ($needs_resize) {
+			$image->save($upload['file'], 'image/webp');
+		}
+		return $upload;
+	}
+
+	// Convert non-WebP to WebP
+	if (!$image->supports_mime_type('image/webp')) {
+		return $upload; // server doesn't support WebP output — leave as-is
+	}
+
+	$webp_file = preg_replace('/\.[^.\/]+$/', '.webp', $upload['file']);
+	$webp_url  = preg_replace('/\.[^.\/]+$/', '.webp', $upload['url']);
+
+	$saved = $image->save($webp_file, 'image/webp');
+	if (is_wp_error($saved)) {
+		return $upload;
+	}
+
+	// Verify the saved WebP is a real image — some inputs produce a 0-byte /
+	// unreadable file without raising a WP_Error. If output is bad, keep the original.
+	$webp_ok = file_exists($webp_file) && filesize($webp_file) > 100;
+	if ($webp_ok) {
+		$dims = @getimagesize($webp_file);
+		$webp_ok = is_array($dims) && !empty($dims[0]) && !empty($dims[1]);
+	}
+	if (!$webp_ok) {
+		if ($webp_file !== $upload['file']) @unlink($webp_file);
+		return $upload;
+	}
+
+	// Remove the original (jpg/png/heic/etc) now that WebP is saved
+	if ($webp_file !== $upload['file']) {
+		@unlink($upload['file']);
+	}
+
+	$upload['file'] = $webp_file;
+	$upload['url']  = $webp_url;
+	$upload['type'] = 'image/webp';
+
+	return $upload;
+
+}, 10, 2);
 
 // Highlights menu option based on the post type of the current page and the title attribute given to the menu button in Appearance->Menus
 add_filter('nav_menu_css_class', 'battleplan_current_type_nav_class', 10, 2 );

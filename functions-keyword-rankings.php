@@ -668,7 +668,7 @@ function bp_kw_target_records(): array {
 		$stats = bp_kw_jobsite_service_term_stats();
 		$terms = bp_kw_get_terms('jobsite_geo-services');
 		foreach (is_wp_error($terms) ? [] : (array) $terms as $term) {
-			$parsed = bp_kw_parse_service_term_slug($term->slug);
+			$parsed = bp_kw_parse_service_term_slug(strpos((string) $term->name, '--') !== false ? strtolower((string) $term->name) : $term->slug);
 			if (!$parsed['service'] || !$parsed['city'] || !$parsed['state']) continue;
 			$heat     = bp_kw_term_heat((int) $term->term_id, $stats);
 			$variants = bp_kw_apply_synonyms_to_service($parsed['service'], $synonyms);
@@ -822,12 +822,12 @@ function bp_kw_discovery_enabled(): bool {
 # DataForSEO API
 --------------------------------------------------------------*/
 
-function bp_kw_dfs_request(string $endpoint, array $payload): ?array {
+function bp_kw_dfs_request(string $endpoint, array $payload, int $timeout = 25): ?array {
 	$creds = bp_kw_api_creds();
 	if (!$creds['login'] || !$creds['password']) return null;
 
 	$response = wp_remote_post('https://api.dataforseo.com' . $endpoint, [
-		'timeout'   => 25,
+		'timeout'   => $timeout,
 		'sslverify' => true,
 		'headers'   => [
 			'Authorization' => 'Basic ' . base64_encode("{$creds['login']}:{$creds['password']}"),
@@ -897,18 +897,65 @@ function bp_kw_dfs_request_parallel(string $endpoint, array $payloads): array {
 }
 
 
+// GET several DataForSEO paths in parallel (task_get results — free to fetch). Returns key => decoded JSON or null.
+function bp_kw_dfs_get_parallel(array $paths): array {
+	$creds = bp_kw_api_creds();
+	if (!$creds['login'] || !$creds['password'] || !$paths) return [];
+	$auth = 'Basic ' . base64_encode("{$creds['login']}:{$creds['password']}");
+	$mh = curl_multi_init(); $handles = [];
+	foreach ($paths as $key => $path) {
+		$ch = curl_init('https://api.dataforseo.com' . $path);
+		curl_setopt_array($ch, [
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_HTTPHEADER     => ['Authorization: ' . $auth],
+			CURLOPT_TIMEOUT        => 30,
+			CURLOPT_CONNECTTIMEOUT => 10,
+			CURLOPT_SSL_VERIFYPEER => true,
+		]);
+		curl_multi_add_handle($mh, $ch);
+		$handles[$key] = $ch;
+	}
+	$active = null;
+	do {
+		$mrc = curl_multi_exec($mh, $active);
+		if ($active) curl_multi_select($mh, 1.0);
+	} while ($active && $mrc === CURLM_OK);
+	$out = [];
+	foreach ($handles as $key => $ch) {
+		$decoded   = json_decode(curl_multi_getcontent($ch) ?: '', true);
+		$out[$key] = ((int) curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200 && is_array($decoded)) ? $decoded : null;
+		curl_multi_remove_handle($mh, $ch);
+		curl_close($ch);
+	}
+	curl_multi_close($mh);
+	return $out;
+}
+
+// One SERP task. Since ~Oct 2026 Google hands scrapers encrypted google.com/goto links and
+// "poisoned" result pages (directory listings from other towns), which read as "not ranking"
+// everywhere. DataForSEO's fixes: resolve_goto_urls (real destination URLs/domains) and
+// resolve_poisoned_results (re-checks against Google Web mode, replacing bad organic items —
+// those carry checks: ["from_web"]; costs one extra SERP page). Both are on for every check.
+function bp_kw_serp_payload(string $keyword, string $device, int $depth, string $tag = ''): array {
+	return array_filter([
+		'keyword'                  => $keyword,
+		'location_code'            => 2840,
+		'language_code'            => 'en',
+		'device'                   => $device,
+		'depth'                    => $depth,
+		'resolve_goto_urls'        => true,
+		'resolve_poisoned_results' => true,
+		'tag'                      => $tag,
+	], fn($v) => $v !== '');
+}
+
 // Run a single SERP query and return the raw items array — for the admin test-keyword diagnostic.
-// Uses the same device the cron's batch would use, so the diagnostic matches reality.
+// Uses the same device the cron's batch would use, so the diagnostic matches reality. Live + URL
+// resolution takes ~35s, so the timeout is long (still inside WP Engine's 60s request limit).
 function bp_kw_test_serp(string $keyword): array {
 	$device   = bp_kw_primary_device();
-	$payload = [[
-		'keyword'       => $keyword,
-		'location_code' => 2840,
-		'language_code' => 'en',
-		'device'        => $device,
-		'depth'         => 100,
-	]];
-	$response = bp_kw_dfs_request('/v3/serp/google/organic/live/regular', $payload);
+	$payload  = [bp_kw_serp_payload($keyword, $device, 100)];
+	$response = bp_kw_dfs_request('/v3/serp/google/organic/live/advanced', $payload, 55);
 	$task     = $response['tasks'][0] ?? null;
 	$result   = $task['result'][0] ?? null;
 
@@ -930,18 +977,25 @@ function bp_kw_test_serp(string $keyword): array {
 		'rank_url'       => (string) ($parsed['url'] ?? ''),
 		'rank_type'      => (string) ($parsed['type'] ?? ''),
 		'map_rank'       => (int) ($parsed['map_rank'] ?? 0),
+		'inconclusive'   => !empty($parsed['inconclusive']),
+		'corrected'      => (int) ($parsed['corrected'] ?? 0),
 	];
 }
 
 // Parse a single DataForSEO SERP response. Returns:
-//   'rank'     => best organic rank for our domain (0 if not ranked)
-//   'url'      => URL of the best-ranking page
-//   'type'     => SERP element type for the best rank (e.g. 'organic', 'featured_snippet')
-//   'map_rank' => position (1-indexed) within the local pack if our place_id/cid matches; 0 if not
+//   'rank'         => best ORGANIC position for our domain (rank_group: counts organic results only, not
+//                     ads/map pack/AI boxes — so it matches what a person counts on the page); 0 if not found.
+//                     A featured snippet of ours counts as #1.
+//   'url'          => URL of the best-ranking page
+//   'type'         => SERP element type for the best rank (e.g. 'organic', 'featured_snippet')
+//   'map_rank'     => position (1-indexed) within the local pack if our place_id/cid matches; 0 if not
+//   'inconclusive' => true when most organic results are unresolved google.com/goto redirects — the page
+//                     can't say where anyone ranks, so the caller must NOT record it as "not ranking"
+//   'corrected'    => organic items DataForSEO replaced from Google Web mode (checks: from_web)
 //
 // $place_id can be a string, an array (multi-location sites), or null (no map pack tracking).
 function bp_kw_parse_serp_response(?array $response, string $domain, $place_id = null): array {
-	$result = ['rank' => 0, 'url' => '', 'type' => '', 'map_rank' => 0];
+	$result = ['rank' => 0, 'url' => '', 'type' => '', 'map_rank' => 0, 'inconclusive' => false, 'corrected' => 0];
 
 	if (!$response || ($response['status_code'] ?? 0) !== 20000) return $result;
 	$task = $response['tasks'][0] ?? null;
@@ -951,15 +1005,18 @@ function bp_kw_parse_serp_response(?array $response, string $domain, $place_id =
 
 	// Normalize the place_id list for matching — accepts string, array, or null
 	$place_ids = array_values(array_filter(array_map('strval', (array) ($place_id ?? []))));
+	$host_of   = fn($u) => preg_replace('/^www\./', '', strtolower((string) parse_url((string) $u, PHP_URL_HOST)));
+	$organic   = 0; $unresolved = 0;
 
 	foreach (($task_result['items'] ?? []) as $item) {
 		$item_type = (string) ($item['type'] ?? '');
 
 		// Map pack — DataForSEO may emit a single 'local_pack' item with nested 'items',
 		// OR several top-level 'local_pack' items each representing one business listing.
-		// Handle both shapes.
+		// Position is rank_group (1-3 within the pack), never rank_absolute (its place on the whole page).
 		if ($item_type === 'local_pack' && $place_ids) {
-			$pack_items = (!empty($item['items']) && is_array($item['items'])) ? $item['items'] : [$item];
+			$nested     = !empty($item['items']) && is_array($item['items']);
+			$pack_items = $nested ? $item['items'] : [$item];
 			foreach ($pack_items as $idx => $li) {
 				$li_place = (string) ($li['place_id'] ?? '');
 				$li_cid   = (string) ($li['cid'] ?? '');
@@ -967,8 +1024,7 @@ function bp_kw_parse_serp_response(?array $response, string $domain, $place_id =
 				$matched = ($li_place && in_array($li_place, $place_ids, true))
 				        || ($li_cid   && in_array($li_cid,   $place_ids, true));
 				if (!$matched) continue;
-				// Position: explicit rank_absolute on the nested item, or its index in the pack
-				$pos = (int) ($li['rank_absolute'] ?? ($idx + 1));
+				$pos = $nested ? $idx + 1 : (int) ($li['rank_group'] ?? 0);
 				if ($pos > 0 && ($result['map_rank'] === 0 || $pos < $result['map_rank'])) {
 					$result['map_rank'] = $pos;
 				}
@@ -976,143 +1032,196 @@ function bp_kw_parse_serp_response(?array $response, string $domain, $place_id =
 			continue;
 		}
 
-		// Organic — match by domain
-		$item_domain = strtolower($item['domain'] ?? '');
-		if (!$item_domain) {
-			$host        = parse_url($item['url'] ?? '', PHP_URL_HOST);
-			$item_domain = strtolower($host ?: '');
+		if ($item_type !== 'organic' && $item_type !== 'featured_snippet') continue;
+
+		// Domain: DataForSEO's field, else the URL's host. A google.com/goto link is Google's encrypted
+		// redirect — fall back to the breadcrumb (the visible web address), and count it as unresolved.
+		$url         = (string) ($item['url'] ?? '');
+		$item_domain = preg_replace('/^www\./', '', strtolower((string) ($item['domain'] ?? ''))) ?: $host_of($url);
+		$is_goto     = $item_domain === 'google.com' || stripos($url, 'google.com/goto') !== false || stripos($url, 'google.com/url?') !== false;
+		if ($item_type === 'organic') {
+			$organic++;
+			if (in_array('from_web', (array) ($item['checks'] ?? []), true)) $result['corrected']++;
+			if ($is_goto) $unresolved++;
 		}
-		$item_domain = preg_replace('/^www\./', '', $item_domain);
+		if ($is_goto) {
+			$crumb       = (string) ($item['breadcrumb'] ?? '');
+			$item_domain = preg_match('#^https?://[^\s/›]+#i', $crumb, $m) ? $host_of($m[0]) : '';
+			$url         = $item_domain ? trim(preg_replace('/\s*›.*$/u', '', $crumb)) : '';
+		}
 		if (!$item_domain || $item_domain !== $domain) continue;
 
-		$item_rank = (int) ($item['rank_absolute'] ?? 0);
+		$item_rank = $item_type === 'featured_snippet' ? 1 : (int) ($item['rank_group'] ?? 0);
 		if ($item_rank > 0 && ($result['rank'] === 0 || $item_rank < $result['rank'])) {
 			$result['rank'] = $item_rank;
-			$result['url']  = $item['url'] ?? '';
+			$result['url']  = $url;
 			$result['type'] = $item_type;
 		}
 	}
+	// Mostly unresolved and we weren't found: the page can't tell us anything. (If we WERE found via a
+	// breadcrumb, that reading stands.)
+	if ($organic >= 3 && $unresolved / $organic >= 0.5 && $result['rank'] === 0) $result['inconclusive'] = true;
 	return $result;
 }
 
-// Process due records in PARALLEL chunks via curl_multi. With DataForSEO Live taking
-// 10-15s per task on standard tiers, sequential is too slow. Parallel collapses wall
-// time: N concurrent requests finish in roughly the slowest single request's time, not
-// the sum. Saves tracked + history after each parallel chunk so timeouts are non-destructive.
-//
-// Returns counts: ['processed', 'ok', 'fail', 'items_0', 'matched', 'status_codes', 'aborted_on_time']
-function bp_kw_run_serp_batch(array $records, string $endpoint, string $device, string $mode, array &$tracked, array &$history, string $today, float $budget_start, float $budget_seconds): array {
-	$counts = ['processed' => 0, 'ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'status_codes' => [], 'lines' => [], 'aborted_on_time' => false];
-	if (!$records) return $counts;
+// Apply ONE finished SERP task to its tracked keyword. Shared by the queue collector. $meta = the
+// pending record: [k (kw key), kw, mode primary|secondary, device, depth, source]. Updates $counts
+// (ok/fail/items_0/matched/inconclusive/corrected/status_codes/lines) the same way for every caller.
+function bp_kw_apply_task(?array $task, array $meta, array &$tracked, array &$history, string $today, array &$counts): void {
+	$kw_key = $meta['k'];
+	$mode   = $meta['mode'];
+	$status = (int) ($task['status_code'] ?? 0);
 
-	$domain   = preg_replace('/^www\./', '', bp_kw_site_domain());
-	$place_id = customer_info()['pid'] ?? null;
-	$path     = ($endpoint === 'live_advanced')
-		? '/v3/serp/google/organic/live/advanced'
-		: '/v3/serp/google/organic/live/regular';
-
-	// Deliberately low. A 16-wide burst against the Live endpoints came back 8 ok / 8 failed
-	// while the same payload sent on its own succeeded every time. Raise only if fail codes stay clean.
-	$concurrency = max(1, (int) apply_filters('bp_kw_concurrency', 5));
-
-	foreach (array_chunk($records, $concurrency) as $chunk) {
-		if ((microtime(true) - $budget_start) > $budget_seconds) {
-			$counts['aborted_on_time'] = true;
-			break;
+	$retry_tomorrow = function () use (&$tracked, $kw_key, $mode, $today) {
+		if (!isset($tracked[$kw_key])) return;
+		if ($mode === 'primary') {
+			$tracked[$kw_key]['last_check'] = $today;
+			$tracked[$kw_key]['next_check'] = date('Y-m-d', strtotime('+1 day'));
+		} else {
+			$tracked[$kw_key]['last_secondary_check'] = $today;
 		}
+	};
 
-		// Build keyed payloads + record map so we can stitch responses back to records
-		$payloads = $rec_map = [];
-		foreach ($chunk as $r) {
-			$key = md5(bp_kw_normalize_keyword($r['keyword']));
-			$payloads[$key] = [[
-				'keyword'       => $r['keyword'],
-				'location_code' => 2840,
-				'language_code' => 'en',
-				'device'        => $device,
-				'depth'         => (int) ($r['depth'] ?? 100),
-			]];
-			$rec_map[$key] = $r;
-		}
-
-		$responses = bp_kw_dfs_request_parallel($path, $payloads);
-
-		foreach ($responses as $pre_key => $response) {
-			$r           = $rec_map[$pre_key];
-			$envelope_ok = $response && ($response['status_code'] ?? 0) === 20000;
-			$task        = $envelope_ok ? ($response['tasks'][0] ?? null) : null;
-			$task_status = (int) ($task['status_code'] ?? 0);
-
-			if (!$envelope_ok || $task_status !== 20000) {
-				$counts['fail']++;
-				$code = !$envelope_ok ? ($response['status_code'] ?? 0) : $task_status;
-				$counts['status_codes'][$code] = ($counts['status_codes'][$code] ?? 0) + 1;
-
-				// A bare status code is undiagnosable — keep the message DataForSEO sent with it.
-				// A null $response means the HTTP call never returned 200 + JSON (timeout, 429, 402),
-				// which bp_kw_dfs_request_parallel() collapses to null before we ever see a code.
-				if      (!$envelope_ok && !$response) $fail_msg = 'no HTTP 200/JSON — timed out or rejected at the edge';
-				elseif  (!$envelope_ok)               $fail_msg = (string) ($response['status_message'] ?? '');
-				else                                  $fail_msg = (string) ($task['status_message'] ?? '');
-				$counts['lines'][] = sprintf(
-					'FAIL  %-44s (%s, code %s%s)',
-					$r['keyword'] ?? '?', $r['source'] ?? '?', $code, $fail_msg ? ': ' . $fail_msg : ''
-				);
-				if (isset($tracked[$pre_key])) {
-					if ($mode === 'primary') {
-						$tracked[$pre_key]['last_check'] = $today;
-						$tracked[$pre_key]['next_check'] = date('Y-m-d', strtotime('+1 day'));
-					} else {
-						$tracked[$pre_key]['last_secondary_check'] = $today;
-					}
-				}
-				$counts['processed']++;
-				continue;
-			}
-
-			$task_items = isset($task['result'][0]['items']) && is_array($task['result'][0]['items']) ? count($task['result'][0]['items']) : 0;
-			$task_kw    = (string) ($task['data']['keyword'] ?? $r['keyword']);
-			if ($task_items === 0) $counts['items_0']++;
-			$counts['ok']++;
-
-			$parsed = bp_kw_parse_serp_response($response, $domain, $place_id);
-			if ($parsed['rank'] > 0) $counts['matched']++;
-
-			// Per-keyword result line — the only way to confirm from the admin screen that a
-			// given jobsite keyword was actually queried, and what came back for it.
-			if ($parsed['rank'] > 0) {
-				$counts['lines'][] = sprintf(
-					'#%-4d %-44s (%s)%s%s',
-					$parsed['rank'], $task_kw, $r['source'] ?? '?',
-					$parsed['url'] ? ' ' . $parsed['url'] : '',
-					$parsed['map_rank'] > 0 ? ' · map #' . $parsed['map_rank'] : ''
-				);
-			} else {
-				$counts['lines'][] = sprintf(
-					'--    %-44s (%s, not in top %d%s)',
-					$task_kw, $r['source'] ?? '?', (int) ($r['depth'] ?? 100),
-					$task_items === 0 ? ' — SERP came back empty' : ''
-				);
-			}
-
-			// Re-key on the keyword DataForSEO echoes back (more robust than index alignment)
-			$apply_key = md5(bp_kw_normalize_keyword($task_kw));
-			if (isset($tracked[$apply_key])) {
-				$result = array_merge($parsed, ['keyword' => $task_kw, 'device' => $device]);
-				if ($mode === 'primary') bp_kw_apply_serp_primary($tracked[$apply_key], $history, $apply_key, $result, $today);
-				else                     bp_kw_apply_serp_secondary($tracked[$apply_key], $result, $today);
-			}
-			$counts['processed']++;
-		}
-
-		// Save once per parallel chunk so a timeout mid-run preserves what's done
-		bp_kw_save_tracked($tracked);
-		bp_kw_save_history($history);
+	if ($status !== 20000) {
+		$counts['fail']++;
+		$counts['status_codes'][$status] = ($counts['status_codes'][$status] ?? 0) + 1;
+		$counts['lines'][] = sprintf('FAIL  %-44s (%s, code %s%s)', $meta['kw'], $meta['source'] ?? '?', $status ?: '—',
+			!empty($task['status_message']) ? ': ' . $task['status_message'] : ($task ? '' : ': no response'));
+		$retry_tomorrow();
+		return;
 	}
 
-	return $counts;
+	$items = isset($task['result'][0]['items']) && is_array($task['result'][0]['items']) ? count($task['result'][0]['items']) : 0;
+	if ($items === 0) $counts['items_0']++;
+	$counts['ok']++;
+
+	$domain = preg_replace('/^www\./', '', bp_kw_site_domain());
+	$parsed = bp_kw_parse_serp_response(['status_code' => 20000, 'tasks' => [$task]], $domain, customer_info()['pid'] ?? null);
+	$counts['corrected'] += (int) $parsed['corrected'];
+
+	// Google returned a page of unresolved redirects: no reading. Never record it as "not ranking".
+	if ($parsed['inconclusive']) {
+		$counts['inconclusive']++;
+		$counts['lines'][] = sprintf('??    %-44s (%s, inconclusive — results were unresolved google.com redirects; retrying tomorrow)', $meta['kw'], $meta['source'] ?? '?');
+		$retry_tomorrow();
+		return;
+	}
+
+	if ($parsed['rank'] > 0) {
+		$counts['matched']++;
+		$counts['lines'][] = sprintf('#%-4d %-44s (%s)%s%s%s', $parsed['rank'], $meta['kw'], $meta['source'] ?? '?',
+			$parsed['url'] ? ' ' . $parsed['url'] : '', $parsed['map_rank'] > 0 ? ' · map #' . $parsed['map_rank'] : '',
+			$parsed['corrected'] ? ' · corrected from Google Web' : '');
+	} else {
+		$counts['lines'][] = sprintf('--    %-44s (%s, not in top %d%s)', $meta['kw'], $meta['source'] ?? '?', (int) $meta['depth'], $items === 0 ? ' — SERP came back empty' : '');
+	}
+
+	if (!isset($tracked[$kw_key])) return;
+	$result = array_merge($parsed, ['keyword' => $meta['kw'], 'device' => $meta['device']]);
+	if ($mode === 'primary') bp_kw_apply_serp_primary($tracked[$kw_key], $history, $kw_key, $result, $today);
+	else                     bp_kw_apply_serp_secondary($tracked[$kw_key], $result, $today);
 }
 
+function bp_kw_empty_counts(): array {
+	return ['processed' => 0, 'ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'inconclusive' => 0, 'corrected' => 0, 'status_codes' => [], 'lines' => []];
+}
+
+// One diagnostics line, in the format the dashboard and the AI Site Audit both read.
+function bp_kw_log_counts(array $c, string $what, float $elapsed): void {
+	$domain = preg_replace('/^www\./', '', bp_kw_site_domain());
+	$msg = sprintf('tasks: %d ok, %d failed · %d had 0 items · %d matched %s · %d inconclusive · %d corrected · %s%s · %.1fs',
+		$c['ok'], $c['fail'], $c['items_0'], $c['matched'], $domain, $c['inconclusive'], $c['corrected'], $what,
+		$c['status_codes'] ? ' · fail codes: ' . json_encode($c['status_codes']) : '', $elapsed);
+	if ($c['lines']) $msg .= "\n" . implode("\n", $c['lines']);
+	error_log('bp_kw: ' . $msg);
+	$log   = (array) get_option('bp_kw_last_run_diags', []);
+	$log[] = $msg;
+	update_option('bp_kw_last_run_diags', array_slice($log, -20), false);
+}
+
+// Standard queue (task_post → task_get). Live calls with URL resolution take 35s+ each, which a
+// 60s web request can't batch; the queue takes every due keyword in one fast POST (100 per call),
+// costs less than Live, and results come back in a few minutes. Pending tasks live in the option
+// bp_kw_pending (task id => meta) until bp_kw_collect_pending() picks them up.
+function bp_kw_post_serp_tasks(array $jobs, array &$tracked, string $today): array {
+	$pending = (array) get_option('bp_kw_pending', []);
+	$posted  = ['primary' => 0, 'secondary' => 0, 'failed' => 0, 'lines' => []];
+	foreach (array_chunk($jobs, 100) as $chunk) {
+		$payload = []; $metas = [];
+		foreach ($chunk as $i => $j) {
+			$tag        = substr(md5($j['k'] . $j['mode'] . $j['device'] . $today . $i), 0, 16);
+			$payload[]  = bp_kw_serp_payload($j['kw'], $j['device'], (int) $j['depth'], $tag);
+			$metas[$tag] = $j;
+		}
+		$res = bp_kw_dfs_request('/v3/serp/google/organic/task_post', $payload, 30);
+		foreach ((array) ($res['tasks'] ?? []) as $t) {
+			$meta = $metas[$t['data']['tag'] ?? ''] ?? null;
+			if (!$meta) continue;
+			unset($metas[$t['data']['tag']]);
+			if ((int) ($t['status_code'] ?? 0) !== 20100 || empty($t['id'])) {
+				$posted['failed']++;
+				$posted['lines'][] = 'POST FAIL ' . $meta['kw'] . ' (' . ($t['status_code'] ?? '?') . ' ' . ($t['status_message'] ?? '') . ')';
+				continue;
+			}
+			$pending[$t['id']] = $meta + ['at' => time()];
+			$posted[$meta['mode']]++;
+			if (isset($tracked[$meta['k']])) $tracked[$meta['k']][$meta['mode'] === 'primary' ? 'pending_at' : 'pending_secondary_at'] = $today;
+		}
+		// Anything the API didn't echo back (whole call failed) stays due — it's picked up next run.
+		$posted['failed'] += count($metas);
+		foreach ($metas as $m) $posted['lines'][] = 'POST FAIL ' . $m['kw'] . ' (no response)';
+	}
+	update_option('bp_kw_pending', $pending, false);
+	return $posted;
+}
+
+// Pick up finished queue tasks (task_get is free). Tasks still queued are left for the next pass;
+// anything older than 2 days is given up on and retried. Runs from its own short chron slot while
+// tasks are pending, at the start of every keyword run, and from the admin Fetch buttons.
+function bp_kw_collect_pending(float $budget_seconds = 40): array {
+	$pending = (array) get_option('bp_kw_pending', []);
+	$counts  = bp_kw_empty_counts();
+	if (!$pending) return $counts;
+
+	$t0      = microtime(true);
+	$today   = date('Y-m-d');
+	$tracked = bp_kw_tracked();
+	$history = bp_kw_history();
+	$waiting = 0;
+	$clear   = function (array $meta) use (&$tracked) {
+		if (isset($tracked[$meta['k']])) unset($tracked[$meta['k']][$meta['mode'] === 'primary' ? 'pending_at' : 'pending_secondary_at']);
+	};
+
+	foreach (array_chunk(array_keys($pending), 10) as $ids) {
+		if (microtime(true) - $t0 > $budget_seconds) break;
+		$paths = [];
+		foreach ($ids as $id) $paths[$id] = '/v3/serp/google/organic/task_get/advanced/' . rawurlencode($id);
+		foreach (bp_kw_dfs_get_parallel($paths) as $id => $resp) {
+			$meta   = $pending[$id];
+			$task   = $resp['tasks'][0] ?? null;
+			$status = (int) ($task['status_code'] ?? 0);
+			if (in_array($status, [40601, 40602], true) || (!$task && time() - (int) $meta['at'] < 2 * DAY_IN_SECONDS)) {
+				// Still in DataForSEO's queue (or a blip fetching it). Give up after 2 days.
+				if (time() - (int) $meta['at'] < 2 * DAY_IN_SECONDS) { $waiting++; continue; }
+				$task = ['status_code' => $status ?: 0, 'status_message' => 'still queued after 2 days — gave up'];
+			}
+			bp_kw_apply_task($task, $meta, $tracked, $history, $today, $counts);
+			$clear($meta);
+			unset($pending[$id]);
+			$counts['processed']++;
+		}
+	}
+	if ($counts['processed']) {
+		bp_kw_save_tracked($tracked);
+		bp_kw_save_history($history);
+		update_option('bp_kw_pending', $pending, false);
+		update_option('bp_kw_chron_last_run', time(), false);
+		update_option('bp_kw_snapshot_date', $today, false);
+		bp_kw_log_counts($counts, 'collected ' . $counts['processed'] . ', ' . $waiting . ' still queued', microtime(true) - $t0);
+	}
+	$counts['waiting'] = $waiting;
+	return $counts;
+}
 
 // Fetch ALL organic keywords the domain ranks for, paginating through the full result set
 function bp_kw_fetch_ranked_keywords(): ?array {
@@ -1280,8 +1389,10 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 	@ini_set('max_execution_time', 300);
 	@ignore_user_abort(true);
 
-	// Reset per-run diagnostics — each batch will append a line to this option
+	// Reset per-run diagnostics, then pick up any results from the previous run still in the queue
+	// (before tracked/history are loaded below, since collecting writes them).
 	update_option('bp_kw_last_run_diags', [], false);
+	$collected = bp_kw_collect_pending(20);
 
 	$today    = date('Y-m-d');
 	$records  = bp_kw_target_records();
@@ -1398,13 +1509,9 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 	}
 	$out['bootstrapping'] = $bootstrapping;
 
-	// D. Build due-lists, grouped by endpoint
-	$primary_advanced   = $primary_regular   = [];
-	$secondary_advanced = $secondary_regular = [];
-
-	// $force bypasses the weekly cron gate (in functions-chron.php), not per-keyword cadence —
-	// once a keyword's been checked today its next_check is in the future, and we shouldn't
-	// waste API calls re-querying it just because the user clicked Fetch Now again.
+	// D. Due keywords → queue jobs. A keyword already waiting in DataForSEO's queue isn't posted again.
+	$jobs = []; $total_due = 0;
+	$fresh = fn($d) => $d && strtotime($d) >= strtotime('-2 days');
 	foreach ($tracked as $kw_key => $entry) {
 		if (!isset($entry['source'])) continue;
 
@@ -1419,97 +1526,43 @@ function bp_kw_run_serp_chron(bool $force = false, ?callable $selector = null): 
 			$secondary_due = false;
 		} else {
 			$primary_due   = $next_check <= $today;
-			$secondary_due = !$last_secondary || strtotime($last_secondary) < strtotime('-90 days');
-			if (!$primary_due && !$secondary_due) continue;
+			// Skip secondary entirely while bootstrapping — all budget goes to primary
+			$secondary_due = !$bootstrapping && (!$last_secondary || strtotime($last_secondary) < strtotime('-90 days'));
 		}
+		if ($primary_due && $fresh($entry['pending_at'] ?? ''))             $primary_due   = false;
+		if ($secondary_due && $fresh($entry['pending_secondary_at'] ?? '')) $secondary_due = false;
+		if (!$primary_due && !$secondary_due) continue;
 
-		$cadence   = bp_kw_cadence_for_record($entry, (int) ($entry['last_rank'] ?? 0));
-		$batch_rec = $entry + [
-			'depth'           => $cadence['depth'],
-			'_next_check'     => $next_check,
-			'_last_secondary' => $last_secondary,
-		];
-
-		if ($primary_due) {
-			if ($cadence['endpoint'] === 'live_advanced') $primary_advanced[] = $batch_rec;
-			else                                          $primary_regular[]  = $batch_rec;
-		}
-		// Skip secondary entirely while bootstrapping — all budget goes to primary
-		if ($secondary_due && !$bootstrapping) {
-			if ($cadence['endpoint'] === 'live_advanced') $secondary_advanced[] = $batch_rec;
-			else                                          $secondary_regular[]  = $batch_rec;
-		}
+		$cadence = bp_kw_cadence_for_record($entry, (int) ($entry['last_rank'] ?? 0));
+		$base    = ['k' => $kw_key, 'kw' => $entry['keyword'], 'depth' => $cadence['depth'], 'source' => $entry['source'] ?? '', '_sort' => $next_check];
+		if ($primary_due)   { $jobs[] = $base + ['mode' => 'primary',   'device' => $primary];   $total_due++; }
+		if ($secondary_due) { $jobs[] = $base + ['mode' => 'secondary', 'device' => $secondary, '_sort' => $last_secondary]; $total_due++; }
 	}
+	// Most overdue first; primary before secondary. Capped per run so one site can't post thousands.
+	usort($jobs, fn($a, $b) => [$a['mode'] !== 'primary', $a['_sort']] <=> [$b['mode'] !== 'primary', $b['_sort']]);
+	$cap  = (int) apply_filters('bp_kw_max_tasks_per_run', 500);
+	$jobs = array_slice($jobs, 0, $cap);
 
-	// Sort each list — most overdue first
-	$sort_primary   = fn($a, $b) => ($a['_next_check']     ?? '') <=> ($b['_next_check']     ?? '');
-	$sort_secondary = fn($a, $b) => ($a['_last_secondary'] ?? '') <=> ($b['_last_secondary'] ?? '');
-	usort($primary_advanced,   $sort_primary);
-	usort($primary_regular,    $sort_primary);
-	usort($secondary_advanced, $sort_secondary);
-	usort($secondary_regular,  $sort_secondary);
-
-	$total_due = count($primary_advanced) + count($primary_regular) + count($secondary_advanced) + count($secondary_regular);
-
-	// E. Process due records under a time budget — stop before hitting PHP timeout.
-	// DataForSEO Live submitted one task per HTTP call (multi-task batches silently fail
-	// most tasks on standard account tiers). Per-task time varies 3-15s, so a fixed task
-	// count is a poor budget — time is what we actually need to manage.
-	$budget_start   = microtime(true);
-	$budget_seconds = (float) apply_filters('bp_kw_max_seconds_per_run', 50);
-
-	$batches = [
-		['records' => $primary_advanced,   'endpoint' => 'live_advanced', 'device' => $primary,   'mode' => 'primary'],
-		['records' => $primary_regular,    'endpoint' => 'live_regular',  'device' => $primary,   'mode' => 'primary'],
-		['records' => $secondary_advanced, 'endpoint' => 'live_advanced', 'device' => $secondary, 'mode' => 'secondary'],
-		['records' => $secondary_regular,  'endpoint' => 'live_regular',  'device' => $secondary, 'mode' => 'secondary'],
-	];
-
-	$all = ['ok' => 0, 'fail' => 0, 'items_0' => 0, 'matched' => 0, 'status_codes' => [], 'lines' => [], 'aborted_on_time' => false];
-
-	foreach ($batches as $b) {
-		if (!$b['records']) continue;
-		if ((microtime(true) - $budget_start) > $budget_seconds) { $all['aborted_on_time'] = true; break; }
-
-		$counts = bp_kw_run_serp_batch(
-			$b['records'], $b['endpoint'], $b['device'], $b['mode'],
-			$tracked, $history, $today, $budget_start, $budget_seconds
-		);
-
-		if ($b['mode'] === 'primary') $out['primary']   += $counts['processed'];
-		else                          $out['secondary'] += $counts['processed'];
-
-		$all['ok']      += $counts['ok'];
-		$all['fail']    += $counts['fail'];
-		$all['items_0'] += $counts['items_0'];
-		$all['matched'] += $counts['matched'];
-		foreach ($counts['status_codes'] as $code => $n) {
-			$all['status_codes'][$code] = ($all['status_codes'][$code] ?? 0) + $n;
-		}
-		foreach ($counts['lines'] as $line) $all['lines'][] = $line;
-		if ($counts['aborted_on_time']) { $all['aborted_on_time'] = true; break; }
-	}
-
+	// E. Post them to DataForSEO's Standard queue. Results are collected later (bp_kw_collect_pending).
+	$t0     = microtime(true);
+	$posted = bp_kw_post_serp_tasks($jobs, $tracked, $today);
+	bp_kw_save_tracked($tracked);
+	bp_kw_save_history($history);
 	update_option('bp_kw_chron_last_run', time(), false);
-	update_option('bp_kw_snapshot_date',  $today, false);
 
-	$processed = $out['primary'] + $out['secondary'];
-	$out['remaining'] = max(0, $total_due - $processed);
+	$out['primary']   = $posted['primary'];
+	$out['secondary'] = $posted['secondary'];
+	$out['queued']    = $posted['primary'] + $posted['secondary'];
+	$out['remaining'] = max(0, $total_due - $out['queued']);
+	$out['collected'] = (int) ($collected['processed'] ?? 0);
 
-	$elapsed   = microtime(true) - $budget_start;
-	$domain    = preg_replace('/^www\./', '', bp_kw_site_domain());
-	$codes_str = $all['status_codes'] ? ' · fail codes: ' . json_encode($all['status_codes']) : '';
-	$abort_str = $all['aborted_on_time'] ? ' · stopped on time budget' : '';
-	$diag_msg  = sprintf(
-		'tasks: %d ok, %d failed · %d had 0 items · %d matched %s%s · %.1fs%s',
-		$all['ok'], $all['fail'], $all['items_0'], $all['matched'], $domain, $codes_str, $elapsed, $abort_str
-	);
-	if ($all['lines']) $diag_msg .= "\n" . implode("\n", $all['lines']);
-
-	error_log('bp_kw_run_serp_chron: ' . $diag_msg . ($bootstrapping ? ' [bootstrap]' : ''));
-	$diag_log = (array) get_option('bp_kw_last_run_diags', []);
-	$diag_log[] = $diag_msg;
-	update_option('bp_kw_last_run_diags', $diag_log, false);
+	$msg = sprintf('queued %d keyword checks (%d primary, %d secondary)%s · %d collected from earlier runs · %.1fs',
+		$out['queued'], $posted['primary'], $posted['secondary'], $posted['failed'] ? ', ' . $posted['failed'] . ' failed to post' : '', $out['collected'], microtime(true) - $t0);
+	if ($posted['lines']) $msg .= "\n" . implode("\n", $posted['lines']);
+	error_log('bp_kw_run_serp_chron: ' . $msg . ($bootstrapping ? ' [bootstrap]' : ''));
+	$log   = (array) get_option('bp_kw_last_run_diags', []);
+	$log[] = $msg;
+	update_option('bp_kw_last_run_diags', array_slice($log, -20), false);
 
 	return $out;
 }
@@ -1884,25 +1937,19 @@ function bp_kw_render_admin_page(): void {
 				$label   = $entry['keyword'] ?? '';
 				$device  = bp_kw_primary_device();
 				$cadence = bp_kw_cadence_for_record($entry, (int) ($entry['last_rank'] ?? 0));
-				$path    = ($cadence['endpoint'] === 'live_advanced')
-					? '/v3/serp/google/organic/live/advanced'
-					: '/v3/serp/google/organic/live/regular';
-				$payload = [[
-					'keyword'       => $entry['keyword'],
-					'location_code' => 2840,
-					'language_code' => 'en',
-					'device'        => $device,
-					'depth'         => (int) $cadence['depth'],
-				]];
-				$response = bp_kw_dfs_request($path, $payload);
+				// One live check (with URL resolution, ~35s) fits in a single admin request.
+				$payload  = [bp_kw_serp_payload($entry['keyword'], $device, (int) $cadence['depth'])];
+				$response = bp_kw_dfs_request('/v3/serp/google/organic/live/advanced', $payload, 55);
 				$ok       = $response && ($response['status_code'] ?? 0) === 20000;
 				$task     = $ok ? ($response['tasks'][0] ?? null) : null;
 				$task_ok  = $task && ($task['status_code'] ?? 0) === 20000;
+				$domain   = preg_replace('/^www\./', '', bp_kw_site_domain());
+				$place_id = customer_info()['pid'] ?? null;
+				$parsed   = $task_ok ? bp_kw_parse_serp_response($response, $domain, $place_id) : [];
 
-				if ($task_ok) {
-					$domain   = preg_replace('/^www\./', '', bp_kw_site_domain());
-					$place_id = customer_info()['pid'] ?? null;
-					$parsed   = bp_kw_parse_serp_response($response, $domain, $place_id);
+				if ($task_ok && !empty($parsed['inconclusive'])) {
+					echo '<div class="notice notice-warning is-dismissible"><p>Checked <strong>' . esc_html($label) . '</strong> — inconclusive: Google returned unresolved redirect links, so this reading was not saved. Try again later.</p></div>';
+				} elseif ($task_ok) {
 					$today    = date('Y-m-d');
 					$new_rank = (int) ($parsed['rank']     ?? 0);
 					$new_map  = (int) ($parsed['map_rank'] ?? 0);
@@ -1949,7 +1996,7 @@ function bp_kw_render_admin_page(): void {
 			});
 			$primary   = (int) ($result['primary']   ?? 0);
 			$remaining = (int) ($result['remaining'] ?? 0);
-			$msg       = "Top-20 refresh complete — <strong>{$primary}</strong> keyword(s) re-checked live.";
+			$msg       = "Top-20 refresh queued — <strong>{$primary}</strong> keyword(s) sent to DataForSEO. Results arrive in a few minutes and are collected automatically (or click <em>Fetch Due Rankings</em> to collect now).";
 			if ($remaining > 0) {
 				$msg .= " <strong>{$remaining}</strong> still pending — click <em>Fetch Rankings Now</em> again to finish.";
 			}
@@ -1972,7 +2019,7 @@ function bp_kw_render_admin_page(): void {
 			$remaining = (int) ($result['remaining'] ?? 0);
 			$total     = 0;
 			foreach (bp_kw_target_records() as $rec) if (($rec['source'] ?? '') === 'jobsite') $total++;
-			$msg       = "Jobsite re-check complete — <strong>{$primary}</strong> of <strong>{$total}</strong> jobsite keyword(s) queried live.";
+			$msg       = "Jobsite re-check queued — <strong>{$primary}</strong> of <strong>{$total}</strong> jobsite keyword(s) sent to DataForSEO. Results arrive in a few minutes and are collected automatically.";
 			if ($remaining > 0) {
 				$msg .= " <strong>{$remaining}</strong> still pending — click <em>Recheck Jobsite Keywords</em> again to finish.";
 			}
@@ -1994,7 +2041,7 @@ function bp_kw_render_admin_page(): void {
 			$secondary= (int) ($result['secondary'] ?? 0);
 			$remaining= (int) ($result['remaining'] ?? 0);
 			$bootstrap= !empty($result['bootstrapping']);
-			$msg      = "Run complete — <strong>{$primary}</strong> primary + <strong>{$secondary}</strong> secondary keywords checked.";
+			$msg      = "Queued <strong>{$primary}</strong> primary + <strong>{$secondary}</strong> secondary keyword checks; collected <strong>" . (int) ($result[collected] ?? 0) . "</strong> results from earlier runs. New results arrive in a few minutes — click again to collect them.";
 			if ($remaining > 0) {
 				$msg .= " <strong>{$remaining}</strong> still due — click <em>Fetch Due Rankings</em> again to continue.";
 			}
@@ -2036,9 +2083,9 @@ function bp_kw_render_admin_page(): void {
 
 	// Cost estimate — walk target_records and sum per-record annual SERP cost based on
 	// cadence (source × heat × is_primary) + quarterly secondary-device spot-check.
-	// Rankings are pulled via the DataForSEO LIVE endpoints (see bp_kw_run_serp_batch),
-	// priced at $0.002 per SERP + $0.0015 per additional 100-result page of depth — NOT
-	// the $0.0006 Standard/queued rate. NOTE: this covers targeted SERP checks only; it
+	// Scheduled rankings go through the DataForSEO Standard queue (bp_kw_post_serp_tasks) with
+	// resolve_poisoned_results, which bills one extra SERP page per check. The figures below
+	// predate that switch and are a conservative estimate. NOTE: this covers targeted SERP checks only; it
 	// excludes the periodic Labs discovery calls that populate Labs-sourced tracked keywords.
 	$cost_records = bp_kw_target_records();
 	$kw_count     = count($cost_records);

@@ -57,33 +57,41 @@ h3.archive-subheadline {
 	margin-bottom:                                             var(--measure-small);
 }
 
+.single-meta .icon {
+	margin-right:                                              8px;
+}
+
+.single-meta .icon.user {
+	margin-right:                                              5px;
+}
+
+.single-meta .meta-date,
+.single-meta .meta-author,
+.single-meta .meta-comments {
+	margin-right:                                              20px;
+}
+
 .archive-meta span,
 .single-meta span {
-	margin-left:                                               10px;
-	margin-right:                                              10px;
 }
 
 .archive-meta i.fa-calendar-alt,
 .single-meta i.fa-calendar-alt {
-	margin-right:                                              8px;
-	transform:                                                 translateY(0);
+
 }
 
 .archive-meta i.fa-user,
 .single-meta i.fa-user {
-	margin-left:                                               8px;
-	margin-right:                                              -3px;
-	transform:                                                 translateY(0);
+
 }
 
 .archive-meta i.fa-user {
-	margin-right:                                              4px;
+
 }
 
 .archive-meta i.fa-comments,
 .single-meta i.fa-comments {
-	margin-right:                                              4px;
-	transform:                                                 translateY(0);
+
 }
 
 .updated:not(.published) {

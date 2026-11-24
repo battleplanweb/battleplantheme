@@ -15,17 +15,14 @@
 	--cc-brand-2-ink:                                          #ffffff;
 
 	/* Standardized canvas — white + a fixed greyscale ramp. Never changes per client. */
-	--cc-white:                                                #ffffff;
 	--cc-bg: #f4f6f8;           /* app background */
 	--cc-surface: #ffffff;      /* cards */
 	--cc-ink: #1f2933;          /* primary text */
 	--cc-ink-soft: #52606d;     /* secondary text */
-	--cc-ink-faint: #9aa5b1;    /* tertiary / placeholders */
 	--cc-line: #e2e6ea;         /* borders / dividers */
 
 	--cc-radius:                                               0.9em;
 	--cc-shadow:                                               0 0.15em 0.5em rgba(0, 0, 0, .06);
-	--cc-tabbar-h:                                             4.2em;
 
 	/* Back-compat aliases so existing --cc-accent usages map to the primary brand tone. */
 	--cc-accent:                                               var(--cc-brand);
@@ -116,10 +113,10 @@ body.has-customer-connect #main-content {
 .cc-check {
 	width:                                                     3em; height: 3em; margin: 0 auto 0.6em;
 	border-radius:                                             50%; background: var(--cc-accent); color: #fff;
-	font-size:                                                 1.4em; line-height: 3em; text-align: center; font-weight: 700;
+	font-size:                                                 1.4em; line-height: 3em; text-align: center; font-weight: bold;
 	animation:                                                 cc-pop 0.35s ease;
 }
-.cc-welcome { margin: 0; font-weight: 600; color: var(--cc-ink); }
+.cc-welcome { margin: 0; font-weight: bold; color: var(--cc-ink); }
 @keyframes cc-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .cc-spinner {
@@ -159,7 +156,7 @@ body.has-customer-connect #main-content {
 }
 
 .cc-field { display: flex; flex-direction: column; gap: 0.35em; }
-.cc-field > span { font-size: 0.8em; font-weight: 600; color: var(--cc-ink-soft); }
+.cc-field > span { font-size: 0.8em; font-weight: bold; color: var(--cc-ink-soft); }
 .cc-field input {
 	font:                                                      inherit;
 	padding:                                                   0.75em 0.85em;
@@ -182,7 +179,7 @@ body.has-customer-connect #main-content {
 /* ---------- buttons ---------- */
 
 .cc-btn {
-	font:                                                      inherit; font-weight: 600;
+	font:                                                      inherit; font-weight: bold;
 	border:                                                    0; border-radius: 0.6em;
 	padding:                                                   0.8em 1em;
 	cursor:                                                    pointer;
@@ -204,7 +201,7 @@ body.has-customer-connect #main-content {
 #customer-connect-app .cc-code-box {
 	flex:                                                      1 1 0; min-width: 0; width: 100%;
 	aspect-ratio:                                              3 / 4;
-	font:                                                      inherit; font-size: 1.6em; font-weight: 700; text-align: center;
+	font:                                                      inherit; font-size: 1.6em; font-weight: bold; text-align: center;
 	color:                                                     var(--cc-ink);
 	border:                                                    1.5px solid var(--cc-line);
 	border-radius:                                             0.55em;
@@ -234,7 +231,7 @@ body.has-customer-connect #main-content {
 	background:                                                var(--cc-accent); color: var(--cc-accent-ink);
 	position:                                                  sticky; top: 0; z-index: 5;
 }
-.cc-appbar-title { flex: 1 1 auto; font-family: inherit; font-weight: 700; font-size: 1.15em; }
+.cc-appbar-title { flex: 1 1 auto; font-family: inherit; font-weight: bold; font-size: 1.15em; }
 .cc-appbar-actions { display: flex; align-items: center; gap: 0.5em; }
 .cc-appbar-btn {
 	width:                                                     2.2em; height: 2.2em; flex: 0 0 auto; border: 0; border-radius: 50%;
@@ -248,7 +245,7 @@ body.has-customer-connect #main-content {
 	position:                                                  absolute; top: -0.2em; right: -0.2em;
 	min-width:                                                 1.25em; height: 1.25em; padding: 0 0.25em;
 	background:                                                #e11d48; color: #fff; border-radius: 0.7em;
-	font-size:                                                 0.6em; font-weight: 700; line-height: 1.25em; text-align: center;
+	font-size:                                                 0.6em; font-weight: bold; line-height: 1.25em; text-align: center;
 }
 .cc-badge[hidden] { display: none; }
 
@@ -258,10 +255,10 @@ body.has-customer-connect #main-content {
 .cc-notif-list { display: flex; flex-direction: column; gap: 0.7em; }
 .cc-notif.is-unread { border-left: 0.25em solid var(--cc-accent); }
 .cc-notif-head { display: flex; justify-content: space-between; gap: 0.5em; align-items: baseline; }
-.cc-notif-title { font-weight: 700; color: var(--cc-ink); }
+.cc-notif-title { font-weight: bold; color: var(--cc-ink); }
 .cc-notif-when { font-size: 0.78em; color: var(--cc-ink-soft); white-space: nowrap; }
 .cc-notif-body { margin: 0.4em 0 0; font-size: 0.92em; }
-.cc-notif-link { display: inline-block; margin-top: 0.5em; color: var(--cc-accent); font-weight: 600; font-size: 0.9em; }
+.cc-notif-link { display: inline-block; margin-top: 0.5em; color: var(--cc-accent); font-weight: bold; font-size: 0.9em; }
 
 .cc-view {
 	flex:                                                      1;
@@ -290,7 +287,7 @@ body.has-customer-connect #main-content {
 	display:                                                   flex; flex-direction: column; gap: 0.2em;
 }
 .cc-quick-item:hover, .cc-quick-item.active, .cc-quick-item.tab-focus { box-shadow: 0 0.3em 0.8em rgba(0, 0, 0, .1); }
-.cc-quick-title { font-weight: 700; color: var(--cc-ink); }
+.cc-quick-title { font-weight: bold; color: var(--cc-ink); }
 .cc-quick-sub { font-size: 0.9em; color: var(--cc-ink-soft); }
 
 .cc-account-form { margin-top: 0.4em; }
@@ -326,13 +323,13 @@ body.has-customer-connect #main-content {
 	padding:                                                   0.7em 0.6em 1em;
 }
 .cc-sidebar-logo { width: 1.9em; height: 1.9em; border-radius: 0.4em; flex: 0 0 auto; }
-.cc-sidebar-app { font-weight: 700; font-size: 1.05em; }
+.cc-sidebar-app { font-weight: bold; font-size: 1.05em; }
 
 .cc-tab {
 	display:                                                   flex; align-items: center; gap: 0.8em; width: 100%;
 	border:                                                    0; background: none; cursor: pointer;
 	color:                                                     var(--cc-brand-ink); opacity: 0.82;
-	font:                                                      inherit; font-weight: 600; font-size: 0.95em; text-align: left;
+	font:                                                      inherit; font-weight: bold; font-size: 0.95em; text-align: left;
 	padding:                                                   0.8em; border-radius: 0.6em;
 	transition:                                                background 0.15s ease, opacity 0.15s ease;
 }
@@ -350,14 +347,14 @@ body.has-customer-connect #main-content {
 
 .cc-eq-list { display: flex; flex-direction: column; gap: 0.8em; }
 .cc-eq-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; }
-.cc-eq-title { font-weight: 700; color: var(--cc-ink); }
+.cc-eq-title { font-weight: bold; color: var(--cc-ink); }
 .cc-eq-meta { margin: 0.5em 0 0; font-size: 0.88em; color: var(--cc-ink-soft); }
 .cc-eq-actions { display: flex; gap: 0.5em; margin-top: 0.9em; }
 
 .cc-btn-sm { padding: 0.5em 0.8em; font-size: 0.85em; background: #eef1f4; }
 
 .cc-chip {
-	font-size:                                                 0.72em; font-weight: 700;
+	font-size:                                                 0.72em; font-weight: bold;
 	padding:                                                   0.3em 0.6em; border-radius: 1em; white-space: nowrap;
 }
 .cc-chip-ok   { background: #e7f5ee; color: #067647; }
@@ -409,7 +406,7 @@ body.has-customer-connect #main-content {
 	border-radius:                                             var(--sp-radius-sm, 8px); padding: 0.6em 0.75em; display: flex; flex-direction: column; gap: 0.15em;
 }
 .cc-cust-opt:hover, .cc-cust-opt.active, .cc-cust-opt.tab-focus { border-color: var(--sp-accent-color, #ec9a3c); }
-.cc-cust-name { font-weight: 700; color: var(--sp-text, #12161c); }
+.cc-cust-name { font-weight: bold; color: var(--sp-text, #12161c); }
 .cc-cust-meta { font-size: 0.85em; color: var(--sp-text-secondary, #173522); }
 .cc-cust-none { font-size: 0.85em; color: var(--sp-text-secondary, #173522); padding: 0.4em 0; }
 .cc-chosen { display: flex; align-items: center; justify-content: space-between; gap: 0.5em; background: var(--sp-secondary-lightest, #dae9de); border-radius: var(--sp-radius-sm, 8px); padding: 0.6em 0.9em; }

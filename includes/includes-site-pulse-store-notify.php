@@ -53,7 +53,7 @@ function sp_store_notification_templates(): array {
 			'to'      => 'customer',
 			'default' => true,
 			'subject' => 'Your {business} order {order_number}',
-			'body'    => "Hi {customer_first},\n\nThanks for your order! Here's your receipt.\n\nOrder {order_number} · {order_date}\n\n{items}\n\nSubtotal: {subtotal}\n{discount_line}{shipping_line}{tax_line}Total paid: {total}\n\n{downloads_block}{ship_to_block}{agreements_block}If you have any questions, just reply to this email.\n\n{business}",
+			'body'    => "Hi {customer_first},\n\nThanks for your order! Here's your receipt.\n\nOrder {order_number} · {order_date}\n\n{items}\n\nSubtotal: {subtotal}\n{discount_line}{fee_line}{shipping_line}{tax_line}Total paid: {total}\n\n{downloads_block}{ship_to_block}{agreements_block}If you have any questions, just reply to this email.\n\n{business}",
 		],
 		'shipped' => [
 			'label'   => 'Shipping notice',
@@ -188,6 +188,8 @@ function sp_store_tokens( array $order, array $payload = [] ): array {
 		'{discount_line}'   => (int) $order['discount_cents'] ? 'Discount: -' . $money( 'discount_cents' ) . "\n" : '',
 		'{shipping_line}'   => (int) $order['shipping_cents'] ? 'Shipping: ' . $money( 'shipping_cents' ) . "\n" : '',
 		'{tax_line}'        => (int) $order['tax_cents'] ? 'Tax: ' . $money( 'tax_cents' ) . "\n" : '',
+		'{fee_line}'        => (int) $order['fee_card_cents'] + (int) $order['fee_platform_cents']
+			? 'Service fee: ' . sp_store_money_text( (int) $order['fee_card_cents'] + (int) $order['fee_platform_cents'], $cur ) . "\n" : '',
 		'{ship_to_block}'   => $ship ? "Shipping to:\n" . implode( "\n", $ship ) . "\n\n" : '',
 		'{tracking_block}'  => $tracking,
 		'{tracking_number}' => (string) $order['tracking_number'],
@@ -208,7 +210,7 @@ function sp_store_tokens( array $order, array $payload = [] ): array {
 function sp_store_token_names(): array {
 	return array_merge( [
 		'{customer}', '{customer_first}', '{business}', '{order_number}', '{order_date}', '{items}',
-		'{subtotal}', '{shipping}', '{tax}', '{total}', '{discount_line}', '{shipping_line}', '{tax_line}',
+		'{subtotal}', '{shipping}', '{tax}', '{total}', '{discount_line}', '{fee_line}', '{shipping_line}', '{tax_line}',
 		'{ship_to_block}', '{tracking_block}', '{tracking_number}', '{refund_amount}', '{email}',
 		'{email_line}', '{phone_line}', '{note_block}', '{orders_link}',
 	], ( function_exists( 'sp_store_members_on' ) && sp_store_members_on() ) ? [ '{plans}', '{account_page}', '{account_link}' ] : [],
@@ -369,6 +371,11 @@ function sp_store_deliver( array $order, string $template_key, string $recipient
 		$tokens['{account_link}'] = $link !== '' ? $link : ( function_exists( 'sp_member_account_url' ) ? sp_member_account_url() : '' );
 	}
 	$subject = strtr( $copy['subject'], $tokens );
+	// A receipt saved before the service fee existed has no {fee_line}; slot it in
+	// before the shipping line so the customer's receipt still adds up to the total.
+	if ( strpos( $copy['body'], '{fee_line}' ) === false && strpos( $copy['body'], '{shipping_line}' ) !== false ) {
+		$copy['body'] = str_replace( '{shipping_line}', '{fee_line}{shipping_line}', $copy['body'] );
+	}
 	$body    = strtr( $copy['body'], $tokens );
 
 	$headers = [ 'Content-Type: text/html; charset=UTF-8' ];

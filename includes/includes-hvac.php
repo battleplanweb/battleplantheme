@@ -55,7 +55,7 @@ function battleplan_product_overview( $atts, $content = null ) {
 		[col class="col-archive col-products"]
 		 [img size="1/3" link="'.$link.'" ada-hidden="true"]<img class="img-archive img-products" src="/wp-content/uploads/'.$pic.'" loading="lazy" alt="'.$alt.'" style="aspect-ratio:1/1">[/img]
 		 [group size="2/3"]
-		  [txt size="100" class="text-products"]<h3><a class="link-archive link-products" href="'.$link.'" aria-hidden="true" tabindex="-1">'.$title.'</a></h3>'.$excerpt.'[/txt]
+		  [txt size="100" class="text-products"]<h2><a class="link-archive link-products" href="'.$link.'" aria-hidden="true" tabindex="-1">'.$title.'</a></h2>'.$excerpt.'[/txt]
 		  [btn size="100" class="button-products" link="'.$link.'"]View '.$title.'[/btn]
 		 [/group]
 		[/col]

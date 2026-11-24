@@ -13,9 +13,9 @@ get_header(); ?>
 		<?php bp_before_the_content(); ?>
 
 		<?php
-		// On a category archive use the term's own name and description, so a client
+		// On a category or tag archive use the term's own name and description, so a client
 		// who writes an intro for /shop-category/hats/ actually sees it on the page.
-		$sp_store_term = is_tax( 'bp_product_cat' ) ? get_queried_object() : null;
+		$sp_store_term = is_tax( [ 'bp_product_cat', 'bp_product_tag' ] ) ? get_queried_object() : null;
 
 		$sp_store_heading = $sp_store_term
 			? $sp_store_term->name
@@ -35,6 +35,10 @@ get_header(); ?>
 		if ( $sp_store_term && trim( (string) $sp_store_term->description ) !== '' ) {
 			echo '<div class="store-archive-intro">' . wpautop( wp_kses_post( $sp_store_term->description ) ) . '</div>';
 		}
+
+		// Site markup under the heading (search, filters…). Printed with or without results,
+		// so a filter that matches nothing still leaves the customer a way back.
+		echo apply_filters( 'sp_store_catalog_header', '' );
 
 		if ( have_posts() ) {
 
@@ -56,7 +60,7 @@ get_header(); ?>
 
 		} else {
 
-			echo '<p class="store-empty">There is nothing in the shop just yet. Please check back soon.</p>';
+			echo '<p class="store-empty">' . wp_kses_post( apply_filters( 'sp_store_empty_message', 'There is nothing in the shop just yet. Please check back soon.' ) ) . '</p>';
 
 		}
 		?>

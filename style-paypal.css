@@ -19,8 +19,8 @@
 
 :root {
 	--pp-max-width:                                            480px;
-	--pp-gap:                                                  16px;
-	--pp-radius:                                               8px;
+	--pp-gap:                                                  var(--space-4);
+	--pp-radius:                                               var(--radius-sm);
 	--pp-border:                                               1px solid var(--light-grey);
 	--pp-background:                                           var(--white);
 	--pp-label-color:                                          var(--medium-grey);

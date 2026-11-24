@@ -8,7 +8,7 @@ Theme URI: https://bp-webdev.com/
 Author: Glendon Guttenfelder
 Author URI: https://bp-webdev.com
 Description: The Battle Plan Web Design Theme
-Version: v47.2
+Version: v47.3
 Text Domain: battleplan
 GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
 */
@@ -100,7 +100,6 @@ GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
   --font-size-title:                                        32px;
 
   --label-color:                                            var(--input-color);
-  --label-background:                                       var(--input-background);
   --label-color-focus:                                      var(--input-color-focus);
   --label-background-focus:                                 var(--input-background-focus);
 
@@ -227,6 +226,27 @@ GitHub Theme URI: https://github.com/battleplanweb/battleplantheme
   --measure-large:                                          2.5em;
   --bullet-spacing:                                         0.7em;
   --sidebar-width:                                          356px;
+
+  /* Spacing + radius scale — snap padding/margin/gap/border-radius to these instead of
+     writing raw px. Fixed whole-pixel values ON PURPOSE: no clamp()/vw/em/calc-with-multipliers,
+     which resolve to fractional pixels. Override a step at site level only with another whole px. */
+  --space-1:                                                4px;
+  --space-2:                                                8px;
+  --space-3:                                                12px;
+  --space-4:                                                16px;
+  --space-5:                                                20px;
+  --space-6:                                                24px;
+  --space-7:                                                32px;
+  --space-8:                                                48px;
+  --space-9:                                                64px;
+
+  --radius-xs:                                              4px;
+  --radius-sm:                                              8px;
+  --radius-md:                                              12px;
+  --radius-lg:                                              16px;
+  --radius-xl:                                              24px;
+  --radius-pill:                                            999px;
+  --radius-circle:                                          50%;
 
   /* [layout grid="fit"] tile sizing — see style-grid.css div.grid-fit.
      --fit-min is the tile width AND the wrap threshold. --fit-max is an optional
@@ -421,7 +441,8 @@ h1 > span {
 }
 
 h3,
-h2 > span {
+h2 > span,
+.slug-product-overview h2 {
 	--h-font-size:                                             var(--font-size-h3);
 }
 
@@ -852,7 +873,7 @@ a.icon-btn .icon-bg {
 	box-shadow:                                                var(--button-box-shadow);
 	z-index:                                                   100;
 	transform:                                                 var(--button-transform);
-	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+	transition:                                                var(--button-transition);
 }
 
 a.icon-btn:hover .icon-bg,
@@ -861,7 +882,7 @@ a.icon-btn.tab-focus .icon-bg {
 	background:                                                var(--button-background-hover);
 	box-shadow:                                                var(--button-box-shadow-hover);
 	transform:                                                 var(--button-transform-hover);
-	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+	transition:                                                var(--button-transition-hover);
 }
 
 .social-box {

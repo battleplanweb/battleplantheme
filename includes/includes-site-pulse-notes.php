@@ -225,16 +225,14 @@ function sp_note_notify_update( array $note, int $me ): void {
 			$uid, (int) $note['id']
 		) );
 		if ( $open ) continue;
-		site_pulse_notify( $uid, 'note_updated', sprintf( '%s updated the note: %s', $name, $note['title'] ), (int) $note['id'], 'note' );
-		if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
+		site_pulse_deliver( $uid, 'note_updated', sprintf( '%s updated the note: %s', $name, $note['title'] ), (int) $note['id'], 'note' );
 	}
 }
 
 function sp_note_notify_shared( array $note, int $me, array $uids ): void {
 	$name = sp_notes_name( $me );
 	foreach ( $uids as $uid ) {
-		site_pulse_notify( (int) $uid, 'note_shared', sprintf( '%s shared a note with you: %s', $name, $note['title'] ), (int) $note['id'], 'note' );
-		if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( (int) $uid );
+		site_pulse_deliver( (int) $uid, 'note_shared', sprintf( '%s shared a note with you: %s', $name, $note['title'] ), (int) $note['id'], 'note' );
 	}
 }
 
@@ -480,7 +478,7 @@ function sp_notes_ajax_delete(): void {
 		sp_note_destroy( $note );
 		if ( $others ) {
 			$name = sp_notes_name( $me );
-			foreach ( $others as $uid ) site_pulse_notify( $uid, 'note_deleted', sprintf( '%s deleted the note: %s', $name, $note['title'] ), $nid, 'note' );
+			foreach ( $others as $uid ) site_pulse_deliver( $uid, 'note_deleted', sprintf( '%s deleted the note: %s', $name, $note['title'] ), $nid, 'note' );
 		}
 		site_pulse_log( 'note_deleted', 'Note deleted', [ 'note_id' => $nid ] );
 		wp_send_json_success( [ 'removed' => 'all' ] );

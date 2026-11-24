@@ -322,7 +322,7 @@ function bp_run_chron_housekeeping(bool $force = false): void {
 		}
 	}
 
-	if ( bp_module_on(get_option('event_calendar')) ) {
+	if ( function_exists('bp_calendar_on') && bp_calendar_on() ) {
 		bp_universal_page_ensure('calendar', 'Calendar', '[get-event-calendar]');
 		// Roll recurring events' generated dates forward (rolling horizon) + prune past.
 		if (function_exists('bp_event_topup_recurrences')) bp_event_topup_recurrences();

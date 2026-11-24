@@ -717,6 +717,19 @@ function sp_member_by_subscription( string $subscription ): ?array {
  * order settles, which reads the subscription itself. An event for a subscription
  * with no membership is simply ignored.
  */
+/**
+ * The service fee a renewal carried, as the payment row's meta: the shares stored on the
+ * order when it was bought, which is what its recurring "Service fee" line charges each
+ * period. E-Commerce → Service Fees reads these. Null when the order renews without one.
+ */
+function sp_member_renewal_fee_meta( int $order_id ): ?string {
+	$order = $order_id ? sp_store_get_order( $order_id ) : null;
+	if ( ! $order ) return null;
+	$card = (int) ( $order['fee_renew_card_cents'] ?? 0 );
+	$plat = (int) ( $order['fee_renew_platform_cents'] ?? 0 );
+	return $card + $plat > 0 ? wp_json_encode( [ 'fee_card_cents' => $card, 'fee_platform_cents' => $plat ] ) : null;
+}
+
 function sp_member_handle_stripe_event( string $type, array $object ): void {
 	global $wpdb;
 	$table = sp_store_table( 'memberships' );
@@ -742,6 +755,7 @@ function sp_member_handle_stripe_event( string $type, array $object ): void {
 				'status'          => 'succeeded',
 				'provider_object' => (string) ( $object['id'] ?? '' ),
 				'description'     => 'Membership renewal',
+				'meta'            => sp_member_renewal_fee_meta( (int) $m['order_id'] ),
 				'created_at'      => $now,
 				'updated_at'      => $now,
 			] );
@@ -854,7 +868,29 @@ function sp_member_filter_content( $content ) {
 	if ( ! sp_store_members_on() ) return $content;
 	$post = get_post();
 	if ( ! $post || sp_member_can_view( (int) $post->ID ) ) return $content;
+
+	// Only swap the locked post's OWN content. The site header, footer and every other
+	// Element run through the_content too, while get_post() is still the locked page —
+	// without this check the header became the lock box and the page body stayed open.
+	$c = trim( (string) $content );
+	if ( $c === '' || strpos( (string) $post->post_content, $c ) === false ) return $content;
+
 	return sp_member_locked_box( $post );
+}
+
+/**
+ * Most templates never call the_content() — they print get_the_content() straight
+ * (template-parts/content.php, [build-archive], etc.), which skips the filter above.
+ * get_the_content() reads the $pages global that setup_postdata() fills, so swap it
+ * here and every one of those paths gets the lock box instead of the real content.
+ */
+add_action( 'the_post', 'sp_member_lock_postdata', 1 );
+function sp_member_lock_postdata( $post ): void {
+	if ( is_admin() || ! ( $post instanceof WP_Post ) || ! sp_store_members_on() ) return;
+	if ( sp_member_can_view( (int) $post->ID ) ) return;
+	$GLOBALS['pages']     = [ sp_member_locked_box( $post ) ];
+	$GLOBALS['multipage'] = 0;
+	$GLOBALS['numpages']  = 1;
 }
 
 /** The preview + "Members only" box a locked post shows instead of itself. */
@@ -1183,10 +1219,15 @@ function sp_store_customers( array $args ): array {
 		}
 	}
 
+	// Other modules add their people (Booking: everyone who has booked, free RSVPs included — they
+	// never make an order). Each row keeps the keys above; a module may add its own (e.g. 'bookings').
+	$people = (array) apply_filters( 'sp_store_customer_people', $people );
+	uasort( $people, static fn( $a, $b ) => strcmp( (string) $b['last'], (string) $a['last'] ) );
+
 	$search = strtolower( trim( (string) ( $args['search'] ?? '' ) ) );
 	$filter = (string) ( $args['filter'] ?? '' );
 	$people = array_values( array_filter( $people, static function ( $p ) use ( $search, $filter ) {
-		if ( $search !== '' && strpos( strtolower( $p['email'] . ' ' . $p['name'] ), $search ) === false ) return false;
+		if ( $search !== '' && strpos( strtolower( $p['email'] . ' ' . $p['name'] . ' ' . $p['phone'] ), $search ) === false ) return false;
 		$live = (bool) array_filter( $p['plans'], static fn( $pl ) => $pl['state']['tone'] === 'success' );
 		if ( $filter === 'members' && ! $live ) return false;
 		if ( $filter === 'customers' && $live ) return false;
@@ -1231,7 +1272,8 @@ function sp_store_customer_detail( string $email ): array {
 	}
 
 	$name = $rows ? (string) $rows[0]['customer_name'] : ( $user ? (string) $user->display_name : '' );
-	return [
+	// Other modules add their part of this person (Booking adds 'bookings').
+	return (array) apply_filters( 'sp_store_customer_detail', [
 		'email'        => $email,
 		'name'         => $name,
 		'phone'        => $rows ? (string) $rows[0]['customer_phone'] : '',
@@ -1239,7 +1281,7 @@ function sp_store_customer_detail( string $email ): array {
 		'member_only'  => $user ? sp_member_only( (int) $user->ID ) : false,
 		'orders'       => array_map( 'sp_store_order_row', $rows ),
 		'memberships'  => $memberships,
-	];
+	], $email );
 }
 
 
@@ -1333,7 +1375,7 @@ function sp_store_ajax_member_update(): void {
 	] );
 }
 
-/** Settings → Store → Membership Plans. */
+/** Settings → E-Commerce → Membership Plans. */
 add_action( 'wp_ajax_site_pulse_store_member_plans', 'sp_store_ajax_member_plans' );
 function sp_store_ajax_member_plans(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );

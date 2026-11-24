@@ -211,6 +211,111 @@ function bp_gsc_collect_top_queries(): void {
     update_option('bp_gsc_top_queries', $result, false);
 }
 
+// Query × page pairs over 90 days, for the AI Site Audit's search-opportunity analysis: WHICH page
+// Google shows for which query, so it can spot pages shown but rarely clicked, queries just off page
+// one, and two pages splitting one query. One API call; the old value is kept if the call fails.
+function bp_gsc_collect_query_pages(): void {
+
+    $token = bp_gsc_token();
+    if (!$token) return;
+
+    $home    = untrailingslashit(get_bloginfo('url'));
+    $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', $home);
+    $resp = wp_remote_post('https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($siteUrl) . '/searchAnalytics/query', [
+        'timeout' => 20,
+        'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
+        'body'    => wp_json_encode([
+            'startDate'             => date('Y-m-d', strtotime('-90 days')),
+            'endDate'               => date('Y-m-d', strtotime('-1 day')),
+            'dimensions'            => ['query', 'page'],
+            'rowLimit'              => 2500,
+            'dimensionFilterGroups' => [['filters' => [['dimension' => 'country', 'operator' => 'equals', 'expression' => 'usa']]]],
+        ]),
+    ]);
+    if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) return;
+
+    $data = json_decode(wp_remote_retrieve_body($resp), true);
+    $rows = [];
+    foreach ($data['rows'] ?? [] as $row) {
+        $query = (string) ($row['keys'][0] ?? '');
+        $page  = (string) ($row['keys'][1] ?? '');
+        if ($query === '' || $page === '') continue;
+        $path   = (string) (wp_parse_url($page, PHP_URL_PATH) ?: '/');
+        $rows[] = [$query, $path, (int) $row['clicks'], (int) $row['impressions'], round((float) $row['position'], 1)];
+    }
+    if (!$rows) return;
+
+    update_option('bp_gsc_query_pages', ['at' => time(), 'days' => 90, 'rows' => $rows], false);
+}
+
+// One page's Search Console totals (US) for a date range: clicks, impressions, CTR %, avg position.
+function bp_gsc_page_stats(string $page_url, string $start, string $end): ?array {
+    $token = bp_gsc_token();
+    if (!$token) return null;
+    $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', untrailingslashit(get_bloginfo('url')));
+    $resp = wp_remote_post('https://www.googleapis.com/webmasters/v3/sites/' . rawurlencode($siteUrl) . '/searchAnalytics/query', [
+        'timeout' => 15,
+        'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
+        'body'    => wp_json_encode([
+            'startDate'             => $start,
+            'endDate'               => $end,
+            'dimensionFilterGroups' => [['filters' => [
+                ['dimension' => 'page', 'operator' => 'equals', 'expression' => $page_url],
+                ['dimension' => 'country', 'operator' => 'equals', 'expression' => 'usa'],
+            ]]],
+        ]),
+    ]);
+    if (is_wp_error($resp) || wp_remote_retrieve_response_code($resp) !== 200) return null;
+    $row = json_decode(wp_remote_retrieve_body($resp), true)['rows'][0] ?? [];
+    return [
+        'clicks'      => (int) ($row['clicks'] ?? 0),
+        'impressions' => (int) ($row['impressions'] ?? 0),
+        'ctr'         => round((float) ($row['ctr'] ?? 0) * 100, 1),
+        'position'    => round((float) ($row['position'] ?? 0), 1),
+    ];
+}
+
+// AI Site Audit → Auto Fix results. 31 days after a fix is applied (28 days of data + Search Console's
+// ~3-day lag), compare the page's 28 days before the change with the 28 days after, alongside the whole
+// site's click change over the same windows so a seasonal swing isn't credited to the fix. Stored on the
+// fix itself in bp_site_audit_ai_history; the audit journal and email show it. Returns how many it measured.
+function bp_audit_measure_impacts(int $max = 5): int {
+    $history = get_option('bp_site_audit_ai_history');
+    if (!is_array($history) || !function_exists('bp_gsc_token')) return 0;
+    $site = get_option('bp_gsc_totals_history');
+    $siteClicks = function (string $a, string $b) use ($site): int {
+        $t = 0;
+        foreach ((array) $site as $d => $r) if ((string) $d >= $a && (string) $d <= $b) $t += (int) ($r['clicks'] ?? 0);
+        return $t;
+    };
+    $done = 0; $changed = false;
+    foreach ($history as $date => &$report) {
+        foreach ((array) ($report['fixes'] ?? []) as $i => $fx) {
+            if ($done >= $max) break 2;
+            if (($fx['status'] ?? '') !== 'fixed' || !empty($fx['impact']) || empty($fx['applied']['at'])) continue;
+            $at = (int) $fx['applied']['at'];
+            if (time() < $at + 31 * DAY_IN_SECONDS) continue;
+            $d = static fn(int $days) => gmdate('Y-m-d', $at + $days * DAY_IN_SECONDS);
+            $before = bp_gsc_page_stats((string) $fx['url'], $d(-28), $d(-1));
+            $after  = bp_gsc_page_stats((string) $fx['url'], $d(1), $d(28));
+            $done++;
+            if (!$before || !$after) continue;
+            $sb = $siteClicks(str_replace('-', '', $d(-28)), str_replace('-', '', $d(-1)));
+            $sa = $siteClicks(str_replace('-', '', $d(1)), str_replace('-', '', $d(28)));
+            $report['fixes'][$i]['impact'] = [
+                'before'             => $before,
+                'after'              => $after,
+                'site_clicks_change' => $sb > 0 ? (int) round(($sa - $sb) / $sb * 100) : 0,
+                'measured'           => time(),
+            ];
+            $changed = true;
+        }
+    }
+    unset($report);
+    if ($changed) update_option('bp_site_audit_ai_history', $history, false);
+    return $done;
+}
+
 /*--------------------------------------------------------------
 # GA4 Helpers
 --------------------------------------------------------------*/
@@ -1134,7 +1239,7 @@ function bp_collect_audit_metrics(): void {
     update_option('bp_audit_metrics_time', time(), false);
     update_option('bp_audit_metrics_next', time() + 3 * DAY_IN_SECONDS + rand(0, 6 * HOUR_IN_SECONDS), false);
 
-    foreach (['bp_content_collect_counts', 'bp_gbp_collect_stats', 'bp_gbp_collect_performance', 'bp_gsc_collect_totals', 'bp_gsc_collect_links', 'bp_kw_collect_bands'] as $fn) {
+    foreach (['bp_content_collect_counts', 'bp_gbp_collect_stats', 'bp_gbp_collect_performance', 'bp_gsc_collect_totals', 'bp_gsc_collect_links', 'bp_kw_collect_bands', 'bp_audit_measure_impacts'] as $fn) {
         try { $fn(); } catch (\Throwable $e) { error_log("$fn failed: " . $e->getMessage()); }
     }
 }
@@ -1214,21 +1319,24 @@ function bp_gsc_collect_totals(): void {
  *  Store: bp_gsc_coverage_history[YYYYMMDD] = ['indexed','not_indexed','total','reasons'=>[coverageState=>n],
  *  'groups'=>[main|secondary|blog|jobsite=>['i'=>,'n'=>]]] — see bp_gsc_coverage_by_group(). */
 function bp_gsc_collect_index_coverage(bool $force = false): void {
-    $now = time();
-    if ($force && $now < (int) get_option('bp_gsc_coverage_forced_until', 0)) $force = false;   // force still cooling down
-    if (!$force) {
-        $next = (int) get_option('bp_gsc_coverage_next', 0);
-        if ($next === 0) {   // first run: phase-shift 0–6 days per site so the fleet spreads across the week
-            update_option('bp_gsc_coverage_next', $now + (int) (crc32(get_bloginfo('url')) % (7 * DAY_IN_SECONDS)), false);
-            return;
-        }
-        if ($now < $next) return;                                                               // weekly gate
-    }
+    // WHY THIS IS NOT A WEEKLY ALL-OR-NOTHING BURST ANYMORE (2026-11-20): the old version inspected a 25–50 URL
+    // batch and only saved the snapshot + advanced the weekly gate AFTER the whole loop. Live, the Chron C request
+    // got killed ~10 inspections in (it runs after the rest of the analytics work), so every night re-stamped a
+    // few pages, never reached the save, and never moved the gate — a month in, no site had a single snapshot.
+    // Now: every pass inspects only pages not checked in 7 days, stops on a time budget, and ALWAYS saves today's
+    // snapshot from the per-URL stamps (cheap DB tally) — so the trend line gets a point every night.
+    $now     = time();
+    $started = microtime(true);
+    $reqT0   = (float) ($_SERVER['REQUEST_TIME_FLOAT'] ?? $started);
+    $outOfTime = static function () use ($started, $reqT0) {
+        $t = microtime(true);
+        return ($t - $started) > 20 || ($t - $reqT0) > 40;                                      // stay well under WPE's 60s
+    };
 
-    $token = bp_gsc_token();
-    if (!$token) return;
-    $targets = bp_gsc_coverage_targets();                                                       // oldest-first, already capped
-    if (!$targets) return;
+    $token   = bp_gsc_token();
+    $targets = $token ? bp_gsc_coverage_targets() : [];                                         // oldest-first, already capped
+    $fresh   = $now - 7 * DAY_IN_SECONDS;
+    if (!$force) $targets = array_values(array_filter($targets, static function ($t) use ($fresh) { return $t['ts'] < $fresh; }));
 
     $siteUrl = 'sc-domain:' . str_replace(['https://', 'http://'], '', get_bloginfo('url'));
     $stamp = static function (array $t, string $key, $val) {
@@ -1236,15 +1344,16 @@ function bp_gsc_collect_index_coverage(bool $force = false): void {
     };
     $ok = 0;
     foreach ($targets as $t) {
+        if ($outOfTime()) break;                                                                // rest waits for tomorrow
         $resp = wp_remote_post('https://searchconsole.googleapis.com/v1/urlInspection/index:inspect', [
-            'timeout' => 8,
+            'timeout' => 6,
             'headers' => ['Authorization' => 'Bearer ' . $token, 'Content-Type' => 'application/json'],
             'body'    => wp_json_encode(['inspectionUrl' => $t['url'], 'siteUrl' => $siteUrl]),
         ]);
         $code = (int) wp_remote_retrieve_response_code($resp);
         if (is_wp_error($resp) || $code !== 200) {
             // 403 on the first URL = the service account isn't an Owner/Full user. Stop; don't advance the gate.
-            if ($code === 403 && $ok === 0) { error_log('bp_gsc_coverage: 403 — service account needs Owner/Full access on ' . $siteUrl); return; }
+            if ($code === 403 && $ok === 0) { error_log('bp_gsc_coverage: 403 — service account needs Owner/Full access on ' . $siteUrl); break; }
             $stamp($t, '_bp_gsc_inspected', $now);                                               // transient fail — advance rotation past it
             continue;
         }
@@ -1254,13 +1363,13 @@ function bp_gsc_collect_index_coverage(bool $force = false): void {
         $stamp($t, '_bp_gsc_state',    sanitize_text_field($isr['coverageState'] ?? 'Unknown'));
         $stamp($t, '_bp_gsc_inspected', $now);
     }
-    if ($ok === 0) return;                                                                      // nothing succeeded — retry next pass
-
-    // Site-wide aggregate across post meta (core) + term meta (/service/ pages), split by page group.
+    // Site-wide aggregate across post meta (core) + term meta (/service/ pages), split by page group. Saved every
+    // pass (today's key is overwritten by later passes the same day) as long as ANY page has ever been checked.
     global $wpdb;
     $groups  = bp_gsc_coverage_by_group();
     $indexed = 0; $not = 0; $reasons = [];
     foreach ($groups as $g) { $indexed += $g['i']; $not += $g['n']; }
+    if ($indexed + $not === 0) return;                                                          // nothing checked yet
     foreach ($wpdb->get_results("SELECT pm.meta_value v, COUNT(*) c FROM {$wpdb->postmeta} pm
         JOIN {$wpdb->posts} p  ON p.ID = pm.post_id AND p.post_status = 'publish'
         JOIN {$wpdb->postmeta} pi ON pi.post_id = pm.post_id AND pi.meta_key = '_bp_gsc_indexed' AND pi.meta_value = '0'
@@ -1274,9 +1383,7 @@ function bp_gsc_collect_index_coverage(bool $force = false): void {
     bp_audit_metric_store('bp_gsc_coverage_history', date('Ymd'), [
         'indexed' => $indexed, 'not_indexed' => $not, 'total' => $indexed + $not, 'reasons' => $reasons, 'groups' => $groups,
     ], 400);
-
-    update_option('bp_gsc_coverage_next', $now + 7 * DAY_IN_SECONDS, false);
-    if ($force) update_option('bp_gsc_coverage_forced_until', $now + 7 * DAY_IN_SECONDS, false);
+    delete_option('bp_gsc_coverage_next');                                                      // retired weekly gate
 }
 
 /** This run's targets, least-recently-inspected first: core content pages (post meta) + jobsite_geo /service/
@@ -1547,8 +1654,9 @@ function bp_ga4_collect_all_clean(BetaAnalyticsDataClient $client, $propertyId):
     require_once get_template_directory() . '/functions-customer-checkins.php';
     bp_run_customer_checkins();
 
-    // 6) GSC Top Queries
+    // 6) GSC Top Queries + query × page pairs (AI Site Audit search opportunities)
     bp_gsc_collect_top_queries();
+    bp_gsc_collect_query_pages();
 
     return true;
 }

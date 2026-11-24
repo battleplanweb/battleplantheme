@@ -456,11 +456,190 @@ function add_american_standard_products() {
 
 
 	// Packaged Units
+array ( 'post_title'	=>	'Silver 13.4 Packaged Air Conditioner System',
+		'post_content' 	=>	'<span class="descriptionText">Experience cool air just the way you want it with this packaged air conditioner.</span>
+
+<ul>
+	<li><b>Communicating features:</b> This exceptional air handler is equipped with American Standard Link® communicating technology that can provide homeowners with more in-depth performance information about their HVAC system.</li>
+	<li><b>Built to last:</b> The American Standard Link® air handler is built to last for years to come. Featuring fully enclosed insulation that eliminates the possibility of loose fibers, a sweat eliminating design, and an epoxy coated coil, this is an air handler you can trust.</li>
+	<li><b>Variable speed technology:</b> Enjoy highly efficient and effective variable speed technology with this air handler. A variable speed Vortica™ blower motor works to circulate the air in exactly the way your home needs it. </li>
+	<li><b>Diagnostic compatible:</b> This air handler works with American Standard Diagnostics, which allows your dealer (with your permission) to remotely diagnose potential issues with your HVAC system, plus provides perks like alert code notifications.</li>
+	<li><b>SEER2:</b> Up to 13.4</li>
+	<li><b>Cooling Stages:</b> One</li>
+	<li><b>Energy Savings:</b> Up to 29%</li>
+</ul>',
+		'post_excerpt'	=>	'Experience cool air just the way you want it with this packaged air conditioner.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1400,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
+		'image_name'	=>	'American-Standard-10.webp'
+),
+
+array ( 'post_title'	=>	'Gold 15 Packaged Heat Pump System',
+		'post_content' 	=>	'<span class="descriptionText">This system gives you your choice of energy sources and customized comfort.</span>
+
+<ul>
+	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
+	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
+	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on. </li>
+	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
+	<li><b>SEER2:</b> Up to 15.2</li>
+	<li><b>HSPF2:</b> Up to 7.5</li>
+	<li><b>Cooling Stages:</b> Two</li>
+	<li><b>Energy Savings:</b> Up to 33%</li>
+</ul>',
+		'post_excerpt'	=>	'This system gives you your choice of energy sources and customized comfort.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1410,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
+		'image_name'	=>	'American-Standard-11.webp'
+),
+
+array ( 'post_title'	=>	'Silver 13.4 Packaged Heat Pump System',
+		'post_content' 	=>	'<span class="descriptionText">Enjoy a system that works smarter, not harder, to deliver year round comfort.</span>
+
+<ul>
+	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
+	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
+	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on. </li>
+	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
+	<li><b>SEER2:</b> Up to 13.4</li>
+	<li><b>HSPF2:</b> Up to 7</li>
+	<li><b>Cooling Stages:</b> Two</li>
+	<li><b>Energy Savings:</b> Up to 29%</li>
+</ul>',
+		'post_excerpt'	=>	'Enjoy a system that works smarter, not harder, to deliver year round comfort.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1420,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
+		'image_name'	=>	'American-Standard-10.webp'
+),
+
+array ( 'post_title'	=>	'Gold 15 Hybrid Comfort System',
+		'post_content' 	=>	'<span class="descriptionText">Welcome higher quality heating and cooling to your home with this hybrid system.</span>
+
+<ul>
+	<li><b>Efficient performance:</b> The Duration™ compressor has been tested to provide efficient and long-lasting durability to ensure that you get the most out of your packaged heating and cooling system.</li>
+	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
+	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on.</li>
+	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
+	<li><b>SEER2:</b> Up to 15.2</li>
+	<li><b>HSPF2:</b> Up to 7.45</li>
+	<li><b>AFUE:</b> Up to 81%</li>
+	<li><b>Cooling Stages:</b> Two</li>
+	<li><b>Energy Savings:</b> Up to 38%</li>
+</ul>',
+		'post_excerpt'	=>	'Welcome higher quality heating and cooling to your home with this hybrid system.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1430,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
+		'image_name'	=>	'American-Standard-11.webp'
+),
+
+array ( 'post_title'	=>	'Gold 15 Gas/Electric Packaged System',
+		'post_content' 	=>	'<span class="descriptionText">Stay warm in the winter and cool in the summer with a durable packaged system.</span>
+
+<ul>
+	<li><b>Efficient performance:</b> The two-stage Duration™ compressor provides two stages of heating and cooling for a higher level of efficiency than most single-stage compressor units. It runs at 70% capacity most of the time, but steps up to the second stage on the most extreme days to provide efficiency in temperature control.</li>
+	<li><b>Improved indoor air quality:</b> This packaged unit system is compatible with the American Standard AccuClean® Air Cleaner (horizontal applications only) which can optimize air in your home. This air cleaner helps remove allergens, bacteria, and certain viruses from the air you breathe in your home.</li>
+	<li><b>Quiet performance:</b> As one of the quietest packaged units on the market, you can count on this system to deliver the temperature control you desire with a performance so quiet, you might not even know your system is turned on.</li>
+	<li><b>Humidity control that helps:</b> With precise humidity control features, this packaged system helps remove unwanted humidity from the air in your home. Unregulated humidity levels indoors can result in problems for both your health and your home, which is why this system works to keep humidity at optimal levels.</li>
+	<li><b>SEER2:</b> Up to 15.2</li>
+	<li><b>AFUE:</b> Up to 81%</li>
+	<li><b>Cooling Stages:</b> Two</li>
+	<li><b>Energy Savings:</b> Up to 33%</li>
+</ul>',
+		'post_excerpt'	=>	'Stay warm in the winter and cool in the summer with a durable packaged system.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1440,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'packaged-units', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-packaged-brochure-12-09-22.pdf'),
+		'image_name'	=>	'American-Standard-11.webp'
+),
+
 
 
 
 
 	// Thermostats
+array ( 'post_title'	=>	'AccuLink™ Platinum 850 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.</span>
+
+<ul>
+	<li><b>Alerts you can count on:</b> Not only does this thermostat tell you the temperature in your home, it also gives you a five day forecast and alerts for the weather outside. Plus, it gives you maintenance and filter service reminder alerts as well, so you can help ensure your product stays in peak performance condition.</li>
+	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the AccuLink™ Platinum 850. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, it has a one touch installation set up with six preset configurations for homeowners to choose from.</li>
+	<li><b>Communication technology:</b> The AccuLink™ Platinum 850 is compatible with American Standard AccuLink™ Communicating System and AccuComfort™ Variable Speed Systems to give you control over your home comfort system. Enjoy communication technology that allows your home systems such as lights, security, HVAC, and more to all be controlled by the touch of a button.</li>
+	<li><b>Humidity control:</b> Unregulated levels of humidity inside can lead to health problems for you and structural problems for your home. This thermostat works to keep optimal levels of humidity in your home and reduce these issues with a built-in humidity sensor that alerts the system when indoor humidity is too low or too high.</li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 5</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Communicating:</b> Yes</li>
+	<li><b>Z Wave Compatible:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>',
+		'post_excerpt'	=>	'Never leave your home unprepared thanks to this thermostat that gives you a 5-day weather forecast and radar.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1500,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'best'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'AS-Thermostat-01.webp'
+),
+
+array ( 'post_title'	=>	'Gold 824 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Programing capabilities on this thermostat make temperature control a breeze.</span>
+
+<ul>
+	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the Gold 824. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, setup only takes a few clicks. Not to mention, there\'s upgradable software to enhance your temperature control experience.</li>
+	<li><b>Humidity control:</b> Unregulated levels of humidity inside can lead to health problems for you and structural problems for your home. This thermostat works to keep optimal levels of humidity in your home and reduce these issues with a built-in indoor relative humidity display that shows when indoor humidity is too low or too high. </li>
+	<li><b>Alerts you can count on:</b> Not only does this thermostat tell you the temperature in your home, it also gives you a five day forecast and alerts for the weather outside. Plus, it gives you maintenance and filter service reminder alerts as well, so you can help ensure your product stays in peak performance condition.</li>
+	<li><b>Scheduling capabilities:</b> Program your temperature schedule exactly how you want it with the scheduling capabilities on the Gold 824 thermostat. Capabilities include up to four daily heating and cooling periods.</li>
+	<li><b>ENERGY STAR® Qualified:</b> Yes</li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 5</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Z Wave Compatible:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>',
+		'post_excerpt'	=>	'Programing capabilities on this thermostat make temperature control a breeze.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1510,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'better'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'AS-Thermostat-01.webp'
+),
+
+array ( 'post_title'	=>	'Silver 724 Thermostat',
+		'post_content' 	=>	'<span class="descriptionText">Temperature control you can trust to make your home comfortable.</span>
+
+<ul>
+	<li><b>Easy installation:</b> Enjoy an easy installation after purchasing the Silver 724. This thermostat can quickly and efficiently be installed almost anywhere in your home, and once it\'s turned on, setup only takes a few clicks.</li>
+	<li><b>Scheduling capabilities:</b> Program your temperature schedule exactly how you want it with the scheduling capabilities on the Silver 724 thermostat. Capabilities include temperature scheduling for seven days a week.</li>
+	<li><b>Seamless remote controls:</b> Remote control capabilities on the Silver 724 thermostat allow you to make your home an oasis without even touching your thermostat. Simply use the remote control from anywhere in your home and enjoy the benefits of warm or cool air when you need it.</li>
+	<li><b>Digital touchscreen:</b> Experience a large touchscreen on this thermostat that makes it easy to see and easy to use all year long. Controls are simple and work efficiently to get you the temperature you desire.</li>
+	<li><b>Cooling Stages:</b> 2</li>
+	<li><b>Heating Stages:</b> 4</li>
+	<li><b>Smart Thermostat:</b> Yes</li>
+	<li><b>Screen:</b> 4.3" color touchscreen</li>
+	<li><b>Diagnostics:</b> Yes</li>
+	<li><b>Programmable:</b> Yes</li>
+</ul>',
+		'post_excerpt'	=>	'Temperature control you can trust to make your home comfortable.',
+		'post_type'     =>	'products',
+		'menu_order'  	=>  1520,
+		'tax_input'		=>  array('product-brand'=>'american-standard', 'product-type'=>'Thermostats', 'product-class'=>'good'),
+		'meta_input'	=>	array('brochure'=>'https://americanstandardair.com/assets/product-brochures/asa-tstat-smart-brochure-01-02-23.pdf'),
+		'image_name'	=>	'AS-Thermostat-02.webp'
+),
+
+
 
 
 	);

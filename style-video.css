@@ -175,6 +175,13 @@
 	transition:                                                all .4s var(--main-trans-easing);
 }
 
+/* Portrait: fill the tall box. height:auto above keeps a landscape thumb landscape,
+   letterboxed in the middle; cover + full height crops it to the centre instead. */
+.block-video.video-player.portrait img,
+.portrait .block-video.video-player img {
+	height:                                                    100%;
+}
+
 .video-player .play,
 .yt-play {
 	position:                                                  absolute;
@@ -222,6 +229,20 @@
 	.block-video.span-1 {
 		width:                                                    75%;
 		padding-top:                                              37.376875%;
+	}
+
+	/* An explicit mobile="" (embeds only) sets the phone width, in --mobile-w
+	   percent. It must out-rank the portrait rules above (0,4,0), so the portrait
+	   variants repeat that specificity and win by coming later. */
+	.block-video.video-player.has-mobile-w {
+		width:                                                    calc(var(--mobile-w) * 1%);
+		padding-top:                                              calc(var(--mobile-w) * 0.5625%);
+	}
+
+	.block-video.video-player.portrait.has-mobile-w,
+	.portrait .block-video.video-player.has-mobile-w {
+		width:                                                    calc(var(--mobile-w) * 1%);
+		padding-top:                                              calc(var(--mobile-w) * 1.777778%);
 	}
 }
 

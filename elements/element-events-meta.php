@@ -36,6 +36,23 @@
 		return $ts ? date('g:ia', $ts) : '';
 	};
 
+	// A weekly run in words: "Tuesdays, from January 12th to February 9th, 2027", or
+	// "Tuesdays, starting January 12th" with no end. The year shows once, only when it isn't this year.
+	$fmtWeekly = function( $weekdays, $interval, $sT, $eT ) use ( $currentYear ) {
+		$days = array_map( function( $d ) use ( $interval ) { return ucfirst( $d ) . ( $interval > 1 ? '' : 's' ); }, $weekdays );
+		$last = array_pop( $days );
+		$days = $days ? implode( ', ', $days ) . ' & ' . $last : $last;
+		if ( $interval === 2 ) $days = 'Every other ' . $days;
+		elseif ( $interval > 2 ) $days = 'Every ' . $interval . ' weeks on ' . $days;
+
+		$sYear = date('Y', $sT);
+		if ( ! $eT ) return $days . ', starting ' . date( $sYear == $currentYear ? 'F jS' : 'F jS, Y', $sT );
+		$eYear = date('Y', $eT);
+		$start = date( ( $sYear != $eYear && $sYear != $currentYear ) ? 'F jS, Y' : 'F jS', $sT );
+		$end   = date( $eYear == $currentYear ? 'F jS' : 'F jS, Y', $eT );
+		return $days . ', from ' . $start . ' to ' . $end;
+	};
+
 	if ( $blocks || $venue || $location ) :
 		$buildMeta = '<div class="event-meta">';
 
@@ -50,6 +67,15 @@
 					break;
 				endif;
 			endforeach;
+
+			$weekOrder = array( 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday' );
+			$ruleDays  = array_values( array_intersect( $weekOrder, $recRule['weekdays'] ) );
+			$ruleStart = strtotime( (string) $recRule['start'] );
+			if ( $recRule['freq'] === 'weekly' && $ruleDays && $ruleStart ) :
+				$ruleEnd = $recRule['until'] ? strtotime( (string) $recRule['until'] ) : false;
+				if ( ! $ruleEnd && $next && $ruleStart < strtotime('today') ) $ruleStart = strtotime( $b['s_date'] );
+				$next = $fmtWeekly( $ruleDays, $recRule['interval'], $ruleStart, $ruleEnd );
+			endif;
 
 			if ( $next ) :
 				$buildMeta .= '<div class="event-date"><span class="date-icon">[get-icon type="calendar"]</span><span class="event-dates-list">'.$next.'</span></div><!-- .event-date -->';
@@ -85,7 +111,31 @@
 				$times      = array_unique( wp_list_pluck( $rows, 'time' ) );
 				$sharedTime = ( count($times) === 1 ) ? reset($times) : null;
 
-				if ( $sharedTime !== null ) :
+				// Three or more single days, one week apart, read as a weekly run.
+				$weekly = false;
+				$days   = array();
+				foreach ( $blocks as $b ) :
+					$sT = strtotime( (string) ( $b['s_date'] ?? '' ) );
+					$eT = ! empty($b['e_date']) ? strtotime( (string) $b['e_date'] ) : $sT;
+					if ( ! $sT || date('Y-m-d', $eT) !== date('Y-m-d', $sT) ) { $days = array(); break; }
+					$days[] = strtotime( date('Y-m-d', $sT) );
+				endforeach;
+				sort( $days );
+				if ( count($days) >= 3 ) :
+					$weekly = true;
+					for ( $i = 1; $i < count($days); $i++ ) :
+						if ( round( ( $days[$i] - $days[$i-1] ) / 86400 ) != 7 ) { $weekly = false; break; }
+					endfor;
+				endif;
+
+				if ( $sharedTime !== null && $weekly ) :
+					$buildMeta .= '<div class="event-date"><span class="date-icon">[get-icon type="calendar"]</span><span class="event-dates-list">';
+					$buildMeta .= $fmtWeekly( array( strtolower( date('l', $days[0]) ) ), 1, $days[0], end($days) );
+					$buildMeta .= '</span></div><!-- .event-date -->';
+					if ( $sharedTime !== '' ) :
+						$buildMeta .= '<div class="event-time"><span class="time-icon">[get-icon type="clock"]</span>'.$sharedTime.'</div><!-- .event-time -->';
+					endif;
+				elseif ( $sharedTime !== null ) :
 					$buildMeta .= '<div class="event-date"><span class="date-icon">[get-icon type="calendar"]</span><span class="event-dates-list">';
 					$buildMeta .= implode( '<br>', wp_list_pluck( $rows, 'range' ) );
 					$buildMeta .= '</span></div><!-- .event-date -->';

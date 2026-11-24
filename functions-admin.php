@@ -451,13 +451,11 @@ function bp_an_index_coverage_payload(): ?array {
 		$stamped += $gv['i'] + $gv['n'];
 	}
 
-	// Why the card might be empty — the collector self-gates weekly, phase-shifted 0–6 days per site, so a
-	// site can go up to two weeks before its first snapshot. A 403 (service account not Owner) never stamps.
-	$next   = (int) get_option( 'bp_gsc_coverage_next', 0 );
+	// Why the card might be empty — the collector saves a snapshot on every nightly stats run once any page has
+	// been checked. A 403 (service account not Owner) never stamps, so the card stays empty for that site.
 	$status = ! $any
-		? ( $stamped ? 'The trend lines start with the first saved weekly snapshot — the donut shows the current status.'
-		  : ( $next ? 'No pages checked yet — the first weekly check is scheduled for ' . wp_date( 'M j, Y', $next ) . '. If it stays empty after that, the Search Console service account likely needs Owner/Full access on the property.'
-		  : 'No pages checked yet — the weekly check gets scheduled on the next nightly stats run.' ) )
+		? ( $stamped ? 'The trend lines start with tonight\'s stats run — the donut shows the current status.'
+		  : 'No pages checked yet — checks run on each nightly stats run. If it stays empty for a few days, the Search Console service account likely needs Owner/Full access on the property.' )
 		: '';
 
 	return array_merge( [
@@ -2150,6 +2148,7 @@ function battleplan_addWidgetPicViewsToImg( $post_ID ) {
 add_action('add_attachment', 'battleplan_auto_add_image_category');
 function battleplan_auto_add_image_category($attachment_id) {
     $parent_post = get_post( wp_get_post_parent_id( $attachment_id ) );
+    if ( $parent_post && $parent_post->post_type === 'bp_product' && function_exists( 'sp_store_tag_product_image' ) ) { sp_store_tag_product_image( (int) $attachment_id ); return; }
     $term = $parent_post ? ( [ 'jobsite_geo' => 'Jobsite GEO', 'testimonials' => 'Testimonials' ][ $parent_post->post_type ] ?? '' ) : '';
     if ( $term === '' ) return;
 
@@ -2676,6 +2675,16 @@ function bp_geo_taxonomy_cleanup_page() {
 	}
 
 	echo '<div class="wrap"><h1>Jobsite Tools</h1>';
+	echo '<style>
+		.bp-jobsite-tools { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:20px; align-items:stretch; margin-top:20px; }
+		.bp-jobsite-tools > .card { max-width:none; min-width:0; margin:0 !important; box-sizing:border-box; }
+		.bp-jobsite-tools > .card.bp-span-all { grid-column:1 / -1; }
+		.bp-jobsite-tools table { table-layout:fixed; }
+		.bp-jobsite-tools td { word-wrap:break-word; }
+		@media (max-width:1400px) { .bp-jobsite-tools { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+		@media (max-width:900px)  { .bp-jobsite-tools { grid-template-columns:1fr; } }
+	</style>';
+	echo '<div class="bp-jobsite-tools">';
 
 	echo '<div class="card" style="margin-top:20px;padding:20px;">';
 	echo '<h2 style="margin-top:0">Taxonomy Cleanup</h2>';
@@ -2712,6 +2721,82 @@ function bp_geo_taxonomy_cleanup_page() {
 		<?php submit_button('Run Taxonomy Cleanup', 'primary', 'bp_run_taxonomy_cleanup'); ?>
 	</form>
 	</div>
+
+	<?php if ( function_exists( 'bp_geo_backfill_todo' ) ) : ?>
+	<div class="card<?php echo isset( $_POST['bp_geo_backfill'] ) ? ' bp-span-all' : ''; ?>" style="margin-top:20px;padding:20px;">
+	<h2 style="margin-top:0">Project Headlines &amp; Links</h2>
+	<p>Fills in the AI headline, service link phrase, and other-service mentions for jobs written before those existed. Only empty fields are written — hand edits are kept. Runs 10 jobs per click (one AI call each) to stay under the server time limit; click again until nothing is left, then purge the cache.</p>
+	<?php
+	if ( isset( $_POST['bp_geo_backfill'] ) && check_admin_referer( 'bp_geo_backfill_nonce' ) ) {
+		[ $todo ] = bp_geo_backfill_todo( 10 );
+		[ $rows, $noPage ] = bp_geo_backfill_run( $todo );
+
+		echo '<table class="widefat striped" style="margin:12px 0;"><thead><tr><th>Job</th><th>Result</th><th>Headline</th><th>Link Phrase</th><th>Links To</th><th>Other Services</th></tr></thead><tbody>';
+		foreach ( $rows as $r ) {
+			$ok = $r['result'] === 'ok';
+			echo '<tr><td><a href="' . esc_url( get_edit_post_link( $r['id'] ) ) . '">' . esc_html( $r['job'] ) . '</a></td>';
+			echo '<td style="color:' . ( $ok ? '#00a32a' : '#d63638' ) . ';">' . esc_html( $r['result'] ) . '</td>';
+			echo '<td>' . esc_html( $r['headline'] ) . '</td><td>' . esc_html( $r['phrase'] ) . '</td><td>' . esc_html( $r['page'] ) . '</td><td>' . esc_html( $r['mentions'] ) . '</td></tr>';
+		}
+		echo '</tbody></table>';
+
+		if ( $noPage ) echo '<div class="notice notice-warning inline"><p>No service page to link for: <code>' . esc_html( implode( ', ', $noPage ) ) . '</code> — add the right page under the "Our Services" menu item, or set "Service Link Page" on the job.</p></div>';
+	}
+	[ , $missing ] = bp_geo_backfill_todo();
+	echo '<p><strong>' . (int) $missing . '</strong> published job(s) still missing card data.</p>';
+	?>
+	<form method="post">
+		<?php wp_nonce_field( 'bp_geo_backfill_nonce' ); ?>
+		<?php submit_button( 'Fill Next 10 Jobs', 'primary', 'bp_geo_backfill', false, $missing ? [] : [ 'disabled' => 'disabled' ] ); ?>
+	</form>
+	</div>
+	<?php endif; ?>
+
+	<?php if ( function_exists( 'bp_geo_generate_meta_summary' ) ) : ?>
+	<div class="card<?php echo isset( $_POST['bp_geo_meta_backfill'] ) ? ' bp-span-all' : ''; ?>" style="margin-top:20px;padding:20px;">
+	<h2 style="margin-top:0">Service Page Meta Descriptions</h2>
+	<p>Writes a one-sentence AI summary of the projects on each /service/ page, followed by the call to action, for the meta description. Pages without one use &ldquo;Explore recent {Service} projects in {City, ST}.&rdquo; Runs 10 pages per click; click again until nothing is left, then purge the cache.</p>
+	<?php
+	$md_terms   = get_terms( [ 'taxonomy' => 'jobsite_geo-services', 'hide_empty' => true ] );
+	$md_terms   = is_wp_error( $md_terms ) ? [] : $md_terms;
+	$md_missing = function () use ( $md_terms ) {
+		return array_values( array_filter( $md_terms, function ( $t ) {
+			return get_term_meta( $t->term_id, BP_GEO_META_SUMMARY, true ) === '';
+		} ) );
+	};
+
+	if ( isset( $_POST['bp_geo_meta_backfill'] ) && check_admin_referer( 'bp_geo_meta_backfill_nonce' ) ) {
+		if ( ! empty( $_POST['md_reset'] ) ) {
+			foreach ( $md_terms as $t ) {
+				delete_term_meta( $t->term_id, BP_GEO_META_SUMMARY );
+				delete_term_meta( $t->term_id, BP_GEO_META_RAN );
+			}
+		}
+		$md_batch = array_slice( $md_missing(), 0, 10 );
+		@set_time_limit( count( $md_batch ) * 35 );
+
+		echo '<table class="widefat striped" style="margin:12px 0;"><thead><tr><th>Page</th><th>Result</th><th>Meta Description</th><th>Length</th></tr></thead><tbody>';
+		foreach ( $md_batch as $t ) {
+			$res  = bp_geo_generate_meta_summary( $t->term_id );
+			$ok   = ! is_wp_error( $res );
+			$p    = bp_geo_parse_service_slug( bp_geo_service_term_key( $t ) );
+			$desc = bp_geo_meta_desc( get_term( $t->term_id ), bp_format_service( sanitize_title( $p['service'] ) ), ucwords( $p['city'] ) . ', ' . strtoupper( $p['state'] ) );
+			echo '<tr><td><a href="' . esc_url( get_term_link( $t ) ) . '" target="_blank">' . esc_html( $t->slug ) . '</a></td>';
+			echo '<td style="color:' . ( $ok ? '#00a32a' : '#d63638' ) . ';">' . esc_html( $ok ? 'ok' : 'ERROR: ' . $res->get_error_message() ) . '</td>';
+			echo '<td>' . esc_html( $desc ) . '</td><td>' . mb_strlen( $desc ) . '</td></tr>';
+		}
+		echo '</tbody></table>';
+	}
+	$md_left = count( $md_missing() );
+	echo '<p><strong>' . $md_left . '</strong> of ' . count( $md_terms ) . ' service page(s) still missing a summary.</p>';
+	?>
+	<form method="post" onsubmit="return !this.md_reset.checked || confirm('Clear every existing summary and start over?');">
+		<?php wp_nonce_field( 'bp_geo_meta_backfill_nonce' ); ?>
+		<p><label><input type="checkbox" name="md_reset" value="1">&nbsp;Clear all existing summaries first (rewrite everything)</label></p>
+		<?php submit_button( 'Write Next 10', 'primary', 'bp_geo_meta_backfill', false ); ?>
+	</form>
+	</div>
+	<?php endif; ?>
 
 	<div class="card" style="margin-top:20px;padding:20px;">
 	<h2 style="margin-top:0">Audit Review Links</h2>
@@ -3034,6 +3119,7 @@ function bp_geo_taxonomy_cleanup_page() {
 		</p>
 		<?php submit_button( 'Re-caption Photos', 'secondary', 'bp_recaption_photos' ); ?>
 	</form>
+	</div>
 	</div>
 	</div>
 	<?php

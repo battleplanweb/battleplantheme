@@ -165,7 +165,11 @@ function battleplan_buildLayout( $atts, $content = null ) {
 	$grid = esc_attr($a['grid']);
 	$custom_grid = '';
 	if ( preg_match('/px|em|fr/', $grid) ) {
-		$custom_grid = 'grid-template-columns: '.$grid.';';
+		// A variable, not grid-template-columns itself: an inline grid-template-columns
+		// beats every stylesheet rule, so the break-point rules could never stack the
+		// columns and a fixed track (grid="1fr 600px") ran off the side of a phone.
+		// div.grid-custom (style-grid.css) applies it; the break rules out-rank that.
+		$custom_grid = '--grid-custom: '.$grid.';';
 		$grid = 'custom';
 	}
 	$gap = !empty($a['gap']) ? 'gap:' . esc_attr($a['gap']) . '; ' : '';
@@ -310,7 +314,12 @@ function battleplan_buildVid( $atts, $content = null ) {
 			if ( esc_attr($a['related']) === "false" ) $link .= "&rel=0";
 			if ( esc_attr($a['begin']) !== "" ) $link .= "&start=".esc_attr($a['begin']);
 
-			$thumb = $thumb !== '' ? $thumb : '//i.ytimg.com/vi/'.$id.'/hqdefault.jpg';
+			// hqdefault is always 4:3 landscape. A vertical upload (Short / phone video)
+			// also has oar2.jpg, a 1080x1920 portrait frame, so a portrait [vid] uses that.
+			// class="portrait" on a wrapper can't be seen from here; the CSS crops
+			// hqdefault to fill in that case.
+			$isPortrait = preg_match( '/(^|\s)portrait(\s|$)/', $a['class'] );
+			$thumb = $thumb !== '' ? $thumb : '//i.ytimg.com/vi/'.$id.'/'.( $isPortrait ? 'oar2' : 'hqdefault' ).'.jpg';
 		else:
 			$id = str_replace(['https://player.vimeo.com/video/', 'https://vimeo.com/'], '', $link);
 			$embed = 'https://player.vimeo.com/video/'.$id;
@@ -336,6 +345,20 @@ function battleplan_buildVid( $atts, $content = null ) {
 		];
 
 		$schemaBlock = '<script type="application/ld+json">' . wp_json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>';
+
+		// mobile="" on an embed = the block's width on phones (≤576px), as a percent
+		// ("100") or a fraction ("1/2"). Only when written out: the default "100" has
+		// always meant "leave the phone steps in style-video.css alone", and changing
+		// that would resize every existing video in the fleet. (On a self-hosted
+		// <video> mobile="" is a zoom instead, handled by script-pages.js below.)
+		if ( isset( $atts['mobile'] ) ) {
+			$m = trim( (string) $a['mobile'] );
+			if ( preg_match( '~^(\d+)\s*/\s*(\d+)$~', $m, $f ) && (int) $f[2] > 0 ) $m = 100 * (int) $f[1] / (int) $f[2];
+			$m = max( 1, min( 100, (float) $m ) );
+			$class .= ' has-mobile-w';
+			$var    = '--mobile-w: '.round( $m, 4 ).';';
+			$style  = $style === '' ? ' style="'.$var.'"' : substr( $style, 0, -1 ).' '.$var.'"';
+		}
 
 		return $schemaBlock . '<div class="block block-video span-'.$size.$class.' video-player"'.$tracking.$style.' data-thumb="'.$thumb.'" data-link="'.$link.'" data-id="'.$id.'"></div>';
 	endif;

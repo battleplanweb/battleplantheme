@@ -21,7 +21,7 @@ $GLOBALS['bp_inline_css_buffer'] ??= [];
 function bp_get_css_sources() {
     $deferred = ['/style-testimonials.css', '/style-forms.css'];
 
-    if (bp_module_on(get_option('event_calendar'))) $deferred[] = '/style-events.css';
+    if (function_exists('bp_calendar_on') && bp_calendar_on()) $deferred[] = '/style-events.css';
     if (bp_module_on(get_option('timeline'))) $deferred[] = '/style-timeline.css';
     if (is_plugin_active('woocommerce/woocommerce.php')) $deferred[] = '/style-woocommerce.css';
     if (bp_module_on(get_option('site-pulse'))) $deferred[] = '/style-site-pulse.css';

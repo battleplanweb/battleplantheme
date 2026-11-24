@@ -745,10 +745,16 @@ function sp_book_claim( array $args ) {
 	$mode = (string) $service['mode'];
 	$now  = sp_book_now();
 
+	// A SERIES (one price, a seat in every date) claims every date at once and returns the lead booking.
+	// Every caller — website reserve, Store checkout, staff New Booking — gets that for free.
+	if ( $mode === 'session' && empty( $args['_series_member'] ) && function_exists( 'sp_book_service_opts' ) && sp_book_service_opts( $service )['series'] ) {
+		return sp_book_claim_series( $service, $args );
+	}
+
 	$base = [
 		'service_id'     => $service_id,
-		'status'         => in_array( (string) ( $args['status'] ?? 'pending' ), [ 'pending', 'confirmed' ], true ) ? (string) $args['status'] : 'pending',
-		'source'         => in_array( (string) ( $args['source'] ?? 'web' ), array_keys( sp_book_sources() ), true ) ? (string) $args['source'] : 'web',
+		'status'         => in_array( (string) ( $args['status'] ?? 'pending' ), [ 'pending', 'confirmed' ], true ) ? (string) ( $args['status'] ?? 'pending' ) : 'pending',
+		'source'         => in_array( (string) ( $args['source'] ?? 'web' ), array_keys( sp_book_sources() ), true ) ? (string) ( $args['source'] ?? 'web' ) : 'web',
 		'customer_id'    => (int) ( $args['customer_id'] ?? 0 ),
 		'customer_name'  => sanitize_text_field( (string) ( $args['customer_name'] ?? '' ) ),
 		'customer_email' => sanitize_email( (string) ( $args['customer_email'] ?? '' ) ),
@@ -882,6 +888,90 @@ function sp_book_claim_session( array $service, array $base, array $args ) {
 
 	sp_book_cache_bust();
 	return sp_book_get_booking( $booking_id );
+}
+
+/*--------------------------------------------------------------
+ * SERIES — a class sold as a whole (a 4-week course: one price, a seat in every date).
+ *
+ * An enrollment is ONE BOOKING PER DATE, tied together by group_id (every row carries the lead's
+ * id; the lead is the first date's booking and carries the price). That keeps each date's roster,
+ * seat count and check-in exactly as for any class, while:
+ *   · claiming the lead claims every date, all or nothing (a full date undoes the others);
+ *   · confirming the lead confirms them all; releasing/cancelling the lead releases them all;
+ *   · a member date can still be cancelled on its own by staff (one missed class).
+ * Enrollment closes once the first date has started — no late joiners.
+ *------------------------------------------------------------*/
+
+/**
+ * A series service's schedule: its upcoming dates, whether it has already started, the seats left
+ * (the tightest date decides) and the lead session (the first upcoming date — what buttons point at).
+ */
+function sp_book_series_state( array $service ): array {
+	global $wpdb;
+	$rows = $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM " . sp_book_table( 'sessions' ) . " WHERE service_id = %d AND status = 'scheduled' ORDER BY starts_at ASC",
+		(int) $service['id']
+	), ARRAY_A ) ?: [];
+	$now      = sp_book_now();
+	$upcoming = array_values( array_filter( $rows, static fn( $s ) => $s['starts_at'] > $now ) );
+	$left     = null;
+	foreach ( $upcoming as $s ) {
+		$l    = max( 0, (int) $s['capacity'] - (int) $s['seats_taken'] );
+		$left = $left === null ? $l : min( $left, $l );
+	}
+	return [
+		'all'      => $rows,
+		'sessions' => $upcoming,
+		'started'  => count( $upcoming ) < count( $rows ),
+		'left'     => (int) $left,
+		'lead'     => $upcoming[0] ?? null,
+	];
+}
+
+/** Claim a seat in every upcoming date of a series. Returns the lead booking or a WP_Error. */
+function sp_book_claim_series( array $service, array $args ) {
+	global $wpdb;
+	$st = sp_book_series_state( $service );
+	if ( ! $st['sessions'] ) return new WP_Error( 'invalid_slot', 'This class is no longer on the schedule.' );
+	// A paid order whose hold lapsed is re-claimed with ignore_policy — the money is in, so let it through.
+	if ( $st['started'] && empty( $args['ignore_policy'] ) ) return new WP_Error( 'series_started', 'This class has already started, so enrollment is closed.' );
+
+	$made = [];
+	foreach ( $st['sessions'] as $i => $s ) {
+		$a = array_merge( $args, [ 'session_id' => (int) $s['id'], '_series_member' => true ] );
+		if ( $i > 0 ) { $a['price_cents'] = 0; $a['deposit_cents'] = 0; }   // the lead carries the price
+		$b = sp_book_claim( $a );
+		if ( is_wp_error( $b ) ) {
+			// All or nothing: hand back what this enrollment already took, and leave no trace of it.
+			foreach ( $made as $m ) {
+				sp_book_release( (int) $m['id'], 'expired', 0, 'Series enrollment undone' );
+				$wpdb->delete( sp_book_table( 'bookings' ), [ 'id' => (int) $m['id'] ] );
+			}
+			if ( $b->get_error_code() === 'session_full' ) return new WP_Error( 'session_full', 'This class is full.' );
+			return $b;
+		}
+		$made[] = $b;
+	}
+
+	$lead = (int) $made[0]['id'];
+	$wpdb->query( "UPDATE " . sp_book_table( 'bookings' ) . " SET group_id = " . $lead . " WHERE id IN (" . implode( ',', array_map( static fn( $m ) => (int) $m['id'], $made ) ) . ")" );
+	sp_book_cache_bust();
+	return sp_book_get_booking( $lead );
+}
+
+/** Is this booking the lead of a series enrollment? */
+function sp_book_is_series_lead( array $booking ): bool {
+	return (int) ( $booking['group_id'] ?? 0 ) && (int) $booking['group_id'] === (int) $booking['id'];
+}
+
+/** The other dates of a series enrollment (lead excluded), in date order. Empty for a single booking. */
+function sp_book_series_members( array $booking ): array {
+	if ( ! sp_book_is_series_lead( $booking ) ) return [];
+	global $wpdb;
+	return $wpdb->get_results( $wpdb->prepare(
+		"SELECT * FROM " . sp_book_table( 'bookings' ) . " WHERE group_id = %d AND id <> %d ORDER BY starts_at ASC",
+		(int) $booking['id'], (int) $booking['id']
+	), ARRAY_A ) ?: [];
 }
 
 /**
@@ -1118,6 +1208,11 @@ function sp_book_release( int $booking_id, string $status, int $by_user = 0, str
 		[ 'booking_id' => $booking_id, 'status' => 'queued' ]
 	);
 
+	// Releasing a series lead releases the whole enrollment (every date). A member alone stays alone.
+	foreach ( sp_book_series_members( $booking ) as $m ) {
+		sp_book_release( (int) $m['id'], $status, $by_user, $reason );
+	}
+
 	sp_book_cache_bust();
 	return true;
 }
@@ -1152,7 +1247,10 @@ function sp_book_confirm( int $booking_id ): bool {
 		[ 'id' => $booking_id, 'status' => 'pending' ]
 	);
 
-	if ( $ok ) sp_book_cache_bust();
+	if ( $ok ) {
+		foreach ( sp_book_series_members( $booking ) as $m ) sp_book_confirm( (int) $m['id'] );   // a series: every date
+		sp_book_cache_bust();
+	}
 	return (bool) $ok;
 }
 

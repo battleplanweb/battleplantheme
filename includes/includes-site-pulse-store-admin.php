@@ -2,7 +2,8 @@
 /* Battle Plan Web Design — Site Pulse: Store Settings
 
 /*--------------------------------------------------------------
-Settings → Store. The store's non-credential configuration.
+Settings → Store (the look) and Settings → E-Commerce (payment, tax, shipping, emails, extras):
+the store's non-credential configuration.
 
 Payment KEYS deliberately live elsewhere — on Settings → API Keys with every
 other credential, encrypted, behind `manage_api_keys`. What belongs here is the
@@ -134,6 +135,22 @@ function sp_store_resolve_var( string $token, int $depth = 0 ): string {
 
 function sp_store_setting_defs(): array {
 	$defs = [
+		'name_one' => [
+			'label'   => 'What you call one item',
+			'row'     => 'name',
+			'type'    => 'text',
+			'default' => '',
+			'placeholder' => 'Product',
+			'help'    => 'The word Site Pulse uses for what you sell, e.g. <code>Product</code>, <code>Artwork</code>, <code>Item</code>. Leave blank for Product.',
+		],
+		'name_many' => [
+			'label'   => 'What you call several',
+			'row'     => 'name',
+			'type'    => 'text',
+			'default' => '',
+			'placeholder' => 'Products',
+			'help'    => 'The plural, e.g. <code>Products</code>, <code>Artwork</code>, <code>Items</code>. Used for the menu and page headings. Leave blank for Products.',
+		],
 		'variant_picker' => [
 			'label'   => 'How customers choose options',
 			'type'    => 'choice',
@@ -194,21 +211,48 @@ function sp_store_setting_defs(): array {
 		],
 		'number_prefix' => [
 			'label'   => 'Order number prefix',
+			'section' => 'Payment processor',
 			'type'    => 'text',
 			'default' => 'BP',
 			'help'    => 'Two letters at the front of every order number, e.g. <code>BP-K4R9TM</code>. Order numbers are random rather than sequential, so they do not tell customers how many orders you have taken.',
 		],
 		'allow_promo_codes' => [
 			'label'   => 'Discount codes',
+			'section' => 'Payment processor',
 			'type'    => 'toggle',
 			'default' => '',
 			'help'    => 'Shows a promotion-code box at checkout. The codes themselves are created in your Stripe dashboard under Products → Coupons.',
 		],
+		'stripe_checkout_style' => [
+			'label'   => 'Where customers pay (Stripe)',
+			'section' => 'Payment processor',
+			'type'    => 'choice',
+			'default' => 'embedded',
+			'choices' => [
+				'hosted'   => 'On a Stripe page — the customer leaves your site to pay',
+				'embedded' => 'On your checkout page — Stripe\'s payment form sits inside your site',
+			],
+			'help'    => 'Either way the card details go straight to Stripe and never touch this website. Paying on your own page needs the Stripe Publishable Key under Settings &rarr; API Keys; without it, or if it is a test key beside a live secret key (or the other way round), customers are sent to the Stripe page instead.',
+		],
+		'fee_card_rate' => [
+			'label'   => 'Card processing (%)',
+			'section' => 'Service fee',
+			'type'    => 'text',
+			'default' => '0',
+			'help'    => 'Covers what your payment processor charges you to take a card, usually about 3%. Worked out on the items only, before shipping and tax, and shown to the customer as part of one &ldquo;Service fee&rdquo; line. 0 means none.',
+		],
+		'fee_memberships' => [
+			'label'   => 'Charge it on memberships',
+			'section' => 'Service fee',
+			'type'    => 'toggle',
+			'default' => '1',
+			'help'    => 'On: membership purchases pay the service fee like anything else, and a membership that renews pays it again every month or year. Off: memberships never pay it. A change applies to new purchases; a membership already renewing keeps what it was bought with.',
+		],
 		'tax_mode' => [
-			'label'   => 'Sales tax',
+			'label'   => 'How tax is charged',
 			'type'    => 'choice',
 			'default' => 'none',
-			'section' => 'Tax and shipping',
+			'section' => 'Sales tax',
 			'choices' => [
 				'none'     => 'Do not charge tax',
 				'flat'     => 'One flat rate on every order',
@@ -220,14 +264,14 @@ function sp_store_setting_defs(): array {
 			'label'   => 'Flat tax rate (%)',
 			'type'    => 'text',
 			'default' => '0',
-			'section' => 'Tax and shipping',
+			'section' => 'Sales tax',
 			'help'    => 'Used only by the flat-rate option above. Texas, for example, is 6.25% state plus up to 2% local, so 8.25% is the ceiling.',
 		],
 		'tax_shipping' => [
 			'label'   => 'Charge tax on shipping too',
 			'type'    => 'toggle',
 			'default' => '1',
-			'section' => 'Tax and shipping',
+			'section' => 'Sales tax',
 			'help'    => 'In most states, including Texas, the delivery charge on taxable goods is itself taxable. Turn this off only if you have been told your state does not.',
 		],
 		'description_heading' => [
@@ -262,13 +306,27 @@ function sp_store_setting_defs(): array {
 			'help'    => 'Files a buyer receives, such as a PDF, an e-book or an audio course. Attach them to a product in its Extras; buyers get private links in their receipt and on their account page, and a refund switches the links off. The files are kept out of the media library.',
 		],
 		'feature_distance_shipping' => [
-			'label'   => 'Shipping by distance',
+			'label'   => 'Price shipping by distance',
 			'type'    => 'toggle',
 			'default' => '',
-			'section' => 'Extras',
+			'section' => 'Shipping',
 			'help'    => 'For freight and heavy items: shipping is priced from the driving distance to the customer&rsquo;s address, at a per-mile rate you set for each distance band, plus a handling fee. Replaces the shipping rates table while it is on. Needs the Google key under Settings &rarr; API Keys.',
 		],
 	];
+
+	// The Site Pulse share of the service fee is Battle Plan's, so only god sees or sets it.
+	// Left out of the definitions for everyone else, which also keeps a save from writing it.
+	if ( function_exists( 'site_pulse_is_god' ) && site_pulse_is_god() ) {
+		$defs = array_merge( array_slice( $defs, 0, array_search( 'fee_card_rate', array_keys( $defs ), true ) + 1, true ), [
+			'fee_platform_rate' => [
+				'label'   => 'Site Pulse (%)',
+				'section' => 'Service fee',
+				'type'    => 'text',
+				'default' => '0',
+				'help'    => 'Battle Plan&rsquo;s share, added on top of card processing in the same &ldquo;Service fee&rdquo; line. Only god can see or change this; the client sees what it adds up to under E-Commerce &rarr; Service Fees. 0 means none.',
+			],
+		] ) + $defs;
+	}
 
 	// The processor list is BUILT from the registry, so the picker can never offer
 	// one that is not actually wired up, and a new provider needs no edit here.
@@ -281,6 +339,7 @@ function sp_store_setting_defs(): array {
 		if ( count( $choices ) > 1 ) {
 			$defs = [ 'payment_provider' => [
 				'label'   => 'Payment processor',
+				'section' => 'Payment processor',
 				'type'    => 'choice',
 				'default' => 'stripe',
 				'choices' => $choices,
@@ -332,7 +391,9 @@ function sp_store_sanitize_setting( string $key, $value ): string {
 			return isset( $def['choices'][ $value ] ) ? $value : (string) $def['default'];
 
 		case 'toggle':
-			return (string) $value === '1' ? '1' : '';
+			// Off is '0', not '': wpdb::get_var() returns null for an empty string, so a saved ''
+			// read back as the default and a toggle that defaults ON could never be switched off.
+			return (string) $value === '1' ? '1' : '0';
 
 		case 'color':
 			// Empty is meaningful — it means "leave this colour alone", which is how a
@@ -364,8 +425,12 @@ function sp_store_ajax_settings(): void {
 			'label'   => $def['label'],
 			'type'    => $def['type'],
 			'help'    => $def['help'] ?? '',
+			// What a blank box means: shown greyed in the empty input (defaults to the default).
+			'placeholder' => (string) ( $def['placeholder'] ?? $def['default'] ?? '' ),
 			'choices' => $def['choices'] ?? null,
 			'section' => $def['section'] ?? '',
+			// Consecutive fields sharing a row sit side by side.
+			'row'     => $def['row'] ?? '',
 			'value'   => sp_store_setting_value( $key ),
 		];
 
@@ -402,10 +467,15 @@ function sp_store_ajax_save_settings(): void {
 	$posted = (array) ( $_POST['settings'] ?? [] );
 	$saved  = [];
 
+	// Settings → Store and Settings → E-Commerce each show half of these, and each sends the keys
+	// it shows. Only those are written, so saving one screen can't reset the other's settings.
+	$only = isset( $_POST['keys'] ) ? array_flip( array_map( 'sanitize_key', (array) $_POST['keys'] ) ) : null;
+
 	// Iterate the DEFINITIONS, not the POST: an unknown key can then never be written,
 	// and a toggle the browser omitted when off is correctly stored as off rather than
 	// silently keeping its old value.
 	foreach ( sp_store_setting_defs() as $key => $def ) {
+		if ( $only !== null && ! isset( $only[ $key ] ) ) continue;
 		$value = sp_store_sanitize_setting( $key, wp_unslash( $posted[ $key ] ?? '' ) );
 		sp_store_set_setting( $key, $value );
 		$saved[ $key ] = $value;

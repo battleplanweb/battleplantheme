@@ -21,6 +21,10 @@ require_once get_template_directory() . '/includes/includes-site-pulse-customer-
 require_once get_template_directory() . '/includes/includes-site-pulse-booking.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-jobsites.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-events.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-content.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-profile.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-notif-prefs.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-schedules.php';
 
 /* Battle Plan Web Design - Site Pulse Internal Operations Platform
@@ -1924,7 +1928,19 @@ function site_pulse_can_see_superadmin( int $viewer_id = 0 ): bool {
 	if ( ! $viewer_id ) $viewer_id = site_pulse_effective_user_id();
 	if ( ! $viewer_id ) return false;
 	if ( site_pulse_is_superadmin( $viewer_id ) ) return true;
+	if ( site_pulse_superadmin_visible() ) return true;
 	return site_pulse_has_cap_raw( $viewer_id, 'see_superadmin' );
+}
+
+/**
+ * Per-install switch (Settings → Modules, superadmin only): is the protected superadmin visible to
+ * everyone? ON by default so clients can find and message Battle Plan. When OFF, it is hidden again
+ * from everyone except people granted `see_superadmin`. A site that must start hidden seeds it from
+ * its child theme: add_option( 'site_pulse_superadmin_visible', '0' ) — add_option, so the switch
+ * still works afterwards.
+ */
+function site_pulse_superadmin_visible(): bool {
+	return get_option( 'site_pulse_superadmin_visible', '1' ) !== '0';
 }
 
 /**
@@ -2066,7 +2082,7 @@ add_action( 'wp_body_open', function() {
 	echo '<div class="sp-doc-brand">';
 	if ( $icon ) echo '<img src="' . esc_url( $icon ) . '" alt="" class="sp-doc-brand__icon" width="44" height="44">';
 	echo '<div class="sp-doc-brand__name">' . esc_html( $app ) . '</div>';
-	echo '<a class="sp-btn sp-btn-secondary sp-doc-brand__signin" href="' . esc_url( home_url( '/site-pulse-login/' ) ) . '">' . ( is_user_logged_in() ? 'Back to app' : 'Sign in' ) . '</a>';
+	echo '<a class="sp-btn sp-doc-brand__signin" href="' . esc_url( home_url( '/site-pulse-login/' ) ) . '">' . ( is_user_logged_in() ? 'Back to app' : 'Sign in' ) . '</a>';
 	echo '</div>';
 } );
 
@@ -2150,6 +2166,10 @@ function site_pulse_enqueue_assets(): void {
 		// god-only control just like that user sees. (The god bar/picker is server-rendered for the real
 		// god, so the god can still switch/stop.)
 		'isGod'              => site_pulse_god_can_override(),
+		'terms'              => [
+			'product' => [ 'one' => site_pulse_term( 'product' ), 'many' => site_pulse_term( 'product', 'many' ) ],
+			'service' => [ 'one' => site_pulse_term( 'service' ), 'many' => site_pulse_term( 'service', 'many' ) ],
+		],
 		// Only true for the real battleplanweb session AND not while impersonating — so "view as
 		// <someone>" hides the super-admin-only controls (Grant/Revoke God) like that user sees.
 		'isSuperadmin'       => site_pulse_is_superadmin( $real_user_id ) && ! site_pulse_is_impersonating(),
@@ -2161,6 +2181,7 @@ function site_pulse_enqueue_assets(): void {
 		'appInstalled'       => (bool) get_user_meta( $eff_user_id, '_sp_app_installed', true ),
 		// Per-user chart style for the distribution graphs (bar | pie). Effective user.
 		'chartStyle'         => get_user_meta( $eff_user_id, '_sp_chart_style', true ) === 'pie' ? 'pie' : 'bar',
+		'storeSquareOk'      => (bool) get_user_meta( $eff_user_id, '_sp_store_square_ok', true ),
 		// Whether a Claude API key is saved. Without one the bar's Ask button is shown disabled: its screen
 		// finder and Ask AI both need Claude.
 		'hasClaude'          => site_pulse_get_api_key() !== '',
@@ -2328,6 +2349,8 @@ function site_pulse_capability_catalog_all(): array {
 		$cat[ site_pulse_report_submit_cap( (string) $t['slug'] ) ] = 'Submit ' . $plural;
 		$cat[ site_pulse_report_view_cap( (string) $t['slug'] ) ]   = 'View all ' . $plural;
 	}
+	// Website Content: five levels per managed content type (includes-site-pulse-content.php).
+	if ( function_exists( 'sp_content_caps_catalog' ) ) $cat = array_merge( $cat, sp_content_caps_catalog() );
 	return array_merge( $cat, [
 		'view_gm_action_items'         => 'View all GM action items',
 		'view_supervisor_action_items' => 'View all supervisor action items',
@@ -2352,6 +2375,7 @@ function site_pulse_capability_catalog_all(): array {
 		'use_shift_scheduling'   => 'Use shift scheduling (my schedule, claim OT, PDO, coverage)',
 		'view_jobsites'          => 'View jobsites',
 		'add_jobsites'           => 'Add jobsites (and edit their own)',
+		'view_events'            => 'View events',
 		'see_superadmin'    => 'See protected admin in lists',
 		'view_activity_log' => 'View the activity log',
 		'submit_mileage'    => 'Submit mileage',
@@ -2390,6 +2414,7 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_customers'         => 'Manage customers',
 		'manage_schedule_requests' => 'Manage scheduling requests',
 		'manage_bookings'          => 'Book, reschedule &amp; cancel for customers',
+		'delete_bookings'          => 'Permanently delete bookings (test bookings)',
 		'manage_booking_services'  => 'Manage services, resources &amp; availability',
 		'manage_booking_payments'  => 'Manage passes, memberships &amp; refunds',
 		'manage_booking_settings'  => 'Manage booking settings',
@@ -2398,6 +2423,7 @@ function site_pulse_capability_catalog_all(): array {
 		'manage_store_payments'    => 'Refund orders &amp; view payment records',
 		'manage_store_settings'    => 'Manage store settings',
 		'manage_jobsites'          => 'Edit &amp; delete everyone\'s jobsites',
+		'manage_events'            => 'Add, edit &amp; delete events',
 		'manage_shift_schedules'   => 'Supervise shift scheduling (members, approvals, duty, logs)',
 		'manage_shift_settings'    => 'Manage shift scheduling settings (shifts, agency, disciplines)',
 	] );
@@ -2608,6 +2634,28 @@ function site_pulse_can_view_report( int $viewer_id, array $report ): bool {
 /*--------------------------------------------------------------
 # Settings Helpers
 --------------------------------------------------------------*/
+
+/**
+ * What this business calls the things it sells or books: 'product' (Store, default Product/Products,
+ * e.g. Artwork) and 'service' (Booking, default Service/Services, e.g. Retreats). Set in Settings →
+ * E-Commerce (store_name_one / _many) and Settings → Booking (booking_name_one / _many).
+ * $form: 'one' | 'many'. Lower-case it at the call site when it sits mid-sentence.
+ */
+function site_pulse_term( string $key, string $form = 'one' ): string {
+	static $cache = [];
+	$defaults = [ 'product' => [ 'Product', 'Products', 'store_' ], 'service' => [ 'Service', 'Services', 'booking_' ] ];
+	if ( ! isset( $defaults[ $key ] ) ) return '';
+	if ( ! isset( $cache[ $key ] ) ) {
+		[ $one, $many, $prefix ] = $defaults[ $key ];
+		$set_one  = trim( site_pulse_get_setting( $prefix . 'name_one', '' ) );
+		$set_many = trim( site_pulse_get_setting( $prefix . 'name_many', '' ) );
+		$cache[ $key ] = [
+			'one'  => $set_one !== '' ? $set_one : ( $set_many !== '' ? $set_many : $one ),
+			'many' => $set_many !== '' ? $set_many : ( $set_one !== '' ? $set_one : $many ),
+		];
+	}
+	return $cache[ $key ][ $form === 'many' ? 'many' : 'one' ];
+}
 
 function site_pulse_get_setting( string $key, string $default = '' ): string {
 	global $wpdb;
@@ -3301,6 +3349,15 @@ function site_pulse_ajax_set_chart_style(): void {
 	wp_send_json_success( [ 'style' => $style ] );
 }
 
+add_action( 'wp_ajax_site_pulse_store_square_ok', 'site_pulse_ajax_store_square_ok' );
+function site_pulse_ajax_store_square_ok(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	$uid = get_current_user_id();
+	if ( ! $uid ) wp_send_json_error();
+	if ( ! site_pulse_is_impersonating() ) update_user_meta( $uid, '_sp_store_square_ok', 1 );
+	wp_send_json_success();
+}
+
 // Remember the user's Action Items sort order so it loads that way next time (same view-as rule).
 add_action( 'wp_ajax_site_pulse_set_action_sort', 'site_pulse_ajax_set_action_sort' );
 function site_pulse_ajax_set_action_sort(): void {
@@ -3492,7 +3549,7 @@ function site_pulse_render_force_password_screen(): string {
 	if ( $error ) {
 		$html .= '<div class="sp-form-error" role="alert" style="display:block;">' . esc_html( $error ) . '</div>';
 	}
-	$html .=     '<button type="submit" class="sp-btn sp-btn-primary sp-btn-full">Save New Password</button>';
+	$html .=     '<button type="submit" class="sp-btn sp-btn--primary sp-btn--block">Save New Password</button>';
 	$html .=   '</form>';
 	$html .=   '<p class="sp-login-foot"><a href="' . esc_url( $logout ) . '">Log out</a></p>';
 	$html .= '</div></div>';
@@ -4615,7 +4672,7 @@ function site_pulse_page_access_map(): array {
 		'admin-mileage'       => 'manage_mileage',
 		'admin-forms'         => 'manage_form_repositories',
 		'admin-settings'      => 'manage_settings',
-		'admin-notifications' => 'manage_notifications',
+		// admin-notifications: open to everyone (personal choices); its app-wide parts gate themselves.
 		'admin-apikeys'       => 'manage_api_keys',
 		'admin-activity'      => 'view_activity_log',
 	] );
@@ -4989,11 +5046,7 @@ function site_pulse_notification_columns(): array {
 	// generated from Settings → Roles (key 'role:<slug>', label = the role's label), so adding,
 	// renaming, or removing a role flows straight through to this matrix. 'god' is excluded.
 	$cols = [
-		'dashboard'  => 'Dash',   // short header to save column width; help text still says "Dashboard"
-		'email'      => 'Email',
-		'push'       => 'Push',
-		'bell'       => 'Bell',
-		'sms'        => 'Text',   // queued + coalesced into a per-user digest by includes-site-pulse-sms-nudge.php
+		'dashboard'  => 'Banner', // also a dismissible dashboard banner (channels are per-person now)
 		'gm'         => 'User',
 		'supervisor' => "User's Supervisor",
 	];
@@ -5062,14 +5115,10 @@ function site_pulse_dispatch_notification( string $event, int $subject_user_id, 
 	$cols = site_pulse_get_notification_routing()[ $event ] ?? [];
 	if ( empty( $cols ) ) return;
 
-	// Channel flags (not recipients). 'bell' = create an in-app notification entry; 'dashboard' elevates
-	// that entry to a banner (so dashboard implies a bell row); 'email' also emails (gated by the app
-	// switch); 'push' fires a Web Push wake (push_send self-gates on the app switch).
+	// The routing decides WHO (and whether it's also a dashboard banner). HOW each recipient hears —
+	// App / Push / Email / Text — is their own choice in Settings → Notifications (site_pulse_deliver).
+	// The old per-event bell/push/email/sms flags in saved routing are ignored.
 	$on_dashboard = ! empty( $cols['dashboard'] );
-	$on_bell      = ! empty( $cols['bell'] );
-	$do_push      = ! empty( $cols['push'] );
-	$on_email     = ! empty( $cols['email'] ) && site_pulse_get_setting( 'notifications_email_enabled', '0' ) === '1';
-	$do_sms       = ! empty( $cols['sms'] ) && function_exists( 'sp_sms_enqueue_event' ); // queued + coalesced into a digest
 
 	$recipients = [];
 	if ( ! empty( $cols['gm'] ) && $subject_user_id ) {
@@ -5088,14 +5137,7 @@ function site_pulse_dispatch_notification( string $event, int $subject_user_id, 
 	}
 
 	$recipients = array_values( array_unique( array_map( 'intval', array_filter( $recipients ) ) ) );
-	// The dashboard banner is stored as a (flagged) bell row, so create a row when EITHER is on.
-	$make_row = $on_bell || $on_dashboard;
-	foreach ( $recipients as $rid ) {
-		if ( $make_row )                                          site_pulse_notify( $rid, $event, $message, $related_id, $related_type, $on_dashboard );
-		if ( $do_push && function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $rid );
-		if ( $on_email )                                          site_pulse_notify_email( $rid, $message );
-		if ( $do_sms )                                            sp_sms_enqueue_event( $rid, $event, $message, $related_id, $related_type );
-	}
+	foreach ( $recipients as $rid ) site_pulse_deliver( $rid, $event, $message, $related_id, $related_type, $on_dashboard );
 }
 
 // Email one recipient a plain notification (used by the matrix' Email channel + new-message emails).
@@ -5138,7 +5180,7 @@ function site_pulse_ajax_ack_dashboard_message(): void {
 add_action( 'wp_ajax_site_pulse_get_notification_settings', 'site_pulse_ajax_get_notification_settings' );
 function site_pulse_ajax_get_notification_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
+	if ( ! site_pulse_can_manage_global_notifications() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	wp_send_json_success( [
 		'events'        => site_pulse_notification_events_active(),   // only events whose feature is on
@@ -5154,7 +5196,7 @@ function site_pulse_ajax_get_notification_settings(): void {
 add_action( 'wp_ajax_site_pulse_save_notification_settings', 'site_pulse_ajax_save_notification_settings' );
 function site_pulse_ajax_save_notification_settings(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
-	if ( ! site_pulse_admin_check( 'manage_notifications' ) ) return;
+	if ( ! site_pulse_can_manage_global_notifications() ) wp_send_json_error( [ 'message' => 'Not authorized.' ] );
 
 	$in = json_decode( wp_unslash( $_POST['routing'] ?? '' ), true );
 	if ( ! is_array( $in ) ) wp_send_json_error( [ 'message' => 'Invalid data.' ] );
@@ -5860,8 +5902,7 @@ function site_pulse_ajax_create_action_item(): void {
 			$my_id = $new_id;
 		} else {
 			// Notify the added person (bell + their devices), mirroring the chat→action flow.
-			site_pulse_notify( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), $new_id, 'action_item' );
-			if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
+			site_pulse_deliver( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), $new_id, 'action_item' );
 		}
 	}
 	wp_send_json_success( [ 'id' => $my_id ] );
@@ -5895,7 +5936,12 @@ function site_pulse_ajax_feedback_summary(): void {
 	if ( ! $uid ) wp_send_json_error( [ 'message' => 'Not signed in.' ] );
 
 	global $wpdb;
-	$can    = function ( $c ) use ( $uid ) { return site_pulse_user_can( $uid, $c ); };
+	// Each area also needs its module on — a god holds every cap, even for modules this site doesn't run.
+	$mods   = site_pulse_cap_module_map();
+	$can    = function ( $c ) use ( $uid, $mods ) {
+		if ( isset( $mods[ $c ] ) && ! site_pulse_module_on( $mods[ $c ] ) ) return false;
+		return site_pulse_user_can( $uid, $c );
+	};
 	$cutoff = gmdate( 'Y-m-d H:i:s', current_time( 'timestamp', true ) - 30 * DAY_IN_SECONDS );
 	$out    = [];
 
@@ -6773,8 +6819,7 @@ function site_pulse_ajax_complete_action_item(): void {
 		$who = site_pulse_display_name( $me );
 		$msg = sprintf( '%s completed an action item: %s', $who, $item['description'] );
 		foreach ( $recipients as $uid ) {
-			site_pulse_notify( $uid, 'action_item', $msg, $item_id, 'action_item' );
-			if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid ); // bell + wake devices
+			site_pulse_deliver( $uid, 'action_item', $msg, $item_id, 'action_item' );
 		}
 	}
 
@@ -6861,8 +6906,7 @@ function site_pulse_ajax_update_action_item(): void {
 				'updated_at'  => $now,
 			] );
 			$new_id = (int) $wpdb->insert_id;
-			site_pulse_notify( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), $new_id, 'action_item' );
-			if ( function_exists( 'site_pulse_push_send' ) ) site_pulse_push_send( $uid );
+			site_pulse_deliver( $uid, 'action_pending', sprintf( '%s added an action item for you: %s', $me_name, $desc ), $new_id, 'action_item' );
 		}
 	}
 
@@ -7057,14 +7101,15 @@ function site_pulse_ajax_admin_save_setting(): void {
 	// are not interchangeable even on a site running both).
 	$store_secret_keys   = [ 'store_stripe_secret', 'store_stripe_webhook' ];
 	$api_key_keys   = array_merge(
-		[ 'claude_api_key', 'maps_js_api_key', 'google_api_key', 'tollguru_api_key', 'brightlocal_api_key', 'booking_stripe_publishable_key' ],
+		[ 'claude_api_key', 'maps_js_api_key', 'google_api_key', 'tollguru_api_key', 'brightlocal_api_key', 'booking_stripe_publishable_key', 'store_stripe_publishable' ],
 		$booking_secret_keys,
 		$store_secret_keys
 	);
 	$notif_keys     = [ 'push_enabled', 'messages_email_enabled', 'notifications_email_enabled', 'push_contact_email', 'sms_nudge_enabled' ];
-	$required_cap   = in_array( $key, $api_key_keys, true ) ? 'manage_api_keys'
-		: ( in_array( $key, $notif_keys, true ) ? 'manage_notifications' : 'manage_settings' );
-	if ( ! site_pulse_admin_check( $required_cap ) ) return;
+	// App-wide notification switches: god / System Admin only (everyone else sets their own channels).
+	if ( in_array( $key, $notif_keys, true ) ) {
+		if ( ! site_pulse_can_manage_global_notifications() ) wp_send_json_error( [ 'message' => 'Only a System Admin can change app-wide notifications.' ] );
+	} elseif ( ! site_pulse_admin_check( in_array( $key, $api_key_keys, true ) ? 'manage_api_keys' : 'manage_settings' ) ) return;
 
 	if ( $key === 'claude_api_key' ) {
 		site_pulse_set_api_key( $value );
@@ -7109,16 +7154,30 @@ function site_pulse_ajax_admin_get_settings(): void {
 	$store_secret = function_exists( 'sp_store_get_secret' ) ? sp_store_get_secret( 'stripe_secret' ) : '';
 	$store_hook   = function_exists( 'sp_store_get_secret' ) ? sp_store_get_secret( 'stripe_webhook' ) : '';
 	$store_forced = defined( 'BP_STORE_STRIPE_SECRET' ) && BP_STORE_STRIPE_SECRET;
+	// Saved by the generic branch as store_stripe_publishable, which is the Store's own
+	// stripe_publishable setting. Public by design, but masked like its neighbours.
+	$store_pk     = function_exists( 'sp_store_stripe_publishable' ) ? sp_store_stripe_publishable() : '';
 
 	wp_send_json_success( [
 		'claude_api_key_masked'      => $masked,
 		'claude_api_key_set'         => ! empty( $api_key ),
 		'store_stripe_secret_masked'  => $store_secret ? sp_store_mask_secret( $store_secret ) : '',
 		'store_stripe_secret_set'     => ! empty( $store_secret ) || $store_forced,
+		'store_stripe_pk_masked'      => $store_pk ? sp_store_mask_secret( $store_pk ) : '',
+		'store_stripe_pk_set'         => $store_pk !== '',
+		'store_stripe_pk_mode'        => $store_pk === '' ? '' : ( strpos( $store_pk, 'pk_live_' ) === 0 ? 'live' : 'test' ),
+		'store_stripe_pk_forced'      => defined( 'BP_STORE_STRIPE_PUBLISHABLE' ) && BP_STORE_STRIPE_PUBLISHABLE,
 		'store_stripe_webhook_masked' => $store_hook ? sp_store_mask_secret( $store_hook ) : '',
 		'store_stripe_webhook_set'    => ! empty( $store_hook ) || ( defined( 'BP_STORE_STRIPE_WEBHOOK_SECRET' ) && BP_STORE_STRIPE_WEBHOOK_SECRET ),
 		// Shown beside the fields so there is no guessing about what to paste into Stripe.
+		//
+		// Two URLs, deliberately. store_webhook_url is the ACTIVE provider's endpoint;
+		// store_stripe_webhook_url is always Stripe's. The Stripe field used the first
+		// one, so on a site running Clover it printed the Clover endpoint under a
+		// heading that said Stripe — and a webhook registered there reaches Clover's
+		// verifier, fails its signature check, and silently confirms nothing.
 		'store_webhook_url'           => function_exists( 'sp_store_webhook_url' ) ? sp_store_webhook_url() : '',
+		'store_stripe_webhook_url'    => function_exists( 'sp_store_provider_webhook_url' ) ? sp_store_provider_webhook_url( 'stripe' ) : '',
 		'store_stripe_mode'           => function_exists( 'sp_store_stripe_mode' ) ? sp_store_stripe_mode() : '',
 		'store_stripe_forced'         => (bool) $store_forced,
 		'store_module_on'             => function_exists( 'site_pulse_module_on' ) && site_pulse_module_on( 'store' ),
@@ -7457,12 +7516,13 @@ function site_pulse_sanitize_css_color( string $v ): string {
 # A scheme is three anchors: a deep BRAND color (header, bottom bar, primary
 # buttons — white text on it passes WCAG AA), a pale page TINT, and an ACCENT
 # (second-level buttons, the Ask button). The admin either picks a preset by
-# hand, or enters the company colors and the closest preset is tuned toward
-# them: each logo color takes the preset role nearest in hue, darkness and
-# saturation; the preset's own darkness and calm saturation act as a CEILING,
-# so a loud logo color is toned down while a darker or calmer one is kept;
-# the hue is always the logo's. Contrast is re-checked after tuning. Pure math,
-# so the same colors always give the same scheme.
+# hand, or enters the company colors: each logo color takes the role (brand or
+# accent) of the closest preset nearest in hue, darkness and saturation. A logo
+# color that already WORKS in its role (contrast, not too light/dark/loud/dull)
+# is used exactly as entered; only a failing one is tuned toward the preset,
+# whose darkness band and calm saturation act as a ceiling, keeping the logo's
+# hue. Contrast is re-checked after tuning. Pure math, so the same colors always
+# give the same scheme.
 --------------------------------------------------------------*/
 
 /** The curated presets. `danger` moves the "overdue" red toward orange where the brand itself is red. */
@@ -7525,7 +7585,8 @@ function site_pulse_oklch_fit_hex( array $c ): string {
  * tried and the closest wins. Returns the anchors plus the chosen preset's slug and name, or [] if none.
  */
 function site_pulse_preset_match( array $colors ): array {
-	$neutral = 0.045;   // OKLCH chroma below this reads as black/gray/white: hue is meaningless
+	$neutral = 0.02;    // OKLCH chroma below this is a true black/gray/white: hue is noise. (Was 0.045, which
+	                    // called a muted olive or slate "gray" and handed it the Charcoal preset's blue.)
 	$cols = [];
 	foreach ( $colors as $c ) { $h = site_pulse_sanitize_hex( (string) $c ); if ( $h !== '' ) $cols[] = $h; }
 	$cols = array_slice( array_values( array_unique( $cols ) ), 0, 3 );
@@ -7539,10 +7600,16 @@ function site_pulse_preset_match( array $colors ): array {
 		if ( $ln || $tn ) return 140 + $shade;
 		return site_pulse_hue_gap( $logo['H'], $target['H'] ) + $shade;
 	};
+	// White / cream / pale gray is a page-tint color, never a brand or accent: left in, a white logo
+	// color could win the brand role and come out as a gray sidebar. It stays a page-tint candidate below.
+	$roleCols = array_values( array_filter( $cols, static function ( string $h ): bool {
+		$o = site_pulse_oklch_deg( $h );
+		return ! ( $o['L'] >= 0.90 && $o['C'] < 0.05 );
+	} ) ) ?: $cols;
 	$pairs = [];
-	foreach ( $cols as $i => $b ) {
-		if ( count( $cols ) === 1 ) $pairs[] = [ $b, null ];
-		foreach ( $cols as $j => $a ) if ( $i !== $j ) $pairs[] = [ $b, $a ];
+	foreach ( $roleCols as $i => $b ) {
+		if ( count( $roleCols ) === 1 ) $pairs[] = [ $b, null ];
+		foreach ( $roleCols as $j => $a ) if ( $i !== $j ) $pairs[] = [ $b, $a ];
 	}
 	$best = null;
 	foreach ( site_pulse_color_presets() as $slug => $p ) {
@@ -7558,33 +7625,79 @@ function site_pulse_preset_match( array $colors ): array {
 	$pb = site_pulse_oklch_deg( $p['brand'] );
 	$pa = site_pulse_oklch_deg( $p['accent'] );
 	$pc = site_pulse_oklch_deg( $p['canvas'] );
-	// The preset is a ceiling: lightness is clamped to its band, saturation never exceeds its own (plus a
-	// little), and only the hue is taken from the logo outright.
-	$tune = static function ( array $pre, ?string $hex, float $lo, float $hi ) use ( $neutral ): array {
+	$readable = static fn( string $h ): bool => max( site_pulse_contrast_ratio( $h, '#ffffff' ), site_pulse_contrast_ratio( $h, '#16181d' ) ) >= 4.5;
+
+	// 1. A logo color that already works in its role is used EXACTLY as entered. Brand: white text reads
+	//    on it (not too light), it isn't near-black (the deeper rungs need room below it), and it isn't
+	//    loud. Accent: it has real color without being neon, isn't washed out, button text reads on it,
+	//    and it stands apart from the brand (it's the active item on the brand-colored sidebar).
+	$brandWorks = static function ( string $hex ): bool {
+		$c = site_pulse_oklch_deg( $hex );
+		return site_pulse_contrast_ratio( $hex, '#ffffff' ) >= 4.5 && $c['L'] >= 0.20 && $c['C'] <= 0.20;
+	};
+	$accentWorks = static function ( string $hex, string $brandHex ) use ( $readable ): bool {
+		$c = site_pulse_oklch_deg( $hex );
+		return $c['C'] >= 0.05 && $c['C'] <= 0.25 && $c['L'] <= 0.92 && $readable( $hex )
+			&& site_pulse_contrast_ratio( $hex, $brandHex ) >= 1.3;
+	};
+
+	// 2. Only a color that fails is tuned toward the matched preset: lightness clamped to the preset's
+	//    band, saturation capped at its own (plus a little), the logo's hue kept. A gray/white logo color
+	//    has no hue to keep: a brand takes the preset's hue at the logo's grayness; an accent can't be
+	//    gray, so it takes the preset's own accent.
+	$tune = static function ( array $pre, ?string $hex, float $lo, float $hi, bool $isAccent ) use ( $neutral ): array {
 		if ( ! $hex ) return $pre;
 		$l = site_pulse_oklch_deg( $hex );
 		$L = max( $lo, min( $hi, $l['L'] ) );
-		if ( $l['C'] < $neutral ) return [ 'L' => $L, 'C' => $l['C'], 'H' => $pre['H'] ];
+		if ( $l['C'] < $neutral ) return $isAccent ? $pre : [ 'L' => $L, 'C' => $l['C'], 'H' => $pre['H'] ];
 		return [ 'L' => $L, 'C' => min( $l['C'], $pre['C'] * 1.15 + 0.01 ), 'H' => $l['H'] ];
 	};
-	$brand  = $tune( $pb, $best['b'], 0.24, $pb['L'] + 0.03 );
-	$accent = $tune( $pa, $best['a'], $pa['L'] - 0.10, $pa['L'] + 0.10 );
 
-	$brandHex = site_pulse_oklch_fit_hex( $brand );
-	while ( site_pulse_contrast_ratio( $brandHex, '#ffffff' ) < 4.5 && $brand['L'] > 0.15 ) {
-		$brand['L'] -= 0.02;
+	$keptBrand = $brandWorks( $best['b'] );
+	if ( $keptBrand ) {
+		$brandHex = $best['b'];
+		$brand    = site_pulse_oklch_deg( $brandHex );
+	} else {
+		$brand    = $tune( $pb, $best['b'], 0.24, $pb['L'] + 0.03, false );
 		$brandHex = site_pulse_oklch_fit_hex( $brand );
+		while ( site_pulse_contrast_ratio( $brandHex, '#ffffff' ) < 4.5 && $brand['L'] > 0.15 ) {
+			$brand['L'] -= 0.02;
+			$brandHex = site_pulse_oklch_fit_hex( $brand );
+		}
 	}
-	$accentOk  = static fn( string $h ): bool => max( site_pulse_contrast_ratio( $h, '#ffffff' ), site_pulse_contrast_ratio( $h, '#16181d' ) ) >= 4.5;
-	$accentHex = site_pulse_oklch_fit_hex( $accent );
-	while ( ! $accentOk( $accentHex ) && $accent['L'] > 0.1 && $accent['L'] < 0.97 ) {
-		$accent['L'] += $accent['L'] >= 0.6 ? 0.02 : -0.02;
+
+	$keptAccent = $best['a'] && $accentWorks( $best['a'], $brandHex );
+	if ( $keptAccent ) {
+		$accentHex = $best['a'];
+		$accent    = site_pulse_oklch_deg( $accentHex );
+	} else {
+		$accent    = $tune( $pa, $best['a'], $pa['L'] - 0.10, $pa['L'] + 0.10, true );
+		// Still unreadable? Step lighter AND darker and take the smaller move (pure red goes deeper red, not coral).
 		$accentHex = site_pulse_oklch_fit_hex( $accent );
+		for ( $d = 0.02; ! $readable( $accentHex ) && $d < 0.9; $d += 0.02 ) {
+			foreach ( [ $accent['L'] >= 0.6 ? $d : -$d, $accent['L'] >= 0.6 ? -$d : $d ] as $step ) {
+				$L = $accent['L'] + $step;
+				if ( $L <= 0.1 || $L >= 0.97 ) continue;
+				$try = site_pulse_oklch_fit_hex( [ 'L' => $L ] + $accent );
+				if ( $readable( $try ) ) { $accentHex = $try; $accent['L'] = $L; break; }
+			}
+		}
 	}
-	// The tint turns by as much as the brand turned, so an exact preset match keeps the preset's own tint.
-	$turn      = ( $brand['C'] < $neutral || $pb['C'] < $neutral ) ? 0 : $brand['H'] - $pb['H'];
-	$canvasHex = site_pulse_oklch_fit_hex( [ 'L' => $pc['L'], 'C' => $pc['C'], 'H' => fmod( $pc['H'] + $turn + 360, 360 ) ] );
-	$nearRed   = static fn( array $c ): bool => $c['C'] >= $neutral && site_pulse_hue_gap( $c['H'], 27 ) < 22;
+
+	// Page tint: a pale logo color not already used (cream, ivory, pale gray — not pure white, which
+	// would erase the white cards) is used as-is; otherwise the preset's tint, turned to the brand's hue.
+	$keptCanvas = false;
+	$canvasHex  = '';
+	foreach ( $cols as $c ) {
+		if ( $c === $best['b'] || ( $keptAccent && $c === $best['a'] ) ) continue;
+		$o = site_pulse_oklch_deg( $c );
+		if ( $o['L'] >= 0.92 && $o['L'] <= 0.985 && $o['C'] <= 0.06 ) { $canvasHex = $c; $keptCanvas = true; break; }
+	}
+	if ( ! $keptCanvas ) {
+		$turn      = ( $brand['C'] < $neutral || $pb['C'] < $neutral ) ? 0 : $brand['H'] - $pb['H'];
+		$canvasHex = site_pulse_oklch_fit_hex( [ 'L' => $pc['L'], 'C' => $pc['C'], 'H' => fmod( $pc['H'] + $turn + 360, 360 ) ] );
+	}
+	$nearRed = static fn( array $c ): bool => $c['C'] >= 0.045 && site_pulse_hue_gap( $c['H'], 27 ) < 22;
 
 	return [
 		'slug'   => $best['slug'],
@@ -7592,6 +7705,7 @@ function site_pulse_preset_match( array $colors ): array {
 		'brand'  => $brandHex,
 		'canvas' => $canvasHex,
 		'accent' => $accentHex,
+		'kept'   => [ 'brand' => $keptBrand, 'accent' => $keptAccent, 'canvas' => $keptCanvas ],
 		'danger' => ( $nearRed( $brand ) || $nearRed( $accent ) ) ? '#c2410c' : ( $p['danger'] ?? '#d0432f' ),
 	];
 }
@@ -13636,6 +13750,22 @@ function site_pulse_ajax_admin_recompute_mileage_distances(): void {
 		'total'               => $total,
 		'done'                => ( ! $ids || $processed >= $total ),
 	] );
+}
+
+
+/*--------------------------------------------------------------
+# Short URLs: /sp-login and /sp-admin → /site-pulse-login/ (301)
+--------------------------------------------------------------*/
+
+add_action( 'parse_request', 'site_pulse_short_url_redirect', 0 );
+function site_pulse_short_url_redirect(): void {
+	if ( is_admin() || wp_doing_ajax() ) return;
+	$path = strtolower( trim( (string) parse_url( $_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH ), '/' ) );
+	$base = strtolower( trim( (string) parse_url( home_url(), PHP_URL_PATH ), '/' ) );
+	if ( $base !== '' && strpos( $path, $base . '/' ) === 0 ) $path = substr( $path, strlen( $base ) + 1 );
+	if ( ! in_array( $path, [ 'sp-login', 'sp-admin' ], true ) ) return;
+	wp_redirect( home_url( '/site-pulse-login/' ), 301 );
+	exit;
 }
 
 

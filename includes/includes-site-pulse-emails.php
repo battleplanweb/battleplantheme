@@ -231,6 +231,21 @@ function sp_emails_ajax_list(): void {
 		$scope[] = "( stream IS NULL OR stream = '' )";
 	}
 
+	// Routed To filter: the addresses this viewer can see, narrowed to one when picked. The first load of
+	// the screen (to_default) starts on the viewer's own address when it's listed, otherwise on all of them.
+	$to_emails = []; $to = '';
+	if ( $stream !== '' ) {
+		$to_emails = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT LOWER(to_email) AS to_email FROM $t WHERE " . implode( ' AND ', $scope ) . " AND to_email IS NOT NULL AND to_email <> '' ORDER BY to_email", $scope_args ) ) ?: [];
+		if ( ! empty( $_POST['to_default'] ) ) {
+			$wpu = get_userdata( $me );
+			$to  = $wpu ? strtolower( (string) $wpu->user_email ) : '';
+		} else {
+			$to = strtolower( sanitize_email( wp_unslash( $_POST['to'] ?? '' ) ) );
+		}
+		if ( ! in_array( $to, $to_emails, true ) ) $to = '';
+		if ( $to !== '' ) { $scope[] = 'LOWER(to_email) = %s'; $scope_args[] = $to; }
+	}
+
 	$where = $scope; $args = $scope_args;
 	if ( $status === 'new' || $status === 'handled' ) { $where[] = 'status = %s'; $args[] = $status; }
 	if ( $stream === '' ) {
@@ -268,6 +283,9 @@ function sp_emails_ajax_list(): void {
 		$resp['brands']     = $wpdb->get_col( "SELECT DISTINCT brand FROM $t WHERE brand IS NOT NULL AND brand <> '' ORDER BY brand" ) ?: [];
 		$resp['locations']  = $wpdb->get_col( "SELECT DISTINCT location FROM $t WHERE location IS NOT NULL AND location <> '' ORDER BY location" ) ?: [];
 		$resp['categories'] = $wpdb->get_col( "SELECT DISTINCT category FROM $t WHERE category IS NOT NULL AND category <> '' ORDER BY category" ) ?: [];
+	} else {
+		$resp['to_emails'] = $to_emails;
+		$resp['to']        = $to;
 	}
 	wp_send_json_success( $resp );
 }

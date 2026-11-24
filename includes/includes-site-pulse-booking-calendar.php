@@ -207,7 +207,27 @@ function sp_book_ajax_list(): void {
 	$where  = '';
 	$params = [];
 
-	if ( $status === 'upcoming' ) {
+	// Current Bookings' List mode sends the day / week / month the calendar is on (local dates) and
+	// its resource filter, so the list shows exactly the bookings the calendar would.
+	$from  = sp_book_date_value( sp_book_post( 'from' ) );
+	$to    = sp_book_date_value( sp_book_post( 'to' ) );
+	$range = $from !== '' && $to !== '';
+	if ( $range ) {
+		$where   .= ' AND b.starts_at >= %s AND b.starts_at < %s ';
+		$params[] = sp_book_to_utc( $from . ' 00:00:00' );
+		$params[] = sp_book_to_utc( gmdate( 'Y-m-d', strtotime( $to . ' +1 day' ) ) . ' 00:00:00' );
+	}
+	$resource_id = (int) ( $_POST['resource_id'] ?? 0 );
+	if ( $resource_id ) {
+		$where   .= ' AND b.resource_id = %d ';
+		$params[] = $resource_id;
+	}
+
+	if ( $status === 'upcoming' && $range ) {
+		// Within a chosen range, "Active" = still happening (or happened) as booked, in time order.
+		$where .= " AND b.status IN ( 'pending', 'confirmed' ) ";
+		$order  = 'ASC';
+	} elseif ( $status === 'upcoming' ) {
 		// "Upcoming" is the working view: what still needs to happen, soonest first.
 		$where   .= " AND b.starts_at >= %s AND b.status IN ( 'pending', 'confirmed' ) ";
 		$params[] = sp_book_now();
@@ -431,6 +451,41 @@ function sp_book_ajax_cancel(): void {
 	sp_book_notify_cancelled( $id );
 	site_pulse_log( 'booking_cancelled', sprintf( 'Cancelled booking #%d', $id ) );
 	wp_send_json_success( [ 'message' => 'Booking cancelled.' ] );
+}
+
+/**
+ * Hard delete (cap delete_bookings), for test bookings (sandbox checkouts). Unlike Cancel it leaves no
+ * trace: no email, no refund attempt, and the booking, its other series dates, seats, payment
+ * rows, pass use and queued messages all go. A store order that sold it stays, unlinked.
+ */
+add_action( 'wp_ajax_site_pulse_booking_delete', 'sp_book_ajax_delete' );
+function sp_book_ajax_delete(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! site_pulse_user_can( site_pulse_effective_user_id(), 'delete_bookings' ) && ! site_pulse_god_can_override() ) wp_send_json_error( [ 'message' => 'You do not have permission to delete bookings.' ] );
+
+	global $wpdb;
+	$booking = sp_book_get_booking( (int) ( $_POST['id'] ?? 0 ) );
+	if ( ! $booking ) wp_send_json_error( [ 'message' => 'That booking no longer exists.' ] );
+
+	// Release first (quietly: no notify, no refund) so event seats taken go back down.
+	sp_book_release( (int) $booking['id'], 'cancelled', get_current_user_id(), 'Deleted (test booking)' );
+
+	$ids = [ (int) $booking['id'] ];
+	foreach ( sp_book_series_members( $booking ) as $m ) $ids[] = (int) $m['id'];
+	$ids = array_values( array_unique( $ids ) );
+	$in  = implode( ',', $ids );
+
+	foreach ( [ 'participants', 'pass_redemptions', 'payments', 'notifications' ] as $t ) {
+		$wpdb->query( "DELETE FROM " . sp_book_table( $t ) . " WHERE booking_id IN ($in)" );
+	}
+	if ( function_exists( 'sp_store_table' ) ) {
+		$wpdb->query( "UPDATE " . sp_store_table( 'order_items' ) . " SET booking_id = 0 WHERE booking_id IN ($in)" );
+	}
+	$wpdb->query( "DELETE FROM " . sp_book_table( 'bookings' ) . " WHERE id IN ($in)" );
+	sp_book_cache_bust();
+
+	site_pulse_log( 'booking_deleted', sprintf( 'Deleted booking %s (%s)', (string) $booking['code'], (string) ( $booking['customer_name'] ?? '' ) ) );
+	wp_send_json_success( [ 'message' => 'Booking deleted.' ] );
 }
 
 /**

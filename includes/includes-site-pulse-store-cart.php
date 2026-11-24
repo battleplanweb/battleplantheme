@@ -303,7 +303,7 @@ function sp_store_cart_set_qty( int $variant_id, int $qty ) {
 	$wpdb->update(
 		sp_store_table( 'cart_items' ),
 		[ 'qty' => $qty, 'updated_at' => current_time( 'mysql', true ) ],
-		[ 'cart_id' => (int) $cart['id'], 'variant_id' => $variant_id ]
+		[ 'cart_id' => (int) $cart['id'], 'variant_id' => $variant_id, 'kind' => 'product' ]
 	);
 
 	sp_store_cart_touch( (int) $cart['id'] );
@@ -318,6 +318,7 @@ function sp_store_cart_remove( int $variant_id ) {
 	$wpdb->delete( sp_store_table( 'cart_items' ), [
 		'cart_id'    => (int) $cart['id'],
 		'variant_id' => $variant_id,
+		'kind'       => 'product',     // never the booking lines, which all carry variant_id 0
 	] );
 
 	sp_store_cart_touch( (int) $cart['id'] );
@@ -352,7 +353,7 @@ function sp_store_cart_lines( int $cart_id ): array {
 
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT ci.*, v.sku, v.option1, v.option2, v.option3, v.status AS variant_status,
-		        v.price_cents, v.sale_price_cents, v.track_stock, v.allow_backorder,
+		        v.price_cents, v.sale_price_cents, v.track_stock, v.show_stock, v.allow_backorder,
 		        v.stock, v.stock_committed, v.currency
 		   FROM " . sp_store_table( 'cart_items' ) . " ci
 		   JOIN " . sp_store_table( 'variants' ) . " v ON v.id = ci.variant_id
@@ -393,6 +394,8 @@ function sp_store_cart_lines( int $cart_id ): array {
 			'image'      => (string) ( get_the_post_thumbnail_url( $product_id, 'thumbnail' ) ?: '' ),
 			'qty'        => $qty,
 			'max'        => ( $available !== null && empty( $row['allow_backorder'] ) ) ? max( 0, $available ) : null,
+			// Show Stock off: the cart still stops at what's there, but doesn't say how much that is.
+			'show_stock' => (int) $row['show_stock'],
 			'unit_cents' => $unit,
 			'unit'       => sp_store_money( $unit, (string) $row['currency'] ),
 			'line_cents' => $unit * $qty,
@@ -406,6 +409,12 @@ function sp_store_cart_lines( int $cart_id ): array {
 			  WHERE cart_id = %d AND variant_id IN (" . implode( ',', array_fill( 0, count( $stale ), '%d' ) ) . ")",
 			array_merge( [ $cart_id ], $stale )
 		) );
+	}
+
+	// Booking lines (seats in a session) have no variant, so the JOIN above never returns them.
+	// They're built by includes-site-pulse-store-bookings.php and carry kind = 'booking'.
+	if ( function_exists( 'sp_store_booking_cart_lines' ) ) {
+		$lines = array_merge( $lines, sp_store_booking_cart_lines( $cart_id ) );
 	}
 
 	return $lines;
@@ -579,6 +588,11 @@ function sp_store_ajax_cart_add(): void {
 
 function sp_store_ajax_cart_qty(): void {
 	if ( ! sp_store_cart_guard() ) return;
+	// A booking line is addressed by its line id (it has no variant).
+	if ( ! empty( $_POST['line_id'] ) && function_exists( 'sp_store_cart_booking_qty' ) ) {
+		sp_store_cart_reply( sp_store_cart_booking_qty( (int) $_POST['line_id'], (int) ( $_POST['qty'] ?? 0 ) ) );
+		return;
+	}
 	sp_store_cart_reply( sp_store_cart_set_qty(
 		(int) ( $_POST['variant_id'] ?? 0 ),
 		(int) ( $_POST['qty'] ?? 0 )
@@ -587,6 +601,10 @@ function sp_store_ajax_cart_qty(): void {
 
 function sp_store_ajax_cart_remove(): void {
 	if ( ! sp_store_cart_guard() ) return;
+	if ( ! empty( $_POST['line_id'] ) && function_exists( 'sp_store_cart_booking_qty' ) ) {
+		sp_store_cart_reply( sp_store_cart_booking_qty( (int) $_POST['line_id'], 0 ) );
+		return;
+	}
 	sp_store_cart_reply( sp_store_cart_remove( (int) ( $_POST['variant_id'] ?? 0 ) ) );
 }
 

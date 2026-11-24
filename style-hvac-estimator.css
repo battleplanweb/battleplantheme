@@ -1,0 +1,495 @@
+/*--------------------------------------------------------------
+# HVAC Replacement Estimator — [hvac-estimator]
+  Inlined in <head> just BEFORE style-site.css on pages using the shortcode, so any style-site.css
+  rule on these classes wins at equal specificity. Everything is scoped to .estimator.
+  Brand it from style-site.css with the tokens below — headings, buttons, radios and the
+  contact fields already use the site's own heading / --button-* / --input-* styling.
+--------------------------------------------------------------*/
+
+.estimator {
+	--estimator-accent:                                        var(--button-color);
+	--estimator-accent-text:                                   var(--white);
+	--estimator-surface:                                       var(--white);
+	--estimator-tint:                                          color-mix(in srgb, var(--estimator-accent) 8%, var(--estimator-surface));
+	--estimator-line:                                          var(--black-lowest);
+	--estimator-text:                                          var(--text-color);
+	--estimator-warning:                                       var(--warning);
+
+	display:                                                   grid;
+	gap:                                                       var(--space-6);
+	max-width:                                                 640px;
+	margin:                                                    0 auto;
+	padding:                                                   var(--space-7) var(--space-7) var(--space-6);
+	background:                                                var(--estimator-surface);
+	border:                                                    1px solid var(--estimator-line);
+	border-radius:                                             var(--radius-lg);
+	box-shadow:                                                0 8px 24px var(--black-lowest);
+	color:                                                     var(--estimator-text);
+	text-align:                                                left;
+}
+
+/* Progress */
+.estimator-progress {
+	display:                                                   grid;
+	gap:                                                       var(--space-2);
+}
+
+.estimator-progress-label {
+	margin:                                                    0;
+	font-size:                                                 14px;
+	font-weight:                                               bold;
+	letter-spacing:                                            1px;
+	text-transform:                                            uppercase;
+	color:                                                     var(--estimator-accent);
+}
+
+.estimator-progress-track {
+	height:                                                    8px;
+	background:                                                var(--estimator-line);
+	border-radius:                                             var(--radius-pill);
+	overflow:                                                  hidden;
+}
+
+.estimator-progress-fill {
+	display:                                                   block;
+	width:                                                     0;
+	height:                                                    100%;
+	background:                                                var(--estimator-accent);
+	border-radius:                                             inherit;
+	transition:                                                width 0.35s ease;
+}
+
+/* Question */
+.estimator-stage {
+	display:                                                   grid;
+	gap:                                                       var(--space-5);
+}
+
+.estimator-fieldset {
+	display:                                                   grid;
+	gap:                                                       var(--space-4);
+	margin:                                                    0;
+	padding:                                                   0;
+	border:                                                    none;
+	min-width:                                                 0;
+}
+
+.estimator-legend {
+	padding:                                                   0;
+	margin-bottom:                                             var(--space-1);
+}
+
+/* Sentence case on purpose: questions and "As low as $X/month" must read exactly as written,
+   so a site heading style of text-transform: capitalize is switched off here. */
+.estimator-heading,
+.estimator-form-title {
+	--h-text-transform:                                        none;
+	text-transform:                                            none;
+}
+
+.estimator-heading {
+	--h-font-size:                                             32rem;
+	--h-text-align:                                            left;
+	text-align:                                                left;
+}
+
+.estimator-heading:focus {
+	outline:                                                   none;
+}
+
+.estimator-help {
+	margin:                                                    0;
+	font-size:                                                 16px;
+}
+
+.estimator-choices {
+	display:                                                   grid;
+	gap:                                                       var(--space-3);
+}
+
+.estimator-choice {
+	display:                                                   grid;
+	grid-template-columns:                                     auto minmax(0, 1fr);
+	align-items:                                               center;
+	min-height:                                                64px;
+	padding:                                                   var(--space-4) var(--space-5);
+	font-family:                                               var(--font-text);
+	font-weight:                                               normal;
+	font-size:                                                 18px;
+	color:                                                     var(--estimator-text);
+	background:                                                var(--estimator-surface);
+	border:                                                    2px solid var(--estimator-line);
+	border-radius:                                             var(--radius-md);
+	cursor:                                                    pointer;
+	transition:                                                border-color var(--main-trans-speed) var(--main-trans-easing), background var(--main-trans-speed) var(--main-trans-easing);
+}
+
+.estimator-choice:hover,
+.estimator-choice.active,
+.estimator-choice.tab-focus {
+	border-color:                                              var(--estimator-accent);
+}
+
+.estimator-choice:has(:checked) {
+	border-color:                                              var(--estimator-accent);
+	background:                                                var(--estimator-tint);
+}
+
+.estimator-choice:has(:focus-visible) {
+	outline:                                                   3px solid var(--estimator-accent);
+	outline-offset:                                            2px;
+}
+
+.estimator .estimator-radio {
+	transform:                                                 none;
+}
+
+.estimator-choice-text {
+	display:                                                   grid;
+	gap:                                                       2px;
+}
+
+.estimator-choice-label {
+	font-weight:                                               bold;
+}
+
+.estimator-choice-desc {
+	font-size:                                                 15px;
+	opacity:                                                   0.8;
+}
+
+.estimator-error {
+	margin:                                                    0;
+	color:                                                     var(--estimator-warning);
+	font-weight:                                               bold;
+}
+
+.estimator-error:empty {
+	display:                                                   none;
+}
+
+/* Question step: the answers, a clear gap, then the Back / Next row */
+.estimator-step {
+	display:                                                   grid;
+	gap:                                                       var(--space-6);
+}
+
+/* Back / Next row.
+   flex, not grid: Back is pushed left and Next right, and Back is absent on question 1. */
+.estimator-nav {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	align-items:                                               center;
+	gap:                                                       var(--space-3);
+}
+
+.estimator-nav .estimator-next {
+	margin-left:                                               auto;
+}
+
+.estimator button,
+.estimator a.estimator-tel {
+	min-height:                                                52px;
+}
+
+.estimator :is(button, a):focus-visible {
+	outline:                                                   3px solid var(--estimator-accent);
+	outline-offset:                                            2px;
+}
+
+/* Back, Change my answers and Start over carry no styling of their own: they are the site's button, like Next */
+
+/* Book a free in-home estimate: the filled, main call to action */
+.estimator .estimator-open:not(.estimator-secondary) {
+	--button-background:                                       var(--estimator-accent);
+	--button-color:                                            var(--estimator-accent-text);
+	--button-border:                                           2px solid var(--estimator-accent);
+}
+
+/* Result */
+.estimator-loading {
+	margin:                                                    0;
+	padding:                                                   var(--space-7) 0;
+	font-weight:                                               bold;
+	text-align:                                                center;
+}
+
+.estimator-result {
+	display:                                                   grid;
+	gap:                                                       var(--space-4);
+}
+
+.estimator-result p {
+	margin:                                                    0;
+}
+
+.estimator-result-system {
+	font-weight:                                               bold;
+	font-size:                                                 17px;
+	color:                                                     var(--estimator-accent);
+}
+
+/* One column: monthly figure*, the installed range (label over amount), then *the financing terms */
+.estimator-price {
+	display:                                                   grid;
+	gap:                                                       var(--space-4);
+	padding:                                                   var(--space-5);
+	background:                                                var(--estimator-tint);
+	border-radius:                                             var(--radius-md);
+}
+
+/* With a product photo: the price column, and the photo beside it (under it on phones) */
+.estimator-price.has-product {
+	grid-template-columns:                                     minmax(0, 1fr) 180px;
+	align-items:                                               center;
+	gap:                                                       var(--space-5);
+}
+
+.estimator-price-main {
+	display:                                                   grid;
+	gap:                                                       var(--space-4);
+}
+
+.estimator-product {
+	margin:                                                    0;
+}
+
+.estimator-product-link {
+	display:                                                   grid;
+	gap:                                                       var(--space-2);
+	justify-items:                                             center;
+	text-align:                                                center;
+	text-decoration:                                           none;
+	color:                                                     var(--estimator-text);
+}
+
+.estimator-product img {
+	width:                                                     100%;
+	max-width:                                                 180px;
+	height:                                                    auto;
+}
+
+.estimator-product-title {
+	font-size:                                                 14px;
+	line-height:                                               1.3;
+}
+
+.estimator-product-link:hover .estimator-product-title {
+	color:                                                     var(--estimator-accent);
+	text-decoration:                                           underline;
+}
+
+.estimator-monthly {
+	--h-font-size:                                             44rem;
+	font-variant:                                              normal;
+}
+
+.estimator-monthly strong {
+	font-weight:                                               bold;
+}
+
+/* The asterisk tying the monthly figure to the terms */
+.estimator-mark {
+	color:                                                     var(--estimator-accent);
+	font-weight:                                               bold;
+}
+
+.estimator-monthly .estimator-mark {
+	margin-left:                                               2px;
+	font-size:                                                 24px;
+	line-height:                                               0;
+	vertical-align:                                            super;
+}
+
+.estimator-range {
+	display:                                                   grid;
+	gap:                                                       var(--space-1);
+	font-size:                                                 22px;
+}
+
+.estimator-range-amount {
+	font-size:                                                 26px;
+	font-weight:                                               bold;
+}
+
+/* Terms hang under their asterisk */
+.estimator-financing {
+	display:                                                   grid;
+	grid-template-columns:                                     auto minmax(0, 1fr);
+	gap:                                                       var(--space-1);
+	font-size:                                                 15px;
+	line-height:                                               1.4;
+	color:                                                     var(--estimator-text);
+}
+
+.estimator-load-calc {
+	padding:                                                   var(--space-3) var(--space-4);
+	font-weight:                                               bold;
+	border:                                                    1px solid var(--estimator-warning);
+	border-radius:                                             var(--radius-sm);
+	background:                                                var(--estimator-surface);
+}
+
+.estimator-note {
+	font-size:                                                 15px;
+}
+
+.estimator-result-call .estimator-tel {
+	display:                                                   inline-block;
+}
+
+/* Change my answers / Start over: together they fill the row, each growing from its own text width
+   (so the longer label gets the wider button); they wrap onto two rows when there is no room */
+.estimator-result-nav {
+	display:                                                   flex;
+	flex-wrap:                                                 wrap;
+	gap:                                                       var(--space-3);
+}
+
+.estimator-result-nav button {
+	flex:                                                      1 1 auto;
+	white-space:                                               nowrap;
+}
+
+/* Optional actions */
+.estimator-actions {
+	display:                                                   grid;
+	gap:                                                       var(--space-5);
+	padding-top:                                               var(--space-5);
+	border-top:                                                1px solid var(--estimator-line);
+}
+
+.estimator-actions[hidden],
+.estimator-form[hidden],
+.estimator [hidden] {
+	display:                                                   none;
+}
+
+.estimator-action-buttons {
+	display:                                                   grid;
+	gap:                                                       var(--space-3);
+}
+
+.estimator-form {
+	display:                                                   grid;
+	gap:                                                       var(--space-4);
+	padding:                                                   var(--space-5);
+	border:                                                    1px solid var(--estimator-line);
+	border-radius:                                             var(--radius-md);
+}
+
+.estimator-form-title {
+	--h-font-size:                                             26rem;
+	--h-text-align:                                            left;
+	text-align:                                                left;
+}
+
+.estimator-form-title:focus {
+	outline:                                                   none;
+}
+
+.estimator-form-help {
+	margin:                                                    0;
+	font-size:                                                 15px;
+}
+
+.estimator-field-error {
+	color:                                                     var(--estimator-warning);
+	font-size:                                                 14px;
+	font-weight:                                               bold;
+}
+
+.estimator-field-error:empty {
+	display:                                                   none;
+}
+
+.estimator-hp {
+	position:                                                  absolute;
+	left:                                                      -9999px;
+	width:                                                     1px;
+	height:                                                    1px;
+	overflow:                                                  hidden;
+}
+
+.estimator-status {
+	margin:                                                    0;
+	font-weight:                                               bold;
+}
+
+.estimator-status:empty {
+	display:                                                   none;
+}
+
+.estimator-status.is-error {
+	color:                                                     var(--estimator-warning);
+}
+
+.estimator-status.is-success {
+	padding:                                                   var(--space-3) var(--space-4);
+	background:                                                var(--estimator-tint);
+	border-radius:                                             var(--radius-sm);
+}
+
+.estimator-status:focus {
+	outline:                                                   none;
+}
+
+/* Persistent call option */
+.estimator-call {
+	margin:                                                    0;
+	padding-top:                                               var(--space-4);
+	border-top:                                                1px solid var(--estimator-line);
+	text-align:                                                center;
+	font-size:                                                 17px;
+}
+
+.estimator-call a {
+	font-weight:                                               bold;
+	white-space:                                               nowrap;
+	color:                                                     var(--estimator-accent);
+}
+
+/*--------------------------------------------------------------
+# Mobile
+--------------------------------------------------------------*/
+@media (max-width: 576px) {
+	.estimator {
+		gap:                                                      var(--space-5);
+		padding:                                                  var(--space-5) var(--space-4);
+		border-radius:                                            var(--radius-md);
+	}
+
+	.estimator-heading {
+		--h-font-size:                                            28rem;
+	}
+
+	.estimator-price {
+		padding:                                                  var(--space-4);
+	}
+
+	.estimator-monthly {
+		--h-font-size:                                            38rem;
+	}
+
+
+	.estimator-nav .estimator-next,
+	.estimator-form button[type="submit"],
+	.estimator-action-buttons button,
+	.estimator-result-call .estimator-tel {
+		width:                                                    100%;
+	}
+
+	.estimator-nav .estimator-next {
+		order:                                                    -1;
+		margin-left:                                              0;
+	}
+
+
+	.estimator-price.has-product {
+		grid-template-columns:                                    minmax(0, 1fr);
+	}
+
+	.estimator-product img {
+		max-width:                                                140px;
+	}
+}

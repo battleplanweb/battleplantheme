@@ -607,6 +607,7 @@ function bpgbp_client_autopair(): void {
 	if ( bpgbp_registry_active() ) return;                              // the hub never pairs with itself
 	if ( defined( 'BPGBP_SITE_SECRET' ) && BPGBP_SITE_SECRET ) return;  // already hand-configured
 	if ( defined( 'BPGBP_AUTOPAIR' ) && ! BPGBP_AUTOPAIR ) return;      // explicit opt-out
+	bpgbp_client_check_install();                                       // a copied database drops the copied identity
 	if ( 'active' === get_option( 'bpgbp_pair_status' ) ) return;       // done
 	if ( get_transient( 'bpgbp_pair_throttle' ) ) return;
 	set_transient( 'bpgbp_pair_throttle', 1, HOUR_IN_SECONDS );
@@ -634,6 +635,34 @@ function bpgbp_client_autopair(): void {
 	if ( is_array( $data ) && isset( $data['status'] ) ) {
 		update_option( 'bpgbp_pair_status', sanitize_key( $data['status'] ) );
 	}
+}
+
+
+/**
+ * New sites are started from a copy of another site's database, which carries that site's hub key,
+ * secret and 'active' status — so the copy signs in as the original (same Google listing, same
+ * Fleet Pulse row). The identity is therefore bound to the INSTALL it was created on (WP Engine
+ * install name, else database name + table prefix), which survives a domain launch but not a copy.
+ * On a mismatch the copied identity is dropped and the site re-pairs under a key from its own URL.
+ * Sites that predate the binding simply adopt their current install (a copy made before this shipped
+ * has to be found by comparing keys across the fleet).
+ */
+function bpgbp_install_id(): string {
+	if ( defined( 'PWP_NAME' ) && PWP_NAME ) return 'wpe:' . PWP_NAME;
+	return 'db:' . ( defined( 'DB_NAME' ) ? DB_NAME : '' ) . ':' . ( $GLOBALS['table_prefix'] ?? '' );
+}
+
+function bpgbp_client_check_install(): void {
+	$here  = bpgbp_install_id();
+	$bound = (string) get_option( 'bpgbp_site_install', '' );
+	if ( $bound === $here ) return;
+	if ( '' !== $bound ) {
+		delete_option( 'bpgbp_site_key' );
+		delete_option( 'bpgbp_site_secret' );
+		delete_option( 'bpgbp_pair_status' );
+		delete_transient( 'bpgbp_pair_throttle' );
+	}
+	update_option( 'bpgbp_site_install', $here, false );
 }
 
 

@@ -59,7 +59,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 // The store owns its own schema version, separate from SITE_PULSE_DB_VERSION, so a
 // store schema change doesn't re-run dbDelta across all ~40 core Site Pulse tables
 // on every install in the fleet (and vice versa). Same idiom as Booking and Fleet.
-define( 'SITE_PULSE_STORE_DB_VERSION', '1.6' );
+define( 'SITE_PULSE_STORE_DB_VERSION', '1.10' );
 
 /** The post type that holds product CONTENT. Commerce lives in the tables below. */
 define( 'SITE_PULSE_STORE_CPT', 'bp_product' );
@@ -93,6 +93,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-store-imp
 require_once get_template_directory() . '/includes/includes-site-pulse-store-clover.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-admin.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-store-front.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-store-bookings.php';
 
 
 /*--------------------------------------------------------------
@@ -452,6 +453,7 @@ function sp_store_install_db(): void {
 		cost_cents int(11) NOT NULL DEFAULT 0,
 		currency char(3) NOT NULL DEFAULT 'USD',
 		track_stock tinyint(1) NOT NULL DEFAULT 1,
+		show_stock tinyint(1) NOT NULL DEFAULT 1,
 		stock int(11) NOT NULL DEFAULT 0,
 		stock_committed int(11) NOT NULL DEFAULT 0,
 		low_stock_at int(11) NOT NULL DEFAULT 0,
@@ -523,11 +525,13 @@ function sp_store_install_db(): void {
 		qty int(11) NOT NULL DEFAULT 1,
 		unit_price_cents int(11) NOT NULL DEFAULT 0,
 		committed int(11) NOT NULL DEFAULT 0,
+		kind varchar(20) NOT NULL DEFAULT 'product',
+		session_id int(11) NOT NULL DEFAULT 0,
 		meta longtext DEFAULT NULL,
 		created_at datetime NOT NULL,
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
-		UNIQUE KEY cart_variant (cart_id, variant_id),
+		UNIQUE KEY cart_line (cart_id, variant_id, session_id),
 		KEY variant_id (variant_id)
 	) $charset;";
 
@@ -559,6 +563,12 @@ function sp_store_install_db(): void {
 		discount_cents int(11) NOT NULL DEFAULT 0,
 		shipping_cents int(11) NOT NULL DEFAULT 0,
 		tax_cents int(11) NOT NULL DEFAULT 0,
+		fee_card_cents int(11) NOT NULL DEFAULT 0,
+		fee_platform_cents int(11) NOT NULL DEFAULT 0,
+		fee_card_rate decimal(5,2) NOT NULL DEFAULT 0,
+		fee_platform_rate decimal(5,2) NOT NULL DEFAULT 0,
+		fee_renew_card_cents int(11) NOT NULL DEFAULT 0,
+		fee_renew_platform_cents int(11) NOT NULL DEFAULT 0,
 		total_cents int(11) NOT NULL DEFAULT 0,
 		paid_cents int(11) NOT NULL DEFAULT 0,
 		refunded_cents int(11) NOT NULL DEFAULT 0,
@@ -641,6 +651,9 @@ function sp_store_install_db(): void {
 		taxable tinyint(1) NOT NULL DEFAULT 1,
 		requires_shipping tinyint(1) NOT NULL DEFAULT 1,
 		weight_grams int(11) NOT NULL DEFAULT 0,
+		kind varchar(20) NOT NULL DEFAULT 'product',
+		session_id int(11) NOT NULL DEFAULT 0,
+		booking_id int(11) NOT NULL DEFAULT 0,
 		meta longtext DEFAULT NULL,
 		created_at datetime NOT NULL,
 		PRIMARY KEY  (id),
@@ -848,6 +861,24 @@ function sp_store_install_db(): void {
 	) );
 	if ( ! $has_guard ) {
 		$wpdb->query( "ALTER TABLE $orders ADD UNIQUE KEY provider_checkout (provider, provider_checkout)" );
+	}
+
+	// 1.7: a cart line is a product variant OR a booking (kind = 'booking', variant_id 0, one line per
+	// session). The line key widened from (cart_id, variant_id) to (cart_id, variant_id, session_id) —
+	// every product line has session_id 0, so it still means one line per variant. dbDelta adds the new
+	// key but never drops the old one, which would allow only ONE booking line per cart; drop it here.
+	$cart_items = sp_store_table( 'cart_items' );
+	$has_line   = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND INDEX_NAME = 'cart_line'", $cart_items
+	) );
+	if ( ! $has_line ) $wpdb->query( "ALTER TABLE $cart_items ADD UNIQUE KEY cart_line (cart_id, variant_id, session_id)" );
+	$has_old = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND INDEX_NAME = 'cart_variant'", $cart_items
+	) );
+	if ( $has_old && ( $has_line || (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND INDEX_NAME = 'cart_line'", $cart_items
+	) ) ) ) {
+		$wpdb->query( "ALTER TABLE $cart_items DROP INDEX cart_variant" );
 	}
 
 	// Products created before the sort keys existed have none, and a product with no

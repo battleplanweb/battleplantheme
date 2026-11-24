@@ -460,6 +460,8 @@ If none of the above tripped, the content blocklist pipeline (`bp_spam_check()`)
 
 Spam submissions still receive a "thanks" response (so bots don't learn what tripped them) but the email gets rerouted to `email@bp-webdev.com` with a `<- SPAM: Blocked {reason} ->` subject prefix, and the IP is fire-and-forget logged to the central `bp-webdev.com/wp-content/email-add-ip.php` endpoint.
 
+**babescatering.com is exempt:** `bp_handle_form_submission()` clears the spam verdict for that domain (bot checks and blocklists alike), so every submission goes to the client.
+
 ### Multi-step forms
 
 Wrap a form body in `[bp-form-steps]…[/bp-form-steps]` and structure the body with `<div class="bp-step">` and `<div class="bp-step-included">` markers, plus `[bp-next]` / `[bp-prev]` buttons. The progress bar wires up automatically.

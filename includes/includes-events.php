@@ -35,6 +35,12 @@ function bp_event_recurrence_admin_assets( $hook ) {
 // date_blocks field existed, so old and new events both render with no migration.
 function bp_event_date_blocks( $post_id ) {
 	$blocks = get_field( 'event_dates', $post_id );
+	// Without ACF's field-reference meta (_event_dates), get_field() can't tell this is a date_blocks
+	// field and hands back the raw JSON string — decode it rather than fall through to the legacy span.
+	if ( is_string($blocks) && $blocks !== '' ) {
+		$decoded = json_decode( $blocks, true );
+		if ( is_array($decoded) ) $blocks = $decoded;
+	}
 	if ( ! empty($blocks) && is_array($blocks) ) return $blocks;
 
 	$s = get_post_meta( $post_id, 'start_date', true ); // legacy ACF date_picker (Ymd)
@@ -46,6 +52,25 @@ function bp_event_date_blocks( $post_id ) {
 		's_time' => get_post_meta( $post_id, 'start_time', true ),
 		'e_time' => get_post_meta( $post_id, 'end_time', true ),
 	) );
+}
+
+// The event's next date as a timestamp (midnight): the first date block that hasn't ended —
+// today while one is under way. 0 when it has no dates. Sorts the list and dates its badge.
+function bp_event_next_date( $post_id ) {
+	$today = strtotime( 'today' );
+	$first = 0;
+	foreach ( bp_event_date_blocks( $post_id ) as $block ) {
+		$s = strtotime( $block['s_date'] ?? '' );
+		if ( ! $s ) continue;
+		$e = ! empty( $block['e_date'] ) ? strtotime( $block['e_date'] ) : $s;
+		if ( $e >= $today && ( ! $first || $s < $first ) ) $first = $s;
+	}
+	if ( $first ) return max( $first, $today );
+	foreach ( bp_event_date_blocks( $post_id ) as $block ) {
+		$s = strtotime( $block['s_date'] ?? '' );
+		if ( $s && ( ! $first || $s < $first ) ) $first = $s;
+	}
+	return $first;
 }
 
 // Seed the date_blocks field from the legacy single start/end fields when an event
@@ -263,7 +288,16 @@ function battleplan_createEventLog() {
 				$tag .= ' event-'.$eventSlug;
 			endforeach;
 
-			$eventHtml = '<div class="event'.$tag.'"><a href="'. get_permalink().'">'.get_the_post_thumbnail(get_the_ID(), "thumbnail", array( 'class' => 'calendar-event-icon' )).'<span class="hide-3 hide-2 hide-1">'.get_the_title().'</span></a></div>';
+			// $suffix tags a period event's first/last day ("Begins" / "Ends") after the title.
+			$buildHtml = function( $suffix = '' ) use ( $tag ) {
+				$label = $suffix ? ' <span class="event-period-label">'.$suffix.'</span>' : '';
+				return '<div class="event'.$tag.'"><a href="'. get_permalink().'">'.get_the_post_thumbnail(get_the_ID(), "thumbnail", array( 'class' => 'calendar-event-icon' )).'<span class="event-title">'.get_the_title().$label.'</span></a></div>';
+			};
+			$eventHtml = $buildHtml();
+
+			// "Ending on" events (sign-up windows etc.) aren't happening every day of their range —
+			// they go on the calendar only on the first day ("Begins") and the last day ("Ends").
+			$isPeriod = get_post_meta( get_the_ID(), 'date_type', true ) === 'period';
 
 			// Expand each (possibly non-consecutive) date block into its own run of days.
 			$overallEnd = 0;
@@ -274,9 +308,19 @@ function battleplan_createEventLog() {
 				$overallEnd = max($overallEnd, $eventEnd);
 				$days = round(($eventEnd - $eventStart) / 86400) + 1;
 
+				if ( $isPeriod && $days > 1 ) :
+					$eventData[] = array('date' => date('j, n, Y', $eventStart), 'event' => apply_filters( 'bp_event_log_block_html', $buildHtml('Begins'), get_the_ID(), $block ));
+					$eventData[] = array('date' => date('j, n, Y', $eventEnd),   'event' => $buildHtml('Ends'));
+					continue;
+				endif;
+
+				// The block's first day can carry extra markup — a bookable event's Book button
+				// (includes-site-pulse-booking-public.php) — so it shows once per block, not per day.
+				$firstHtml = apply_filters( 'bp_event_log_block_html', $eventHtml, get_the_ID(), $block );
+
 				for ($i=0; $i<$days; $i++) :
 					$eventDate = date('j, n, Y', strtotime("+$i days", $eventStart));
-					$eventData[] = array('date' => $eventDate, 'event' => $eventHtml);
+					$eventData[] = array('date' => $eventDate, 'event' => $i === 0 ? $firstHtml : $eventHtml);
 				endfor;
 			endforeach;
 
@@ -292,6 +336,9 @@ function battleplan_createEventLog() {
 	endif;
 
 	wp_reset_postdata();
+
+	// Other calendar sources (booking sessions) add their entries here.
+	$eventData = apply_filters( 'bp_event_log', $eventData );
 
 	// json_encode the bool: echoing a raw false printed "var abbr_days = ;" — a syntax error that
 	// took eventLog (same <script>) down with it.
@@ -364,8 +411,8 @@ function battleplan_add_event_acf_fields() {
 				'label' => 'Date Type',
 				'name' => 'date_type',
 				'type' => 'radio',
-				'instructions' => 'Specific dates = list exact date ranges. Recurring = a repeating rule (e.g. every 3rd Saturday).',
-				'choices' => array( 'specific' => 'Specific dates', 'recurring' => 'Recurring' ),
+				'instructions' => 'Specific dates = list exact date ranges. Recurring = a repeating rule (e.g. every 3rd Saturday). Ending on = a period like a sign-up window; the calendar shows it only on its first day ("Begins") and last day ("Ends").',
+				'choices' => array( 'specific' => 'Specific dates', 'recurring' => 'Recurring', 'period' => 'Ending on' ),
 				'default_value' => 'specific',
 				'layout' => 'horizontal',
 				'required' => 0,
@@ -476,27 +523,27 @@ function battleplan_add_event_acf_fields() {
 // Build the event calendar
 add_shortcode( 'get-event-calendar', 'battleplan_getEventCalendar' );
 function battleplan_getEventCalendar($atts, $content = null ) {
-	$buildCalendar = '<h1 class="page-headline calendar-headline events-headline">Upcoming Events</h1>';
-
-	$buildCalendar .= '<div class="calendar-intro events-intro"><div class="calender-btn-row">[btn link="/events/"]List View[/btn]</div></div>';
-
-	$buildCalendar .= '<div id="calendar"></div>';
-	$buildCalendar .= '<div class="calendar-buttons">';
-	$buildCalendar .= '<button id="prevButton" aria-label="Previous Month"><span class="sr-only">Previous Month</span></button>';
-	$buildCalendar .= '<button id="currentButton">Return To Today</button>';
-	$buildCalendar .= '<button id="nextButton" aria-label="Next Month"><span class="sr-only">Next Month</span></button>';
-	$buildCalendar .= '</div>';
-
-	echo do_shortcode($buildCalendar);
+	// (On a site with Booking but no Events, includes-site-pulse-booking-public.php supplies this shortcode.)
+	echo bp_calendar_markup( 'Upcoming Events' );
 }
 
 // Display teasers of upcoming events
 add_shortcode( 'event_teasers', 'battleplan_event_teasers' );
 function battleplan_event_teasers( $atts, $content = null ) {
-	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'offset'=>'0', 'start'=>'today', 'end'=>'1 year', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More', 'link'=>'false', 'excerpt'=>'true', 'include_section'=>'true' ), $atts );
+	// Layout works like [get-post-slider] / [build-archive]:
+	//   size      = WP image size of the photo (thumbnail, half-s, full-f…)
+	//   pic_size  = width of the photo column. "100" = stacked (photo, then text, then button);
+	//               anything smaller ("1/3", "1/4", "5/12"…) = side by side, photo left, text + button right.
+	//   text_size = width of the text column; blank = the rest of the row (getTextSize).
+	// pic_size defaults to "100" so every existing teaser keeps its stacked look.
+	$a = shortcode_atts( array( 'name'=>'', 'style'=>'1', 'width'=>'default', 'grid'=>'1-1-1', 'tag'=>'featured', 'max'=>'3', 'offset'=>'0', 'start'=>'today', 'end'=>'1 year', 'valign'=>'stretch', 'show_btn'=>'true', 'btn_text'=>'Read More', 'link'=>'false', 'excerpt'=>'true', 'include_section'=>'true', 'size'=>'thumbnail', 'pic_size'=>'100', 'text_size'=>'' ), $atts );
 	$start = date('Y-m-d', strtotime(esc_attr($a['start'])));
 	$end = date('Y-m-d', strtotime(esc_attr($a['end'])));
 	$link = esc_attr($a['link']);
+	$size = esc_attr($a['size']);
+	$picSize = esc_attr($a['pic_size']) !== '' ? esc_attr($a['pic_size']) : '100';
+	$textSizeAtt = esc_attr($a['text_size']);
+	$layoutClass = getTextSize($picSize) === '100' ? 'event-teaser-stacked' : 'event-teaser-side';
 	$includeSection = esc_attr($a['include_section']);
 	$buildEvents = "";
 
@@ -529,18 +576,30 @@ function battleplan_event_teasers( $atts, $content = null ) {
 		while ($query->have_posts()) :
 			$query->the_post();
 
-			$buildEvents .= '[col]';
-			if ( $link == "true" ) $buildEvents .= '<a href = "'.get_the_permalink().'">';
-			$buildEvents .= get_the_post_thumbnail( get_the_ID(), 'thumbnail', array( 'class' => '' ) );
-			if ( $link == "true" ) $buildEvents .= '</a>';
-			$buildEvents .= '[txt]<h3>'.get_the_title().'</h3>';
+			$permalink = esc_url(get_the_permalink());
+			$thumb = has_post_thumbnail() ? get_the_post_thumbnail( get_the_ID(), $size, array( 'class' => 'img-archive img-events', 'loading' => 'lazy' ) ) : '';
+
+			// No photo → the text takes the full row; otherwise text_size, or whatever pic_size leaves.
+			if ( $thumb === '' ) $textSize = '100';
+			else $textSize = $textSizeAtt !== '' ? $textSizeAtt : getTextSize($picSize);
+
+			$buildEvents .= '[col class="event-teaser '.$layoutClass.'"]';
+			if ( $thumb !== '' ) :
+				$imgLink = $link == "true" ? ' link="'.$permalink.'"' : '';
+				// The photo duplicates the button / title link, so keep it out of the tab order.
+				$imgADA = $link == "true" && esc_attr($a['show_btn']) == "true" ? ' ada-hidden="true"' : '';
+				$buildEvents .= '[img size="'.$picSize.'" class="image-events"'.$imgLink.$imgADA.']'.$thumb.'[/img]';
+			endif;
+			$buildEvents .= '[group size="'.$textSize.'" class="group-events"]';
+			$buildEvents .= '[txt class="text-events"]<h3>'.get_the_title().'</h3>';
 			// The element returns its markup — or nothing when there are no dates/venue, in which
 			// case include() returns 1, which used to print a stray "1".
 			$meta = include get_template_directory().'/elements/element-events-meta.php';
 			if ( is_string($meta) ) $buildEvents .= $meta;
 			if ( esc_attr($a['excerpt']) == "true" ) $buildEvents.= '<p>'.get_the_excerpt().'</p>';
 			$buildEvents .= '[/txt]';
-			if ( esc_attr($a['show_btn']) == "true" ) $buildEvents .= '[btn link="'.esc_url(get_the_permalink()).'"]'.esc_attr($a['btn_text']).'[/btn]';
+			if ( esc_attr($a['show_btn']) == "true" ) $buildEvents .= '[btn link="'.$permalink.'"]'.esc_attr($a['btn_text']).'[/btn]';
+			$buildEvents .= '[/group]';
 			$buildEvents .= '[/col]';
 	  	endwhile;
 	endif;

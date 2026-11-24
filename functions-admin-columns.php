@@ -175,11 +175,14 @@ function bp_menu_order_span($id, $value) {
 		title="Click to edit (applies to all checked rows)">'.(int) $value.'</span>';
 }
 
+// Order is click-to-edit everywhere it shows (posts, pages, every CPT), for anyone who can
+// edit that post. A column can opt out with 'inline_edit' => false.
 function bp_render_menu_order($id, $cols, $col) {
 	$value = (int) get_post_field('menu_order', $id);
-	return empty($cols[$col]['inline_edit'])
-		? $value
-		: bp_menu_order_span($id, $value);
+	$editable = ($cols[$col]['inline_edit'] ?? true) !== false && current_user_can('edit_post', $id);
+	return $editable
+		? bp_menu_order_span($id, $value)
+		: $value;
 }
 
 function bp_render_taxonomy_cell($id, $taxonomy, $col, $pt, $inline_edit = false) {

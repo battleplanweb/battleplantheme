@@ -56,7 +56,7 @@ function sp_store_providers(): array {
 	$providers = [
 		'stripe' => [
 			'label'    => 'Stripe',
-			'shape'    => 'redirect',
+			'shape'    => function_exists( 'sp_store_stripe_embedded' ) && sp_store_stripe_embedded() ? 'embedded' : 'redirect',
 			'ready'    => 'sp_store_stripe_ready',
 			'begin'    => 'sp_store_stripe_begin',
 			'webhook'  => 'sp_store_handle_webhook',

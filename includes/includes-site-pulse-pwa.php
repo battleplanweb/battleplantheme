@@ -21,7 +21,7 @@
  * Config (all read via site_pulse_get_setting → DB config, then the site_pulse
  * option, then default — so a site can override in functions-site.php):
  *     app_name              → manifest name              (default "Site Pulse")
- *     pwa_short_name        → home-screen label          (default: first word of app_name)
+ *     pwa_short_name        → home-screen label          (default: app_name if ≤12 chars, else its first word)
  *     pwa_theme_color       → Android status-bar / theme (default "#2d4270")
  *     pwa_background_color  → splash background          (default "#ffffff")
  *     pwa_icon_id           → attachment ID of icon source image (optional)
@@ -56,11 +56,15 @@ if ( ! defined( 'SITE_PULSE_PWA_SW_FILE' ) )       define( 'SITE_PULSE_PWA_SW_FI
  */
 function site_pulse_pwa_config(): array {
 	$app_name = site_pulse_get_setting( 'app_name', 'Site Pulse' );
+	if ( function_exists( 'bp_decode_text' ) ) $app_name = bp_decode_text( $app_name );
 
+	// Default label: the whole name when it fits Android's 12 characters ("Soil & Oil"),
+	// otherwise its first word.
 	$short = site_pulse_get_setting( 'pwa_short_name', '' );
+	if ( function_exists( 'bp_decode_text' ) ) $short = bp_decode_text( $short );
 	if ( $short === '' ) {
 		$first = trim( (string) ( explode( ' ', trim( $app_name ) )[0] ?? '' ) );
-		$short = $first !== '' ? $first : $app_name;
+		$short = mb_strlen( trim( $app_name ) ) <= 12 ? trim( $app_name ) : ( $first !== '' ? $first : $app_name );
 	}
 	// Android truncates long home-screen labels; keep it tight.
 	$short = mb_substr( $short, 0, 12 );

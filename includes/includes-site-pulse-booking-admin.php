@@ -132,6 +132,10 @@ function sp_book_ajax_admin_data(): void {
 
 	foreach ( $services as &$svc ) {
 		$svc['resource_ids'] = $links[ (int) $svc['id'] ] ?? [];
+		$svc['opts']         = sp_book_service_opts( $svc );
+		// The event this booking is linked to (Events → the event's Booking dropdown), shown on its row.
+		$eid = function_exists( 'sp_book_service_event' ) ? sp_book_service_event( $svc ) : 0;
+		$svc['event'] = $eid ? [ 'id' => $eid, 'title' => html_entity_decode( get_the_title( $eid ), ENT_QUOTES ), 'status' => get_post_status( $eid ), 'url' => (string) get_permalink( $eid ) ] : null;
 	}
 	unset( $svc );
 
@@ -146,8 +150,29 @@ function sp_book_ajax_admin_data(): void {
 		$users[] = [ 'id' => $uid, 'name' => (string) ( $u['display_name'] ?? ( 'User #' . $uid ) ) ];
 	}
 
+	// Types (the templates) with how many offerings follow each; per-offering date / seat facts.
+	$type_counts = [];
+	$stats       = sp_book_offering_stats();
+	foreach ( $services as &$svc ) {
+		$svc['type_id']   = (int) $svc['type_id'];
+		$svc['kind']      = sp_book_service_kind( $svc );
+		$svc['rules']     = sp_book_service_rules( $svc );
+		$svc['overrides'] = sp_book_service_overrides( $svc );
+		$svc['stats']     = $stats[ (int) $svc['id'] ] ?? null;
+		if ( $svc['type_id'] ) $type_counts[ $svc['type_id'] ] = ( $type_counts[ $svc['type_id'] ] ?? 0 ) + 1;
+	}
+	unset( $svc );
+	$types = array_map( static fn( $t ) => sp_book_type_shape( $t, $type_counts ), sp_book_get_types() );
+	$kinds = [];
+	foreach ( sp_book_type_kinds() as $k => $v ) $kinds[ $k ] = [ 'label' => $v['label'], 'short' => $v['short'], 'mode' => $v['mode'], 'series' => $v['series'] ];
+
 	wp_send_json_success( [
 		'travel'    => sp_book_travel_settings(),
+		'types'     => $types,
+		'kinds'     => $kinds,
+		'events_on' => function_exists( 'sp_book_events_ready' ) && sp_book_events_ready(),
+		'events'    => sp_book_unlinked_events(),
+		'can_edit_events' => function_exists( 'sp_events_can_manage' ) && sp_events_can_manage(),
 		'services'  => $services,
 		'resources' => $resources,
 		'rules'     => $rules,
@@ -165,94 +190,71 @@ function sp_book_ajax_admin_data(): void {
 --------------------------------------------------------------*/
 
 add_action( 'wp_ajax_site_pulse_booking_save_service', 'sp_book_ajax_save_service' );
+/**
+ * Save an offering. With a type (includes-site-pulse-booking-types.php) the kind comes from the type,
+ * every rule the form sends that differs from the type becomes an override, and every rule it doesn't
+ * send keeps following the type (or keeps its own value when it was already overridden).
+ */
 function sp_book_ajax_save_service(): void {
 	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
 	if ( ! sp_book_admin_gate() ) return;
 
 	global $wpdb;
 	$id   = (int) ( $_POST['id'] ?? 0 );
+	$svc  = $id ? sp_book_get_service( $id ) : null;
+	if ( $id && ! $svc ) wp_send_json_error( [ 'message' => 'That booking no longer exists.' ] );
 	$name = sp_book_post( 'name' );
 	if ( $name === '' ) {
-		wp_send_json_error( [ 'message' => 'A service name is required.' ] );
+		wp_send_json_error( [ 'message' => 'A name is required.' ] );
 	}
 
-	$mode = sp_book_post( 'mode', 'appointment' );
-	if ( ! array_key_exists( $mode, sp_book_modes() ) ) $mode = 'appointment';
+	$type_id = isset( $_POST['type_id'] ) ? (int) $_POST['type_id'] : (int) ( $svc['type_id'] ?? 0 );
+	$type    = $type_id ? sp_book_get_type( $type_id ) : null;
+	if ( ! $type ) $type_id = 0;
+	$kinds   = sp_book_type_kinds();
 
-	// Exact start time, or an arrival window. Windows are validated here rather than trusted:
-	// a malformed entry would otherwise sit in the JSON and silently produce no availability.
-	$slot_mode = sp_book_post( 'slot_mode', 'exact' ) === 'window' ? 'window' : 'exact';
-	$windows   = [];
-	if ( $slot_mode === 'window' ) {
-		$posted = json_decode( wp_unslash( (string) ( $_POST['windows'] ?? '[]' ) ), true );
-		foreach ( is_array( $posted ) ? $posted : [] as $w ) {
-			$start = sp_book_time_value( (string) ( $w['start'] ?? '' ) );
-			$end   = sp_book_time_value( (string) ( $w['end'] ?? '' ) );
-			if ( $start === '' || $end === '' ) continue;
-			if ( $end <= $start ) {
-				wp_send_json_error( [ 'message' => 'An arrival window ends before it starts. Overnight windows are not supported.' ] );
-			}
-			$windows[] = [
-				'label' => sanitize_text_field( (string) ( $w['label'] ?? '' ) ),
-				'start' => $start,
-				'end'   => $end,
-			];
-		}
-		if ( ! $windows ) {
-			wp_send_json_error( [ 'message' => 'Add at least one arrival window, or set this service back to an exact start time.' ] );
-		}
+	$kind = $type ? (string) $type['kind'] : sp_book_post( 'kind', $svc ? sp_book_service_kind( $svc ) : '' );
+	if ( isset( $kinds[ $kind ] ) ) {
+		$mode   = $kinds[ $kind ]['mode'];
+		$series = $kinds[ $kind ]['series'];
+	} else {
+		$kind = '';
+		$mode = sp_book_post( 'mode', (string) ( $svc['mode'] ?? 'appointment' ) );
+		if ( ! array_key_exists( $mode, sp_book_modes() ) ) $mode = 'appointment';
+		$series = isset( $_POST['series'] ) ? ! empty( $_POST['series'] ) : ( $svc ? sp_book_service_opts( $svc )['series'] : false );
 	}
 
-	// Accept the single field, falling back to whichever split value is larger so a service
-	// saved by an older build keeps its spacing instead of silently losing it.
-	$buffer_min = isset( $_POST['buffer_min'] )
-		? max( 0, (int) $_POST['buffer_min'] )
-		: max( (int) ( $_POST['buffer_before_min'] ?? 0 ), (int) ( $_POST['buffer_after_min'] ?? 0 ) );
+	// A booking with dates or sign-ups can't change shape (a class can't become an appointment).
+	if ( $svc && $mode !== $svc['mode'] ) {
+		$used = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . sp_book_table( 'bookings' ) . " WHERE service_id = %d", $id ) )
+			+ (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM " . sp_book_table( 'sessions' ) . " WHERE service_id = %d", $id ) );
+		if ( $used ) wp_send_json_error( [ 'message' => 'This service already has dates or sign-ups, so it can’t switch to a different kind. Pick a template of the same kind, or make a new service.' ] );
+	}
+
+	$posted   = sp_book_rules_from_post();
+	$existing = $svc ? sp_book_service_rules( $svc ) : sp_book_rules_normalize( [] );
+	$old_over = $svc && (int) $svc['type_id'] === $type_id ? sp_book_service_overrides( $svc ) : [];
+	$trules   = $type ? sp_book_type_rules( $type ) : null;
+	$rules    = [];
+	foreach ( array_keys( sp_book_rule_defaults() ) as $k ) {
+		if ( array_key_exists( $k, $posted ) )                 $rules[ $k ] = $posted[ $k ];
+		elseif ( $trules && ! in_array( $k, $old_over, true ) ) $rules[ $k ] = $trules[ $k ];
+		else                                                    $rules[ $k ] = $existing[ $k ];
+	}
+	$rules = sp_book_rules_normalize( $kind !== '' ? sp_book_kind_force( $rules, $kind ) : $rules );
+	if ( $trules && $kind !== '' ) $trules = sp_book_rules_normalize( sp_book_kind_force( $trules, $kind ) );
+	$over  = $trules ? array_keys( array_filter( $rules, static fn( $v, $k ) => $v !== $trules[ $k ], ARRAY_FILTER_USE_BOTH ) ) : [];
 
 	$now  = sp_book_now();
 	$data = [
-		'name'              => $name,
-		'slug'              => sp_book_unique_slug( sp_book_post( 'slug' ) !== '' ? sp_book_post( 'slug' ) : $name, $id ),
-		'mode'              => $mode,
-		'description'       => sanitize_textarea_field( wp_unslash( (string) ( $_POST['description'] ?? '' ) ) ),
-		'duration_min'      => max( 5, (int) ( $_POST['duration_min'] ?? 60 ) ),
-		'slot_mode'         => $slot_mode,
-		'dispatch_mode'     => sp_book_post( 'dispatch_mode', 'order' ) === 'nearest' ? 'nearest' : 'order',
-		'out_of_area_min'   => max( 0, (int) ( $_POST['out_of_area_min'] ?? 45 ) ),
-		'out_of_area_policy'=> in_array( sp_book_post( 'out_of_area_policy', 'allow' ), [ 'allow', 'block', 'surcharge' ], true )
-			? sp_book_post( 'out_of_area_policy', 'allow' ) : 'allow',
-		'out_of_area_fee_cents' => sp_book_cents( sp_book_post( 'out_of_area_fee' ) ),
-		'windows'           => $windows ? wp_json_encode( $windows ) : null,
-		'window_max_jobs'   => max( 0, (int) ( $_POST['window_max_jobs'] ?? 0 ) ),
-		// ONE buffer, written to BOTH sides. The schema keeps two columns so a future
-		// asymmetric need stays possible, but the UI exposes a single "keep this much time
-		// clear around the appointment" — which is what travel time actually means, and which
-		// removes a genuinely confusing distinction: because the gap after an appointment is
-		// governed by the NEXT one's before-buffer, filling in only "after" produced no gap
-		// at all. Equal values give the buffer on both sides and do not stack.
-		'buffer_before_min' => $buffer_min,
-		'buffer_after_min'  => $buffer_min,
-		'slot_interval_min' => max( 5, (int) ( $_POST['slot_interval_min'] ?? 30 ) ),
-		'capacity'          => max( 1, (int) ( $_POST['capacity'] ?? 1 ) ),
-		'lead_time_min'     => max( 0, (int) round( (float) ( $_POST['lead_time_hours'] ?? 12 ) * 60 ) ),
-		'max_advance_days'  => max( 1, (int) ( $_POST['max_advance_days'] ?? 60 ) ),
-		'cancel_window_min' => max( 0, (int) round( (float) ( $_POST['cancel_window_hours'] ?? 12 ) * 60 ) ),
-		'min_units'         => max( 1, (int) ( $_POST['min_units'] ?? 1 ) ),
-		'max_units'         => max( 1, (int) ( $_POST['max_units'] ?? 1 ) ),
-		'price_cents'       => sp_book_cents( sp_book_post( 'price' ) ),
-		'deposit_cents'     => sp_book_cents( sp_book_post( 'deposit' ) ),
-		'requires_payment'  => in_array( sp_book_post( 'requires_payment', 'none' ), [ 'none', 'deposit', 'full' ], true ) ? sp_book_post( 'requires_payment', 'none' ) : 'none',
-		'allow_pass'        => empty( $_POST['allow_pass'] ) ? 0 : 1,
-		'requires_address'  => empty( $_POST['requires_address'] ) ? 0 : 1,
-		'travel_buffer'     => empty( $_POST['travel_buffer'] ) ? 0 : 1,
-		'status'            => sp_book_post( 'status', 'active' ) === 'inactive' ? 'inactive' : 'active',
-		'display_order'     => (int) ( $_POST['display_order'] ?? 0 ),
-		'updated_at'        => $now,
+		'name'        => $name,
+		'slug'        => sp_book_unique_slug( sp_book_post( 'slug' ) !== '' ? sp_book_post( 'slug' ) : $name, $id ),
+		'type_id'     => $type_id,
+		'description' => sanitize_textarea_field( wp_unslash( (string) ( $_POST['description'] ?? '' ) ) ),
+		'status'      => sp_book_post( 'status', 'active' ) === 'inactive' ? 'inactive' : 'active',
+		'updated_at'  => $now,
 	];
-
-	// A service-area radius only means anything for on-location work.
-	$radius = sp_book_post( 'service_area_miles' );
-	$data['service_area_miles'] = ( $data['requires_address'] && $radius !== '' ) ? (float) $radius : null;
+	if ( isset( $_POST['display_order'] ) ) $data['display_order'] = (int) $_POST['display_order'];
 
 	if ( $id ) {
 		$wpdb->update( sp_book_table( 'services' ), $data, [ 'id' => $id ] );
@@ -260,23 +262,31 @@ function sp_book_ajax_save_service(): void {
 		$data['created_at'] = $now;
 		$wpdb->insert( sp_book_table( 'services' ), $data );
 		$id = (int) $wpdb->insert_id;
+		if ( ! $id ) wp_send_json_error( [ 'message' => 'Could not save that booking.' ] );
 	}
+	sp_book_write_rules( $id, $rules, $mode, $series );
+	sp_book_service_set_opts( $id, [ 'overrides' => $over ] );
 
-	// Resource links. An EMPTY selection is meaningful: it means "anyone", which is
-	// what a one-person business wants, so we clear the rows rather than storing all of them.
-	$wpdb->delete( sp_book_table( 'service_resources' ), [ 'service_id' => $id ] );
-	$posted = (array) ( $_POST['resource_ids'] ?? [] );
-	foreach ( array_values( array_unique( array_map( 'intval', $posted ) ) ) as $i => $rid ) {
-		if ( $rid > 0 ) {
-			$wpdb->insert( sp_book_table( 'service_resources' ), [
-				'service_id' => $id, 'resource_id' => $rid, 'display_order' => $i,
-			] );
-		}
-	}
+	// The website page (session offerings): new / an event id / none.
+	$page = sanitize_key( (string) ( $_POST['page'] ?? '' ) );
+	$res  = sp_book_offering_set_page( $id, $page );
 
 	sp_book_cache_bust();
 	site_pulse_log( 'booking_service_saved', sprintf( 'Saved booking service: %s', $name ) );
-	wp_send_json_success( [ 'message' => 'Service saved.', 'id' => $id ] );
+	$msg = 'Saved.';
+	if ( is_wp_error( $res ) ) $msg = 'Saved, but the website page wasn’t linked: ' . $res->get_error_message();
+	wp_send_json_success( [ 'message' => $msg, 'id' => $id ] );
+}
+
+/** Duplicate a booking's settings (no dates, no sign-ups) — the next run of a class. */
+add_action( 'wp_ajax_site_pulse_booking_duplicate_service', 'sp_book_ajax_duplicate_service' );
+function sp_book_ajax_duplicate_service(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! sp_book_admin_gate() ) return;
+	$new = function_exists( 'sp_book_offering_duplicate' ) ? sp_book_offering_duplicate( (int) ( $_POST['id'] ?? 0 ) ) : 0;
+	if ( ! $new ) wp_send_json_error( [ 'message' => 'Could not copy that booking.' ] );
+	site_pulse_log( 'booking_service_saved', sprintf( 'Duplicated booking service #%d', (int) $_POST['id'] ) );
+	wp_send_json_success( [ 'id' => $new, 'message' => 'Copied (no dates or sign-ups). Give the copy its dates with Dates.' ] );
 }
 
 /**
@@ -302,6 +312,10 @@ function sp_book_ajax_delete_service(): void {
 			$booked, $booked === 1 ? '' : 's'
 		) ] );
 	}
+
+	// A linked event lets go of it (the event stays, with no booking).
+	$svc = sp_book_get_service( $id );
+	if ( $svc && function_exists( 'sp_book_service_event' ) && ( $eid = sp_book_service_event( $svc ) ) ) delete_post_meta( $eid, '_bp_book_service_id' );
 
 	$wpdb->delete( sp_book_table( 'services' ), [ 'id' => $id ] );
 	$wpdb->delete( sp_book_table( 'service_resources' ), [ 'service_id' => $id ] );
@@ -626,6 +640,17 @@ function sp_book_ajax_preview_slots(): void {
 			'max_advance_days' => (int) $service['max_advance_days'],
 		],
 	] );
+}
+
+
+/** What this business calls what it books (site_pulse_term 'service'): Services, Retreats, Classes… */
+add_action( 'wp_ajax_site_pulse_booking_save_names', 'sp_book_ajax_save_names' );
+function sp_book_ajax_save_names(): void {
+	check_ajax_referer( 'site_pulse_nonce', 'nonce' );
+	if ( ! sp_book_admin_gate() ) return;
+	sp_book_set_setting( 'name_one',  mb_substr( sanitize_text_field( wp_unslash( $_POST['one'] ?? '' ) ), 0, 30 ) );
+	sp_book_set_setting( 'name_many', mb_substr( sanitize_text_field( wp_unslash( $_POST['many'] ?? '' ) ), 0, 30 ) );
+	wp_send_json_success( [ 'message' => 'Saved. Reload Site Pulse to see the new name everywhere.' ] );
 }
 
 

@@ -104,12 +104,28 @@ function sp_store_register_cpt(): void {
 		'rewrite'           => [ 'slug' => $slug . '-category', 'with_front' => false ],
 	] );
 
+	// Tags: flat, free-form labels (Organic, Gift Idea, Made in Texas) that cut ACROSS the
+	// categories. Same treatment as categories everywhere — editor, Site Pulse screen,
+	// shop archive at /{slug}-tag/{tag}/, [store-products tag=""].
+	register_taxonomy( 'bp_product_tag', [ SITE_PULSE_STORE_CPT ], [
+		'labels'            => [
+			'name'          => _x( 'Product Tags', 'Taxonomy General Name', 'battleplan' ),
+			'singular_name' => _x( 'Product Tag', 'Taxonomy Singular Name', 'battleplan' ),
+			'menu_name'     => __( 'Tags', 'battleplan' ),
+		],
+		'public'            => true,
+		'hierarchical'      => false,
+		'show_admin_column' => false,
+		'show_in_rest'      => true,
+		'rewrite'           => [ 'slug' => $slug . '-tag', 'with_front' => false ],
+	] );
+
 	// Rewrite rules are expensive to flush and must not be flushed on every request.
 	// Keying the flag on a SIGNATURE of every store slug means turning the module on
 	// flushes once, and changing any slug filter later — or the framework adding a route,
 	// which is what sp_store_rewrite_signature collects — flushes exactly once more, with
 	// no manual step and no "re-save your permalinks" instruction in a handover document.
-	$signature = implode( '|', array_map( 'strval', (array) apply_filters( 'sp_store_rewrite_signature', [ $slug ] ) ) );
+	$signature = implode( '|', array_map( 'strval', (array) apply_filters( 'sp_store_rewrite_signature', [ $slug, $slug . '-tag' ] ) ) );
 	if ( get_option( 'sp_store_rewrite_slug' ) !== $signature ) {
 		flush_rewrite_rules( false );
 		update_option( 'sp_store_rewrite_slug', $signature );
@@ -347,11 +363,15 @@ function sp_store_price_range( int $product_id ): array {
 	// `regular_min`/`regular_max` are the undiscounted prices. Collapsing a sale into a
 	// single effective range turns "$20, on sale for $15" into "$15.00 – $20.00", which
 	// reads as a product with two prices rather than as a discount.
-	$effective = array_map( 'sp_store_variant_price', $variants );
-	$regular   = array_map( static fn( $v ) => (int) $v['price_cents'], $variants );
+	// A site may price a product from only some of its variants (sp_store_price_variants),
+	// e.g. a gallery showing the original painting's price, never a range down to its prints.
+	$priced = array_values( (array) apply_filters( 'sp_store_price_variants', $variants, $product_id ) ) ?: $variants;
+
+	$effective = array_map( 'sp_store_variant_price', $priced );
+	$regular   = array_map( static fn( $v ) => (int) $v['price_cents'], $priced );
 
 	$on_sale = false;
-	foreach ( $variants as $variant ) {
+	foreach ( $priced as $variant ) {
 		if ( sp_store_variant_on_sale( $variant ) ) { $on_sale = true; break; }
 	}
 
@@ -421,7 +441,8 @@ function sp_store_refresh_sort_meta( int $product_id ): void {
 	$price   = null;
 	$savings = 0;
 
-	foreach ( sp_store_get_variants( $product_id, true ) as $variant ) {
+	$variants = sp_store_get_variants( $product_id, true );
+	foreach ( array_values( (array) apply_filters( 'sp_store_price_variants', $variants, $product_id ) ) ?: $variants as $variant ) {
 		$effective = sp_store_variant_price( $variant );
 		$price     = $price === null ? $effective : min( $price, $effective );
 		$savings   = max( $savings, (int) $variant['price_cents'] - $effective );
@@ -540,6 +561,9 @@ function sp_store_save_variant( array $data ) {
 		'cost_cents'        => max( 0, (int) ( $data['cost_cents'] ?? 0 ) ),
 		'currency'          => (string) ( $data['currency'] ?? sp_store_currency() ),
 		'track_stock'       => ! empty( $data['track_stock'] ) ? 1 : 0,
+		// 1.8: shown unless deliberately switched off (one-of-a-kind pieces, where "Only 1 left"
+		// makes a unique item sound like the last of a batch). Absent = shown.
+		'show_stock'        => array_key_exists( 'show_stock', $data ) ? ( ! empty( $data['show_stock'] ) ? 1 : 0 ) : 1,
 		'low_stock_at'      => max( 0, (int) ( $data['low_stock_at'] ?? 0 ) ),
 		'allow_backorder'   => ! empty( $data['allow_backorder'] ) ? 1 : 0,
 		'requires_shipping' => ! empty( $data['requires_shipping'] ) ? 1 : 0,
@@ -845,7 +869,7 @@ function sp_store_render_variants_box( WP_Post $post ): void {
 			printf( '<option value="%d"%s>%s (%s)</option>', (int) $plan['id'], selected( $have, (int) $plan['id'], false ), esc_html( $plan['name'] ), esc_html( sp_member_plan_length_label( $plan ) ) );
 		}
 		echo '</select></label>';
-		if ( ! $plans ) echo '<p class="description">Set up a plan first, in Site Pulse under Settings &rarr; Store.</p>';
+		if ( ! $plans ) echo '<p class="description">Set up a plan first, in Site Pulse under Settings &rarr; E-Commerce.</p>';
 		echo '</div>';
 	}
 
@@ -858,7 +882,7 @@ function sp_store_render_variants_box( WP_Post $post ): void {
 			printf( '<label style="display:block;margin:4px 0"><input type="checkbox" name="sp_store_agreements[]" value="%d"%s> %s%s</label>',
 				(int) $a['id'], checked( in_array( (int) $a['id'], $mine, true ), true, false ), esc_html( $a['title'] ), $a['signature'] ? ' <span class="description">(signature)</span>' : '' );
 		}
-		if ( ! sp_store_agreements() ) echo '<p class="description">Write an agreement first, in Site Pulse under Settings &rarr; Store.</p>';
+		if ( ! sp_store_agreements() ) echo '<p class="description">Write an agreement first, in Site Pulse under Settings &rarr; E-Commerce.</p>';
 		echo '</div>';
 	}
 
@@ -1084,7 +1108,7 @@ function sp_store_variants_box_assets(): void {
 	</style>
 	<script>
 	( function () {
-		var optionsWrap = document.getElementById( 'sp-store-options' );
+		var optionsWrap = document.getElementById( 'sp-stack sp-stack--sm sp-store-options' );
 		var tbody       = document.getElementById( 'sp-store-rows' );
 		var tpl         = document.getElementById( 'sp-store-row-tpl' );
 		if ( ! optionsWrap || ! tbody || ! tpl ) return;
@@ -1414,6 +1438,8 @@ function sp_store_save_product_data( int $post_id, array $data ): array {
 				'price_cents'       => sp_store_parse_money( (string) ( $row['price'] ?? '' ) ),
 				'sale_price_cents'  => sp_store_parse_money( (string) ( $row['sale_price'] ?? '' ) ),
 				'track_stock'       => ! empty( $row['track_stock'] ),
+				// The wp-admin variants box has no Show Stock column, so a save from there keeps the saved value.
+				'show_stock'        => array_key_exists( 'show_stock', $row ) ? ! empty( $row['show_stock'] ) : ( $existing ? (bool) (int) ( $existing['show_stock'] ?? 1 ) : true ),
 				'allow_backorder'   => ! empty( $row['allow_backorder'] ),
 				'requires_shipping' => $ships_given ? $ships : ( $existing ? (bool) (int) $existing['requires_shipping'] : true ),
 				'taxable'           => $existing ? (bool) (int) $existing['taxable'] : true,
@@ -1807,6 +1833,7 @@ function sp_store_register_admin_columns(): void {
 			bp_col( 'sp-store-stock', 'Stock', 'sp_store_column_stock' ),
 			bp_col( 'sp-store-sku',   'SKU',   'sp_store_column_sku' ),
 			bp_taxonomy( 'bp-product-cat', 'bp_product_cat', 'Category', [] ),
+			bp_taxonomy( 'bp-product-tag', 'bp_product_tag', 'Tags', [] ),
 			[ 'bp-modified'       => [ 'type' => 'bp-modified', 'label' => 'Updated', 'sortable' => true ] ]
 		),
 	] );

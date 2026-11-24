@@ -129,6 +129,33 @@ Two consequences worth knowing before you convert an existing site's `em` values
 
 (Supersedes the older "use `em`, not `rem`" note that came out of the CCSO schedules module.)
 
+### Spacing + radius scale — `--space-*` / `--radius-*` (framework `:root`, `style.css`)
+
+Snap padding, margin, gap and border-radius to these instead of writing raw px:
+
+| token | px | | token | px |
+|---|---|---|---|---|
+| `--space-1` | 4 | | `--radius-xs` | 4 |
+| `--space-2` | 8 | | `--radius-sm` | 8 |
+| `--space-3` | 12 | | `--radius-md` | 12 |
+| `--space-4` | 16 | | `--radius-lg` | 16 |
+| `--space-5` | 20 | | `--radius-xl` | 24 |
+| `--space-6` | 24 | | `--radius-pill` | 999px |
+| `--space-7` | 32 | | `--radius-circle` | 50% |
+| `--space-8` | 48 | | | |
+| `--space-9` | 64 | | | |
+
+They're **fixed whole-pixel values on purpose** — not `clamp()`/`vw` fluid like Site Pulse's
+`--sp-space-*`, because a fluid value lands on fractional pixels between its endpoints. Keep
+it that way:
+- Override a step at site level only with another whole `px` value.
+- Combining steps is fine if the result stays whole: `calc(var(--space-4) + var(--space-1))`,
+  `calc(var(--space-2) * 3)`. Never multiply by a fraction (`* 0.5`, `* 1.5` on odd steps).
+- Responsive spacing = swap to a different step in the breakpoint query, not a fluid formula.
+- Component radius tokens (`--button-border-radius`, `--input-border-radius`, …) keep their own
+  defaults (0); when a site rounds them, set them to a `--radius-*` step.
+- Site Pulse keeps its own `--sp-space-*` / `--sp-radius-*` inside the app — use those there.
+
 ### style-site.css is COMPILED — it is never served directly
 
 `bp_build_site_css()` (in `functions-style-sheets.php`, on `after_setup_theme`) compiles `style-site.css` → `dist/site.css` + `dist/site.min.css`. The browser is served **`dist/site.min.css?ver=_BP_VERSION`** (the `battleplanweb` admin user gets the unminified `dist/site.css`). Editing `style-site.css` alone is not enough to see changes:

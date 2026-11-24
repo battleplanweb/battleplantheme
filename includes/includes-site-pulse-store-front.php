@@ -177,6 +177,7 @@ function sp_store_product_card( int $product_id ): string {
 	// up whether their titles run to one line or three.
 	$out .= '<div class="store-card-body">';
 	$out .= '<h3 class="store-card-title">' . esc_html( $title ) . '</h3>';
+	$out .= sp_store_fields_html( $product_id, 'card' );
 
 	if ( $range['count'] ) {
 		$out .= '<p class="store-card-price">' . sp_store_price_range_label( $product_id ) . '</p>';
@@ -191,7 +192,10 @@ function sp_store_product_card( int $product_id ): string {
 /**
  * [store-products] — a grid of products.
  *
- * Attributes: category (slug), limit, columns, orderby, order, ids (comma list).
+ * Attributes: category (slug), tag (slug), limit, columns, orderby, order, ids (comma list),
+ * field + value (a site-defined product field from sp_store_product_setup, e.g.
+ * field="artist" value="123"). category and tag together = products in that category AND
+ * carrying that tag; field/value narrows any of them further.
  * Deliberately few: a shortcode with thirty attributes is a template engine
  * nobody can remember, and this framework already has one of those.
  */
@@ -202,11 +206,14 @@ function sp_store_products_shortcode( $atts ): string {
 	$atts = bp_orderby_atts( $atts, 'orderby' );
 	$atts = shortcode_atts( [
 		'category' => '',
+		'tag'      => '',
 		'limit'    => 12,
 		'columns'  => 3,
 		'orderby'  => 'menu_order',
 		'order'    => 'ASC',
 		'ids'      => '',
+		'field'    => '',
+		'value'    => '',
 	], $atts, 'store-products' );
 
 	$query = [
@@ -229,12 +236,24 @@ function sp_store_products_shortcode( $atts ): string {
 		}
 	}
 
-	if ( trim( (string) $atts['category'] ) !== '' ) {
-		$query['tax_query'] = [ [
-			'taxonomy' => 'bp_product_cat',
+	$tax = [];
+	foreach ( [ 'category' => 'bp_product_cat', 'tag' => 'bp_product_tag' ] as $att => $taxonomy ) {
+		if ( trim( (string) $atts[ $att ] ) === '' ) continue;
+		$tax[] = [
+			'taxonomy' => $taxonomy,
 			'field'    => 'slug',
-			'terms'    => array_map( 'sanitize_title', array_map( 'trim', explode( ',', (string) $atts['category'] ) ) ),
-		] ];
+			'terms'    => array_map( 'sanitize_title', array_map( 'trim', explode( ',', (string) $atts[ $att ] ) ) ),
+		];
+	}
+	if ( $tax ) $query['tax_query'] = array_merge( [ 'relation' => 'AND' ], $tax );
+
+	// A site-defined field. Only keys the site actually defines, so the shortcode can't be
+	// used to query arbitrary post meta. An unknown field or blank value shows nothing,
+	// never the whole catalog.
+	$field = sanitize_key( (string) $atts['field'] );
+	if ( $field !== '' ) {
+		if ( ! isset( sp_store_product_setup()['fields'][ $field ] ) || trim( (string) $atts['value'] ) === '' ) return '';
+		$query['meta_query'] = [ [ 'key' => '_sp_store_field_' . $field, 'value' => trim( (string) $atts['value'] ) ] ];
 	}
 
 	$products = new WP_Query( $query );
@@ -314,9 +333,9 @@ function sp_store_current_sort(): string {
 	return isset( $options[ $chosen ] ) ? $chosen : $default;
 }
 
-/** True on the shop archive or a product category page. */
+/** True on the shop archive or a product category / tag page. */
 function sp_store_is_catalog_query( WP_Query $query ): bool {
-	return $query->is_post_type_archive( SITE_PULSE_STORE_CPT ) || $query->is_tax( 'bp_product_cat' );
+	return $query->is_post_type_archive( SITE_PULSE_STORE_CPT ) || $query->is_tax( [ 'bp_product_cat', 'bp_product_tag' ] );
 }
 
 /**
@@ -358,7 +377,7 @@ function sp_store_catalog_toolbar(): string {
 	$total = (int) $wp_query->found_posts;
 	if ( $total < 1 ) return '';
 
-	$base = is_tax( 'bp_product_cat' )
+	$base = is_tax( [ 'bp_product_cat', 'bp_product_tag' ] )
 		? get_term_link( get_queried_object() )
 		: get_post_type_archive_link( SITE_PULSE_STORE_CPT );
 	if ( is_wp_error( $base ) || ! $base ) $base = sp_store_shop_url();
@@ -443,11 +462,28 @@ function sp_store_variant_payload( int $product_id ): array {
 				: '',
 			'inStock'  => sp_store_in_stock( $variant ),
 			// null for an untracked variant, so the page can stay quiet about quantity
-			// instead of announcing a number that means nothing.
-			'left'     => ( $available !== null && $available <= 10 ) ? max( 0, $available ) : null,
+			// instead of announcing a number that means nothing. Also null when Show Stock
+			// is off: a one-of-a-kind piece still sells out, but never says "Only 1 left".
+			'left'     => ( $available !== null && $available <= 10 && (int) ( $variant['show_stock'] ?? 1 ) === 1 ) ? max( 0, $available ) : null,
+			// false = say nothing about stock (no "In stock" either); only "Sold out" still shows.
+			'showStock' => ! ( (int) $variant['track_stock'] === 1 && (int) ( $variant['show_stock'] ?? 1 ) === 0 ),
+			// The most one shopper can pick: the quantity control offers 1..max and hides
+			// itself at 1. null = no limit (stock not counted, or backorders allowed).
+			'max'      => sp_store_qty_max( $variant ),
 		];
 	}
 	return $payload;
+}
+
+/**
+ * The largest quantity the buy control offers for a variant, or null for no limit.
+ * Only a convenience for the shopper — the cart still clamps to live stock, since a
+ * cached page can be behind.
+ */
+function sp_store_qty_max( array $variant ): ?int {
+	$available = sp_store_available( $variant );
+	if ( $available === null || ! empty( $variant['allow_backorder'] ) ) return null;
+	return max( 0, $available );
 }
 
 /**
@@ -638,20 +674,24 @@ function sp_store_option_pickers( int $product_id, array $names, array $variants
  * Both render a control carrying `.store-qty` whose `.value` is the quantity — a
  * number input in one, a select in the other — so the picker script reads it the same
  * way and needs no branch.
+ *
+ * $max is the opening variant's limit (sp_store_qty_max): the choices stop there, and at
+ * 1 the quantity part is hidden altogether. The picker script redoes this per variant.
  */
-function sp_store_buy_control( int $product_id ): string {
+function sp_store_buy_control( int $product_id, ?int $max = null ): string {
 	$joined = sp_store_get_setting( 'buy_style', 'standard' ) === 'joined';
 	$label  = sp_store_get_setting( 'buy_label', 'Add to Cart' ) ?: 'Add to Cart';
 	$note   = trim( (string) sp_store_get_setting( 'buy_note', '' ) );
 	$qty_id = 'store-qty-' . $product_id;
+	$hide   = $max !== null && $max <= 1 ? ' hidden' : '';
 
 	// class="unique" on every button here: style-forms.css styles EVERY bare <button>
 	// with the site's pill and shadow, which fights both of these layouts.
 	if ( ! $joined ) {
 		$out  = '<div class="store-buy store-buy-standard">';
-		$out .= '<span class="store-qty-wrap">';
+		$out .= '<span class="store-qty-wrap"' . $hide . '>';
 		$out .= '<label class="store-qty-label" for="' . esc_attr( $qty_id ) . '">Qty</label>';
-		$out .= '<input id="' . esc_attr( $qty_id ) . '" class="store-qty" type="number" value="1" min="1" step="1" inputmode="numeric">';
+		$out .= '<input id="' . esc_attr( $qty_id ) . '" class="store-qty" type="number" value="1" min="1"' . ( $max ? ' max="' . $max . '"' : '' ) . ' step="1" inputmode="numeric">';
 		$out .= '</span>';
 		$out .= '<button type="button" class="store-add" data-store-add>' . esc_html( $label ) . '</button>';
 		return $out . '</div>';
@@ -661,14 +701,14 @@ function sp_store_buy_control( int $product_id ): string {
 	$out .= '<div class="store-buy-pill">';
 
 	// A select rather than a number box: it is narrower, it cannot be typed into
-	// nonsensically, and a stepper looks wrong fused against a button. Ten is plenty —
-	// the server clamps to real stock anyway, so this is about the control, not the limit.
+	// nonsensically, and a stepper looks wrong fused against a button. It runs to the
+	// stock on hand, or to ten when stock isn't counted.
 	// Wrapped so the caret can be drawn as a pseudo-element on the wrapper. A native
 	// select's arrow sits wherever the browser puts it — usually hard against the right
 	// edge, leaving a gap between it and the number — and no amount of padding moves it.
-	$out .= '<span class="store-qty-pick">';
+	$out .= '<span class="store-qty-pick"' . $hide . '>';
 	$out .= '<select id="' . esc_attr( $qty_id ) . '" class="store-qty" aria-label="Quantity">';
-	for ( $n = 1; $n <= 10; $n++ ) {
+	for ( $n = 1, $top = $max ?: 10; $n <= $top; $n++ ) {
 		$out .= '<option value="' . $n . '">' . $n . '</option>';
 	}
 	$out .= '</select>';
@@ -680,6 +720,33 @@ function sp_store_buy_control( int $product_id ): string {
 	$out .= '</button>';
 
 	return $out . '</div></div>';
+}
+
+/**
+ * This site's custom product fields (sp_store_product_setup): a label/value list on the
+ * product page, or plain lines under the title on a card. Empty values are skipped, and a
+ * site with no fields prints nothing. Each item carries its key as a class for site CSS.
+ */
+function sp_store_fields_html( int $product_id, string $where ): string {
+	$items = '';
+	foreach ( sp_store_product_setup()['fields'] as $key => $f ) {
+		if ( empty( $f[ $where ] ) ) continue;
+		$value = sp_store_field_display( $f, sp_store_field_value( $product_id, $key ) );
+		if ( $value === '' ) continue;
+		$items .= $where === 'card'
+			? '<p class="store-card-field store-field-' . esc_attr( $key ) . '">' . esc_html( $value ) . '</p>'
+			: '<div class="store-field store-field-' . esc_attr( $key ) . '"><dt>' . esc_html( $f['label'] ) . '</dt><dd>' . nl2br( esc_html( $value ) ) . '</dd></div>';
+	}
+	// Tags / categories the site moved up here ($setup['terms']), as archive links.
+	if ( $where === 'page' ) {
+		foreach ( sp_store_product_setup()['terms'] as $taxonomy => $label ) {
+			$list = get_the_term_list( $product_id, $taxonomy, '', ', ', '' );
+			if ( ! $list || is_wp_error( $list ) ) continue;
+			$items .= '<div class="store-field store-field-' . esc_attr( $taxonomy === 'bp_product_tag' ? 'tags' : 'categories' ) . '"><dt>' . esc_html( $label ) . '</dt><dd>' . $list . '</dd></div>';
+		}
+	}
+	if ( $items === '' ) return '';
+	return $where === 'card' ? $items : '<dl class="store-single-fields">' . $items . '</dl>';
 }
 
 /** The whole single-product block: gallery, price, picker, buy control. */
@@ -701,6 +768,7 @@ function sp_store_single_product( int $product_id ): string {
 	// ---- Detail
 	$out .= '<div class="store-single-detail">';
 	$out .= '<h1 class="store-single-title">' . esc_html( get_the_title( $product_id ) ) . '</h1>';
+	$out .= sp_store_fields_html( $product_id, 'page' );
 
 	// Rendered server-side for the first variant, not left to JS, so the right price is
 	// on the page even if the script never runs.
@@ -718,7 +786,7 @@ function sp_store_single_product( int $product_id ): string {
 
 	// ---- Buy control, self-gating on the phase 3 cart API.
 	if ( sp_store_cart_ready() ) {
-		$out .= sp_store_buy_control( $product_id );
+		$out .= sp_store_buy_control( $product_id, sp_store_qty_max( $first ) );
 	} elseif ( current_user_can( 'edit_posts' ) ) {
 		$out .= '<p class="store-notice">Checkout is not wired up on this site yet, so the Add to Cart button is hidden from customers. Only logged-in staff see this message.</p>';
 	}
@@ -781,7 +849,7 @@ function sp_store_template_include( $template ) {
 	$wanted = '';
 	if ( is_singular( SITE_PULSE_STORE_CPT ) ) {
 		$wanted = 'single-' . SITE_PULSE_STORE_CPT . '.php';
-	} elseif ( is_post_type_archive( SITE_PULSE_STORE_CPT ) || is_tax( 'bp_product_cat' ) ) {
+	} elseif ( is_post_type_archive( SITE_PULSE_STORE_CPT ) || is_tax( [ 'bp_product_cat', 'bp_product_tag' ] ) ) {
 		$wanted = 'archive-' . SITE_PULSE_STORE_CPT . '.php';
 	}
 	if ( $wanted === '' ) return $template;

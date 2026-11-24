@@ -261,15 +261,22 @@ function sp_store_serve_download(): void {
 		"UPDATE " . sp_store_table( 'orders' ) . " SET downloads = downloads + 1 WHERE id = %d", (int) $order['id']
 	) );
 
-	// Stream it. Every buffer is cleared first, or the framework's own output buffer
-	// would hold the whole file in memory before a byte reached the customer.
+	sp_store_stream_file( $path, (string) $file['name'] );
+}
+
+/**
+ * Send a private file to the browser and stop. Every buffer is cleared first, or the
+ * framework's own output buffer would hold the whole file in memory before a byte
+ * reached the customer.
+ */
+function sp_store_stream_file( string $path, string $name ): void {
 	while ( ob_get_level() > 0 ) ob_end_clean();
 	@set_time_limit( 0 );
-	$type = wp_check_filetype( (string) $file['name'] )['type'] ?: 'application/octet-stream';
+	$type = wp_check_filetype( $name )['type'] ?: 'application/octet-stream';
 	nocache_headers();
 	header( 'Content-Type: ' . $type );
 	header( 'Content-Length: ' . filesize( $path ) );
-	header( 'Content-Disposition: attachment; filename="' . str_replace( '"', '', (string) $file['name'] ) . '"' );
+	header( 'Content-Disposition: attachment; filename="' . str_replace( '"', '', $name ) . '"' );
 	header( 'X-Content-Type-Options: nosniff' );
 	header( 'X-Robots-Tag: noindex, nofollow' );
 
@@ -282,6 +289,90 @@ function sp_store_serve_download(): void {
 		fclose( $fh );
 	}
 	exit;
+}
+
+
+/*--------------------------------------------------------------
+# Member Files
+--------------------------------------------------------------*/
+
+/*
+ * A members-only page (a Lesson) offering the file that comes with the plan:
+ *
+ *   [member-download file="Aerial-Spiral-Pole-Studio-Workbook.pdf"]Download Workbook[/member-download]
+ *
+ * The file is one attached to a product that GRANTS one of the page's plans, so it
+ * lives in the private folder and updates in one place. Unlike the receipt link this
+ * needs no order — a member given access by hand gets it too. The link only names the
+ * page and the file; who may have it is decided on every request by
+ * sp_member_can_view(), so a shared link does nothing for someone without the plan.
+ */
+
+/** The files on products that grant any of these plans, keyed by file key. */
+function sp_member_plan_files( array $plan_ids ): array {
+	if ( ! $plan_ids ) return [];
+	$products = get_posts( [
+		'post_type'   => SITE_PULSE_STORE_CPT,
+		'post_status' => 'publish',
+		'numberposts' => -1,
+		'fields'      => 'ids',
+		'meta_query'  => [ [ 'key' => '_sp_store_grants_plan', 'value' => array_map( 'strval', $plan_ids ), 'compare' => 'IN' ] ],
+	] );
+	$out = [];
+	foreach ( $products as $pid ) {
+		foreach ( sp_store_product_downloads( (int) $pid ) as $f ) $out[ $f['key'] ] = $f;
+	}
+	return $out;
+}
+
+add_shortcode( 'member-download', 'sp_member_download_shortcode' );
+function sp_member_download_shortcode( $atts, $content = null ): string {
+	$a = shortcode_atts( [ 'file' => '' ], $atts );
+	if ( ! function_exists( 'sp_store_members_on' ) || ! sp_store_members_on() || ! sp_store_downloads_on() ) return '';
+	$post = get_post();
+	if ( ! $post || ! sp_member_can_view( (int) $post->ID ) ) return '';
+
+	$want = strtolower( sanitize_file_name( (string) $a['file'] ) );
+	foreach ( sp_member_plan_files( sp_member_required_plans( (int) $post->ID ) ) as $key => $f ) {
+		if ( $want !== '' && strtolower( (string) $f['name'] ) !== $want ) continue;
+		$url   = add_query_arg( [ 'sp_member_dl' => (int) $post->ID, 'f' => $key ], home_url( '/' ) );
+		$label = trim( (string) $content ) !== '' ? wp_strip_all_tags( (string) $content ) : 'Download';
+		return do_shortcode( '[btn link="' . esc_url( $url ) . '"]' . esc_html( $label ) . '[/btn]' );
+	}
+	return '';
+}
+
+add_action( 'init', 'sp_member_serve_download', 15 );
+function sp_member_serve_download(): void {
+	if ( empty( $_GET['sp_member_dl'] ) ) return;
+	if ( ! defined( 'DONOTCACHEPAGE' ) ) define( 'DONOTCACHEPAGE', true );
+
+	$fail = static function ( string $why, int $code = 403 ) {
+		status_header( $code );
+		nocache_headers();
+		wp_die( esc_html( $why ), 'Download', [ 'response' => $code, 'back_link' => true ] );
+	};
+
+	if ( ! function_exists( 'sp_store_members_on' ) || ! sp_store_members_on() || ! sp_store_downloads_on() ) $fail( 'Downloads are not available on this site.', 404 );
+
+	$post_id = absint( $_GET['sp_member_dl'] );
+	$key     = sanitize_key( (string) ( $_GET['f'] ?? '' ) );
+	$plans   = $post_id ? sp_member_required_plans( $post_id ) : [];
+	if ( ! $plans || $key === '' ) $fail( 'That download link is not valid.', 404 );
+
+	if ( ! is_user_logged_in() ) {
+		wp_safe_redirect( sp_member_account_url( [ 'redirect_to' => get_permalink( $post_id ) ] ) );
+		exit;
+	}
+	if ( ! sp_member_can_view( $post_id ) ) $fail( 'This file is for members. Your account does not include it.' );
+
+	$files = sp_member_plan_files( $plans );
+	if ( empty( $files[ $key ] ) ) $fail( 'That file is no longer available. Please get in touch and we will help.', 404 );
+
+	$path = sp_store_private_dir() . '/' . basename( (string) $files[ $key ]['file'] );
+	if ( ! is_file( $path ) || ! is_readable( $path ) ) $fail( 'That file could not be found on the server. Please get in touch and we will help.', 404 );
+
+	sp_store_stream_file( $path, (string) $files[ $key ]['name'] );
 }
 
 

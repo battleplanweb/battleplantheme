@@ -278,6 +278,18 @@ $cap_jobsites        = $cap_jobsites_ready && ( in_array( 'view_jobsites', $caps
 $cap_jobsites_add    = $cap_jobsites && ( in_array( 'add_jobsites', $caps, true ) || in_array( 'manage_jobsites', $caps, true ) );
 $nav[] = [ 'slug' => 'jobsites', 'label' => 'Jobsite GEO', 'icon' => 'mappin', 'show' => $cap_jobsites, 'modules' => [ 'jobsites' ] ];
 
+// Events — the website's Events (public calendar, event pages, teasers), added/edited here as well as in
+// wp-admin. Only where Events is loaded; view_events sees the list, manage_events changes it.
+$cap_events_ready  = function_exists( 'sp_events_ready' ) && sp_events_ready();
+$cap_events        = $cap_events_ready && ( in_array( 'view_events', $caps, true ) || in_array( 'manage_events', $caps, true ) );
+$cap_events_manage = $cap_events && in_array( 'manage_events', $caps, true );
+$nav[] = [ 'slug' => 'events', 'label' => 'Events', 'icon' => 'calendar', 'show' => $cap_events, 'modules' => [ 'events' ] ];
+
+// Website Content — the site's pages, posts and opted-in content types (includes-site-pulse-content.php).
+// Shown when the person holds any content level for any managed type; the types/levels come from JS.
+$cap_content = function_exists( 'sp_content_visible' ) && sp_content_visible();
+$nav[] = [ 'slug' => 'content', 'label' => 'Website Content', 'icon' => 'file', 'show' => $cap_content, 'modules' => [ 'content' ] ];
+
 // Shift Scheduling — the scheduling app hosted in one panel (module off by default; access by the
 // use_shift_scheduling / manage_shift_* caps — see includes-site-pulse-schedules.php). Each child opens
 // the same panel on one of the app's views (slug schedules-{view}); members and supervisors get different
@@ -329,7 +341,7 @@ $cap_book_own      = in_array( 'view_own_bookings', $caps, true );
 $cap_book_manage   = in_array( 'manage_bookings', $caps, true );
 $cap_book_passes   = in_array( 'manage_booking_payments', $caps, true );
 $cap_book_services = in_array( 'manage_booking_services', $caps, true );
-$cap_book_area     = $cap_book_view || $cap_book_own || $cap_book_manage || $cap_book_passes;
+$cap_book_area     = $cap_book_view || $cap_book_own || $cap_book_manage || $cap_book_passes || $cap_book_services;
 $nav[] = [
 	'slug'  => 'booking',
 	'modules' => [ 'booking' ],   // owning module(s) — see the god menu split below
@@ -337,9 +349,15 @@ $nav[] = [
 	'icon'  => 'calendar',
 	'show'  => $cap_book_area,
 	'children' => [
-		[ 'slug' => 'booking-calendar', 'label' => 'Calendar', 'show' => $cap_book_view || $cap_book_own ],
-		[ 'slug' => 'booking-list',     'label' => 'Bookings', 'show' => $cap_book_view || $cap_book_own ],
-		[ 'slug' => 'booking-passes',   'label' => 'Passes &amp; Memberships', 'show' => $cap_book_passes ],
+		// Modelled on Vagaro / SimplyBook: Calendar = the appointment book; Services = what customers
+		// book (made from Settings → Booking → Service Templates); Staff & Hours = who does the work and
+		// when. Customers live in E-Commerce when the Store is on (booking people are merged in there),
+		// so Booking only has its own Customers list on a site without the Store.
+		[ 'slug' => 'booking-calendar',  'label' => 'Calendar',      'show' => $cap_book_view || $cap_book_own ],
+		[ 'slug' => 'booking-offerings', 'label' => site_pulse_term( 'service', 'many' ), 'show' => $cap_book_services ],
+		[ 'slug' => 'booking-staff',     'label' => 'Staff & Hours', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ) ],
+		[ 'slug' => 'booking-customers', 'label' => 'Customers',     'show' => ( $cap_book_view || $cap_book_own ) && ! site_pulse_module_on( 'store' ) ],
+		[ 'slug' => 'booking-passes',    'label' => 'Memberships',   'show' => $cap_book_passes ],
 	],
 ];
 
@@ -353,19 +371,30 @@ $cap_store_manage   = in_array( 'manage_orders', $caps, true );
 $cap_store_products = in_array( 'manage_products', $caps, true );
 $cap_store_payments = in_array( 'manage_store_payments', $caps, true );
 $cap_store_settings = in_array( 'manage_store_settings', $caps, true );
-$cap_store_area     = $cap_store_orders || $cap_store_manage || $cap_store_products || $cap_store_payments;
+// Two groups, one module: Store (what's for sale) and E-Commerce (the selling — orders, customers).
 $nav[] = [
 	'slug'  => 'store',
 	'modules' => [ 'store' ],   // owning module(s) — see the god menu split below
 	'label' => 'Store',
 	'icon'  => 'store',
-	'show'  => $cap_store_area,
+	'show'  => $cap_store_products,
 	'children' => [
-		[ 'slug' => 'store-orders',    'label' => 'Orders',    'show' => $cap_store_orders ],
-		[ 'slug' => 'store-customers', 'label' => 'Customers', 'show' => $cap_store_orders ],
-		[ 'slug' => 'store-products',   'label' => 'Products',   'show' => $cap_store_products ],
-		[ 'slug' => 'store-categories', 'label' => 'Categories', 'show' => $cap_store_products ],
+		[ 'slug' => 'store-products',   'label' => site_pulse_term( 'product', 'many' ), 'show' => $cap_store_products ],
 		[ 'slug' => 'store-inventory',  'label' => 'Inventory',  'show' => $cap_store_products ],
+		[ 'slug' => 'store-categories', 'label' => 'Categories', 'show' => $cap_store_products ],
+		[ 'slug' => 'store-tags',       'label' => 'Tags',       'show' => $cap_store_products ],
+	],
+];
+$nav[] = [
+	'slug'  => 'ecommerce',
+	'modules' => [ 'store' ],
+	'label' => 'E-Commerce',
+	'icon'  => 'dollar-sign',
+	'show'  => $cap_store_orders || $cap_store_payments,
+	'children' => [
+		[ 'slug' => 'store-orders',    'label' => 'Orders',    'show' => $cap_store_orders || $cap_store_payments ],
+		[ 'slug' => 'store-customers', 'label' => 'Customers', 'show' => $cap_store_orders || $cap_store_payments ],
+		[ 'slug' => 'store-fees',      'label' => 'Revenue',   'show' => $cap_store_orders ],
 	],
 ];
 
@@ -423,8 +452,12 @@ $nav[] = [
 	'slug'  => 'admin',
 	'label' => 'Settings',
 	'icon'  => 'settings',
-	'show'  => in_array( 'manage_locations', $caps ) || in_array( 'manage_users', $caps ) || in_array( 'manage_settings', $caps ) || in_array( 'manage_roles', $caps ) || in_array( 'manage_ai_prompts', $caps ) || in_array( 'manage_form_repositories', $caps ) || in_array( 'manage_mileage', $caps ) || in_array( 'manage_templates', $caps ) || in_array( 'manage_reviews', $caps ) || in_array( 'manage_notifications', $caps ) || in_array( 'manage_api_keys', $caps ) || $cap_book_services || in_array( 'manage_booking_settings', $caps ) || $cap_store_settings || $cap_store_products,
+	'show'  => true,   // everyone has Settings → Profile; the other children gate themselves
 	'children' => [
+		// Everyone's own account: names, email, password — so members never need wp-admin.
+		[ 'slug' => 'profile',         'label' => 'Profile',          'icon' => 'user',    'show' => true ],
+		// Everyone sets how THEY are notified; the app-wide switches inside are god / System Admin only.
+		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => true ],
 		[ 'slug' => 'admin-users',     'label' => 'Users',            'icon' => 'users',   'show' => in_array( 'manage_users', $caps ) ],
 		[ 'slug' => 'admin-tiers',     'label' => 'Roles',            'icon' => 'layers',  'show' => in_array( 'manage_roles', $caps ) ],
 		[ 'slug' => 'admin-locations', 'label' => 'Home Bases',       'icon' => 'mappin',  'show' => in_array( 'manage_locations', $caps ) ],
@@ -435,9 +468,10 @@ $nav[] = [
 		[ 'slug' => 'admin-forms',     'label' => 'Forms',          'icon' => 'forms',   'show' => in_array( 'manage_form_repositories', $caps ), 'modules' => [ 'forms' ] ],
 		[ 'slug' => 'admin-customer-connect', 'label' => 'Customer Connect', 'icon' => 'home', 'show' => in_array( 'manage_settings', $caps ) && ( $cap_cc_customers || $cap_cc_send || $cap_cc_schedule ), 'modules' => [ 'customer_connect' ] ],
 		[ 'slug' => 'admin-booking',   'label' => 'Booking',        'icon' => 'calendar', 'show' => $cap_book_services || in_array( 'manage_booking_settings', $caps ), 'modules' => [ 'booking' ] ],
+		// Store = how the shop LOOKS; E-Commerce = how it WORKS (payment, tax, shipping, emails, extras).
 		[ 'slug' => 'admin-store',     'label' => 'Store',          'icon' => 'store',    'show' => $cap_store_settings || $cap_store_products, 'modules' => [ 'store' ] ],
+		[ 'slug' => 'admin-ecommerce', 'label' => 'E-Commerce',     'icon' => 'dollar-sign', 'show' => $cap_store_settings, 'modules' => [ 'store' ] ],
 		[ 'slug' => 'admin-settings',  'label' => 'Site Defaults',  'icon' => 'palette', 'show' => in_array( 'manage_settings', $caps ) ],
-		[ 'slug' => 'admin-notifications', 'label' => 'Notifications', 'icon' => 'bell',   'show' => in_array( 'manage_notifications', $caps ) ],
 		[ 'slug' => 'admin-apikeys',   'label' => 'API Keys',         'icon' => 'key',     'show' => in_array( 'manage_api_keys', $caps ) ],
 		[ 'slug' => 'admin-activity',  'label' => 'Activity Log',     'icon' => 'clipboard',   'show' => in_array( 'view_activity_log', $caps ) ],
 		[ 'slug' => 'admin-modules',   'label' => 'Modules',          'icon' => 'layers',  'show' => $is_superadmin ],
@@ -491,6 +525,9 @@ $printPage .= '<aside class="sp-sidebar" id="sp-sidebar">';
 // Sidebar Header — logo image (header_logo_url) OR icon + app name text, then a "powered by" attribution line
 $printPage .=   '<div class="sp-header-grid sp-sidebar-header">';
 $printPage .=     '<div class="sp-sidebar-brand">';
+// The logo links to the public website (not Site Pulse) in a new tab.
+$sp_site_link = '<a class="sp-site-link" href="' . esc_url( home_url( '/' ) ) . '" target="_blank" rel="noopener" title="Open the website in a new tab">';
+$printPage .=     $sp_site_link;
 if ( $header_logo ) {
 	$printPage .=     '<img src="' . esc_url( $header_logo ) . '" alt="' . esc_attr( $app_name ) . '" class="sp-sidebar-logo">';
 } else {
@@ -499,6 +536,7 @@ if ( $header_logo ) {
 	$printPage .=       '<span class="sp-sidebar-title">' . esc_html( $app_name ) . '</span>';
 	$printPage .=     '</div>';
 }
+$printPage .=     '</a>';
 $printPage .=       '<span class="sp-sidebar-powered">Powered by Battle Plan Site Pulse</span>';
 $printPage .=     '</div>';
 $printPage .=     '<button type="button" class="unique sp-sidebar-close" id="sp-sidebar-close" aria-label="Close menu">' . $svg( $icons['x'] ) . '</button>';
@@ -667,11 +705,13 @@ $printPage .=   '</div>';
 // current PAGE TITLE so you always know where you are. Title text is kept in sync by JS.
 $printPage .=   '<div class="sp-mobile-headline">';
 $printPage .=     '<div class="sp-mobile-brand">';
+$printPage .=     $sp_site_link;
 if ( $header_logo ) {
 	$printPage .=   '<img src="' . esc_url( $header_logo ) . '" alt="' . esc_attr( $app_name ) . '" class="sp-mobile-logo">';
 } else {
 	$printPage .=   '<span class="sp-mobile-title">' . esc_html( $app_name ) . '</span>';
 }
+$printPage .=     '</a>';
 $printPage .=       '<span class="sp-mobile-powered">Powered by Battle Plan Site Pulse</span>';
 $printPage .=     '</div>';
 // Scrolled state: the small site icon above the page title — keeps the branding and fills the space.
@@ -702,8 +742,8 @@ $printPage .=     '<h3>Notifications</h3>';
 $printPage .=   '</div>';
 $printPage .=   '<div class="sp-push-prompt" id="sp-push-prompt" hidden></div>'; // per-device "turn on push", filled by JS
 $printPage .=   '<div class="sp-sms-alerts" id="sp-sms-alerts" hidden></div>'; // "text me unread chats" opt-in + settings, filled by JS
-$printPage .=   '<div class="sp-notification-actions"><button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mark-all-read">Mark all read</button></div>';
-$printPage .=   '<div class="sp-notification-list" id="sp-notification-list"></div>';
+$printPage .=   '<div class="sp-notification-actions"><button type="button" class="unique sp-btn" id="sp-mark-all-read">Mark all read</button></div>';
+$printPage .=   '<div class="sp-list sp-notification-list" id="sp-notification-list"></div>';
 $printPage .= '</div>';
 
 // Breadcrumb panel title: a small parent-section eyebrow stacked ABOVE the main page headline,
@@ -757,7 +797,7 @@ $sp_dash_lead = '';
 
 // "Install the app" reminder card — filled + shown by JS only when NOT running as the installed app
 // and the user hasn't installed it yet. (Separate from the floating install banner, which stays.)
-$sp_dash_lead .= '<div class="sp-card sp-install-card" id="sp-install-card" hidden></div>';
+$sp_dash_lead .= '<div class="sp-card sp-card--tint sp-install-card" id="sp-install-card" hidden></div>';
 
 // Important-message banners — notifications flagged "Dashboard" in the Notifications matrix, shown
 // at the top until the user dismisses them.
@@ -779,15 +819,15 @@ $sp_dash_lead .= '<div class="sp-stack" data-sp-day-hero hidden></div>';
 $sp_dash_stats = '<div class="sp-stats" data-sp-day-stats hidden>'
 	.             '<button type="button" class="unique sp-stat" data-nav="action-items"><span class="sp-stat__value" data-sp-stat="today">0</span><span class="sp-stat__label">Due today</span></button>'
 	.             '<button type="button" class="unique sp-stat sp-stat--danger" data-nav="action-items"><span class="sp-stat__value" data-sp-stat="overdue">0</span><span class="sp-stat__label">Overdue</span></button>'
-	.             ( $sp_can_submit_any ? '<button type="button" class="unique sp-stat sp-stat--warning" data-nav="reports-my"><span class="sp-stat__value" data-sp-stat="drafts">0</span><span class="sp-stat__label">Drafts</span></button>' : '' )
+	.             ( $sp_can_submit_any && site_pulse_module_on( 'reports' ) ? '<button type="button" class="unique sp-stat sp-stat--warning" data-nav="reports-my"><span class="sp-stat__value" data-sp-stat="drafts">0</span><span class="sp-stat__label">Drafts</span></button>' : '' )
 	.           '</div>';
 
 $sp_dash_shortcuts = '';
-if ( $sp_can_submit_any ) {
+if ( $sp_can_submit_any && site_pulse_module_on( 'reports' ) ) {
 	$sp_dash_shortcuts .= '<button type="button" class="unique sp-shortcut" data-sp-action="new-report">' . $svg( $icons['file'] )
 		. '<span class="sp-shortcut__main"><span class="sp-shortcut__title">New report</span><span class="sp-shortcut__sub">Start a report</span></span>' . $svg( $icons['chevron-right'] ) . '</button>';
 }
-if ( in_array( 'submit_mileage', $caps, true ) ) {
+if ( in_array( 'submit_mileage', $caps, true ) && site_pulse_module_on( 'mileage' ) ) {
 	$sp_dash_shortcuts .= '<button type="button" class="unique sp-shortcut" data-sp-action="mileage-add">' . $svg( $icons['car'] )
 		. '<span class="sp-shortcut__main"><span class="sp-shortcut__title">Log mileage</span><span class="sp-shortcut__sub">Add today\'s stops</span></span>' . $svg( $icons['chevron-right'] ) . '</button>';
 }
@@ -826,23 +866,23 @@ $sp_widgets['chat'] = [ 'title' => 'Chat', 'nav' => 'messages', 'flush' => true 
 
 // My Recent Reports — off by default for anyone who can't submit reports (they have no own reports).
 if ( $cap_reports_access ) {
-	$sp_widgets['reports'] = [ 'title' => 'Recent reports', 'nav' => 'reports-my', 'flush' => true, 'default_hidden' => ! $sp_can_submit_any ];
+	$sp_widgets['reports'] = [ 'title' => 'Recent reports', 'nav' => 'reports-my', 'flush' => true, 'default_hidden' => ! $sp_can_submit_any, 'modules' => [ 'reports' ] ];
 }
 
 // Past-Due Reports — GMs/Supervisors overdue on their reports. Visibility is set in Settings →
 // Notifications ("Reports past due" row, role-group columns).
 if ( site_pulse_user_sees_pastdue_widget( $sp_dash_uid ) ) {
-	$sp_widgets['pastdue'] = [ 'title' => 'Past-due reports', 'flush' => true, 'default_hidden' => true ];
+	$sp_widgets['pastdue'] = [ 'title' => 'Past-due reports', 'flush' => true, 'default_hidden' => true, 'modules' => [ 'reports' ] ];
 }
 
 // Mileage this month — needs mileage access.
 if ( in_array( 'submit_mileage', $caps ) || in_array( 'manage_mileage', $caps ) ) {
-	$sp_widgets['mileage'] = [ 'title' => 'Mileage this month', 'nav' => 'mileage' ];
+	$sp_widgets['mileage'] = [ 'title' => 'Mileage this month', 'nav' => 'mileage', 'modules' => [ 'mileage' ] ];
 }
 
 // Customer Feedback — a count per feedback area the user can access; each opens that area.
 if ( $cap_reviews_area || $cap_surveys_area || $cap_cm_area || $cap_emails_area ) {
-	$sp_widgets['feedback'] = [ 'title' => 'Customer feedback', 'default_hidden' => true ];
+	$sp_widgets['feedback'] = [ 'title' => 'Customer feedback', 'default_hidden' => true, 'modules' => [ 'reviews', 'surveys', 'emails' ] ];
 }
 
 // Company Directory — the directory's own filters + search; using any of them opens the filtered directory.
@@ -851,6 +891,7 @@ if ( $cap_directory ) {
 		'title'          => 'Company directory',
 		'nav'            => 'directory',
 		'default_hidden' => true,
+		'modules'        => [ 'directory' ],
 		'body'           => '<div class="sp-grid">'
 			. '<select id="sp-dashw-dir-brand" class="sp-select"><option value="">All brands</option></select>'
 			. '<select id="sp-dashw-dir-location" class="sp-select"><option value="">All locations</option></select>'
@@ -863,6 +904,14 @@ if ( $cap_directory ) {
 
 // Display order: saved order first (available sections only), then any new ones appended.
 $sp_order = [];
+// A widget belongs to its module(s): drop it when none of them is on. Non-god caps are already
+// module-filtered, but a god holds every cap, so without this a god's dashboard offered widgets for
+// modules the site doesn't run (e.g. "Mileage this month" with the Expense Report module off).
+foreach ( $sp_widgets as $id => $w ) {
+	if ( empty( $w['modules'] ) ) continue;
+	if ( ! array_filter( $w['modules'], 'site_pulse_module_on' ) ) unset( $sp_widgets[ $id ] );
+}
+
 foreach ( $sp_l_order as $id ) if ( isset( $sp_widgets[ $id ] ) && ! in_array( $id, $sp_order, true ) ) $sp_order[] = $id;
 foreach ( array_keys( $sp_widgets ) as $id ) if ( ! in_array( $id, $sp_order, true ) ) $sp_order[] = $id;
 
@@ -1049,18 +1098,18 @@ if ( in_array( 'view_notes', $caps, true ) ) {
 if ( in_array( 'use_ai_assistant', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-ai-assistant">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>' . esc_html( $sp_ai_name ) . '</h2>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-ai-new">New chat</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn" id="sp-ai-new">New chat</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<p class="sp-help-text" style="margin:0 0 12px">Pick a role, then ask for what you need. Responses are written in your company\'s voice (Settings → AI Prompts).</p>';
-	$printPage .=   '<div class="sp-ai-bar">';
+	$printPage .=   '<div class="sp-toolbar">';
 	$printPage .=     '<label class="sp-field-label" for="sp-ai-role">Role</label>';
 	$printPage .=     '<select id="sp-ai-role" class="sp-select"></select>';
 	$printPage .=     '<input type="text" id="sp-ai-role-custom" class="sp-input sp-ai-role-custom" placeholder="Describe the role…" style="display:none">';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-ai-chat" id="sp-ai-chat"></div>';
+	$printPage .=   '<div class="sp-card sp-ai-chat" id="sp-ai-chat"></div>';
 	$printPage .=   '<form class="sp-ai-composer" id="sp-ai-composer">';
 	$printPage .=     '<textarea id="sp-ai-input" class="sp-input sp-ai-input" rows="3" placeholder="Ask for anything — e.g. “Write ad copy for a Mother’s Day special”"></textarea>';
-	$printPage .=     '<button type="submit" class="unique sp-btn sp-btn-primary" id="sp-ai-send">Send</button>';
+	$printPage .=     '<button type="submit" class="unique sp-btn sp-btn--primary" id="sp-ai-send">Send</button>';
 	$printPage .=   '</form>';
 	$printPage .= '</section>';
 }
@@ -1069,16 +1118,16 @@ if ( in_array( 'use_ai_assistant', $caps ) ) {
 if ( $sp_ask_visible ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-ask-ai">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Ask AI</h2>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-ask-new">New question</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn" id="sp-ask-new">New question</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<p class="sp-help-text sp-ask-intro">Ask anything about your company&#039;s data — reviews, comment cards, customer emails, manager reports, action items, expenses and mileage. The AI reads the actual records, not just keywords, and writes you a report. Bigger questions take a minute or two.</p>';
 	$printPage .=   '<div class="sp-ask-layout">';
 	$printPage .=     '<div class="sp-ask-main">';
 	$printPage .=       '<form class="sp-ask-composer" id="sp-ask-form">';
 	$printPage .=         '<textarea id="sp-ask-input" class="sp-input sp-ask-input" rows="3" maxlength="1000" placeholder="e.g. “What are customers saying about our servers over the past 6 months?”"></textarea>';
-	$printPage .=         '<button type="submit" class="unique sp-btn sp-btn-primary" id="sp-ask-go">Ask</button>';
+	$printPage .=         '<button type="submit" class="unique sp-btn sp-btn--primary" id="sp-ask-go">Ask</button>';
 	$printPage .=       '</form>';
-	$printPage .=       '<div class="sp-ask-examples" id="sp-ask-examples"></div>';
+	$printPage .=       '<div class="sp-toolbar" id="sp-ask-examples"></div>';
 	$printPage .=       '<div class="sp-ask-output" id="sp-ask-output"></div>';
 	$printPage .=     '</div>';
 	$printPage .=     '<aside class="sp-ask-side">';
@@ -1096,16 +1145,16 @@ if ( $sp_ask_visible ) {
 if ( $cap_import ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-import-reports">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Import Past Reports</h2></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">First <strong>choose which report</strong> you\'re importing, then upload past copies of it (PDF, CSV, or image — JPG/PNG, one report per file). Claude reads each file and fills in that report\'s fields. Review the detected person, location and dates below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Location is optional — leave it blank for reports that aren\'t tied to a store.</em></div></div>';
-	$printPage .=   '<label class="sp-import-f sp-import-tpl"><span>Which report are you importing?</span><select class="sp-select" id="sp-import-template"><option value="0">Loading…</option></select></label>';
+	$printPage .=   '<div class="sp-notice sp-notice--block"><div>First <strong>choose which report</strong> you\'re importing, then upload past copies of it (PDF, CSV, or image — JPG/PNG, one report per file). Claude reads each file and fills in that report\'s fields. Review the detected person, location and dates below, correct anything, then save. <strong>No action items are created</strong> for imported reports. <em>Location is optional — leave it blank for reports that aren\'t tied to a store.</em></div></div>';
+	$printPage .=   '<label class="sp-field sp-field__label sp-import-tpl"><span>Which report are you importing?</span><select class="sp-select" id="sp-import-template"><option value="0">Loading…</option></select></label>';
 	$printPage .=   '<div class="sp-import-drop is-locked" id="sp-import-drop">';
 	$printPage .=     '<input type="file" id="sp-import-files" accept=".pdf,.csv,.jpg,.jpeg,.jpe,.jfif,.png,application/pdf,text/csv,image/jpeg,image/png" multiple hidden>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-pick">Choose PDF / CSV / Image files</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-import-pick">Choose PDF / CSV / Image files</button>';
 	$printPage .=     '<span class="sp-import-hint">…or drop files here</span>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-import-list" id="sp-import-list"></div>';
+	$printPage .=   '<div class="sp-stack" id="sp-import-list"></div>';
 	$printPage .=   '<div class="sp-import-actions" id="sp-import-actions" hidden>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-save-all">Save All Checked Reports</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-import-save-all">Save All Checked Reports</button>';
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -1116,15 +1165,15 @@ if ( $cap_import ) {
 if ( $cap_import_cards ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-import-cards">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Import Comment Cards</h2></div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-import-intro">Upload photos or scans of <strong>customer comment cards</strong> (JPG, PNG, or PDF — one card per file). Claude reads each card and fills in the <strong>star ratings, contact info, visit date, and comments</strong>. Review the detected info below, set the <strong>location</strong>, correct anything, then save. Cards are added to <strong>Reviews → Surveys</strong>; <strong>no notification</strong> is sent.</div></div>';
+	$printPage .=   '<div class="sp-notice sp-notice--block"><div>Upload photos or scans of <strong>customer comment cards</strong> (JPG, PNG, or PDF — one card per file). Claude reads each card and fills in the <strong>star ratings, contact info, visit date, and comments</strong>. Review the detected info below, set the <strong>location</strong>, correct anything, then save. Cards are added to <strong>Reviews → Surveys</strong>; <strong>no notification</strong> is sent.</div></div>';
 	$printPage .=   '<div class="sp-import-drop" id="sp-card-import-drop">';
 	$printPage .=     '<input type="file" id="sp-card-import-files" accept=".jpg,.jpeg,.jpe,.jfif,.png,.pdf,image/jpeg,image/png,application/pdf" multiple hidden>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-card-import-pick">Choose card images / PDFs</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-card-import-pick">Choose card images / PDFs</button>';
 	$printPage .=     '<span class="sp-import-hint">…or drop files here</span>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-import-list" id="sp-card-import-list"></div>';
+	$printPage .=   '<div class="sp-stack" id="sp-card-import-list"></div>';
 	$printPage .=   '<div class="sp-import-actions" id="sp-card-import-actions" hidden>';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-card-import-save-all">Save All Checked Cards</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-card-import-save-all">Save All Checked Cards</button>';
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -1175,19 +1224,19 @@ if ( $cap_x_mileage ) {
 if ( $cap_x_tolls ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-tolls">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Tolls' ) . '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-toll-intro">Upload the CSV or Excel (.xlsx) export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
+	$printPage .=   '<div class="sp-notice sp-notice--block"><div>Upload the CSV or Excel (.xlsx) export from your toll account (e.g. NTTA). We only look at the days you logged a trip — charges on any other date are ignored. AI matches each toll to a leg of that day\'s route; you review before anything is added.</div></div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-toll-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=     '<div class="sp-toolbar">';
 	// accept= keeps phone file-pickers on document sources (otherwise Android offers Camera, and can
 	// stick there as the remembered default). octet-stream is in the list because NTTA exports
 	// sometimes have no extension — without it the picker greys them out. Content is still sniffed
 	// on upload, so this is a picker hint only, never the validation.
 	$printPage .=       '<input type="file" id="sp-toll-file" class="sp-toll-file" accept=".csv,.xlsx,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-toll-upload-btn" disabled>Upload</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-toll-upload-btn" disabled>Upload</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-toll-status" id="sp-toll-status" hidden></div>';
-	$printPage .=   '<div class="sp-toll-days" id="sp-toll-days"></div>';
+	$printPage .=   '<div class="sp-notice" id="sp-toll-status" hidden></div>';
+	$printPage .=   '<div class="sp-stack" id="sp-toll-days"></div>';
 	$printPage .= '</section>';
 }
 
@@ -1196,13 +1245,13 @@ if ( $cap_x_mileage ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-mileage-map">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Mileage Map' ) . '</div>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-mileage-map-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=     '<div class="sp-toolbar">';
 	$printPage .=       '<select id="sp-mileage-map-category" class="sp-select"><option value="">All categories</option></select>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-map-fit">Fit All</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn" id="sp-mileage-map-fit">Fit All</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-mileage-map-notice" id="sp-mileage-map-notice" hidden>Add a Google Maps API key to enable the map. The mileage location key is reused; make sure it has the <strong>Maps JavaScript API</strong> enabled and is restricted to this site.</div>';
-	$printPage .=   '<div class="sp-card sp-table-card"><div id="sp-mileage-map-canvas" class="sp-mileage-map-canvas"></div></div>';
+	$printPage .=   '<div class="sp-notice" id="sp-mileage-map-notice" hidden>Add a Google Maps API key to enable the map. The mileage location key is reused; make sure it has the <strong>Maps JavaScript API</strong> enabled and is restricted to this site.</div>';
+	$printPage .=   '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><div id="sp-mileage-map-canvas" class="sp-mileage-map-canvas"></div></div>';
 	$printPage .= '</section>';
 }
 
@@ -1245,7 +1294,7 @@ if ( $cap_x_travel ) {
 if ( $cap_x_approve ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-approve-expense">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Approve Reports' ) . '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-rep-intro">Expense reports your team has submitted. Open one to review it, then Approve (emails it to accounting) or send it back.</div></div>';
+	$printPage .=   '<div class="sp-notice sp-notice--block"><div>Expense reports your team has submitted. Open one to review it, then Approve (emails it to accounting) or send it back.</div></div>';
 	$printPage .=   '<div class="sp-approve-content" id="sp-approve-content"></div>';
 	$printPage .=   '<div class="sp-approve-detail" id="sp-approve-detail" hidden></div>';
 	$printPage .= '</section>';
@@ -1255,12 +1304,12 @@ if ( $cap_x_approve ) {
 if ( $cap_x_archive ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-approved-expense">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Expense Report','Accounting' ) . '</div>';
-	$printPage .=   '<div class="sp-meta-bar"><div class="sp-rep-intro">The archive of approved expense reports. Filter by date, then open the frozen PDF that was sent to accounting.</div></div>';
+	$printPage .=   '<div class="sp-notice sp-notice--block"><div>The archive of approved expense reports. Filter by date, then open the frozen PDF that was sent to accounting.</div></div>';
 	$printPage .=   '<div class="sp-toolbar sp-period-toolbar" id="sp-approved-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=     '<div class="sp-toolbar">';
 	$printPage .=       '<input type="date" id="sp-approved-start" class="sp-input" placeholder="From">';
 	$printPage .=       '<input type="date" id="sp-approved-end" class="sp-input" placeholder="To">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-approved-clear">Clear</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn" id="sp-approved-clear">Clear</button>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-approved-content" id="sp-approved-content"></div>';
@@ -1317,14 +1366,14 @@ if ( in_array( 'view_reviews', $caps ) || in_array( 'manage_reviews', $caps ) ) 
 		.             '</select></label>';
 	$printPage .=   '</div>';
 
-	$printPage .=   '<div class="sp-reviews-stats" id="sp-reviews-stats"></div>';
+	$printPage .=   '<div class="sp-stack sp-stack-stats" id="sp-reviews-stats"></div>';
 	$printPage .=   '<div class="sp-tabs" role="tablist">'
 		.             '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-review-reply="">All</button>'
 		.             '<button type="button" class="unique sp-tab" role="tab" data-sp-review-reply="unreplied">Needs reply</button>'
 		.             '<button type="button" class="unique sp-tab" role="tab" data-sp-review-reply="replied">Replied</button>'
 		.           '</div>';
 	$printPage .=   '<div class="sp-stack sp-reviews-list" id="sp-reviews-list"></div>';
-	$printPage .=   '<div class="sp-reviews-more">';
+	$printPage .=   '<div class="sp-stack sp-stack--center">';
 	$printPage .=     '<p class="sp-meta" id="sp-reviews-count" hidden></p>';
 	$printPage .=     '<button type="button" class="unique sp-btn" id="sp-reviews-load-older" hidden>Load older reviews</button>';
 	$printPage .=   '</div>';
@@ -1338,7 +1387,7 @@ if ( ( defined( 'BPGBP_REFRESH_TOKEN' ) && BPGBP_REFRESH_TOKEN ) && ( $eff_is_go
 	$printPage .=   '<div class="sp-page-head" data-sp-title="Client reviews"><div class="sp-page-head__eyebrow">Agency</div><h1 class="sp-page-head__title">Client reviews</h1></div>';
 	$printPage .=   '<button type="button" class="unique" id="sp-agency-reviews-refresh-btn" hidden data-sp-more-action data-sp-icon="bolt" data-sp-sub="Pull every client\'s newest reviews">Refresh reviews</button>';
 	$printPage .=   '<div class="sp-toolbar" id="sp-agency-reviews-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
+	$printPage .=     '<div class="sp-toolbar">';
 	$printPage .=       '<input type="search" id="sp-agency-client-search" class="sp-input" list="sp-agency-client-list" placeholder="Search company…" autocomplete="off">';
 	$printPage .=       '<datalist id="sp-agency-client-list"></datalist>';
 	$printPage .=       '<select id="sp-agency-filter-client" class="sp-select"><option value="">All clients</option></select>';
@@ -1413,13 +1462,13 @@ if ( in_array( 'view_surveys', $caps ) || in_array( 'manage_surveys', $caps ) ) 
 		.             '</select></label>';
 	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Source</span><select id="sp-survey-filter-source" class="sp-select"><option value="">All sources</option><option value="web">Web</option><option value="imported">Imported</option></select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-reviews-stats" id="sp-survey-summary"></div>';
+	$printPage .=   '<div class="sp-stack sp-stack-stats" id="sp-survey-summary"></div>';
 	// Active / Archived: which list you're on (the Archived tab carries the count).
 	$printPage .=   '<div class="sp-tabs" role="tablist">'
 		.             '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-survey-view="active">Active</button>'
 		.             '<button type="button" class="unique sp-tab" role="tab" data-sp-survey-view="archived">Archived <span class="sp-count sp-count--quiet" data-sp-survey-archived-count hidden></span></button>'
 		.           '</div>';
-	$printPage .=   '<div class="sp-stack sp-survey-list" id="sp-survey-list"></div>';
+	$printPage .=   '<div class="sp-stack sp-stack-survey" id="sp-survey-list"></div>';
 	$printPage .= '</div></section>';
 }
 
@@ -1459,9 +1508,13 @@ if ( in_array( 'view_routed_emails', $caps, true ) || in_array( 'manage_routed_e
 	$printPage .=   '<div class="sp-stack">';
 	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-remails-search" class="sp-input" placeholder="Search subject, sender or message" autocomplete="off"></div>';
 	$printPage .=     $sp_email_tabs;
-	$printPage .=     '<p class="sp-meta" id="sp-remails-count"></p>';
+	$printPage .=     '<div class="sp-toolbar"><button type="button" class="unique sp-filter" data-sp-remails-filters hidden>' . $svg( $icons['sliders'] ) . ' <span data-sp-remails-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button><span class="sp-meta" id="sp-remails-count"></span></div>';
 	$printPage .=   '</div>';
 	$printPage .=   '<select id="sp-remails-filter-status" class="sp-select" hidden><option value="new">New</option><option value="handled">Handled</option><option value="all">All</option></select>';
+	// The To filter, shown in the Filter sheet; options come from the list response.
+	$printPage .=   '<div hidden data-sp-remails-filter-holder>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">To</span><select id="sp-remails-filter-to" class="sp-select"><option value="">All recipients</option></select></label>';
+	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-stack" id="sp-remails-list"></div>';
 	$printPage .= '</div></section>';
 }
@@ -1538,10 +1591,62 @@ if ( $cap_jobsites ) {
 	$printPage .=   '<div hidden data-sp-job-filter-holder>';
 	$printPage .=     '<select id="sp-job-filter-status" class="sp-select"><option value="all">All statuses</option><option value="publish">Live</option><option value="draft">Drafts</option></select>';
 	// Filled by JS from the list response: All, then the current user, then everyone else who added jobs.
-	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Added by</span><select id="sp-job-filter-author" class="sp-select"><option value="0">All users</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Added by</span><select id="sp-job-filter-author" class="sp-select"><option value="">All users</option></select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-stack" id="sp-job-list"></div>';
-	$printPage .=   '<div class="sp-reviews-more" id="sp-job-more"></div>';
+	$printPage .=   '<div class="sp-stack sp-stack--center" id="sp-job-more"></div>';
+	$printPage .= '</div></section>';
+}
+
+// Events Panel — the website's events (next date, venue, live/draft) with Upcoming / Past / Drafts tabs.
+// Add/edit happens in a JS modal (dates or a repeating rule, venue, photo, description).
+if ( $cap_events ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-events"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Events"><div class="sp-page-head__eyebrow">Website</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Events</h1>'
+		.             ( $cap_events_manage ? '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-evt-add-btn" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Event</button></div>' : '' )
+		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-evt-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-evt-search" class="sp-input" placeholder="Search events" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-tabs" role="tablist">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-evt-view="upcoming">Upcoming</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-evt-view="past">Past</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-evt-view="draft">Drafts</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-evt-view="all">All</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar">'
+		.               $sp_sort( 'sp-evt-sort', [ 'soon' => 'Soonest first', 'late' => 'Latest first', 'az' => 'A–Z', 'za' => 'Z–A' ], 'soon' )
+		.               '<span class="sp-meta" id="sp-evt-count"></span></div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stack" id="sp-evt-list"></div>';
+	$printPage .= '</div></section>';
+}
+
+// Website Content Panel — type tabs (Posts / Pages / ...), status tabs, search + sort, a row per item.
+// Add/edit happens in a JS modal; the type tabs and the Add button are drawn from what the person can do.
+if ( $cap_content ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-content"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Website Content"><div class="sp-page-head__eyebrow">Website</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Website Content</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-wc-add-btn" data-sp-bar="1" data-sp-icon="plus" hidden>' . $svg( $icons['plus'] ) . ' <span id="sp-wc-add-label">Add</span></button></div>'
+		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-wc-search' )
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-tabs" role="tablist" id="sp-wc-types"></div>';
+	$printPage .=     '<div class="sp-control sp-control--lead"><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span><input type="search" id="sp-wc-search" class="sp-input" placeholder="Search" autocomplete="off"></div>';
+	$printPage .=     '<div class="sp-tabs" role="tablist" id="sp-wc-views">'
+		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-wc-view="all">All</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-wc-view="publish">Published</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-wc-view="draft">Drafts</button>'
+		.               '<button type="button" class="unique sp-tab" role="tab" data-sp-wc-view="pending">Waiting for Review</button>'
+		.             '</div>';
+	$printPage .=     '<div class="sp-toolbar">'
+		.               $sp_sort( 'sp-wc-sort', [ 'recent' => 'Recently changed', 'oldest' => 'Oldest changes', 'az' => 'A–Z', 'za' => 'Z–A' ], 'recent' )
+		.               '<span class="sp-meta" id="sp-wc-count"></span></div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stack" id="sp-wc-list"></div>';
+	$printPage .=   '<div id="sp-wc-more"></div>';
 	$printPage .= '</div></section>';
 }
 
@@ -1564,7 +1669,7 @@ if ( $cap_cc_customers ) {
 	$printPage .=   '<div class="sp-header-grid sp-panel-header"><h2>Customers</h2></div>';
 	$printPage .=   '<div class="sp-dir-searchrow">';
 	$printPage .=     '<input type="search" id="sp-cc-cust-search" class="sp-input sp-dir-search" placeholder="Search name, phone, or email…">';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-cc-cust-clear">Clear</button>';
+	$printPage .=     '<button type="button" class="unique sp-btn" id="sp-cc-cust-clear">Clear</button>';
 	$printPage .=   '</div>';
 	$printPage .=   '<div class="sp-dir-count" id="sp-cc-cust-count"></div>';
 	$printPage .=   '<div id="sp-cc-customers-list"><div class="sp-loading"></div></div>';
@@ -1584,7 +1689,7 @@ if ( $cap_cc_send ) {
 	$printPage .=     '<div class="sp-form-group"><label for="sp-cc-url">Link (optional)</label>';
 	$printPage .=       '<input type="url" id="sp-cc-url" class="sp-input" placeholder="https://…"></div>';
 	$printPage .=     '<div class="sp-cc-send-actions">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-cc-send-btn">Send Notification</button>';
+	$printPage .=       '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-cc-send-btn">Send Notification</button>';
 	$printPage .=       '<span class="sp-cc-send-result" id="sp-cc-send-result"></span>';
 	$printPage .=     '</div>';
 	$printPage .=   '</div></div>';
@@ -1610,7 +1715,7 @@ $sp_book_js_file  = get_template_directory() . '/js/script-site-pulse.min.js';
 $sp_book_js_stamp = file_exists( $sp_book_js_file )
 	? date_i18n( 'M j, Y g:i a', (int) filemtime( $sp_book_js_file ) )
 	: 'file not found on the server';
-$sp_book_tripwire  = '<div class="sp-js-tripwire">';
+$sp_book_tripwire  = '<div class="sp-notice sp-notice--warning sp-notice--block sp-js-tripwire">';
 $sp_book_tripwire .=   '<strong>The JavaScript for this screen did not run.</strong> ';
 $sp_book_tripwire .=   'Everything below is filled in by <code>script-site-pulse.min.js</code>, which the browser either did not load or loaded from an old cached copy. ';
 $sp_book_tripwire .=   'The copy on this server was last written <strong>' . esc_html( $sp_book_js_stamp ) . '</strong>. If that is older than your last upload, the file did not land. ';
@@ -1636,7 +1741,7 @@ if ( $cap_store_orders ) {
 	// No "New Order" button yet: entering an order by hand needs a product picker, and a button
 	// that does nothing is worse than no button.
 	$printPage .= '<section class="sp-panel" id="sp-panel-store-orders"><div class="sp-page">';
-	$printPage .=   '<div class="sp-page-head" data-sp-title="Orders"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Orders"><div class="sp-page-head__eyebrow">E-Commerce</div><div class="sp-page-head__row">'
 		.             '<h1 class="sp-page-head__title">Orders</h1>'
 		.             $sp_bar_btn( 1, 'search', 'Search', 'focus:#sp-store-order-search' )
 		.             '<button type="button" class="unique" hidden data-sp-bar="2" data-sp-extra data-sp-icon="truck" id="sp-store-toship-btn">To ship</button>'
@@ -1674,7 +1779,7 @@ if ( $cap_store_orders ) {
 	// Customers: everyone who has bought, with members folded in. The Everyone / Members tabs and
 	// the Give Membership button are shown by JS only while Memberships is switched on.
 	$printPage .= '<section class="sp-panel" id="sp-panel-store-customers"><div class="sp-page">';
-	$printPage .=   '<div class="sp-page-head" data-sp-title="Customers"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Customers"><div class="sp-page-head__eyebrow">E-Commerce</div><div class="sp-page-head__row">'
 		.             '<h1 class="sp-page-head__title">Customers</h1>'
 		.             '<div class="sp-page-head__actions" id="sp-store-customer-actions"></div>'
 		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-store-customer-search' )
@@ -1694,15 +1799,34 @@ if ( $cap_store_orders ) {
 	$printPage .=   '<div id="sp-store-customer-more"></div>';
 	$printPage .= '</div></section>';
 }
+if ( $cap_store_orders ) {
+	// Revenue: the whole money picture for a period — what sold by kind (products, downloads, memberships,
+	// bookings), service fees (card + Site Pulse shares), shipping, tax, refunds, best sellers, by month
+	// (sp_store_ajax_fees).
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-fees"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Revenue"><div class="sp-page-head__eyebrow">E-Commerce</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Revenue</h1>'
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     '<div class="sp-tabs" role="tablist">';
+	foreach ( [ 'month' => 'This month', 'last_month' => 'Last month', 'year' => 'Year to date', 'last_year' => 'Last year', 'all' => 'All time' ] as $sp_fee_range => $sp_fee_label ) {
+		$printPage .=   '<button type="button" class="unique sp-tab' . ( 'month' === $sp_fee_range ? ' is-active' : '' ) . '" role="tab" data-sp-store-fee-range="' . esc_attr( $sp_fee_range ) . '">' . esc_html( $sp_fee_label ) . '</button>';
+	}
+	$printPage .=     '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack" id="sp-store-fees"></div>';
+	$printPage .= '</div></section>';
+}
 if ( $cap_store_products ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-store-products"><div class="sp-page">';
-	$printPage .=   '<div class="sp-page-head" data-sp-title="Products"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
-		.             '<h1 class="sp-page-head__title">Products</h1>'
-		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-store-product-new" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Product</button></div>'
+	$printPage .=   '<div class="sp-page-head" data-sp-title="' . esc_attr( site_pulse_term( 'product', 'many' ) ) . '"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">' . esc_html( site_pulse_term( 'product', 'many' ) ) . '</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-store-product-new" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add ' . esc_html( site_pulse_term( 'product' ) ) . '</button></div>'
 		.             $sp_bar_btn( 2, 'search', 'Search', 'focus:#sp-store-product-search' )
 		.           '</div></div>';
 	$printPage .=   '<div class="sp-stack">';
-	$printPage .=     $sp_store_search( 'sp-store-product-search', 'Search products' );
+	$printPage .=     $sp_store_search( 'sp-store-product-search', 'Search ' . mb_strtolower( site_pulse_term( 'product', 'many' ) ) );
 	$printPage .=     '<div class="sp-tabs" role="tablist">'
 		.               '<button type="button" class="unique sp-tab is-active" role="tab" data-sp-store-product-status="">All</button>';
 	foreach ( sp_store_product_statuses() as $sp_sp_status => $sp_sp_label ) {
@@ -1718,7 +1842,8 @@ if ( $cap_store_products ) {
 		$printPage .=   '<option value="' . esc_attr( $sp_sp_status ) . '">' . esc_html( $sp_sp_label ) . '</option>';
 	}
 	$printPage .=     '</select>';
-	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Category</span><select id="sp-store-product-cat" class="sp-select"><option value="0">All categories</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Category</span><select id="sp-store-product-cat" class="sp-select"><option value="">All categories</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Tag</span><select id="sp-store-product-tag" class="sp-select"><option value="">All tags</option></select></label>';
 	$printPage .=   '</div>';
 	$printPage .=   $sp_book_tripwire;
 	$printPage .=   '<div class="sp-stack" id="sp-store-products"></div>';
@@ -1736,6 +1861,18 @@ if ( $cap_store_products ) {
 	$printPage .=   '<div class="sp-toolbar"><span class="sp-meta" id="sp-store-cat-count"></span></div>';
 	$printPage .=   $sp_book_tripwire;
 	$printPage .=   '<div class="sp-stack" id="sp-store-cats"></div>';
+	$printPage .= '</div></section>';
+
+	// Tags: flat labels that cut across categories (Organic, Gift Idea). Same screen shape as
+	// Categories, minus nesting. Deleting a tag never deletes products.
+	$printPage .= '<section class="sp-panel" id="sp-panel-store-tags"><div class="sp-page">';
+	$printPage .=   '<div class="sp-page-head" data-sp-title="Tags"><div class="sp-page-head__eyebrow">Store</div><div class="sp-page-head__row">'
+		.             '<h1 class="sp-page-head__title">Tags</h1>'
+		.             '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="sp-store-tag-new" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' Add Tag</button></div>'
+		.           '</div></div>';
+	$printPage .=   '<div class="sp-toolbar"><span class="sp-meta" id="sp-store-tag-count"></span></div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack" id="sp-store-tags"></div>';
 	$printPage .= '</div></section>';
 
 	$printPage .= '<section class="sp-panel" id="sp-panel-store-inventory"><div class="sp-page">';
@@ -1757,11 +1894,26 @@ if ( $cap_store_products ) {
 	$printPage .=   '<div class="sp-stack" id="sp-store-inventory"></div>';
 	$printPage .= '</div></section>';
 }
+// Settings → Profile — the signed-in person's own WordPress account (includes-site-pulse-profile.php).
+$printPage .= '<section class="sp-panel" id="sp-panel-profile"><div class="sp-page">';
+$printPage .=   '<div class="sp-page-head" data-sp-title="Profile"><div class="sp-page-head__eyebrow">Settings</div><div class="sp-page-head__row"><h1 class="sp-page-head__title">Profile</h1></div></div>';
+$printPage .=   '<div class="sp-stack" id="sp-profile"><div class="sp-loading"></div></div>';
+$printPage .= '</div></section>';
+
 if ( $cap_store_settings || $cap_store_products ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-store">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Store' ) . '</div>';
 	$printPage .=   $sp_book_tripwire;
 	$printPage .=   '<div id="sp-store-settings"><div class="sp-loading"></div></div>';
+	$printPage .= '</section>';
+}
+// Settings → E-Commerce: how the shop WORKS — payment, tax, shipping, emails and the extras
+// (memberships, agreements, downloads). Same settings endpoint as Store, the other half of the fields.
+if ( $cap_store_settings ) {
+	$printPage .= '<section class="sp-panel" id="sp-panel-admin-ecommerce">';
+	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'E-Commerce' ) . '</div>';
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div id="sp-ecom-settings"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
 
@@ -1770,61 +1922,170 @@ if ( $cap_store_settings || $cap_store_products ) {
 # Structure only; every list is filled by JS (spAjax) once the booking
 # endpoints land. Slugs match the nav children above.
 --------------------------------------------------------------*/
-if ( $cap_book_view || $cap_book_own ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-booking-calendar">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Booking', 'Calendar' );
-	if ( $cap_book_manage ) {
-		$printPage .= '<div class="sp-panel-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-new">New Booking</button></div>';
-	}
-	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-book-cal-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-cal-prev" aria-label="Previous">&lsaquo;</button>';
-	$printPage .=       '<span class="sp-toolbar-label" id="sp-book-cal-range"></span>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-cal-next" aria-label="Next">&rsaquo;</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-cal-today">Today</button>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">View</span>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cal-view active" data-view="day">Day</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cal-view" data-view="week">Week</button>';
-	$printPage .=       '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cal-view" data-view="month">Month</button>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">Resource</span>';
-	$printPage .=       '<select id="sp-book-cal-resource" class="sp-select"><option value="">All</option></select>';
-	$printPage .=     '</div>';
-	$printPage .=   '</div>';
-	$printPage .=   $sp_book_tripwire;
-	$printPage .=   '<div id="sp-book-calendar"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+if ( $cap_book_view || $cap_book_own || $cap_book_passes || $cap_book_services ) {
+	// The Booking screens, built like every converted screen: page head (eyebrow + title, the Add button
+	// lives in the bottom bar), search, tabs, one toolbar (Filter · sort · count — the 1 / 2 / cards
+	// layout toggle is added to it by initListColumns), then .sp-row lists.
+	$sp_book_head = function ( $title, $add_id = '', $add_label = '', $search_id = '', $eyebrow = 'Booking' ) use ( $svg, $icons, $sp_bar_btn ) {
+		return '<div class="sp-page-head" data-sp-title="' . esc_attr( $title ) . '"><div class="sp-page-head__eyebrow">' . esc_html( $eyebrow ) . '</div><div class="sp-page-head__row">'
+			. '<h1 class="sp-page-head__title">' . esc_html( $title ) . '</h1>'
+			. ( $add_id ? '<div class="sp-page-head__actions"><button type="button" class="unique sp-btn sp-btn--primary sp-add-btn" id="' . esc_attr( $add_id ) . '" data-sp-bar="1" data-sp-icon="plus">' . $svg( $icons['plus'] ) . ' ' . esc_html( $add_label ) . '</button></div>' : '' )
+			. ( $search_id ? $sp_bar_btn( 2, 'search', 'Search', 'focus:#' . $search_id ) : '' )
+			. '</div></div>';
+	};
+	$sp_book_search = function ( $id, $placeholder, $extra = '' ) use ( $svg, $icons ) {
+		return '<div class="sp-control sp-control--lead"' . $extra . '><span class="sp-control__icon">' . $svg( $icons['search'] ) . '</span>'
+			. '<input type="search" id="' . esc_attr( $id ) . '" class="sp-input" placeholder="' . esc_attr( $placeholder ) . '" autocomplete="off"></div>';
+	};
+	$sp_book_tabs = function ( $attr, $tabs ) {
+		$out = '<div class="sp-tabs" role="tablist">';
+		$first = true;
+		foreach ( $tabs as $value => $label ) {
+			$out .= '<button type="button" class="unique sp-tab' . ( $first ? ' is-active' : '' ) . '" role="tab" data-' . $attr . '="' . esc_attr( $value ) . '">' . esc_html( $label ) . '</button>';
+			$first = false;
+		}
+		return $out . '</div>';
+	};
+	$sp_book_filter_btn = function ( $key ) use ( $svg, $icons ) {
+		return '<button type="button" class="unique sp-filter" data-sp-' . $key . '-filters>' . $svg( $icons['sliders'] )
+			. ' <span data-sp-' . $key . '-filters-label>Filter</span> ' . $svg( $icons['chevron'] ) . '</button>';
+	};
+}
 
-	$printPage .= '<section class="sp-panel" id="sp-panel-booking-list">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Booking', 'Bookings' ) . '</div>';
-	$printPage .=   '<div class="sp-toolbar" id="sp-book-list-toolbar">';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<input type="search" id="sp-book-search" class="sp-input" placeholder="Search name, email, phone, or code&hellip;">';
-	$printPage .=     '</div>';
-	$printPage .=     '<div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">Status</span>';
-	$printPage .=       '<select id="sp-book-status" class="sp-select"><option value="upcoming">Upcoming</option>';
+if ( $cap_book_services ) {
+	// Services — what customers can book, like Store → Products. Add picks a template first; the
+	// template's rules fill the form and stay live-linked (includes-site-pulse-booking-types.php).
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-offerings"><div class="sp-page">';
+	$printPage .=   $sp_book_head( site_pulse_term( 'service', 'many' ), 'sp-book-offer-new', 'Add ' . site_pulse_term( 'service' ), 'sp-book-offer-search' );
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_book_search( 'sp-book-offer-search', 'Search ' . mb_strtolower( site_pulse_term( 'service', 'many' ) ) );
+	$printPage .=     $sp_book_tabs( 'sp-book-offer-status', [ '' => 'All', 'active' => 'Taking bookings', 'inactive' => 'Turned off' ] );
+	$printPage .=     '<div class="sp-toolbar">'
+		.               $sp_sort( 'sp-book-offer-type', [ '' => 'Every template' ], '', 'Template' )
+		.               $sp_sort( 'sp-book-offer-sort', [ 'az' => 'Name A–Z', 'za' => 'Name Z–A', 'next' => 'Next date', 'newest' => 'Newly added' ], 'az' )
+		.               '<span class="sp-meta" id="sp-book-offer-count"></span>'
+		.             '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stack" id="sp-book-offerings"><div class="sp-loading"></div></div>';
+	$printPage .= '</div></section>';
+}
+
+if ( ( $cap_book_view || $cap_book_own ) && ! site_pulse_module_on( 'store' ) ) {
+	// Customers — everyone who has booked (grouped by email). Only on a site WITHOUT the Store; with it,
+	// booking people are listed in E-Commerce → Customers (sp_store_customer_people filter).
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-customers"><div class="sp-page">';
+	$printPage .=   $sp_book_head( 'Customers', '', '', 'sp-book-cust-search' );
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_book_search( 'sp-book-cust-search', 'Search name, email or phone' );
+	$printPage .=     '<div class="sp-toolbar">'
+		.               $sp_sort( 'sp-book-cust-sort', [ 'recent' => 'Most recent', 'az' => 'Name A–Z', 'za' => 'Name Z–A', 'most' => 'Most bookings', 'spent' => 'Most paid' ], 'recent' )
+		.               '<span class="sp-meta" id="sp-book-cust-count"></span>'
+		.             '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div class="sp-stack" id="sp-book-customers"></div>';
+	$printPage .=   '<div id="sp-book-cust-more"></div>';
+	$printPage .= '</div></section>';
+}
+
+if ( $cap_book_view || $cap_book_own ) {
+	// Reservations (was Current Bookings) — one screen, two ways to look: List or Calendar (tabs), over a Day / Week / Month
+	// span moved with the ‹ › arrows. Status + resource live in the Filter sheet.
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-calendar"><div class="sp-page">';
+	$printPage .=   $sp_book_head( 'Calendar', $cap_book_manage ? 'sp-book-new' : '', 'New Booking', 'sp-book-search' );
+	$printPage .=   $sp_book_tripwire;
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_book_search( 'sp-book-search', 'Search name, email, phone or booking code', ' data-sp-book-listonly' );
+	$printPage .=     $sp_book_tabs( 'sp-book-mode', [ 'calendar' => 'Calendar', 'list' => 'List' ] );
+	$printPage .=     '<div class="sp-toolbar">'
+		.               $sp_book_filter_btn( 'book' )
+		.               $sp_sort( 'sp-book-cal-span', [ 'day' => 'Day', 'week' => 'Week', 'month' => 'Month' ], 'month', 'Show' )
+		.               '<div class="sp-book-period">'
+		.                 '<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-book-period__prev" id="sp-book-cal-prev" aria-label="Previous">' . $svg( $icons['chevron-right'] ) . '</button>'
+		.                 '<span class="sp-book-period__label" id="sp-book-cal-range"></span>'
+		.                 '<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm" id="sp-book-cal-next" aria-label="Next">' . $svg( $icons['chevron-right'] ) . '</button>'
+		.                 '<button type="button" class="unique sp-filter" id="sp-book-cal-today">Today</button>'
+		.               '</div>'
+		.               '<span class="sp-meta" id="sp-book-count"></span>'
+		.             '</div>';
+	$printPage .=   '</div>';
+	$printPage .=   '<div hidden data-sp-book-filter-holder>';
+	// '' = no filter (Active), so the Filter button only counts a choice someone actually made.
+	$printPage .=     '<label class="sp-field" data-sp-filter-field data-sp-book-status-field><span class="sp-field__label">Status</span><select id="sp-book-status" class="sp-select"><option value="">Active</option>';
 	foreach ( sp_book_statuses() as $sp_bk_status => $sp_bk_label ) {
 		$printPage .=   '<option value="' . esc_attr( $sp_bk_status ) . '">' . esc_html( $sp_bk_label ) . '</option>';
 	}
-	$printPage .=       '<option value="">All</option></select>';
-	$printPage .=     '</div>';
+	$printPage .=     '<option value="all">Every status</option></select></label>';
+	$printPage .=     '<label class="sp-field" data-sp-filter-field><span class="sp-field__label">Resource</span><select id="sp-book-cal-resource" class="sp-select"><option value="">Everyone</option></select></label>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-table-card" id="sp-book-list"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-book-list" hidden></div>';
+	$printPage .=   '<div id="sp-book-calendar"><div class="sp-loading"></div></div>';
+	$printPage .= '</div></section>';
 }
+
 if ( $cap_book_passes ) {
-	$printPage .= '<section class="sp-panel" id="sp-panel-booking-passes">';
-	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Booking', 'Passes & Memberships' );
-	$printPage .=     '<div class="sp-panel-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-pass-new">Issue Pass</button></div>';
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-passes"><div class="sp-page">';
+	$printPage .=   $sp_book_head( 'Memberships', 'sp-book-pass-new', 'Add Membership', 'sp-book-pass-search' );
+	$printPage .=   '<div class="sp-stack">';
+	$printPage .=     $sp_book_search( 'sp-book-pass-search', 'Search customer or membership' );
+	$printPage .=     $sp_book_tabs( 'sp-book-pass-tab', [ 'active' => 'Active', 'cancelled' => 'Cancelled', 'all' => 'All' ] );
+	$printPage .=     '<div class="sp-toolbar">' . $sp_sort( 'sp-book-pass-sort', [ 'newest' => 'Newest first', 'az' => 'Customer A–Z', 'za' => 'Customer Z–A' ], 'newest' ) . '<span class="sp-meta" id="sp-book-pass-count"></span></div>';
 	$printPage .=   '</div>';
-	$printPage .=   '<div class="sp-table-card" id="sp-book-passes"><div class="sp-loading"></div></div>';
-	$printPage .= '</section>';
+	$printPage .=   '<div class="sp-stack" id="sp-book-passes"></div>';
+	$printPage .= '</div></section>';
 }
+
+if ( $cap_book_services || in_array( 'manage_booking_settings', $caps ) ) {
+	// Staff & Hours — who does the work and when (moved out of Settings: salons change shifts weekly).
+	// Same element ids as before, so the Booking admin JS renders them wherever they sit.
+	$printPage .= '<section class="sp-panel" id="sp-panel-booking-staff"><div class="sp-page">';
+	$printPage .=   $sp_book_head( 'Staff & Hours' );
+	$printPage .=   $sp_book_tripwire;
+	// Resources -- whatever can only be in one place at a time.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-resources">';
+	$printPage .=     '<h3>Staff &amp; Resources</h3>';
+	$printPage .=     '<p class="sp-help-text">Everyone (or everything) that can be booked: a stylist, a technician, an instructor, a treatment room, a truck. Each one can only be in one place at a time, so two customers can never book the same person for the same time. Link a staff member to their Site Pulse login and you can give them a calendar that shows only their own bookings.</p>';
+	$printPage .=     '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--primary sp-btn-tiny" id="sp-book-add-resource">Add Staff or Resource</button></div>';
+	$printPage .=     '<div id="sp-book-resources-list"><div class="sp-loading"></div></div>';
+	$printPage .=   '</div>';
+
+	// Availability -- the weekly template, plus dated exceptions on top of it.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-availability">';
+	$printPage .=     '<h3>Working Hours</h3>';
+	$printPage .=     '<p class="sp-help-text">The hours each person normally works, day by day. Customers can only book inside these hours. Use Date Exceptions for holidays, vacation, or an extra day.</p>';
+	$printPage .=     '<div class="sp-toolbar"><div class="sp-toolbar">';
+	$printPage .=       '<span class="sp-toolbar-label">Staff</span>';
+	$printPage .=       '<select id="sp-book-avail-resource" class="sp-select"></select>';
+	$printPage .=     '</div></div>';
+	$printPage .=     '<div id="sp-book-hours"><div class="sp-loading"></div></div>';
+	$printPage .=     '<h4 class="sp-book-subhead">Date Exceptions</h4>';
+	$printPage .=     '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn-tiny" id="sp-book-add-exception">Add Exception</button></div>';
+	$printPage .=     '<div id="sp-book-exceptions"></div>';
+	$printPage .=   '</div>';
+
+	// Preview -- runs the real availability engine against the rules above.
+	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-preview">';
+	$printPage .=     '<h3>Check What Customers See</h3>';
+	$printPage .=     '<p class="sp-help-text">Pick a service and some dates to see exactly which times a customer would be offered, using your real hours, bookings and rules. If a day shows nothing, it lists the open hours it started from so you can see why.</p>';
+	$printPage .=     '<div class="sp-toolbar">';
+	$printPage .=       '<div class="sp-toolbar"><span class="sp-toolbar-label">Service</span>';
+	$printPage .=         '<select id="sp-book-preview-service" class="sp-select"></select></div>';
+	$printPage .=       '<div class="sp-toolbar"><span class="sp-toolbar-label">Staff</span>';
+	$printPage .=         '<select id="sp-book-preview-resource" class="sp-select"><option value="0">Any</option></select></div>';
+	$printPage .=       '<div class="sp-toolbar"><span class="sp-toolbar-label">From</span>';
+	$printPage .=         '<input type="date" id="sp-book-preview-from" class="sp-input"></div>';
+	$printPage .=       '<div class="sp-toolbar"><span class="sp-toolbar-label">To</span>';
+	$printPage .=         '<input type="date" id="sp-book-preview-to" class="sp-input"></div>';
+	$printPage .=       '<div class="sp-toolbar">';
+	$printPage .=         '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-book-preview-run">Preview</button></div>';
+	$printPage .=     '</div>';
+	$printPage .=     '<div id="sp-book-preview-out"></div>';
+	$printPage .=   '</div>';
+
+	$printPage .= '</div></section>';
+}
+
 if ( $cap_book_services || in_array( 'manage_booking_settings', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-booking">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Booking' ) . '</div>';
@@ -1837,35 +2098,33 @@ if ( $cap_book_services || in_array( 'manage_booking_settings', $caps ) ) {
 	// a line of help, then the controls. The action button sits in its own right-aligned row
 	// rather than beside the heading, so the heading stays centred like every other card.
 
-	// Services -- what a customer picks and pays for.
-	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-services">';
-	$printPage .=     '<h3>Services</h3>';
-	$printPage .=     '<p class="sp-help-text">What a customer books. Each one carries its own length, spacing, travel buffer and notice period.</p>';
-	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-book-add-service">Add Service</button></div>';
-	$printPage .=     '<div class="sp-table-card" id="sp-book-services-list"><div class="sp-loading"></div></div>';
-	$printPage .=   '</div>';
+	// Booking Types + Membership Types first: what can be booked and the memberships on offer. The
+	// cards below (resources, hours, travel) are what those types are delivered with.
+	if ( $cap_book_services ) {
+		$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-names">';
+		$printPage .=     '<h3>What You Call Them</h3>';
+		$printPage .=     '<p class="sp-help-text">The word Site Pulse uses for what people book: Services for a contractor, Retreats for a retreat center, Classes for a studio. Leave blank for Service / Services.</p>';
+		$printPage .=     '<div class="sp-grid">'
+			.               '<div class="sp-form-group"><label for="sp-book-name-one">One</label><input type="text" id="sp-book-name-one" class="sp-input" maxlength="30" placeholder="Service" value="' . esc_attr( trim( sp_book_get_setting( 'name_one', '' ) ) ) . '"></div>'
+			.               '<div class="sp-form-group"><label for="sp-book-name-many">Several</label><input type="text" id="sp-book-name-many" class="sp-input" maxlength="30" placeholder="Services" value="' . esc_attr( trim( sp_book_get_setting( 'name_many', '' ) ) ) . '"></div>'
+			.             '</div>';
+		$printPage .=     '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-book-names-save">Save</button></div>';
+		$printPage .=   '</div>';
 
-	// Resources -- whatever can only be in one place at a time.
-	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-resources">';
-	$printPage .=     '<h3>Resources</h3>';
-	$printPage .=     '<p class="sp-help-text">The person, room or unit that gets booked &mdash; whatever can only be in one place at a time. Link one to a Site Pulse user and that person can be given a calendar limited to their own bookings.</p>';
-	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-book-add-resource">Add Resource</button></div>';
-	$printPage .=     '<div class="sp-table-card" id="sp-book-resources-list"><div class="sp-loading"></div></div>';
-	$printPage .=   '</div>';
+		$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-types">';
+		$printPage .=     '<h3>' . esc_html( site_pulse_term( 'service' ) ) . ' Templates</h3>';
+		$printPage .=     '<p class="sp-help-text">Starting points for the services you offer: a class, a class series, a one-on-one appointment, a service call. Each template holds your usual settings (length, price, seats, how far ahead people can book, payment). When you add a service under Booking &rarr; Services, you pick a template and those settings fill in. Services keep following their template: change a setting here and every service that hasn&rsquo;t changed that setting for itself updates too.</p>';
+		$printPage .=     '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--primary sp-btn-tiny" id="sp-book-add-type">Add Template</button></div>';
+		$printPage .=     '<div class="sp-stack" id="sp-book-types-list"></div>';
+		$printPage .=   '</div>';
 
-	// Availability -- the weekly template, plus dated exceptions on top of it.
-	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-availability">';
-	$printPage .=     '<h3>Availability</h3>';
-	$printPage .=     '<p class="sp-help-text">The hours each resource normally works. Exceptions below are layered on top for holidays, time off, or a one-off extra day.</p>';
-	$printPage .=     '<div class="sp-toolbar"><div class="sp-toolbar-group">';
-	$printPage .=       '<span class="sp-toolbar-label">Resource</span>';
-	$printPage .=       '<select id="sp-book-avail-resource" class="sp-select"></select>';
-	$printPage .=     '</div></div>';
-	$printPage .=     '<div id="sp-book-hours"><div class="sp-loading"></div></div>';
-	$printPage .=     '<h4 class="sp-book-subhead">Date Exceptions</h4>';
-	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-book-add-exception">Add Exception</button></div>';
-	$printPage .=     '<div id="sp-book-exceptions"></div>';
-	$printPage .=   '</div>';
+		$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-plans">';
+		$printPage .=     '<h3>Membership Types</h3>';
+		$printPage .=     '<p class="sp-help-text">The memberships and session packs you sell. Set each one up here once, then give it to a customer under Booking &rarr; Memberships &mdash; the terms fill in for you. Changing a type doesn&rsquo;t change anyone already on it.</p>';
+		$printPage .=     '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--primary sp-btn-tiny" id="sp-book-add-plan">Add Membership Type</button></div>';
+		$printPage .=     '<div class="sp-stack" id="sp-book-plans-list"></div>';
+		$printPage .=   '</div>';
+	}
 
 	// Travel time -- the straight-line-to-driving-time conversion. No API; this is the arithmetic
 	// the scheduler runs on, and every metro needs its own numbers.
@@ -1873,34 +2132,7 @@ if ( $cap_book_services || in_array( 'manage_booking_settings', $caps ) ) {
 	$printPage .=     '<h3>Travel Time</h3>';
 	$printPage .=     '<p class="sp-help-text">How straight-line distance between two ZIP codes is turned into driving minutes. These only ever <strong>raise</strong> a service&rsquo;s buffer, never lower it &mdash; if the minimum you set is already enough, it stands. Defaults are calibrated for Dallas; tune them for your own area.</p>';
 	$printPage .=     '<div id="sp-book-travel-out"><div class="sp-loading"></div></div>';
-	$printPage .=     '<div class="sp-book-card-actions sp-book-card-actions-end"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-travel-save">Save Travel Settings</button></div>';
-	$printPage .=   '</div>';
-
-	// Membership plans -- the products she sells, defined once and reused when issuing.
-	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-plans">';
-	$printPage .=     '<h3>Membership Plans</h3>';
-	$printPage .=     '<p class="sp-help-text">The memberships and session packs you sell. Define each one here once, then issue it to a customer under Booking &rarr; Passes &amp; Memberships &mdash; the terms are filled in for you. Editing a plan does not change anyone already on it.</p>';
-	$printPage .=     '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-btn-tiny" id="sp-book-add-plan">Add Plan</button></div>';
-	$printPage .=     '<div class="sp-table-card" id="sp-book-plans-list"><div class="sp-loading"></div></div>';
-	$printPage .=   '</div>';
-
-	// Preview -- runs the real availability engine against the rules above.
-	$printPage .=   '<div class="sp-card sp-settings-card" id="sp-book-admin-preview">';
-	$printPage .=     '<h3>Preview Availability</h3>';
-	$printPage .=     '<p class="sp-help-text">Runs the live booking engine against the settings above and shows exactly what a customer would be offered &mdash; plus the open hours each day was built from, so an empty day explains itself.</p>';
-	$printPage .=     '<div class="sp-toolbar">';
-	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">Service</span>';
-	$printPage .=         '<select id="sp-book-preview-service" class="sp-select"></select></div>';
-	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">Resource</span>';
-	$printPage .=         '<select id="sp-book-preview-resource" class="sp-select"><option value="0">Any</option></select></div>';
-	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">From</span>';
-	$printPage .=         '<input type="date" id="sp-book-preview-from" class="sp-input"></div>';
-	$printPage .=       '<div class="sp-toolbar-group"><span class="sp-toolbar-label">To</span>';
-	$printPage .=         '<input type="date" id="sp-book-preview-to" class="sp-input"></div>';
-	$printPage .=       '<div class="sp-toolbar-group">';
-	$printPage .=         '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-preview-run">Preview</button></div>';
-	$printPage .=     '</div>';
-	$printPage .=     '<div id="sp-book-preview-out"></div>';
+	$printPage .=     '<div class="sp-toolbar sp-toolbar--end sp-book-card-actions-end"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-book-travel-save">Save Travel Settings</button></div>';
 	$printPage .=   '</div>';
 
 	// Notifications -- confirmations, reminders, change notices. Queued, never sent inline.
@@ -1908,7 +2140,7 @@ if ( $cap_book_services || in_array( 'manage_booking_settings', $caps ) ) {
 	$printPage .=     '<h3>Notifications</h3>';
 	$printPage .=     '<p class="sp-help-text">Confirmations, reminders and change notices sent to the customer. Nothing sends immediately &mdash; messages are queued and delivered by the background sweep, so a reminder still goes out even if the exact minute is missed.</p>';
 	$printPage .=     '<div id="sp-book-notify-out"><div class="sp-loading"></div></div>';
-	$printPage .=     '<div class="sp-book-card-actions sp-book-card-actions-end"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-notify-save">Save Notifications</button></div>';
+	$printPage .=     '<div class="sp-toolbar sp-toolbar--end sp-book-card-actions-end"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-book-notify-save">Save Notifications</button></div>';
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -1938,22 +2170,22 @@ if ( $cap_forms_area ) {
 		$printPage .= '<section class="sp-panel sp-forms-panel" id="sp-panel-forms-' . esc_attr( $sp_cat ) . '" data-forms-cat="' . esc_attr( $sp_cat ) . '">';
 		$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Forms', $sp_form_label );
 		if ( $cap_upload_forms ) {
-			$printPage .= '<button type="button" class="unique sp-btn sp-btn-primary sp-forms-upload-btn">+ Upload Form</button>';
+			$printPage .= '<button type="button" class="unique sp-btn sp-btn--primary sp-forms-upload-btn">+ Upload Form</button>';
 		}
 		$printPage .=   '</div>';
 		// Sub-folder filter chips — only when this repository has sub-folders.
 		if ( $sp_subs ) {
 			$printPage .= '<div class="sp-forms-subchips" data-forms-subchips>';
-			$printPage .=   '<button type="button" class="unique sp-chip sp-forms-subchip active" data-sub="">All</button>';
-			foreach ( $sp_subs as $sk => $sl ) $printPage .= '<button type="button" class="unique sp-chip sp-forms-subchip" data-sub="' . esc_attr( $sk ) . '">' . esc_html( $sl ) . '</button>';
+			$printPage .=   '<button type="button" class="unique sp-filter sp-forms-subchip is-active" data-sub="">All</button>';
+			foreach ( $sp_subs as $sk => $sl ) $printPage .= '<button type="button" class="unique sp-filter sp-forms-subchip" data-sub="' . esc_attr( $sk ) . '">' . esc_html( $sl ) . '</button>';
 			$printPage .= '</div>';
 		}
 
 		// Upload / replace form (hidden until "Upload Form" or a row's "Replace" is clicked).
 		if ( $cap_upload_forms ) {
-			$printPage .= '<div class="sp-forms-upload-wrap" hidden>';
+			$printPage .= '<div class="sp-card sp-forms-upload-wrap" hidden>';
 			$printPage .=   '<form class="sp-forms-upload-form">';
-			$printPage .=     '<h3 class="sp-forms-upload-title unique">Upload Form</h3>';
+			$printPage .=     '<h3 class="sp-card__title sp-forms-upload-title unique">Upload Form</h3>';
 			$printPage .=     '<input type="hidden" class="sp-forms-edit-id" value="">';
 			$printPage .=     '<div class="sp-form-group"><label>Name</label><input type="text" class="sp-input sp-forms-field-name" maxlength="200" placeholder="e.g. Line Check Sheet" required></div>';
 			if ( $sp_subs ) {
@@ -1962,33 +2194,33 @@ if ( $cap_forms_area ) {
 				$printPage .= '</select></div>';
 			}
 			$printPage .=     '<div class="sp-form-group"><label class="sp-forms-file-label">File</label><input type="file" class="sp-input sp-forms-field-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.webp"></div>';
-			$printPage .=     '<p class="sp-forms-replace-note unique" hidden>Leave the file empty to keep the current file and only rename/retype.</p>';
-			$printPage .=     '<div class="sp-forms-upload-status" hidden></div>';
-			$printPage .=     '<div class="sp-forms-upload-buttons"><button type="submit" class="unique sp-btn sp-btn-primary sp-forms-save-btn">Upload</button><button type="button" class="unique sp-btn sp-btn-secondary sp-forms-cancel-btn">Cancel</button></div>';
+			$printPage .=     '<p class="sp-field__hint sp-forms-replace-note unique" hidden>Leave the file empty to keep the current file and only rename/retype.</p>';
+			$printPage .=     '<div class="sp-field__hint sp-forms-upload-status" hidden></div>';
+			$printPage .=     '<div class="sp-toolbar"><button type="submit" class="unique sp-btn sp-btn--primary sp-forms-save-btn">Upload</button><button type="button" class="unique sp-btn sp-forms-cancel-btn">Cancel</button></div>';
 			$printPage .=   '</form>';
 			$printPage .= '</div>';
 		}
 
 		// Bulk-actions row (the search box sits on its own row directly above the table, below).
-		$printPage .=   '<div class="sp-forms-toolbar">';
-		$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-download-selected" disabled>Download selected</button>';
+		$printPage .=   '<div class="sp-toolbar sp-toolbar--end">';
+		$printPage .=     '<button type="button" class="unique sp-btn sp-forms-download-selected" disabled>Download selected</button>';
 		if ( $cap_upload_forms ) {
-			$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-selected" disabled>Move selected</button>';
-			$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-delete-selected" disabled>Delete selected</button>';
+			$printPage .= '<button type="button" class="unique sp-btn sp-forms-move-selected" disabled>Move selected</button>';
+			$printPage .= '<button type="button" class="unique sp-btn sp-forms-delete-selected" disabled>Delete selected</button>';
 		}
 		$printPage .=   '</div>';
 		if ( $cap_upload_forms ) {
-			$printPage .= '<div class="sp-forms-move-wrap" hidden>';
+			$printPage .= '<div class="sp-card sp-card--inset sp-toolbar sp-forms-move-wrap" hidden>';
 			$printPage .=   '<span class="unique sp-forms-move-label">Move selected to:</span>';
 			$printPage .=   '<select class="sp-select sp-forms-move-target"><option value="">— Choose repository —</option>' . $sp_move_opts . '</select>';
-			$printPage .=   '<button type="button" class="unique sp-btn sp-btn-primary sp-forms-move-go">Move</button>';
-			$printPage .=   '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-cancel">Cancel</button>';
+			$printPage .=   '<button type="button" class="unique sp-btn sp-btn--primary sp-forms-move-go">Move</button>';
+			$printPage .=   '<button type="button" class="unique sp-btn sp-forms-move-cancel">Cancel</button>';
 			$printPage .= '</div>';
 		}
 		$printPage .=   '<div class="sp-forms-searchbar"><input type="search" class="sp-input sp-forms-search" placeholder="Search names…" aria-label="Search form names"></div>';
-		$printPage .=   '<div class="sp-card sp-table-card">';
+		$printPage .=   '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card">';
 		$printPage .=     '<table class="sp-table sp-forms-table">';
-		$printPage .=       '<thead class="sp-thead"><tr>';
+		$printPage .=       '<thead><tr>';
 		$printPage .=         '<th class="sp-forms-check-col"><input type="checkbox" class="sp-forms-check-all" aria-label="Select all forms"></th>';
 		$printPage .=         '<th class="sp-forms-sort" data-sort="name">Name</th>';
 		$printPage .=         '<th class="sp-forms-sort" data-sort="category_label">Repository</th>';
@@ -1998,7 +2230,7 @@ if ( $cap_forms_area ) {
 		$printPage .=       '</tr></thead>';
 		$printPage .=       '<tbody class="sp-forms-tbody"></tbody>';
 		$printPage .=     '</table>';
-		$printPage .=     '<div class="sp-forms-empty" hidden><p>No forms here yet.</p></div>';
+		$printPage .=     '<div class="sp-empty sp-forms-empty" hidden><p>No forms here yet.</p></div>';
 		$printPage .=   '</div>';
 		$printPage .= '</section>';
 	}
@@ -2007,25 +2239,25 @@ if ( $cap_forms_area ) {
 	// big search box filters titles live; a Repository column shows where each form lives.
 	$printPage .= '<section class="sp-panel sp-forms-panel sp-forms-all" id="sp-panel-forms-all" data-forms-cat="all">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Forms', 'All' ) . '</div>';
-	$printPage .=   '<div class="sp-forms-toolbar sp-forms-toolbar-all">';
-	$printPage .=     '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-download-selected" disabled>Download selected</button>';
+	$printPage .=   '<div class="sp-toolbar sp-toolbar--end sp-forms-toolbar-all">';
+	$printPage .=     '<button type="button" class="unique sp-btn sp-forms-download-selected" disabled>Download selected</button>';
 	if ( $cap_upload_forms ) {
-		$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-selected" disabled>Move selected</button>';
-		$printPage .= '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-delete-selected" disabled>Delete selected</button>';
+		$printPage .= '<button type="button" class="unique sp-btn sp-forms-move-selected" disabled>Move selected</button>';
+		$printPage .= '<button type="button" class="unique sp-btn sp-forms-delete-selected" disabled>Delete selected</button>';
 	}
 	$printPage .=   '</div>';
 	if ( $cap_upload_forms ) {
-		$printPage .= '<div class="sp-forms-move-wrap" hidden>';
+		$printPage .= '<div class="sp-card sp-card--inset sp-toolbar sp-forms-move-wrap" hidden>';
 		$printPage .=   '<span class="unique sp-forms-move-label">Move selected to:</span>';
 		$printPage .=   '<select class="sp-select sp-forms-move-target"><option value="">— Choose repository —</option>' . $sp_move_opts . '</select>';
-		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-primary sp-forms-move-go">Move</button>';
-		$printPage .=   '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-move-cancel">Cancel</button>';
+		$printPage .=   '<button type="button" class="unique sp-btn sp-btn--primary sp-forms-move-go">Move</button>';
+		$printPage .=   '<button type="button" class="unique sp-btn sp-forms-move-cancel">Cancel</button>';
 		$printPage .= '</div>';
 	}
 	$printPage .=   '<div class="sp-forms-searchbar"><input type="search" class="sp-input sp-forms-search sp-forms-filter-all" placeholder="Search all forms by name…" aria-label="Search all forms"></div>';
-	$printPage .=   '<div class="sp-card sp-table-card">';
+	$printPage .=   '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card">';
 	$printPage .=     '<table class="sp-table sp-forms-table sp-forms-table-all">';
-	$printPage .=       '<thead class="sp-thead"><tr>';
+	$printPage .=       '<thead><tr>';
 	$printPage .=         '<th class="sp-forms-check-col"><input type="checkbox" class="sp-forms-check-all" aria-label="Select all forms"></th>';
 	$printPage .=         '<th class="sp-forms-sort" data-sort="name">Name</th>';
 	$printPage .=         '<th class="sp-forms-sort" data-sort="category_label">Repository</th>';
@@ -2035,7 +2267,7 @@ if ( $cap_forms_area ) {
 	$printPage .=       '</tr></thead>';
 	$printPage .=       '<tbody class="sp-forms-tbody"></tbody>';
 	$printPage .=     '</table>';
-	$printPage .=     '<div class="sp-forms-empty" hidden><p>No forms here yet.</p></div>';
+	$printPage .=     '<div class="sp-empty sp-forms-empty" hidden><p>No forms here yet.</p></div>';
 	$printPage .=   '</div>';
 	$printPage .= '</section>';
 }
@@ -2052,7 +2284,7 @@ if ( in_array( 'manage_form_repositories', $caps ) ) {
 if ( in_array( 'manage_users', $caps ) ) {
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-users">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Users' ) . '</div>';
-	$printPage .=   '<div class="sp-admin-content" id="sp-admin-users-content"></div>';
+	$printPage .=   '<div class="sp-admin-content sp-stack" id="sp-admin-users-content"></div>';
 	$printPage .= '</section>';
 }
 if ( in_array( 'manage_roles', $caps ) ) {
@@ -2093,7 +2325,7 @@ if ( in_array( 'manage_ai_prompts', $caps ) ) {
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-ai-roles-content"><div class="sp-loading"></div></div>';
 	$printPage .= '</section>';
 }
-if ( in_array( 'manage_notifications', $caps ) ) {
+{ // everyone — personal notification choices (+ app-wide switches for god / System Admin)
 	$printPage .= '<section class="sp-panel" id="sp-panel-admin-notifications">';
 	$printPage .=   '<div class="sp-header-grid sp-panel-header">' . $sp_crumb( 'Settings', 'Notifications' ) . '</div>';
 	$printPage .=   '<div class="sp-admin-content" id="sp-admin-notifications-content"></div>';

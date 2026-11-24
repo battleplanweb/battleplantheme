@@ -33,9 +33,15 @@ get_header(); ?>
 				echo '</div>';
 			}
 
-			$sp_store_terms = get_the_term_list( get_the_ID(), 'bp_product_cat', '<p class="store-single-cats">', ', ', '</p>' );
+			// Skipped when the site moved the list into the product details (sp_store_product_setup 'terms').
+			$sp_store_terms = sp_store_terms_moved( 'bp_product_cat' ) ? '' : get_the_term_list( get_the_ID(), 'bp_product_cat', '<p class="store-single-cats">', ', ', '</p>' );
 			if ( $sp_store_terms && ! is_wp_error( $sp_store_terms ) ) {
 				echo $sp_store_terms;
+			}
+
+			$sp_store_tags = sp_store_terms_moved( 'bp_product_tag' ) ? '' : get_the_term_list( get_the_ID(), 'bp_product_tag', '<p class="store-single-tags">', ', ', '</p>' );
+			if ( $sp_store_tags && ! is_wp_error( $sp_store_tags ) ) {
+				echo $sp_store_tags;
 			}
 
 		endwhile; ?>

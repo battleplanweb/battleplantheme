@@ -214,13 +214,13 @@ add_action( 'delete_user', function ( $user_id ) {
 // The app's notifications go to the Site Pulse bell (its own bell is hidden in the panel). related_type
 // carries the view to open — `schedules:{view}` — so a click lands where the Approve / Accept lives.
 add_filter( 'schedules_route_notification', function ( $handled, $row ) {
-	if ( $handled || ! sp_schedules_module_on() || ! function_exists( 'site_pulse_notify' ) ) return $handled;
+	if ( $handled || ! sp_schedules_module_on() || ! function_exists( 'site_pulse_deliver' ) ) return $handled;
 	$type = (string) ( $row['type'] ?? '' );
 	if ( strpos( $type, 'timeoff_request' ) === 0 )  $view = 'coverage';   // supervisor: PDO Requests
 	elseif ( strpos( $type, 'timeoff_' ) === 0 )     $view = 'schedule';   // member: their request decided
 	elseif ( strpos( $type, 'sick_' ) === 0 )        $view = 'members';
 	else                                             $view = 'coverage';   // every cover_* step
-	site_pulse_notify( (int) ( $row['user_id'] ?? 0 ), 'schedules_' . $type, (string) ( $row['message'] ?? '' ), (int) ( $row['related_id'] ?? 0 ), 'schedules:' . $view );
+	site_pulse_deliver( (int) ( $row['user_id'] ?? 0 ), 'schedules_' . $type, (string) ( $row['message'] ?? '' ), (int) ( $row['related_id'] ?? 0 ), 'schedules:' . $view );
 	return true;
 }, 10, 2 );
 

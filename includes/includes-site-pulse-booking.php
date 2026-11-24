@@ -43,6 +43,10 @@ require_once get_template_directory() . '/includes/includes-site-pulse-booking-c
 require_once get_template_directory() . '/includes/includes-site-pulse-booking-notify.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-booking-passes.php';
 require_once get_template_directory() . '/includes/includes-site-pulse-booking-travel.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-booking-sessions.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-booking-events.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-booking-types.php';
+require_once get_template_directory() . '/includes/includes-site-pulse-booking-public.php';
 
 /*--------------------------------------------------------------
 # Constants & Table Helper
@@ -51,7 +55,7 @@ require_once get_template_directory() . '/includes/includes-site-pulse-booking-t
 // Booking owns its own schema version, separate from SITE_PULSE_DB_VERSION, so a
 // booking schema change doesn't re-run dbDelta across all ~40 core Site Pulse
 // tables on every install in the fleet (and vice versa). Same idiom as Fleet.
-define( 'SITE_PULSE_BOOKING_DB_VERSION', '1.8' );
+define( 'SITE_PULSE_BOOKING_DB_VERSION', '1.10' );
 
 /**
  * All booking tables live under the site_pulse_booking_ prefix, so the whole
@@ -400,6 +404,7 @@ function sp_book_install_db(): void {
 		id int(11) NOT NULL AUTO_INCREMENT,
 		name varchar(255) NOT NULL,
 		slug varchar(100) NOT NULL,
+		type_id int(11) NOT NULL DEFAULT 0,
 		mode varchar(20) NOT NULL DEFAULT 'appointment',
 		description text DEFAULT NULL,
 		duration_min int(11) NOT NULL DEFAULT 60,
@@ -437,7 +442,22 @@ function sp_book_install_db(): void {
 		updated_at datetime NOT NULL,
 		PRIMARY KEY  (id),
 		UNIQUE KEY slug (slug),
+		KEY type_id (type_id),
 		KEY status (status)
+	) $charset;";
+
+	// ---- Booking types: the templates offerings are made from (includes-site-pulse-booking-types.php).
+	// rules = JSON of the inheritable values; offerings follow them live except their overrides. (1.10)
+	$sql .= "CREATE TABLE " . sp_book_table( 'types' ) . " (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		name varchar(150) NOT NULL,
+		kind varchar(20) NOT NULL DEFAULT 'appointment',
+		description text DEFAULT NULL,
+		rules longtext DEFAULT NULL,
+		display_order int(11) NOT NULL DEFAULT 0,
+		created_at datetime NOT NULL,
+		updated_at datetime NOT NULL,
+		PRIMARY KEY  (id)
 	) $charset;";
 
 	// ---- Which resources can deliver which service (many-to-many).
@@ -535,6 +555,8 @@ function sp_book_install_db(): void {
 	// contact details, so a guest booking on a Site-Pulse-only site is complete
 	// on its own and a later account link never loses what was actually entered.
 	// slot_guard is the hard double-booking guarantee — see sp_book_slot_guard().
+	// group_id ties a SERIES enrollment together (one booking per date): every row in the group,
+	// the lead included, carries the lead's id. 0 = an ordinary single booking. (1.9)
 	$sql .= "CREATE TABLE " . sp_book_table( 'bookings' ) . " (
 		id int(11) NOT NULL AUTO_INCREMENT,
 		code varchar(20) NOT NULL,
@@ -542,6 +564,7 @@ function sp_book_install_db(): void {
 		service_id int(11) NOT NULL,
 		resource_id int(11) NOT NULL DEFAULT 0,
 		session_id int(11) NOT NULL DEFAULT 0,
+		group_id int(11) NOT NULL DEFAULT 0,
 		starts_at datetime NOT NULL,
 		ends_at datetime NOT NULL,
 		slot_guard varchar(64) DEFAULT NULL,
@@ -582,6 +605,7 @@ function sp_book_install_db(): void {
 		KEY starts_at (starts_at),
 		KEY resource_time (resource_id, starts_at),
 		KEY session_id (session_id),
+		KEY group_id (group_id),
 		KEY customer_id (customer_id),
 		KEY status (status),
 		KEY hold_expires_at (hold_expires_at),

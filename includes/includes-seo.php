@@ -1120,14 +1120,16 @@ function bp_seo_token_script() {
 
 /*--------------------------------------------------------------
 # §11b. AI writer — "✨ Write with AI" on SEO Title + Meta Description
-# Reads the page (title, editor body, Page Top/Bottom) and asks Claude for a
-# value built from the click-to-insert tokens. The result is measured RENDERED
-# (tokens resolved, shortcodes run — what Google actually sees) and sent back
-# for a rewrite if it runs long or types out a value a token already provides.
+# Reads the page (headings, editor body, Page Top/Bottom) and asks Claude to work
+# out the phrase a customer would search for, then write the value from that. The
+# page name is only a nav label, so %%title%% is never offered to the writer. The
+# result is measured RENDERED (tokens resolved, shortcodes run — what Google actually
+# sees) and sent back for a rewrite if it runs long, types out a value a token already
+# provides, or just restates the page name.
 # Only fills the field; nothing is saved until the post is updated.
 # Uses the same API key as AI alt text (functions-ai-alt.php).
 --------------------------------------------------------------*/
-if ( ! defined('BP_SEO_AI_MODEL') ) define('BP_SEO_AI_MODEL', 'claude-sonnet-4-6');
+if ( ! defined('BP_SEO_AI_MODEL') ) define('BP_SEO_AI_MODEL', 'claude-opus-5-5');
 
 /**
  * Character budget per field. Google truncates by pixel width (~580px title,
@@ -1173,37 +1175,59 @@ function bp_seo_token_values( array $ctx ): array {
 	return $vals;
 }
 
-/** The page's readable copy: editor body (unsaved edits when passed in) + Page Top/Bottom. */
-function bp_seo_page_text( WP_Post $post, string $body = '' ): string {
-	$text = implode( "\n\n", [
+/** The page's stored markup: editor body (unsaved edits when passed in) + Page Top/Bottom. */
+function bp_seo_page_markup( WP_Post $post, string $body = '' ): string {
+	return implode( "\n\n", [
 		$body !== '' ? $body : $post->post_content,
 		(string) get_post_meta($post->ID, 'page-top_text', true),
 		(string) get_post_meta($post->ID, 'page-bottom_text', true),
 	] );
-	// Resolve business-fact shortcodes so their words survive; drop every other shortcode
-	// TAG but keep what it wraps ([txt]…[/txt] holds the copy).
-	$text = preg_replace_callback( '/\[get-biz\b[^\]]*\]/', fn($m) => do_shortcode($m[0]), $text );
-	$text = preg_replace( '/\[\/?[a-z][^\]]*\]/i', ' ', $text );
-	$text = html_entity_decode( wp_strip_all_tags( str_replace('<', ' <', $text) ), ENT_QUOTES, 'UTF-8' );
-	return mb_substr( trim( preg_replace('/\s+/', ' ', $text) ), 0, 12000 );
 }
 
-function bp_seo_ai_prompt( string $field, WP_Post $post, array $ctx, array $vals, string $text, string $other ): string {
-	$ci   = function_exists('customer_info') ? (array) customer_info() : [];
-	$lim  = bp_seo_ai_limits($field);
-	$type = $ci['site-type'] ?? ( $ci['business-type'] ?? '' );
-	$svc  = $ci['service-type'] ?? '';
-	$svc  = is_array($svc) ? implode(', ', $svc) : (string) $svc;
+/** Markup → readable words. */
+function bp_seo_copy( string $text ): string {
+	// Resolve business-fact shortcodes so their words survive, keep the words in a title
+	// attribute ([accordion title="What is bungee fitness?"]), then drop every other
+	// shortcode TAG but keep what it wraps ([txt]…[/txt] holds the copy).
+	$text = preg_replace_callback( '/\[get-biz\b[^\]]*\]/', fn($m) => do_shortcode($m[0]), $text );
+	$text = preg_replace( '/\[[a-z][\w-]*\b[^\]]*?\btitle=(["\'])(.*?)\1[^\]]*\]/i', ' $2 ', $text );
+	$text = preg_replace( '/\[\/?[a-z][^\]]*\]/i', ' ', $text );
+	$text = html_entity_decode( wp_strip_all_tags( str_replace('<', ' <', $text) ), ENT_QUOTES, 'UTF-8' );
+	return trim( preg_replace('/\s+/', ' ', $text) );
+}
+
+function bp_seo_page_text( WP_Post $post, string $body = '' ): string {
+	return mb_substr( bp_seo_copy( bp_seo_page_markup($post, $body) ), 0, 12000 );
+}
+
+/** H1–H3 in page order: the flattened page text can't show what the page leads with. */
+function bp_seo_page_headings( WP_Post $post, string $body = '' ): array {
+	preg_match_all( '/<h[1-3]\b[^>]*>(.*?)<\/h[1-3]>/is', bp_seo_page_markup($post, $body), $m );
+	return array_slice( array_values( array_filter( array_map('bp_seo_copy', $m[1]) ) ), 0, 20 );
+}
+
+function bp_seo_ai_prompt( string $field, WP_Post $post, array $ctx, array $vals, string $text, array $heads, string $other ): string {
+	$ci    = function_exists('customer_info') ? (array) customer_info() : [];
+	$lim   = bp_seo_ai_limits($field);
+	$type  = $ci['site-type'] ?? ( $ci['business-type'] ?? '' );
+	$svc   = $ci['service-type'] ?? '';
+	$svc   = is_array($svc) ? implode(', ', $svc) : (string) $svc;
+	$front = (int) get_option('page_on_front') === (int) $post->ID;
+	$loc   = '[get-biz info="city"], [get-biz info="state-abbr"]';
 
 	$L = [];
-	$L[] = 'You are writing the ' . ( $field === 'title' ? 'SEO title (the <title> tag)' : 'meta description' ) . ' for one page of a local business website.';
+	$L[] = 'You are an SEO specialist writing the ' . ( $field === 'title' ? 'SEO title (the <title> tag)' : 'meta description' ) . ' for one page of a local business website. ' . ( $field === 'title' ? 'It is the main on-page ranking signal and the headline people click in Google.' : 'It is the pitch under the headline in Google, and it decides whether people click.' );
 	$L[] = '';
 	$L[] = 'Business: ' . bp_business_name() . ( $type ? " (a {$type} business)" : '' );
 	if ( $svc ) $L[] = "Services: {$svc}";
 	$L[] = '';
+	$L[] = 'First, read the page content at the bottom and work out the primary search phrase: the words a customer would type into Google when looking for what this page offers. Take it from what the page actually covers, in plain customer language.';
+	$L[] = 'The page name is a navigation label, not a keyword. A hero headline or slogan is not a keyword either.';
+	$L[] = '';
 	$L[] = 'Your output is stored as a TEMPLATE. These tokens render at page load, so the text stays correct if the business details ever change:';
 	foreach ( $vals as $tok => $val ) {
-		if ( $val === '' ) continue;
+		// The page name isn't the writer's to reuse. That's the shortcut this prompt exists to avoid.
+		if ( $val === '' || $tok === '%%title%%' || $tok === '%%primary_category%%' ) continue;
 		$L[] = "  {$tok}  → \"{$val}\" (" . mb_strlen($val) . ' chars)';
 	}
 	$L[] = '';
@@ -1222,25 +1246,36 @@ function bp_seo_ai_prompt( string $field, WP_Post $post, array $ctx, array $vals
 	$L[] = "- {$lim['min']} to {$lim['max']} characters rendered. {$lim['max']} is a hard maximum.";
 	$L[] = '- NEVER use em dashes or en dashes. Use a period or a comma instead.';
 	if ( $field === 'title' ) {
-		$L[] = '- Lead with the page\'s main service or topic: the phrase a searcher would type.';
-		$L[] = '- Add the location (city, state) when the page is about local services and it fits.';
+		$L[] = '- Lead with the primary search phrase, written out in your own words. Never use the page name plus a location as the title.';
+		$L[] = '- Add the location when the page is about local services and it fits.';
 		$L[] = '- End with " %%sep%% %%sitename%%" when it fits. Drop that before dropping the keyword or location.';
-		$L[] = '- Use %%title%% only if the page title is already the right keyword phrase.';
 		$L[] = '- Title Case. No ALL CAPS, exclamation marks, keyword stuffing or clickbait.';
+		if ( $front ) $L[] = '- This is the home page: target the main service the whole business is known for.';
+		$L[] = '';
+		$L[] = 'The shape to aim for, from other businesses (write this page\'s own title, from its own content):';
+		$L[] = "  Page named \"Home\" at a heating and cooling company: AC Repair & Heating Service in {$loc} %%sep%% %%sitename%%";
+		$L[] = "  Page named \"What We Do\" at a landscaper: Lawn Care & Landscape Design in {$loc} %%sep%% %%sitename%%";
+		$L[] = "  Page named \"Questions\" at a roofer: Roof Replacement Cost & FAQs %%sep%% {$loc}";
 	} else {
 		$L[] = '- One or two complete sentences, each ending with a period: what this page offers, where, why choose this business, and a call to action.';
-		$L[] = '- Work in the main service and the location naturally. [get-biz info="area-phone"] may go in the call to action if it fits.';
+		$L[] = '- Work in the primary search phrase and the location naturally. Name specifics from this page, not lines that could fit any business. [get-biz info="area-phone"] may go in the call to action if it fits.';
 		$L[] = '- Active voice. No keyword stuffing, no quotes, and don\'t open with the business name.';
+		if ( $front ) $L[] = '- This is the home page: pitch the main service the whole business is known for.';
 	}
 	$L[] = '- Only claim what the page content supports. No invented prices, guarantees, awards, offers or credentials.';
 	$L[] = '';
-	$L[] = 'Page title: ' . html_entity_decode( $ctx['title'], ENT_QUOTES, 'UTF-8' );
+	$L[] = 'Page name: ' . html_entity_decode( $ctx['title'], ENT_QUOTES, 'UTF-8' );
 	$L[] = 'Post type: ' . $post->post_type;
 	if ( $post->post_name ) $L[] = 'URL slug: ' . $post->post_name;
 	if ( $other !== '' ) $L[] = ( $field === 'title' ? 'Current meta description' : 'Current SEO title' ) . " (keep consistent, don't repeat it word for word): {$other}";
+	if ( $heads ) {
+		$L[] = '';
+		$L[] = 'Page headings, in order:';
+		foreach ( $heads as $h ) $L[] = "  {$h}";
+	}
 	$L[] = '';
 	$L[] = 'Page content:';
-	$L[] = $text !== '' ? $text : '(empty, so work from the page title and business details)';
+	$L[] = $text !== '' ? $text : '(empty, so work from the page name and business details)';
 	$L[] = '';
 	$L[] = 'Output ONLY the ' . ( $field === 'title' ? 'title' : 'description' ) . ' on one line. No quotes, no label, no explanation.';
 	return implode("\n", $L);
@@ -1265,6 +1300,26 @@ function bp_seo_ai_problems( string $field, string $raw, array $ctx, array $vals
 		$p[] = 'It types the phone number — use [get-biz info="area-phone"] instead.';
 	}
 	return array_values( array_unique($p) );
+}
+
+/**
+ * The writer-only check: a draft that didn't do the job. Lives apart from bp_seo_ai_problems()
+ * because `wp bp` shares that one, and a person may choose %%title%% on purpose.
+ * A title fails when the only words the model typed itself (tokens removed) are the page name.
+ */
+function bp_seo_ai_lazy( string $field, string $raw, array $ctx ): array {
+	$p = [];
+	if ( preg_match('/%%(title|primary_category)%%/', $raw) ) $p[] = 'It uses a page name token. Write the words out, from the page content.';
+	if ( $field !== 'title' || $p ) return $p;
+
+	$words = fn( string $s ) => array_diff(
+		preg_split( '/[^\p{L}\p{N}]+/u', mb_strtolower($s), -1, PREG_SPLIT_NO_EMPTY ),
+		['a', 'an', 'and', 'at', 'for', 'in', 'near', 'of', 'on', 'the', 'to', 'your']
+	);
+	$typed = $words( preg_replace( '/%%[a-z_]+%%|\[[^\]]*\]/i', ' ', $raw ) );
+	$name  = $words( html_entity_decode( $ctx['title'], ENT_QUOTES, 'UTF-8' ) );
+	if ( ! array_diff($typed, $name) ) $p[] = 'It only restates the page name. Lead with what a customer would search for, taken from the page content.';
+	return $p;
 }
 
 /**
@@ -1298,18 +1353,21 @@ function bp_seo_ai_dedash( string $text, string $field ): string {
 	}, $text );
 }
 
-function bp_seo_ai_request( array $messages ) {
+function bp_seo_ai_request( array $messages, int $timeout = 30 ) {
 	$response = wp_remote_post('https://api.anthropic.com/v1/messages', [
-		'timeout' => 25,
+		'timeout' => $timeout,
 		'headers' => [
 			'Content-Type'      => 'application/json',
 			'x-api-key'         => bp_ai_alt_api_key(),
 			'anthropic-version' => '2023-06-01',
+			'anthropic-beta'    => 'server-side-fallback-2026-07-01',
 		],
 		'body' => wp_json_encode([
-			'model'      => BP_SEO_AI_MODEL,
-			'max_tokens' => 300,
-			'messages'   => $messages,
+			'model'         => BP_SEO_AI_MODEL,
+			'max_tokens'    => 4000, // thinking counts against this, so leave far more room than one line needs
+			'output_config' => [ 'effort' => 'medium' ],
+			'fallbacks'     => 'default',
+			'messages'      => $messages,
 		]),
 	]);
 	if ( is_wp_error($response) ) return $response;
@@ -1321,15 +1379,22 @@ function bp_seo_ai_request( array $messages ) {
 		if ( function_exists('bp_ai_model_alert') ) bp_ai_model_alert( (int) $status, $decoded, BP_SEO_AI_MODEL, 'AI SEO writer' );
 		return new WP_Error('api_error', "Anthropic API error ($status): $msg");
 	}
-	$text = trim( (string) ( $decoded['content'][0]['text'] ?? '' ) );
+	if ( ( $decoded['stop_reason'] ?? '' ) === 'refusal' ) return new WP_Error('refusal', 'The AI declined to write this one. Write it by hand.');
+
+	// Thinking blocks come first, so the text isn't content[0].
+	$text = '';
+	foreach ( (array) ( $decoded['content'] ?? [] ) as $block ) {
+		if ( ( $block['type'] ?? '' ) === 'text' ) $text .= $block['text'];
+	}
+	$text = trim($text);
 	return $text !== '' ? $text : new WP_Error('empty', 'Empty response from API.');
 }
 
 /**
  * Write an SEO title ('title') or meta description ('desc') for $post.
- * Up to three drafts: each one that runs long / short or hard-codes a fact is sent back
- * with the specific problem. Stops early near WP Engine's 60s request limit and returns
- * the best draft, with a warning if it still isn't clean.
+ * Up to three drafts: each one that runs long / short, hard-codes a fact or just restates the
+ * page name is sent back with the specific problem. Stops early near WP Engine's 60s request
+ * limit and returns the best draft, with a warning if it still isn't clean.
  * Returns [value, preview, length, max, warning] or a WP_Error.
  */
 function bp_seo_ai_write( string $field, WP_Post $post, string $title = '', string $body = '', string $other = '' ) {
@@ -1337,26 +1402,31 @@ function bp_seo_ai_write( string $field, WP_Post $post, string $title = '', stri
 
 	$ctx      = bp_seo_post_ctx($post, $title);
 	$vals     = bp_seo_token_values($ctx);
-	$messages = [[ 'role' => 'user', 'content' => bp_seo_ai_prompt( $field, $post, $ctx, $vals, bp_seo_page_text($post, $body), $other ) ]];
+	$text     = bp_seo_page_text($post, $body);
+	$prompt   = bp_seo_ai_prompt( $field, $post, $ctx, $vals, $text, bp_seo_page_headings($post, $body), $other );
+	$messages = [[ 'role' => 'user', 'content' => $prompt ]];
 	$start    = time();
 	$best     = null;
 
 	for ( $try = 0; $try < 3; $try++ ) {
-		$reply = bp_seo_ai_request($messages);
+		$reply = bp_seo_ai_request( $messages, min( 30, 55 - ( time() - $start ) ) );
 		if ( is_wp_error($reply) ) {
 			if ( $best ) break;
 			return $reply;
 		}
 		$raw      = bp_seo_ai_clean($reply, $field);
-		$problems = bp_seo_ai_problems($field, $raw, $ctx, $vals);
+		$problems = array_merge( bp_seo_ai_problems($field, $raw, $ctx, $vals), bp_seo_ai_lazy($field, $raw, $ctx) );
 		[ $plain, $len ] = bp_seo_plain($raw, $ctx);
 		$score    = count($problems) * 1000 + max(0, $len - bp_seo_ai_limits($field)['max']);
 		if ( ! $best || $score < $best['score'] ) $best = compact('raw', 'plain', 'len', 'problems', 'score');
 
-		if ( ! $problems || time() - $start > 35 ) break;
-		$messages[] = [ 'role' => 'assistant', 'content' => $raw ];
-		$messages[] = [ 'role' => 'user', 'content' => "Revise it:\n- " . implode("\n- ", $problems) . "\nOutput ONLY the revised line." ];
+		if ( ! $problems || time() - $start > 30 ) break;
+		// One fresh user turn each round: only the visible draft comes back, never a thinking block.
+		$messages = [[ 'role' => 'user', 'content' => "{$prompt}\n\nYour previous draft:\n{$raw}\n\nRevise it:\n- " . implode("\n- ", $problems) . "\nOutput ONLY the revised line." ]];
 	}
+
+	// Copy that comes from a shortcode ([get-universal-page], sliders) isn't in the stored markup.
+	if ( str_word_count($text) < 30 ) $best['problems'][] = 'This page has almost no readable text, so this came from the page name and business details.';
 
 	return [
 		'value'   => $best['raw'],

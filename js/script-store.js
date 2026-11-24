@@ -508,6 +508,10 @@ endpoint, so the cart layer can subscribe without this file changing.
 				if ( ! current.inStock ) {
 					stockEl.textContent = 'Sold out';
 					stockEl.className   = 'store-stock is-out';
+				} else if ( current.showStock === false ) {
+					// Show Stock off (one-of-a-kind pieces): no stock line at all.
+					stockEl.textContent = '';
+					stockEl.className   = 'store-stock';
 				} else if ( current.left !== null && current.left > 0 ) {
 					stockEl.textContent = 'Only ' + current.left + ' left';
 					stockEl.className   = 'store-stock is-low';
@@ -518,6 +522,41 @@ endpoint, so the cart layer can subscribe without this file changing.
 			}
 
 			if ( addBtn ) addBtn.disabled = ! current.inStock;
+			syncQty( current.max );
+		}
+
+		// Quantity choices run 1..max for the selected variant (10 when stock isn't
+		// counted), and with only one available there is nothing to choose, so the
+		// quantity control hides and Add to Cart adds one.
+		var qtyBox = qtyEl ? qtyEl.closest( '.store-qty-wrap, .store-qty-pick' ) : null;
+		function syncQty( max ) {
+			if ( ! qtyEl ) return;
+			var limited = typeof max === 'number' && max > 0;
+			var top     = limited ? max : 10;
+			var keep    = Math.min( parseInt( qtyEl.value, 10 ) || 1, top );
+
+			if ( qtyEl.tagName === 'SELECT' ) {
+				if ( qtyEl.options.length !== top ) {
+					var html = '';
+					for ( var n = 1; n <= top; n++ ) html += '<option value="' + n + '">' + n + '</option>';
+					qtyEl.innerHTML = html;
+				}
+			} else if ( limited ) {
+				qtyEl.max = top;
+			} else {
+				qtyEl.removeAttribute( 'max' );
+			}
+			qtyEl.value = keep;
+			if ( qtyBox ) qtyBox.hidden = limited && max === 1;
+		}
+
+		// A typed number above the limit snaps back to it.
+		if ( qtyEl && qtyEl.tagName !== 'SELECT' ) {
+			qtyEl.addEventListener( 'change', function () {
+				var max = parseInt( qtyEl.max, 10 );
+				var v   = parseInt( qtyEl.value, 10 ) || 1;
+				qtyEl.value = Math.max( 1, max ? Math.min( v, max ) : v );
+			} );
 		}
 
 		selects.forEach( function ( select ) {
@@ -605,16 +644,21 @@ endpoint, so the cart layer can subscribe without this file changing.
 
 		var html = '';
 		cart.items.forEach( function ( item ) {
-			html += '<div class="store-line" data-variant="' + item.variant_id + '">';
+			// A booking line (seats in a class/event) has no variant; it's addressed by its line id.
+			var isBooking = item.kind === 'booking';
+			html += '<div class="store-line' + ( isBooking ? ' store-line-booking' : '' ) + '"'
+				+ ( isBooking ? ' data-line="' + item.line_id + '"' : ' data-variant="' + item.variant_id + '"' ) + '>';
 			html += item.image
 				? '<a class="store-line-img" href="' + esc( item.url ) + '"><img src="' + esc( item.image ) + '" alt=""></a>'
 				: '<span class="store-line-img store-line-noimg"></span>';
 			html += '<div class="store-line-detail">';
-			html += '<a class="store-line-title" href="' + esc( item.url ) + '">' + esc( item.title ) + '</a>';
+			html += item.url
+				? '<a class="store-line-title" href="' + esc( item.url ) + '">' + esc( item.title ) + '</a>'
+				: '<span class="store-line-title">' + esc( item.title ) + '</span>';
 			if ( item.variant && item.variant !== 'Default' ) {
 				html += '<span class="store-line-variant">' + esc( item.variant ) + '</span>';
 			}
-			html += '<span class="store-line-unit">' + item.unit + ' each</span>';
+			html += '<span class="store-line-unit">' + item.unit + ( isBooking ? ' per person' : ' each' ) + '</span>';
 			html += '<div class="store-line-controls">';
 			html += '<button type="button" class="unique store-qty-btn" data-store-dec aria-label="Reduce quantity">&minus;</button>';
 			html += '<input class="store-line-qty" type="number" min="0" step="1" value="' + item.qty + '"'
@@ -623,9 +667,10 @@ endpoint, so the cart layer can subscribe without this file changing.
 				+ ( item.max !== null && item.qty >= item.max ? ' disabled' : '' ) + '>+</button>';
 			html += '<button type="button" class="unique store-line-remove" data-store-remove>Remove</button>';
 			html += '</div>';
-			// Say why + is disabled, rather than leaving a dead button.
-			if ( item.max !== null && item.qty >= item.max ) {
-				html += '<span class="store-line-limit">That is all we have in stock.</span>';
+			// Say why + is disabled, rather than leaving a dead button. Not when the product hides its
+			// stock (Show Stock off): saying "that is all we have" would give the count away.
+			if ( item.max !== null && item.qty >= item.max && ( isBooking || item.show_stock !== 0 ) ) {
+				html += '<span class="store-line-limit">' + ( isBooking ? 'That is all the spots left for this date.' : 'That is all we have in stock.' ) + '</span>';
 			}
 			html += '</div>';
 			html += '<span class="store-line-total">' + item.line + '</span>';
@@ -713,21 +758,35 @@ endpoint, so the cart layer can subscribe without this file changing.
 			}, true );
 		} );
 
+		// The booking dialog (script-booking.js) fires this for a paid class/event seat.
+		document.addEventListener( 'store:add-booking', function ( e ) {
+			cartCall( 'sp_store_cart_add_booking', {
+				session_id: e.detail.sessionId,
+				qty: e.detail.qty
+			}, true );
+		} );
+
+		// A line's key: its variant, or — for a booking line — its line id.
+		function lineKey( line ) {
+			var lineId = line.getAttribute( 'data-line' );
+			return lineId ? { line_id: lineId } : { variant_id: line.getAttribute( 'data-variant' ) };
+		}
+		function withQty( key, qty ) { key.qty = qty; return key; }
+
 		document.addEventListener( 'click', function ( e ) {
 			if ( e.target.closest( '[data-store-cart-open]' ) )  { e.preventDefault(); openDrawer(); }
 			if ( e.target.closest( '[data-store-cart-close]' ) ) { e.preventDefault(); closeDrawer(); }
 
 			var line = e.target.closest( '.store-line' );
 			if ( ! line ) return;
-			var variantId = line.getAttribute( 'data-variant' );
 			var qtyInput  = line.querySelector( '.store-line-qty' );
 
 			if ( e.target.closest( '[data-store-remove]' ) ) {
-				cartCall( 'sp_store_cart_remove', { variant_id: variantId } );
+				cartCall( 'sp_store_cart_remove', lineKey( line ) );
 			} else if ( e.target.closest( '[data-store-inc]' ) ) {
-				cartCall( 'sp_store_cart_qty', { variant_id: variantId, qty: parseInt( qtyInput.value, 10 ) + 1 } );
+				cartCall( 'sp_store_cart_qty', withQty( lineKey( line ), parseInt( qtyInput.value, 10 ) + 1 ) );
 			} else if ( e.target.closest( '[data-store-dec]' ) ) {
-				cartCall( 'sp_store_cart_qty', { variant_id: variantId, qty: parseInt( qtyInput.value, 10 ) - 1 } );
+				cartCall( 'sp_store_cart_qty', withQty( lineKey( line ), parseInt( qtyInput.value, 10 ) - 1 ) );
 			}
 		} );
 
@@ -735,10 +794,7 @@ endpoint, so the cart layer can subscribe without this file changing.
 			if ( ! e.target.classList.contains( 'store-line-qty' ) ) return;
 			var line = e.target.closest( '.store-line' );
 			if ( line ) {
-				cartCall( 'sp_store_cart_qty', {
-					variant_id: line.getAttribute( 'data-variant' ),
-					qty: parseInt( e.target.value, 10 ) || 0
-				} );
+				cartCall( 'sp_store_cart_qty', withQty( lineKey( line ), parseInt( e.target.value, 10 ) || 0 ) );
 			}
 		} );
 
@@ -761,6 +817,41 @@ endpoint, so the cart layer can subscribe without this file changing.
 	 * rendered totals. A figure that travelled out to a browser and back is a
 	 * figure somebody can edit, so none of them make that trip.
 	 */
+	/*
+	 * Embedded processors. Each mounts the processor's own iframe into the element it
+	 * is handed and returns a promise. Card fields live in the processor's document,
+	 * never this one.
+	 */
+	window.BPStorePay = window.BPStorePay || {};
+
+	var stripeLoading = null;
+	function loadStripe() {
+		if ( window.Stripe ) return Promise.resolve( window.Stripe );
+		if ( stripeLoading ) return stripeLoading;
+		// Must come from js.stripe.com, never a copy: Stripe requires it for PCI.
+		// Allowed by the CSP's strict-dynamic, because this nonced script inserts it.
+		stripeLoading = new Promise( function ( resolve, reject ) {
+			var s = document.createElement( 'script' );
+			s.src   = 'https://js.stripe.com/v3/';
+			s.async = true;
+			s.onload  = function () { window.Stripe ? resolve( window.Stripe ) : reject( new Error( 'stripe' ) ); };
+			s.onerror = function () { stripeLoading = null; reject( new Error( 'stripe' ) ); };
+			document.head.appendChild( s );
+		} );
+		return stripeLoading;
+	}
+
+	window.BPStorePay.stripe = function ( mount, config ) {
+		return loadStripe().then( function ( Stripe ) {
+			return Stripe( config.key ).initEmbeddedCheckout( {
+				fetchClientSecret: function () { return Promise.resolve( config.client_secret ); }
+			} );
+		} ).then( function ( checkout ) {
+			mount.innerHTML = '';
+			checkout.mount( mount );
+		} );
+	};
+
 	function initCheckout() {
 		var root = document.querySelector( '[data-store-checkout]' );
 		if ( ! root ) return;
@@ -770,6 +861,9 @@ endpoint, so the cart layer can subscribe without this file changing.
 		var payMount = root.querySelector( '[data-store-pay]' );
 		var errorEl  = root.querySelector( '[data-store-co-error]' );
 		var placeBtn = root.querySelector( '[data-store-place]' );
+
+		// Warm the processor's library while the shopper fills in the form.
+		if ( payMount && payMount.getAttribute( 'data-store-pay' ) === 'stripe' ) loadStripe().catch( function () {} );
 
 		function field( id ) {
 			var el = document.getElementById( id );
@@ -897,7 +991,20 @@ endpoint, so the cart layer can subscribe without this file changing.
 			// may build card inputs itself — the fields belong to the processor's
 			// document, and that is what keeps the site out of PCI scope.
 			if ( data.shape === 'embedded' && payMount && window.BPStorePay && window.BPStorePay[ data.config.provider ] ) {
-				window.BPStorePay[ data.config.provider ]( payMount, data.config );
+				// The order now exists with this address and total, so the form above is
+				// locked: an edit made here would never reach the order being paid for.
+				Array.prototype.forEach.call(
+					root.querySelectorAll( '.store-checkout-form input, .store-checkout-form select, .store-checkout-form textarea' ),
+					function ( el ) { el.disabled = true; }
+				);
+				// Removed, not [hidden]: the checkout CSS gives it display:block, which beats the attribute.
+				if ( placeBtn ) placeBtn.remove();
+
+				Promise.resolve( window.BPStorePay[ data.config.provider ]( payMount, data.config ) ).then( function () {
+					payMount.scrollIntoView( { block: 'start', behavior: 'smooth' } );
+				} ).catch( function () {
+					showError( 'We could not open the payment form. Please refresh the page and try again.' );
+				} );
 				return;
 			}
 

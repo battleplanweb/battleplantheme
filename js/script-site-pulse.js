@@ -116,15 +116,15 @@ function spDistChart(segs, opts) {
 	if (!segs || !segs.length) return '';
 	opts = opts || {};
 	if (_spChartStyle === 'pie') return spPieChart(segs);
-	const labelCls = opts.labelClass ? (' ' + opts.labelClass) : '';
+	const labelCls = opts.wide ? ' sp-dist__label--wide' : '';
 	const rows = segs.map(s =>
-		'<div class="sp-survey-bar-row">' +
-		`<div class="sp-survey-bar-star${labelCls}">${esc(s.label)}</div>` +
-		`<div class="sp-survey-bar-track"><div class="sp-survey-bar-fill ${s.cls}" style="width:${s.pct}%"></div></div>` +
-		`<div class="sp-survey-bar-pct">${s.pct}%</div>` +
+		'<div class="sp-dist__row">' +
+		`<div class="sp-dist__label${labelCls}">${esc(s.label)}</div>` +
+		`<div class="sp-dist__track"><div class="sp-dist__fill ${s.cls}" style="width:${s.pct}%"></div></div>` +
+		`<div class="sp-dist__pct">${s.pct}%</div>` +
 		'</div>'
 	).join('');
-	return `<div class="sp-survey-bars">${rows}</div>`;
+	return `<div class="sp-dist">${rows}</div>`;
 }
 
 // Donut chart (stroke-dasharray on stacked circles, pathLength 100 so values are percentages).
@@ -133,16 +133,16 @@ function spPieChart(segs) {
 	if (!shown.length) return '';
 	let offset = 0, slices = '';
 	shown.forEach(s => {
-		slices += `<circle class="sp-pie-slice ${s.cls}" cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="8" pathLength="100" stroke-dasharray="${s.pct} ${100 - s.pct}" stroke-dashoffset="${-offset}"></circle>`;
+		slices += `<circle class="sp-pie__slice ${s.cls}" cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="8" pathLength="100" stroke-dasharray="${s.pct} ${100 - s.pct}" stroke-dashoffset="${-offset}"></circle>`;
 		offset += s.pct;
 	});
 	const legend = shown.map(s =>
-		'<div class="sp-pie-legend-row">' +
-		`<span class="sp-pie-dot ${s.cls} unique"></span>` +
-		`<span class="sp-pie-legend-label unique">${esc(s.label)}</span>` +
-		`<span class="sp-pie-legend-pct unique">${s.pct}%</span></div>`
+		'<div class="sp-pie__row">' +
+		`<span class="sp-pie__dot ${s.cls} unique"></span>` +
+		`<span class="sp-pie__label unique">${esc(s.label)}</span>` +
+		`<span class="sp-pie__pct unique">${s.pct}%</span></div>`
 	).join('');
-	return `<div class="sp-pie-wrap"><svg class="sp-pie-svg" viewBox="0 0 40 40" aria-hidden="true"><g transform="rotate(-90 20 20)">${slices}</g></svg><div class="sp-pie-legend">${legend}</div></div>`;
+	return `<div class="sp-pie"><svg class="sp-pie__svg" viewBox="0 0 40 40" aria-hidden="true"><g transform="rotate(-90 20 20)">${slices}</g></svg><div class="sp-pie__legend">${legend}</div></div>`;
 }
 
 // 5→1 star distribution as percentage segments (shared by reviews + surveys).
@@ -215,7 +215,13 @@ window.addEventListener('resize', spCloseHelp);
 
 function iconBtn(kind, cls = '', attrs = '') {
 	const del = kind === 'delete';
-	return `<button type="button" class="unique sp-btn sp-icon-btn ${del ? 'sp-icon-delete' : 'sp-icon-edit'} ${cls}" title="${del ? 'Delete' : 'Edit'}" aria-label="${del ? 'Delete' : 'Edit'}" ${attrs}>${del ? ICON_DELETE : ICON_EDIT}</button>`;
+	return `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm ${del ? 'sp-icon-delete' : 'sp-icon-edit'} ${cls}" title="${del ? 'Delete' : 'Edit'}" aria-label="${del ? 'Delete' : 'Edit'}" ${attrs}>${del ? ICON_DELETE : ICON_EDIT}</button>`;
+}
+
+// The round pencil at the end of a row that opens its editor (the row itself is the click target, so this
+// is a look, not a second button — rows that are <button>s can't hold one).
+function spEditMark() {
+	return `<span class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-edit" aria-hidden="true">${ICON_EDIT}</span>`;
 }
 
 // Relative "last active" label from a unix timestamp (seconds, server UTC — comparable to Date.now).
@@ -248,7 +254,7 @@ function spReportChip(status) {
 // "View receipt" icon button for an expense row that has a receipt photo. cls = the section's
 // functional class; the row's id is in data-id so the click can look up its receipt_url.
 function receiptIconBtn(cls, id) {
-	return `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-receipt ${cls}" title="View receipt" aria-label="View receipt" data-id="${id}">${ICON_RECEIPT}</button>`;
+	return `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-receipt ${cls}" title="View receipt" aria-label="View receipt" data-id="${id}">${ICON_RECEIPT}</button>`;
 }
 
 // Shared popup shell for the admin add/edit forms, so every "Add" opens a centered modal
@@ -378,7 +384,7 @@ const SP_CLICK_SELECTOR = 'button, a[href], [role="button"], [data-nav]';
 // Never tag these: real buttons (.sp-btn keep their own hover), and classes that carry a clickable
 // style but aren't actually clickable in every context (e.g. .sp-msg-members is a button in one
 // place and a plain container in another).
-const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer, .sp-mileage-end-trailer, .sp-radio-inline, .sp-recurring-check, .sp-appr-card, .sp-arch-row, .sp-appr-auto';
+const SP_NO_BUTTON_SELECTOR = '.sp-btn, .sp-msg-members, .sp-mileage-trailer-toggle, .sp-mileage-stop-trailer, .sp-mileage-end-trailer, .sp-check-row, .sp-recurring-check, .sp-appr-card, .sp-arch-row, .sp-appr-auto';
 function spTagClickable(el) {
 	if (!el || el.nodeType !== 1 || el.classList.contains('sp-button')) return;
 	if (el.closest('#wpadminbar')) return;
@@ -410,12 +416,12 @@ function spTagCardItems(root) {
 	const tagChildren = (body) => {
 		for (let i = 0; i < body.children.length; i++) {
 			const c = body.children[i];
-			if (c.tagName === 'DIV' && !c.classList.contains('sp-loading') && !c.classList.contains('sp-tile')) c.classList.add('sp-card-item');
+			if (c.tagName === 'DIV' && !c.classList.contains('sp-loading') && !c.classList.contains('sp-card')) c.classList.add('sp-card-item');
 		}
 	};
 	if (root.matches && root.matches('.sp-card-body')) tagChildren(root);
 	if (root.querySelectorAll) root.querySelectorAll('.sp-card-body').forEach(tagChildren);
-	if (root.tagName === 'DIV' && !root.classList.contains('sp-loading') && !root.classList.contains('sp-tile') &&
+	if (root.tagName === 'DIV' && !root.classList.contains('sp-loading') && !root.classList.contains('sp-card') &&
 		root.parentElement && root.parentElement.matches && root.parentElement.matches('.sp-card-body')) {
 		root.classList.add('sp-card-item');
 	}
@@ -430,7 +436,7 @@ function spTagModalBoxes(root) {
 	if (root.querySelectorAll) root.querySelectorAll('.sp-report-form-wrap').forEach(tag);
 }
 /* Add .checkbox-label / .radio-label to any <label> that directly contains a checkbox/radio, so one
-   shared style can lay out the control + text. Covers .sp-reminder-toggle, .sp-msg-contact-pick, etc. */
+   shared style can lay out the control + text. Covers .sp-msg-contact-pick, etc. */
 function spTagCheckboxLabels(root) {
 	if (!root || root.nodeType !== 1) return;
 	const tag = (input, cls) => { const p = input.parentElement; if (p && p.tagName === 'LABEL') p.classList.add(cls); };
@@ -468,16 +474,16 @@ function spTidyActionRows(root) {
 		const btns = Array.from(row.children).filter(el => el.matches('button, a.sp-btn'));
 		const isDel = (b) => b.matches(SP_DELETE_BTN) || /^\s*delete\b/i.test(b.textContent || '');
 		// The main action (Save / Submit) always leads; Cancel / Back follow it.
-		const lead = btns.find(b => !isDel(b) && b.matches('.sp-btn-primary, .sp-btn--primary, [type="submit"]'));
+		const lead = btns.find(b => !isDel(b) && b.matches('.sp-btn--primary, [type="submit"]'));
 		if (lead && btns[0] !== lead) row.insertBefore(lead, btns[0]);
 		const del = btns.filter(isDel);
 		if (!del.length) return;
-		const hasPrimary = btns.some(b => !isDel(b) && b.matches('.sp-btn-primary, .sp-btn--primary, [type="submit"]'));
+		const hasPrimary = btns.some(b => !isDel(b) && b.matches('.sp-btn--primary, [type="submit"]'));
 		del.forEach(b => {
 			if (!b.matches('.sp-btn--icon')) {
 				if (!hasPrimary) return;   // a confirm's own "Delete": keep its words
 				const label = (b.textContent || '').trim() || b.getAttribute('aria-label') || 'Delete';
-				b.classList.remove('sp-icon-btn', 'sp-icon-delete', 'sp-btn-delete', 'sp-btn-ghost', 'sp-btn-tiny', 'sp-btn-secondary');
+				b.classList.remove('sp-btn--sm', 'sp-icon-delete', 'sp-btn-delete', 'sp-btn--ghost', 'sp-btn-ghost', 'sp-btn-tiny', 'sp-btn-secondary');
 				b.classList.add('sp-btn', 'sp-btn--danger', 'sp-btn--icon');
 				b.setAttribute('aria-label', label);
 				if (!b.title) b.title = label;
@@ -577,7 +583,41 @@ function markUniqueSpans(root) {
 	(root || document.getElementById('sp-app') || document.getElementById('sp-login-wrap') || document).querySelectorAll('span').forEach(function(el) {
 		el.classList.add('unique');
 	});
+	spInfoize(root || document.getElementById('sp-app') || document);
 }
+
+/*
+ * ⓘ — help behind a tap, all over Site Pulse (Glendon 2026-11-21: explanations shouldn't clutter screens).
+ * New code: build the button + panel with spInfoPair(text). Existing screens are converted here, on
+ * every render: a field's .sp-help-text (inside .sp-form-group) and a settings card's intro paragraph
+ * (.sp-settings-card > h3 + .sp-help-text) become an ⓘ on the label / heading. Not converted:
+ * .sp-help-text--keep (must stay visible), any hint with an id (JS updates it), and empty ones.
+ */
+let _spInfoAuto = 0;
+function spInfoize(root) {
+	if (!root || !root.querySelectorAll) return;
+	root.querySelectorAll('.sp-form-group > .sp-help-text, .sp-settings-card > h3 + .sp-help-text').forEach(p => {
+		if (p.classList.contains('sp-help-text--keep') || p.id || !p.textContent.trim()) return;
+		const host = p.matches('h3 + *') ? p.previousElementSibling : p.parentElement.querySelector(':scope > label');
+		if (!host || host.querySelector(':scope > .sp-info')) return;
+		const id = 'sp-info-a' + (++_spInfoAuto);
+		p.id = id;
+		p.classList.remove('sp-help-text');
+		p.classList.add('sp-info__text');
+		p.hidden = true;
+		host.insertAdjacentHTML('beforeend', `<button type="button" class="unique sp-info" aria-label="What’s this?" aria-expanded="false" aria-controls="${id}">?</button>`);
+		host.after(p);
+	});
+}
+document.addEventListener('click', (e) => {
+	const btn = e.target.closest('.sp-info');
+	if (!btn) return;
+	e.preventDefault();
+	const box = document.getElementById(btn.getAttribute('aria-controls'));
+	if (!box) return;
+	box.hidden = !box.hidden;
+	btn.setAttribute('aria-expanded', box.hidden ? 'false' : 'true');
+});
 
 // Brief, unobtrusive "Saved" confirmation for auto-save fields (replaces explicit Save buttons).
 function spFlash(msg = 'Saved') {
@@ -825,6 +865,14 @@ function activatePanel(panelId) {
 		initJobsites();
 		loadJobsites();
 	}
+	if (panelId === 'events') {
+		initEvents();
+		loadEvents();
+	}
+	if (panelId === 'content') {
+		initContent();
+		loadContent();
+	}
 	if (panelId === 'notes') {
 		initNotes();
 		loadNotes();
@@ -833,14 +881,20 @@ function activatePanel(panelId) {
 	if (panelId === 'customer-connect-send')      { initCcSend(); loadCcSegments(); }
 	if (panelId === 'customer-connect-schedule')  { initCcSchedule(); loadCcSchedule(); }
 	if (panelId === 'admin-booking')              { initBookingAdmin(); loadBookingAdmin(); }
-	if (panelId === 'admin-store')                { loadStoreAdmin(); }
+	if (panelId === 'booking-staff')              { initBookingAdmin(); loadBookingAdmin(); }
+	if (panelId === 'profile')                    { loadProfile(); }
+	if (panelId === 'admin-store')                { loadStoreAdmin('store'); }
+	if (panelId === 'admin-ecommerce')            { loadStoreAdmin('ecommerce'); }
 	if (panelId === 'store-orders')               { initStoreOrders(); loadStoreOrders(); }
 	if (panelId === 'store-products')             { initStoreProducts(); loadStoreProducts(); }
 	if (panelId === 'store-customers')            { initStoreCustomers(); loadStoreCustomers(); }
+	if (panelId === 'store-fees')                 { initStoreFees(); loadStoreFees(); }
 	if (panelId === 'store-categories')           { initStoreCategories(); loadStoreCategories(); }
+	if (panelId === 'store-tags')                 { initStoreTags(); loadStoreTags(); }
 	if (panelId === 'store-inventory')            { initStoreInventory(); loadStoreInventory(); }
+	if (panelId === 'booking-offerings')          { initBookingOfferings(); loadBookingOfferings(); }
+	if (panelId === 'booking-customers')          { initBookingCustomers(); loadBookingCustomers(); }
 	if (panelId === 'booking-calendar')           { initBookingCalendar(); loadBookingCalendar(); }
-	if (panelId === 'booking-list')               { initBookingList(); loadBookingList(); }
 	if (panelId === 'booking-passes')             { initBookingPasses(); loadBookingPasses(); }
 	if (panelId === 'emails') {
 		initEmails();
@@ -962,7 +1016,7 @@ function spRenderPageAccessBar(bar, panelId, d) {
 			(!!b.has - !!a.has) || (a.label || a.name || '').localeCompare(b.label || b.name || '')
 		);
 		const rows = sorted.map(i =>
-			`<label class="sp-pa-row"><input type="checkbox" class="sp-pa-cb" data-kind="${kind}" data-cap="${esc(cap)}" value="${i[valKey]}"${i.has ? ' checked' : ''}><span class="sp-pa-name">${esc(i.label || i.name)}</span></label>`
+			`<label class="sp-check-row sp-pa-row"><input type="checkbox" class="sp-pa-cb" data-kind="${kind}" data-cap="${esc(cap)}" value="${i[valKey]}"${i.has ? ' checked' : ''}><span class="sp-pa-name">${esc(i.label || i.name)}</span></label>`
 		).join('');
 		return '<div class="sp-pa-picker">'
 			+ `<button type="button" class="unique sp-select sp-pa-toggle">${esc(label)}${nOn ? ` · ${nOn}` : ''}</button>`
@@ -974,7 +1028,7 @@ function spRenderPageAccessBar(bar, panelId, d) {
 
 	let rowsHtml = '';
 	(d.permissions || []).forEach(p => {
-		rowsHtml += '<div class="sp-pa-inner">';
+		rowsHtml += '<div class="sp-toolbar sp-pa-inner">';
 		rowsHtml += `<span class="sp-pa-label">${esc(p.cap_label)}</span>`;
 		rowsHtml += pickerHtml('role', 'Roles', p.roles, 'id', p.cap);
 		rowsHtml += pickerHtml('user', 'People', p.users, 'user_id', p.cap);
@@ -987,11 +1041,11 @@ function spRenderPageAccessBar(bar, panelId, d) {
 	const caret = '<svg class="sp-pa-caret" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
 	const nPerm = (d.permissions || []).length;
 	bar.innerHTML =
-		`<button type="button" class="sp-pa-master-toggle${_spPaOpen ? ' open' : ''}" aria-expanded="${_spPaOpen ? 'true' : 'false'}">`
+		`<button type="button" class="unique sp-btn sp-btn--sm sp-pa-master-toggle${_spPaOpen ? ' open' : ''}" aria-expanded="${_spPaOpen ? 'true' : 'false'}">`
 		+ `<span class="sp-pa-master-label">Grant Permissions${nPerm ? ` · ${nPerm}` : ''}</span>`
 		+ caret
 		+ '</button>'
-		+ `<div class="sp-pa-body"${_spPaOpen ? '' : ' hidden'}>${rowsHtml}</div>`;
+		+ `<div class="sp-card sp-card--tint sp-card--inset sp-pa-body"${_spPaOpen ? '' : ' hidden'}>${rowsHtml}</div>`;
 
 	const master = $('.sp-pa-master-toggle', bar);
 	const body = $('.sp-pa-body', bar);
@@ -1257,6 +1311,7 @@ screen that does it. Back closes an open sheet first (spCloseTopLayer). */
 const SP_SHELL_ICONS = {
 	plus: 'M12 5v14M5 12h14',
 	x: 'M6 6l12 12M18 6L6 18',
+	copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
 	'chev-r': 'M9 6l6 6-6 6',
 	'chev-l': 'M15 6l-6 6 6 6',
 	'chev-u': 'M6 15l6-6 6 6',
@@ -1438,9 +1493,16 @@ const SP_BAR_FILL = [
 	{ icon: 'users', label: 'Directory', nav: 'directory' },
 ];
 
+// God's menu parks the modules this site doesn't run under "Not Installed". Their screens still exist
+// (god can look around), but no shortcut may point into one from a live screen — only from inside the shelf.
+function spPanelNotInstalled(panelId) {
+	return !!(panelId && document.querySelector(`#sp-nav-inactive [data-nav="${panelId}"]`));
+}
+
 function spShortcutAvailable(s, current) {
 	const panel = s.nav || SP_ACTION_PANEL[s.action];
 	if (panel && !document.getElementById('sp-panel-' + panel)) return false;
+	if (panel && spPanelNotInstalled(panel) && !spPanelNotInstalled(current)) return false;
 	if (s.click && !document.querySelector(s.click)) return false;
 	if (s.focus && !document.querySelector(s.focus)) return false;
 	return !(s.nav && !s.click && !s.action && s.nav === current);   // no "go here" while already here
@@ -1996,19 +2058,19 @@ async function loadNotifications() {
 
 	try {
 		const res = await spAjax('site_pulse_get_notifications', {});
-		if (!res.success) { list.innerHTML = '<div class="sp-notification-empty">Error loading.</div>'; return; }
+		if (!res.success) { list.innerHTML = '<div class="sp-empty">Error loading.</div>'; return; }
 
 		const notifications = res.data.notifications || [];
 		if (notifications.length === 0) {
-			list.innerHTML = '<div class="sp-notification-empty">No notifications.</div>';
+			list.innerHTML = '<div class="sp-empty">No notifications.</div>';
 			return;
 		}
 
 		list.innerHTML = notifications.map(n => {
-			const unread = n.is_read == 0 ? ' unread' : '';
-			return `<div class="sp-notification-item${unread}" data-id="${n.id}" data-related-id="${n.related_id || ''}" data-related-type="${n.related_type || ''}" data-ntype="${n.type || ''}">
-				<div class="sp-notification-message">${esc(n.message)}</div>
-				<div class="sp-notification-time">${timeAgo(n.created_at)}</div>
+			const unread = n.is_read == 0 ? ' is-unread' : '';
+			return `<div class="sp-row sp-notification-item${unread}" data-sp-open data-id="${n.id}" data-related-id="${n.related_id || ''}" data-related-type="${n.related_type || ''}" data-ntype="${n.type || ''}">
+				<div class="sp-row__main"><div>${esc(n.message)}</div></div>
+				<div class="sp-row__trail sp-field__hint">${timeAgo(n.created_at)}</div>
 			</div>`;
 		}).join('');
 
@@ -2024,7 +2086,7 @@ async function loadNotifications() {
 				try { await spAjax('site_pulse_mark_notification_read', { id: id }); } catch (err) {}
 				item.remove();
 				if (!list.querySelector('.sp-notification-item')) {
-					list.innerHTML = '<div class="sp-notification-empty">No notifications.</div>';
+					list.innerHTML = '<div class="sp-empty">No notifications.</div>';
 				}
 				loadNotificationCount();
 
@@ -2040,6 +2102,9 @@ async function loadNotifications() {
 				} else if (relatedType === 'report' && relatedId) {
 					activatePanel('reports-review');
 					showReportDetail(relatedId, 'review');
+				} else if (relatedType === 'content') {
+					activatePanel('content');
+					if (relatedId && ntype === 'content_review') openContentForm(parseInt(relatedId, 10));
 				} else if (relatedType === 'survey') {
 					activatePanel('surveys');
 				} else if (relatedType === 'expense_period') {
@@ -2054,7 +2119,7 @@ async function loadNotifications() {
 			});
 		});
 	} catch (err) {
-		list.innerHTML = '<div class="sp-notification-empty">Error loading.</div>';
+		list.innerHTML = '<div class="sp-empty">Error loading.</div>';
 	}
 }
 
@@ -2211,7 +2276,7 @@ function spActionRowHTML(item) {
 	else if (d === 0) flag = '<span class="sp-flag sp-item-date sp-flag--warning">Due today</span>';
 	else if (d === 1) flag = '<span class="sp-flag sp-item-date">Due tomorrow</span>';
 	const labels = spParseLabels(item.category);
-	const chips = labels.length ? `<span class="sp-review-tags">${labels.map(l => `<span class="sp-chip sp-chip--mark">${esc(l)}</span>`).join('')}</span>` : '';
+	const chips = labels.length ? `<span class="sp-toolbar">${labels.map(l => `<span class="sp-chip sp-chip--mark">${esc(l)}</span>`).join('')}</span>` : '';
 	const meta = item.location_name ? `<span>${esc(item.location_name)}</span>` : '';
 	return `<div class="sp-row${d !== null && d < 0 ? ' is-overdue' : ''}" data-sp-open data-sp-item="${item.id}">`
 		+ `<span class="sp-row__lead"><button type="button" class="unique sp-check" data-sp-complete="${item.id}" aria-label="Mark complete">${spIcon('check', 'sp-icon--sm')}</button></span>`
@@ -2452,7 +2517,7 @@ function initInstallCard() {
 	// iPadOS 13+ reports as "Macintosh" — catch it via touch points.
 	const isIOS = (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) && !window.MSStream;
 	const isMobile = isIOS || /Android|Mobi/i.test(ua);
-	const dismissBtn = '<button type="button" class="unique sp-btn sp-btn-ghost sp-install-dismiss">Dismiss</button>';
+	const dismissBtn = '<button type="button" class="unique sp-btn sp-install-dismiss">Dismiss</button>';
 
 	let title, body, actions;
 	if (!isMobile) {
@@ -2471,13 +2536,13 @@ function initInstallCard() {
 	} else {
 		title = 'Install ' + esc(name);
 		body = `Install <strong>${esc(name)}</strong> for one-tap, full-screen access and push notifications.`;
-		actions = '<button type="button" class="unique sp-btn sp-btn-primary sp-install-go">Install</button>' + dismissBtn;
+		actions = '<button type="button" class="unique sp-btn sp-btn--primary sp-install-go">Install</button>' + dismissBtn;
 	}
 
 	card.innerHTML =
-		'<div class="sp-install-card-text"><strong class="sp-install-card-title">📲 ' + title + '</strong>'
-		+ '<span class="sp-install-card-body">' + body + '</span></div>'
-		+ '<div class="sp-install-card-actions">' + actions + '</div>';
+		'<div class="sp-stack sp-stack--sm"><strong>📲 ' + title + '</strong>'
+		+ '<span class="sp-field__hint">' + body + '</span></div>'
+		+ '<div class="sp-toolbar">' + actions + '</div>';
 	card.hidden = false;
 	markUniqueSpans(card);
 
@@ -2567,7 +2632,7 @@ function spSmsAlertsRender(d) {
 		h += d.legacy
 			? '<div class="sp-help-text">Text alerts have a new sign-up step. Confirm your number to keep getting texts.</div>'
 			: '<div class="sp-help-text">Get your alerts by text too, with a link back to the app.</div>';
-		h += `<div class="sp-sms-actions"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-sms-setup">${d.legacy ? 'Confirm text alerts' : 'Set up text alerts'}</button></div>`;
+		h += `<div class="sp-toolbar"><button type="button" class="unique sp-btn" id="sp-sms-setup">${d.legacy ? 'Confirm text alerts' : 'Set up text alerts'}</button></div>`;
 		slot.innerHTML = h;
 		$('#sp-sms-setup', slot).addEventListener('click', () => spSmsOptinScreen(d));
 		return;
@@ -2576,17 +2641,17 @@ function spSmsAlertsRender(d) {
 	let h = '';
 	h += '<div class="sp-sms-optin">Text alerts are on</div>';
 	h += '<div class="sp-sms-body">';
-	h += `<div class="sp-sms-number">Texting ${esc(spSmsPretty(d.phone))} <button type="button" class="unique sp-btn sp-btn-ghost" id="sp-sms-change">Change number</button></div>`;
+	h += `<div class="sp-toolbar">Texting ${esc(spSmsPretty(d.phone))} <button type="button" class="unique sp-btn" id="sp-sms-change">Change number</button></div>`;
 	h += '<div class="sp-help-text">A link back to the app, never message content. Your admin picks which alerts are sent; reply in the app.</div>';
 	const winDefault = d.org_event_window ? spMins(d.org_event_window) : '1 hour';
-	h += `<label class="sp-sms-field">Bundle update texts — at most one every<select id="sp-sms-window" class="sp-select"><option value="">Company default (${winDefault})</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label>`;
-	h += `<label class="sp-sms-field">Missed chat — wait before texting<select id="sp-sms-delay" class="sp-select"><option value="">Company default (${spMins(d.org_delay)})</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`;
+	h += `<label class="sp-field sp-field__label">Bundle update texts — at most one every<select id="sp-sms-window" class="sp-select"><option value="">Company default (${winDefault})</option><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label>`;
+	h += `<label class="sp-field sp-field__label">Missed chat — wait before texting<select id="sp-sms-delay" class="sp-select"><option value="">Company default (${spMins(d.org_delay)})</option><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`;
 	const renoDefault = d.org_renotify ? spMins(d.org_renotify) : 'off';
-	h += `<label class="sp-sms-field">Missed chat — remind me if still unread<select id="sp-sms-renotify" class="sp-select"><option value="">Company default (${renoDefault})</option><option value="0">Don’t remind</option><option value="60">After 1 hour</option><option value="360">After 6 hours</option><option value="720">After 12 hours</option></select></label>`;
+	h += `<label class="sp-field sp-field__label">Missed chat — remind me if still unread<select id="sp-sms-renotify" class="sp-select"><option value="">Company default (${renoDefault})</option><option value="0">Don’t remind</option><option value="60">After 1 hour</option><option value="360">After 6 hours</option><option value="720">After 12 hours</option></select></label>`;
 	const quietDefault = d.org_quiet ? `${esc(d.org_quiet.start)}–${esc(d.org_quiet.end)}` : 'off';
-	h += `<label class="sp-sms-field">Quiet hours<select id="sp-sms-quiet" class="sp-select"><option value="">Company default (${quietDefault})</option><option value="0">Off</option><option value="1">On</option></select></label>`;
-	h += `<div class="sp-sms-quiet-times"${d.quiet_enabled === '1' ? '' : ' hidden'}><label>From <input type="time" id="sp-sms-quiet-start" class="sp-input" value="${esc(d.quiet_start || '21:00')}"></label><label>To <input type="time" id="sp-sms-quiet-end" class="sp-input" value="${esc(d.quiet_end || '07:00')}"></label></div>`;
-	h += `<div class="sp-sms-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-sms-save">Save</button> <button type="button" class="unique sp-btn sp-btn-ghost" id="sp-sms-off">Turn off text alerts</button></div>`;
+	h += `<label class="sp-field sp-field__label">Quiet hours<select id="sp-sms-quiet" class="sp-select"><option value="">Company default (${quietDefault})</option><option value="0">Off</option><option value="1">On</option></select></label>`;
+	h += `<div class="sp-form-row sp-sms-quiet-times"${d.quiet_enabled === '1' ? '' : ' hidden'}><label>From <input type="time" id="sp-sms-quiet-start" class="sp-input" value="${esc(d.quiet_start || '21:00')}"></label><label>To <input type="time" id="sp-sms-quiet-end" class="sp-input" value="${esc(d.quiet_end || '07:00')}"></label></div>`;
+	h += `<div class="sp-toolbar"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-sms-save">Save</button> <button type="button" class="unique sp-btn" id="sp-sms-off">Turn off text alerts</button></div>`;
 	h += '<div class="sp-help-text" id="sp-sms-status"></div>';
 	h += `</div>`;
 	slot.innerHTML = h;
@@ -2637,13 +2702,13 @@ function spSmsOptinScreen(d, preview = false) {
 	h += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(d.program)} Text Alerts</h3></div>`;
 	if (preview) h += '<div class="sp-help-text">Preview: this is the opt-in screen your team sees. Nothing is saved or sent from here.</div>';
 	h += `<p class="sp-sms-optin-lede">Get ${esc(d.program)} alerts by text: reports, approvals, reminders and messages, anything that lands in your notification bell. Each text is a short note with a link back to the app.</p>`;
-	h += `<label class="sp-sms-field">Mobile number<input type="tel" id="sp-sms-optin-phone" class="sp-input" autocomplete="tel" inputmode="tel" value="${esc(phone)}" placeholder="(555) 123-4567"></label>`;
+	h += `<label class="sp-field sp-field__label">Mobile number<input type="tel" id="sp-sms-optin-phone" class="sp-input" autocomplete="tel" inputmode="tel" value="${esc(phone)}" placeholder="(555) 123-4567"></label>`;
 	h += `<label class="sp-sms-consent"><input type="checkbox" id="sp-sms-consent"><div class="sp-sms-consent-text">${esc(d.consent_text)}</div></label>`;
 	h += `<div class="sp-sms-legal"><a href="${esc(d.privacy_url)}" target="_blank" rel="noopener">Privacy Policy</a> · <a href="${esc(d.terms_url)}" target="_blank" rel="noopener">Terms &amp; Conditions</a></div>`;
 	h += '<div class="sp-help-text" id="sp-sms-optin-status" role="status"></div>';
 	h += '<div class="sp-report-form-actions">';
-	h += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-sms-optin-cancel">Not now</button>';
-	h += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-sms-optin-agree" disabled>Turn on text alerts</button>';
+	h += '<button type="button" class="unique sp-btn" id="sp-sms-optin-cancel">Not now</button>';
+	h += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-sms-optin-agree" disabled>Turn on text alerts</button>';
 	h += '</div></div>';
 	backdrop.innerHTML = h;
 
@@ -2697,13 +2762,13 @@ async function spLoadOrgSmsNudge() {
 	h += '<h3>Text alerts (SMS)</h3>';
 	h += '<p class="sp-help-text" style="margin:0 0 12px;">Company defaults for the <strong>Text</strong> column in the matrix above and the missed-chat nudge. Recipients still opt in (with their own quiet hours) from the bell. Texts carry a link, not message content.</p>';
 	if (!d.twilio_ready) h += `<div class="sp-notice sp-notice--danger">${spIcon('bolt')}<span class="sp-notice__text">No Twilio number is set up for this app yet, so texts won’t send until the number and A2P registration are in place.</span></div>`;
-	h += `<label class="sp-sms-field">Notification digests — at most one text per person every<select id="sp-orgsms-window" class="sp-select"><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label>`;
+	h += `<label class="sp-field sp-field__label">Notification digests — at most one text per person every<select id="sp-orgsms-window" class="sp-select"><option value="30">30 minutes</option><option value="60">1 hour</option><option value="120">2 hours</option><option value="240">4 hours</option></select></label>`;
 	h += `<div class="sp-help-text" style="margin:-4px 0 12px;">Bundles a burst of notifications (e.g. several reports at once) into one digest text.</div>`;
-	h += `<label class="sp-sms-field">Missed chat — wait before texting<select id="sp-orgsms-delay" class="sp-select"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`;
-	h += `<label class="sp-sms-field">Missed chat — re-notify if still unread<select id="sp-orgsms-renotify" class="sp-select"><option value="0">Off</option><option value="60">After 1 hour</option><option value="360">After 6 hours</option><option value="720">After 12 hours</option></select></label>`;
-	h += `<label class="sp-reminder-toggle" style="display:block;margin:12px 0 8px;"><input type="checkbox" id="sp-orgsms-quiet-en"${d.quiet_enabled ? ' checked' : ''}> Default quiet hours (no texts during this window)</label>`;
-	h += `<div class="sp-sms-quiet-times" id="sp-orgsms-quiet-wrap"${d.quiet_enabled ? '' : ' hidden'}><label>From <input type="time" id="sp-orgsms-quiet-start" class="sp-input" value="${esc(d.quiet_start || '21:00')}"></label><label>To <input type="time" id="sp-orgsms-quiet-end" class="sp-input" value="${esc(d.quiet_end || '07:00')}"></label></div>`;
-	h += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-orgsms-save">Save text alert settings</button> <button type="button" class="unique sp-btn sp-btn-secondary" id="sp-orgsms-preview">Preview opt-in screen</button> <span class="sp-help-text" id="sp-orgsms-status"></span></div>';
+	h += `<label class="sp-field sp-field__label">Missed chat — wait before texting<select id="sp-orgsms-delay" class="sp-select"><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select></label>`;
+	h += `<label class="sp-field sp-field__label">Missed chat — re-notify if still unread<select id="sp-orgsms-renotify" class="sp-select"><option value="0">Off</option><option value="60">After 1 hour</option><option value="360">After 6 hours</option><option value="720">After 12 hours</option></select></label>`;
+	h += `<label class="sp-check-row"><input type="checkbox" id="sp-orgsms-quiet-en"${d.quiet_enabled ? ' checked' : ''}> Default quiet hours (no texts during this window)</label>`;
+	h += `<div class="sp-form-row sp-sms-quiet-times" id="sp-orgsms-quiet-wrap"${d.quiet_enabled ? '' : ' hidden'}><label>From <input type="time" id="sp-orgsms-quiet-start" class="sp-input" value="${esc(d.quiet_start || '21:00')}"></label><label>To <input type="time" id="sp-orgsms-quiet-end" class="sp-input" value="${esc(d.quiet_end || '07:00')}"></label></div>`;
+	h += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-orgsms-save">Save text alert settings</button> <button type="button" class="unique sp-btn" id="sp-orgsms-preview">Preview opt-in screen</button> <span class="sp-help-text" id="sp-orgsms-status"></span></div>';
 	h += '</div>';
 	host.innerHTML = h;
 	markUniqueSpans(host);
@@ -2765,13 +2830,13 @@ async function spPushRender() {
 	try { sub = await reg.pushManager.getSubscription(); } catch (e) {}
 
 	if (sub) {
-		slot.innerHTML = '<span class="sp-push-state">🔔 Notifications on for this device.</span> <button type="button" class="unique sp-btn sp-btn-ghost sp-push-off">Turn off</button>';
+		slot.innerHTML = '<span class="sp-push-state">🔔 Notifications on for this device.</span> <button type="button" class="unique sp-btn sp-push-off">Turn off</button>';
 		$('.sp-push-off', slot)?.addEventListener('click', spPushUnsubscribe);
 	} else if (typeof Notification !== 'undefined' && Notification.permission === 'denied') {
 		slot.innerHTML = '<span class="sp-push-state">Notifications are blocked for this app in your device settings — turn them back on there first.</span>';
 	} else {
-		slot.innerHTML = '<button type="button" class="unique sp-btn sp-btn-primary sp-push-on">Turn on notifications for this device</button>'
-			+ '<button type="button" class="unique sp-push-dismiss" aria-label="Not now" title="Not now — ask again in 30 days">&times;</button>';
+		slot.innerHTML = '<button type="button" class="unique sp-btn sp-btn--primary sp-push-on">Turn on notifications for this device</button>'
+			+ '<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-push-dismiss" aria-label="Not now" title="Not now — ask again in 30 days">&times;</button>';
 		$('.sp-push-on', slot)?.addEventListener('click', spPushSubscribe);
 		$('.sp-push-dismiss', slot)?.addEventListener('click', () => {
 			localStorage.setItem('sp_push_dismissed_until', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
@@ -2860,7 +2925,7 @@ function spMsgRenderReplyBar() {
 		composer.parentNode.insertBefore(bar, composer);
 	}
 	bar.innerHTML = '<div class="sp-msg-reply-bar-text"><span class="sp-msg-reply-bar-label unique">Replying to ' + esc(_spMsg.replyTo.sender) + '</span><span class="sp-msg-reply-bar-snippet unique">' + esc(_spMsg.replyTo.snippet) + '</span></div>'
-		+ '<button type="button" class="unique sp-msg-reply-cancel" aria-label="Cancel reply">' + spIcon('x', 'sp-icon--sm') + '</button>';
+		+ '<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-msg-reply-cancel" aria-label="Cancel reply">' + spIcon('x', 'sp-icon--sm') + '</button>';
 	markUniqueSpans(bar);
 	$('.sp-msg-reply-cancel', bar)?.addEventListener('click', () => spMsgCancelReply());
 }
@@ -2958,7 +3023,7 @@ function msgBubbleHTML(m, isGroup) {
 	// Every message gets a "create action item" control; own messages also get Edit/Delete. In a
 	// group, others' bubbles show the sender name.
 	let actions = '<div class="sp-msg-bubble-actions">';
-	const ab = 'unique sp-btn sp-btn--ghost sp-icon-btn';
+	const ab = 'unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm';
 	actions += `<button type="button" class="${ab} sp-msg-reply" title="Reply" aria-label="Reply to message">${ICON_REPLY}</button>`;
 	actions += m.has_task
 		? `<button type="button" class="${ab} sp-msg-task is-done" title="Action item already created" aria-label="Action item already created from this message" disabled>${ICON_TASK}</button>`
@@ -2985,7 +3050,7 @@ function msgBubbleHTML(m, isGroup) {
 			: `<div class="sp-msg-file-card"><button type="button" class="unique sp-msg-attach-file" ${dataAttrs}>`
 				+ `<strong class="sp-msg-file-badge">${esc(spMsgFileKind(m.attach_name, m.attach_mime))}</strong>`
 				+ `<div class="sp-msg-file-meta"><strong class="sp-msg-file-name">${esc(m.attach_name || 'Attachment')}</strong>`
-				+ `<div class="sp-msg-file-hint">File attached · tap to view or download</div></div></button>`
+				+ `<div class="sp-field__hint">File attached · tap to view or download</div></div></button>`
 				+ `<a class="unique sp-msg-file-dl" href="${esc(m.attach_url)}" download="${esc(m.attach_name || '')}" title="Download" aria-label="Download ${esc(m.attach_name || 'file')}">${ICON_DOWNLOAD}</a></div>`;
 	}
 	const bodyHtml = m.body ? `<div class="sp-msg-bubble-body">${esc(m.body)}</div>` : '';
@@ -3011,8 +3076,8 @@ function spMsgAttachModal(url, mime, name, msgId) {
 	const isPdf = (mime || '') === 'application/pdf' || /\.pdf(\?|$)/i.test(url);
 
 	let html = '<div class="sp-modal sp-modal-wide sp-attach-modal">';
-	html += '<div class="sp-card-header sp-header sp-attach-modal-head"><span class="sp-attach-modal-name unique">' + esc(name || 'Attachment') + '</span>'
-		+ '<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-attach-close" aria-label="Close">' + spIcon('x') + '</button></div>';
+	html += '<div class="sp-card-header sp-header"><span class="sp-attach-modal-name unique">' + esc(name || 'Attachment') + '</span>'
+		+ '<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-attach-close" aria-label="Close">' + spIcon('x') + '</button></div>';
 	if (isImg) {
 		html += '<div class="sp-attach-modal-body"><img src="' + esc(url) + '" alt="' + esc(name || '') + '" class="sp-attach-modal-img"></div>';
 	} else if (isPdf) {
@@ -3020,11 +3085,11 @@ function spMsgAttachModal(url, mime, name, msgId) {
 	} else {
 		html += '<div class="sp-attach-modal-body sp-attach-modal-fileonly"><p>No preview available for this file type.</p></div>';
 	}
-	html += '<div class="sp-attach-modal-actions">';
+	html += '<div class="sp-toolbar sp-toolbar--end sp-attach-modal-actions">';
 	// Rotate controls (images only) — physically rotate the stored file so it sticks for everyone in the chat.
 	if (isImg && msgId) {
-		html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-attach-rotate" data-dir="ccw" title="Rotate left" aria-label="Rotate left">&#8634;</button>';
-		html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-attach-rotate" data-dir="cw" title="Rotate right" aria-label="Rotate right">&#8635;</button>';
+		html += '<button type="button" class="unique sp-btn sp-attach-rotate" data-dir="ccw" title="Rotate left" aria-label="Rotate left">&#8634;</button>';
+		html += '<button type="button" class="unique sp-btn sp-attach-rotate" data-dir="cw" title="Rotate right" aria-label="Rotate right">&#8635;</button>';
 	}
 	html += '<button type="button" class="unique sp-btn sp-attach-close">Close</button>'
 		+ '<a class="unique sp-btn sp-btn--primary" href="' + esc(url) + '" download>Download</a></div>';
@@ -3199,7 +3264,7 @@ function editMsg(id, bubble) {
 	if (!bodyEl) return;
 	_spMsg.editing = true;
 	const orig = bodyEl.textContent;
-	bodyEl.innerHTML = `<textarea class="sp-msg-edit-input">${esc(orig)}</textarea><div class="sp-msg-edit-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-msg-edit-save">Save</button><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-edit-cancel">Cancel</button></div>`;
+	bodyEl.innerHTML = `<textarea class="sp-msg-edit-input">${esc(orig)}</textarea><div class="sp-toolbar"><button type="button" class="unique sp-btn sp-btn--primary sp-msg-edit-save">Save</button><button type="button" class="unique sp-btn sp-msg-edit-cancel">Cancel</button></div>`;
 	markUniqueSpans(bubble);
 	const ta = bubble.querySelector('.sp-msg-edit-input');
 	if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
@@ -3236,7 +3301,7 @@ async function spMsgCreateAction(mid) {
 	try { res = await spAjax('site_pulse_messages_action_suggest', { message_id: mid }); } catch (e) {}
 	if (!res || !res.success) {
 		const why = (res && res.data && res.data.message) ? res.data.message : 'Could not reach the action-item generator. Make sure the latest update is deployed.';
-		backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p>${esc(why)}</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Close</button></div></div>`;
+		backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p>${esc(why)}</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-act-cancel">Close</button></div></div>`;
 		$('.sp-act-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
 		return;
 	}
@@ -3246,7 +3311,7 @@ async function spMsgCreateAction(mid) {
 	const others = data.others || [];
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Create Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Cancel</button></div>';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Create Action Item</h3><button type="button" class="unique sp-btn sp-act-cancel">Cancel</button></div>';
 	html += data.empty
 		? '<p class="sp-help-text" style="margin:0 0 10px;">The AI didn’t find a clear to-do in these messages — write one below, then choose whose list to add it to.</p>'
 		: '<p class="sp-help-text" style="margin:0 0 10px;">Review what the AI pulled from this message. Edit or uncheck any, then choose whose list to add them to.</p>';
@@ -3261,19 +3326,19 @@ async function spMsgCreateAction(mid) {
 	});
 	html += '</div>';
 
-	html += '<div class="sp-act-assign">';
-	html += '<label class="sp-reminder-toggle"><input type="radio" name="sp-act-assign" value="me" checked> Add to My Action Items</label>';
+	html += '<div class="sp-options sp-act-assign">';
+	html += '<label class="sp-check-row"><input type="radio" name="sp-act-assign" value="me" checked> Add to My Action Items</label>';
 	if (others.length === 1) {
 		const firstName = esc((others[0].name || '').split(' ')[0] || others[0].name);
-		html += `<label class="sp-reminder-toggle"><input type="radio" name="sp-act-assign" value="other"> Add to ${firstName}’s Action Items</label>`;
-		html += '<label class="sp-reminder-toggle"><input type="radio" name="sp-act-assign" value="both"> Add to Both Action Items</label>';
+		html += `<label class="sp-check-row"><input type="radio" name="sp-act-assign" value="other"> Add to ${firstName}’s Action Items</label>`;
+		html += '<label class="sp-check-row"><input type="radio" name="sp-act-assign" value="both"> Add to Both Action Items</label>';
 	} else if (others.length > 1) {
-		html += '<label class="sp-reminder-toggle"><input type="radio" name="sp-act-assign" value="other"> Add to Everyone Else’s Action Items</label>';
-		html += '<label class="sp-reminder-toggle"><input type="radio" name="sp-act-assign" value="both"> Add to Everyone’s Action Items</label>';
+		html += '<label class="sp-check-row"><input type="radio" name="sp-act-assign" value="other"> Add to Everyone Else’s Action Items</label>';
+		html += '<label class="sp-check-row"><input type="radio" name="sp-act-assign" value="both"> Add to Everyone’s Action Items</label>';
 	}
 	html += '</div>';
 
-	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-act-create">Create</button><button type="button" class="unique sp-btn sp-btn-ghost sp-act-cancel">Cancel</button></div>';
+	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn--primary sp-act-create">Create</button><button type="button" class="unique sp-btn sp-act-cancel">Cancel</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -3299,7 +3364,7 @@ async function spMsgCreateAction(mid) {
 				const tb = document.querySelector(`#sp-msg-bubbles .sp-msg-bubble[data-id="${mid}"] .sp-msg-task`);
 				if (tb) { tb.disabled = true; tb.classList.add('is-done'); tb.title = 'Action item already created'; }
 				const n = res.data.created || 0;
-				backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p style="text-align:center;font-weight:600;margin:8px 0 16px;">✓ Added ${n} action item${n === 1 ? '' : 's'}.</p><div class="sp-report-form-actions" style="justify-content:center;"><button type="button" class="unique sp-btn sp-btn-primary sp-act-cancel">Done</button></div></div>`;
+				backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p style="text-align:center;font-weight:600;margin:8px 0 16px;">✓ Added ${n} action item${n === 1 ? '' : 's'}.</p><div class="sp-report-form-actions" style="justify-content:center;"><button type="button" class="unique sp-btn sp-btn--primary sp-act-cancel">Done</button></div></div>`;
 				$('.sp-act-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
 				loadMsgUnread();
 			} else { spAlert(res.data?.message || 'Could not create the action item.'); if (btn) btn.disabled = false; }
@@ -3477,7 +3542,7 @@ function spMsgLoadOlderHTML(data) {
 	if (!data || !data.has_more) return '';
 	const older = Math.max(0, (parseInt(data.total, 10) || 0) - ((data.messages || []).length));
 	const label = older ? `Load earlier messages (${older} older)` : 'Load earlier messages';
-	return `<button type="button" class="unique sp-btn sp-btn-ghost sp-msg-load-older">${esc(label)}</button>`;
+	return `<button type="button" class="unique sp-btn sp-msg-load-older">${esc(label)}</button>`;
 }
 
 // Everything inside #sp-msg-bubbles — pager, bubbles, read receipt. Shared by the full render, the poll
@@ -3556,24 +3621,24 @@ function renderMsgThread(data) {
 	const isGroup = !!conv.is_group;
 	// Name + avatar come from the server (the DM "other person" is resolved there, same as the title).
 	let html = '<div class="sp-card-header sp-header sp-msg-thread-header">';
-	html += `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-msg-back" title="Back to messages" aria-label="Back to messages">${spIcon('arrow-l')}</button>`;
+	html += `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-msg-back" title="Back to messages" aria-label="Back to messages">${spIcon('arrow-l')}</button>`;
 	html += isGroup ? spMsgGroupAvatar(conv.members) : spMsgAvatar(conv.title || 'Conversation', conv.avatar || '');
 	html += '<div class="sp-msg-thread-heading">';
 	if (isGroup) html += `<button type="button" class="unique sp-msg-members sp-msg-manage">${(conv.participants || []).length} members</button>`;
 	html += `<div class="sp-msg-thread-title-wrap"><span class="sp-msg-thread-title">${esc(conv.title || 'Conversation')}</span></div>`;
 	html += '</div>';
 	html += '<span class="sp-msg-thread-actions">';
-	html += `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-btn" title="Search this conversation" aria-label="Search conversation">${ICON_SEARCH}</button>`;
-	html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-msg-delete" title="Delete this conversation from your list" aria-label="Delete conversation">${ICON_DELETE}</button>`;
+	html += `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-msg-search-btn" title="Search this conversation" aria-label="Search conversation">${ICON_SEARCH}</button>`;
+	html += `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete sp-msg-delete" title="Delete this conversation from your list" aria-label="Delete conversation">${ICON_DELETE}</button>`;
 	html += '</span>';
 	html += '</div>';
 	// In-thread find bar (hidden until the magnifier is tapped) — highlights matches + prev/next.
 	html += '<div class="sp-msg-search-bar" id="sp-msg-search-bar" hidden>'
 		+ '<input type="search" class="sp-input sp-msg-search-input" placeholder="Search this conversation…" aria-label="Search this conversation">'
 		+ '<span class="sp-msg-search-count" aria-live="polite"></span>'
-		+ `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-prev" title="Previous match" aria-label="Previous match">${spIcon('chev-u')}</button>`
-		+ `<button type="button" class="unique sp-btn sp-icon-btn sp-msg-search-next" title="Next match" aria-label="Next match">${spIcon('chev-d')}</button>`
-		+ `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-msg-search-close" title="Close search" aria-label="Close search">${spIcon('x')}</button>`
+		+ `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-msg-search-prev" title="Previous match" aria-label="Previous match">${spIcon('chev-u')}</button>`
+		+ `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-msg-search-next" title="Next match" aria-label="Next match">${spIcon('chev-d')}</button>`
+		+ `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-msg-search-close" title="Close search" aria-label="Close search">${spIcon('x')}</button>`
 		+ '</div>';
 	html += '<div class="sp-msg-bubbles" id="sp-msg-bubbles">';
 	html += spMsgBubblesHTML(data, isGroup);
@@ -3907,7 +3972,7 @@ async function openMsgNew() {
 	const contacts = res.data.contacts || [];
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>New Message</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-new-cancel">Cancel</button></div>';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>New Message</h3><button type="button" class="unique sp-btn sp-msg-new-cancel">Cancel</button></div>';
 	html += '<p class="sp-help-text" style="margin:0 0 10px;">Pick one person for a direct message, or several for a group.</p>';
 	html += '<input type="text" class="sp-input" id="sp-msg-new-search" placeholder="Search people…" style="margin-bottom:10px;">';
 	html += '<div id="sp-msg-new-grouprow" hidden style="margin-bottom:10px;"><input type="text" class="sp-input" id="sp-msg-new-title" placeholder="Group name (optional)"></div>';
@@ -3916,7 +3981,7 @@ async function openMsgNew() {
 		html += `<label class="sp-msg-contact-pick"><input type="checkbox" class="sp-msg-pick" value="${c.id}" data-name="${esc(c.name)}">${spPickFace(c)}<span class="sp-msg-contact-name">${esc(c.name)}</span></label>`;
 	});
 	html += '</div>';
-	html += '<div class="sp-report-form-actions" style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-new-start" disabled>Start conversation</button></div>';
+	html += '<div class="sp-report-form-actions" style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-msg-new-start" disabled>Start conversation</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -3974,22 +4039,22 @@ async function openGroupManage(conv) {
 	const memberIds = new Set((conv.participants || []).map(p => p.id));
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(conv.title || 'Group')}</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-msg-manage-cancel">Close</button></div>`;
+	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(conv.title || 'Group')}</h3><button type="button" class="unique sp-btn sp-msg-manage-cancel">Close</button></div>`;
 	html += '<h4 style="margin:0 0 8px;">Members</h4><div class="sp-msg-members">';
 	(conv.participants || []).forEach(p => {
 		const canRemove = isCreator && p.id !== creatorId;
-		html += `<div class="sp-msg-member"><span>${esc(p.name)}${p.id === creatorId ? ' · creator' : ''}</span>${canRemove ? `<button type="button" class="unique sp-btn sp-btn-ghost sp-msg-remove" data-uid="${p.id}">Remove</button>` : ''}</div>`;
+		html += `<div class="sp-msg-member"><span>${esc(p.name)}${p.id === creatorId ? ' · creator' : ''}</span>${canRemove ? `<button type="button" class="unique sp-btn sp-msg-remove" data-uid="${p.id}">Remove</button>` : ''}</div>`;
 	});
 	html += '</div>';
 	if (isCreator) {
 		const addable = allContacts.filter(c => !memberIds.has(c.id));
 		if (addable.length) {
-			html += '<h4 style="margin:14px 0 8px;">Add member</h4><div class="sp-msg-addrow"><select class="sp-select" id="sp-msg-add-select">';
+			html += '<h4 style="margin:14px 0 8px;">Add member</h4><div class="sp-toolbar sp-toolbar--nowrap sp-msg-addrow"><select class="sp-select" id="sp-msg-add-select">';
 			addable.forEach(c => { html += `<option value="${c.id}">${esc(c.name)}${c.meta ? ' — ' + esc(c.meta) : ''}</option>`; });
-			html += '</select><button type="button" class="unique sp-btn sp-btn-primary" id="sp-msg-add-btn">Add</button></div>';
+			html += '</select><button type="button" class="unique sp-btn sp-btn--primary" id="sp-msg-add-btn">Add</button></div>';
 		}
 	}
-	html += '<div class="sp-report-form-actions" style="margin-top:16px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-msg-leave-btn">Leave group</button></div>';
+	html += '<div class="sp-report-form-actions" style="margin-top:16px;"><button type="button" class="unique sp-btn" id="sp-msg-leave-btn">Leave group</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -4673,7 +4738,7 @@ async function spCancelReport(form, existing) {
 			title: 'Discard this report?',
 			message: 'What you\'ve entered will be thrown away.',
 			options: [
-				{ label: 'Discard', value: 'yes', class: 'sp-btn-primary sp-btn-delete' },
+				{ label: 'Discard', value: 'yes', class: 'sp-btn--primary sp-btn--danger sp-btn-delete' },
 				{ label: 'Keep editing', value: null, class: 'sp-btn-secondary' },
 			],
 		});
@@ -4694,7 +4759,7 @@ async function spDeleteDraftReport(form, report) {
 		title: 'Delete this draft?',
 		message: `Your ${spReportPhrase(report)} draft and its answers will be removed. This can't be undone.`,
 		options: [
-			{ label: 'Delete draft', value: 'yes', class: 'sp-btn-primary sp-btn-delete' },
+			{ label: 'Delete draft', value: 'yes', class: 'sp-btn--primary sp-btn--danger sp-btn-delete' },
 			{ label: 'Keep it', value: null, class: 'sp-btn-secondary' },
 		],
 	});
@@ -5102,7 +5167,7 @@ async function spOpenReassign(report, author, location, panelPrefix) {
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Reassign Report</h3>';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-reassign-cancel">Cancel</button></div>';
+	html += '<button type="button" class="unique sp-btn sp-reassign-cancel">Cancel</button></div>';
 
 	html += '<div class="sp-form-group"><label>Submitted By</label><select class="sp-select" id="sp-reassign-user">';
 	opts.users.forEach(u => {
@@ -5120,8 +5185,8 @@ async function spOpenReassign(report, author, location, panelPrefix) {
 	}
 
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-reassign-save">Save</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-reassign-cancel">Cancel</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary sp-reassign-save">Save</button>';
+	html += '<button type="button" class="unique sp-btn sp-reassign-cancel">Cancel</button>';
 	html += '</div></div>';
 
 	backdrop.innerHTML = html;
@@ -5160,7 +5225,7 @@ async function spGodEditReport(report, panelPrefix) {
 		data = detRes.data;
 		opts = (optRes && optRes.success) ? optRes.data : { users: [], locations: [] };
 	} catch (e) {
-		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>Could not load the report.</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Close</button></div></div>';
+		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>Could not load the report.</p><div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-ger-cancel">Close</button></div></div>';
 		$('.sp-ger-cancel', backdrop)?.addEventListener('click', () => closeFormModal());
 		return;
 	}
@@ -5174,11 +5239,11 @@ async function spGodEditReport(report, panelPrefix) {
 	const dateVal = String(rpt.report_period_start || '').split(' ')[0].split('T')[0];
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Report</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Cancel</button></div>';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Report</h3><button type="button" class="unique sp-btn sp-ger-cancel">Cancel</button></div>';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Fix the imported report — date, submitter, location, and any field values.</p>';
 
 	// Attribution row: date · submitted by · location.
-	html += '<div class="sp-ger-attr">';
+	html += '<div class="sp-toolbar">';
 	html += `<div class="sp-ger-col"><label class="sp-field-label">Report date</label><input type="date" class="sp-input sp-ger-date" value="${dateVal}"></div>`;
 	html += '<div class="sp-ger-col"><label class="sp-field-label">Submitted by</label><select class="sp-select sp-ger-user">'
 		+ (opts.users || []).map(u => `<option value="${u.id}"${u.id === +rpt.user_id ? ' selected' : ''}>${esc(u.name)}${u.meta ? ' — ' + esc(u.meta) : ''}</option>`).join('')
@@ -5203,7 +5268,7 @@ async function spGodEditReport(report, panelPrefix) {
 		html += '</div>';
 	});
 
-	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-ger-save">Save Changes</button><button type="button" class="unique sp-btn sp-btn-ghost sp-ger-cancel">Cancel</button></div>';
+	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn--primary sp-ger-save">Save Changes</button><button type="button" class="unique sp-btn sp-ger-cancel">Cancel</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -5403,7 +5468,7 @@ async function loadActivityLog() {
 }
 
 function spRenderActivityShell(host, data) {
-	let h = '<div class="sp-activity-filters">';
+	let h = '<div class="sp-toolbar">';
 	h += `<input type="text" class="sp-input sp-activity-search" placeholder="Search description or user…" value="${esc(_spActivity.search)}">`;
 	h += '<select class="sp-select sp-activity-actor"><option value="">All users</option>';
 	(data.actors || []).forEach(a => { h += `<option value="${a.actor_id}"${String(_spActivity.actor_filter) === String(a.actor_id) ? ' selected' : ''}>${esc(a.actor_name)}</option>`; });
@@ -5413,7 +5478,7 @@ function spRenderActivityShell(host, data) {
 	h += '</select>';
 	h += `<input type="date" class="sp-input sp-activity-from" value="${esc(_spActivity.date_from)}" title="From date">`;
 	h += `<input type="date" class="sp-input sp-activity-to" value="${esc(_spActivity.date_to)}" title="To date">`;
-	h += '<button type="button" class="unique sp-btn sp-btn-ghost sp-activity-clear">Clear</button>';
+	h += '<button type="button" class="unique sp-btn sp-activity-clear">Clear</button>';
 	h += '</div><div id="sp-activity-results"></div>';
 	host.innerHTML = h;
 	markUniqueSpans(host);
@@ -5437,8 +5502,8 @@ function spRenderActivityResults(data) {
 	const rows = data.rows || [];
 	const totalPages = Math.max(1, Math.ceil((data.total || 0) / (data.per || 50)));
 
-	let h = `<div class="sp-activity-count">${data.total || 0} record${(data.total || 0) !== 1 ? 's' : ''}</div>`;
-	h += '<div class="sp-card sp-table-card"><table class="sp-table"><thead class="sp-thead"><tr>';
+	let h = `<div class="sp-field__hint">${data.total || 0} record${(data.total || 0) !== 1 ? 's' : ''}</div>`;
+	h += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table"><thead><tr>';
 	h += '<th>When</th><th>User</th><th>Action</th><th>Details</th></tr></thead><tbody>';
 	if (!rows.length) {
 		h += '<tr><td colspan="4" class="sp-empty">No activity matches these filters.</td></tr>';
@@ -5449,16 +5514,16 @@ function spRenderActivityResults(data) {
 			if (r.for_user_name) details += ` <span class="unique sp-activity-target">re: ${esc(r.for_user_name)}</span>`;
 			let metaStr = '';
 			try { const m = r.meta ? JSON.parse(r.meta) : null; if (m && typeof m === 'object') metaStr = Object.entries(m).map(([k, v]) => `${k}: ${v}`).join(' · '); } catch (e) {}
-			if (metaStr) details += ` <span class="unique sp-activity-meta">${esc(metaStr)}</span>`;
+			if (metaStr) details += ` <span class="unique sp-field__hint">${esc(metaStr)}</span>`;
 			h += `<tr><td class="sp-activity-when">${esc(when)}</td><td>${esc(r.actor_name || '')}</td><td>${esc(spPrettyAction(r.action))}</td><td>${details}</td></tr>`;
 		});
 	}
 	h += '</tbody></table></div>';
 	if (totalPages > 1) {
 		h += '<div class="sp-activity-pager">';
-		h += `<button type="button" class="unique sp-btn sp-btn-secondary sp-activity-prev"${_spActivity.page <= 1 ? ' disabled' : ''}>← Prev</button>`;
-		h += `<span class="unique sp-activity-page">Page ${_spActivity.page} of ${totalPages}</span>`;
-		h += `<button type="button" class="unique sp-btn sp-btn-secondary sp-activity-next"${_spActivity.page >= totalPages ? ' disabled' : ''}>Next →</button>`;
+		h += `<button type="button" class="unique sp-btn sp-activity-prev"${_spActivity.page <= 1 ? ' disabled' : ''}>← Prev</button>`;
+		h += `<span class="unique sp-field__hint">Page ${_spActivity.page} of ${totalPages}</span>`;
+		h += `<button type="button" class="unique sp-btn sp-activity-next"${_spActivity.page >= totalPages ? ' disabled' : ''}>Next →</button>`;
 		h += '</div>';
 	}
 	box.innerHTML = h;
@@ -5526,12 +5591,12 @@ function spAiRender(thinking) {
 	const chat = $('#sp-ai-chat');
 	if (!chat) return;
 	if (!_spAi.messages.length && !thinking) {
-		chat.innerHTML = '<div class="sp-ai-empty">Pick a role, then ask for what you need — each answer comes back in your company voice. (Ctrl/⌘+Enter to send.)</div>';
+		chat.innerHTML = '<div class="sp-empty">Pick a role, then ask for what you need — each answer comes back in your company voice. (Ctrl/⌘+Enter to send.)</div>';
 		return;
 	}
 	let h = _spAi.messages.map((m, i) => {
 		const body = esc(m.content).replace(/\n/g, '<br>');
-		const copy = (m.role === 'assistant' && !m.error) ? `<button type="button" class="unique sp-btn sp-btn-ghost sp-ai-copy" data-i="${i}">Copy</button>` : '';
+		const copy = (m.role === 'assistant' && !m.error) ? `<button type="button" class="unique sp-btn sp-ai-copy" data-i="${i}">Copy</button>` : '';
 		return `<div class="sp-ai-msg sp-ai-${m.role}${m.error ? ' sp-ai-error' : ''}">${body}${copy}</div>`;
 	}).join('');
 	if (thinking) h += '<div class="sp-ai-msg sp-ai-assistant sp-ai-thinking">…thinking</div>';
@@ -5585,13 +5650,13 @@ function renderAiRoles() {
 	h += '<p class="sp-help-text" style="margin:14px 0 14px">Roles employees pick in the AI Assistant. Each persona steers the AI for that role; the company voice (Settings → AI Prompts) is always applied on top.</p>';
 	h += '<div id="sp-airole-list">';
 	_spAiRoles.forEach((r, i) => {
-		h += `<div class="sp-tile sp-airole" data-i="${i}">`;
-		h += `<div class="sp-airole-top"><input type="text" class="sp-input sp-airole-name" value="${esc(r.name || '')}" placeholder="Role name (e.g. Ad Copy Writer)"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-airole-del" data-i="${i}" title="Remove role" aria-label="Remove role">${ICON_DELETE}</button></div>`;
+		h += `<div class="sp-card sp-card--inset sp-airole" data-i="${i}">`;
+		h += `<div class="sp-airole-top"><input type="text" class="sp-input sp-airole-name" value="${esc(r.name || '')}" placeholder="Role name (e.g. Ad Copy Writer)"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete sp-airole-del" data-i="${i}" title="Remove role" aria-label="Remove role">${ICON_DELETE}</button></div>`;
 		h += `<textarea class="sp-input sp-airole-persona" rows="3" placeholder="Persona / guidance for this role (how it should write)…">${esc(r.persona || '')}</textarea>`;
 		h += '</div>';
 	});
 	h += '</div>';
-	h += '<button type="button" class="unique sp-btn sp-btn-secondary sp-airole-add">+ Add Role</button>';
+	h += '<button type="button" class="unique sp-btn sp-airole-add">+ Add Role</button>';
 	h += '<span class="sp-help-text sp-airole-status" style="margin-left:10px"></span>';
 	h += '</div>';
 	h += '</div>';
@@ -5699,28 +5764,28 @@ async function loadAiPrompts() {
 const ICON_AI_DONE = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
 function aiVoiceRowHtml(v, i) {
-	const trash = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-ai-voice-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
+	const trash = `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete sp-ai-voice-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
 	if (v.editing) {
-		return `<div class="sp-tile sp-settings-tile sp-ai-voice-row is-editing" data-i="${i}">`
+		return `<div class="sp-card sp-card--inset sp-settings-tile sp-ai-voice-row is-editing" data-i="${i}">`
 			+ '<div class="sp-form-group"><label>Brand</label>'
 			+ `<input type="text" class="sp-input sp-ai-voice-brand" list="sp-ai-brand-list" value="${esc(v.brand)}" placeholder="Pick or type a brand — leave blank to apply to all" autocomplete="off">`
 			+ '<div class="sp-help-text">Start typing to search your brands/clients. Blank = the default voice for every brand.</div></div>'
 			+ '<div class="sp-form-group"><label>Voice</label>'
 			+ `<textarea class="sp-input sp-ai-voice-text" rows="3" placeholder="How replies should sound — tone, personality, what the brand is about…">${esc(v.voice)}</textarea></div>`
-			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-ai-voice-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
+			+ `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-approve sp-ai-voice-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
 			+ '</div>';
 	}
-	return `<div class="sp-tile sp-settings-tile sp-ai-voice-row" data-i="${i}">`
-		+ `<div class="sp-ai-row-title">${v.brand ? esc(v.brand) : 'All brands'}</div>`
+	return `<div class="sp-card sp-card--inset sp-settings-tile sp-ai-voice-row" data-i="${i}">`
+		+ `<div class="sp-row__title">${v.brand ? esc(v.brand) : 'All brands'}</div>`
 		+ `<div class="sp-ai-row-text">${esc(v.voice)}</div>`
-		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-ai-voice-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
+		+ `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-edit sp-ai-voice-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
 		+ '</div>';
 }
 
 function aiPromptRowHtml(p, i) {
-	const trash = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-ai-prompt-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
+	const trash = `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete sp-ai-prompt-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
 	if (p.editing) {
-		return `<div class="sp-tile sp-settings-tile sp-ai-prompt-row is-editing" data-i="${i}">`
+		return `<div class="sp-card sp-card--inset sp-settings-tile sp-ai-prompt-row is-editing" data-i="${i}">`
 			+ '<div class="sp-aai-row">'
 			+ '<div class="sp-aai-col"><label class="sp-field-label">Keyword / keyphrase</label>'
 			+ `<input type="text" class="sp-input sp-ai-prompt-kw" value="${esc(p.keyword)}" placeholder="e.g. green beans, green bean"></div>`
@@ -5730,33 +5795,33 @@ function aiPromptRowHtml(p, i) {
 			+ '<div class="sp-help-text" style="margin-top:4px;">Keyword: comma-separate alternates — any match triggers this. Brand: blank applies to every brand/client.</div>'
 			+ '<div class="sp-form-group"><label>Details</label>'
 			+ `<textarea class="sp-input sp-ai-prompt-details" rows="3" placeholder="What's going on / how the reply should address it when this topic comes up…">${esc(p.details)}</textarea></div>`
-			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-ai-prompt-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
+			+ `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-approve sp-ai-prompt-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
 			+ '</div>';
 	}
 	const scope = p.brand ? ` <span class="unique sp-ai-row-scope">· ${esc(p.brand)}</span>` : '';
-	return `<div class="sp-tile sp-settings-tile sp-ai-prompt-row" data-i="${i}">`
-		+ `<div class="sp-ai-row-title">${esc(p.keyword)}${scope}</div>`
+	return `<div class="sp-card sp-card--inset sp-settings-tile sp-ai-prompt-row" data-i="${i}">`
+		+ `<div class="sp-row__title">${esc(p.keyword)}${scope}</div>`
 		+ `<div class="sp-ai-row-text">${esc(p.details)}</div>`
-		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-ai-prompt-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
+		+ `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-edit sp-ai-prompt-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
 		+ '</div>';
 }
 
 function aiCriticalRowHtml(c, i) {
-	const trash = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-ai-crit-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
+	const trash = `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete sp-ai-crit-remove" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`;
 	if (c.editing) {
-		return `<div class="sp-tile sp-settings-tile sp-ai-crit-row is-editing" data-i="${i}">`
+		return `<div class="sp-card sp-card--inset sp-settings-tile sp-ai-crit-row is-editing" data-i="${i}">`
 			+ '<div class="sp-form-group"><label>Brand</label>'
 			+ `<input type="text" class="sp-input sp-ai-crit-brand" list="sp-ai-brand-list" value="${esc(c.brand)}" placeholder="Pick or type a brand — leave blank to apply to all" autocomplete="off">`
 			+ '<div class="sp-help-text">Blank = the guidance for every brand. Add a row per brand to differ.</div></div>'
 			+ '<div class="sp-form-group"><label>Guidance for bad reviews (3★ or lower)</label>'
 			+ `<textarea class="sp-input sp-ai-crit-text" rows="3" placeholder="How you want negative reviews handled — own the problem, apologize sincerely, offer to make it right, who/how to contact you offline…">${esc(c.details)}</textarea></div>`
-			+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-approve sp-ai-crit-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
+			+ `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-approve sp-ai-crit-done" title="Done" aria-label="Done">${ICON_AI_DONE}</button>${trash}</div>`
 			+ '</div>';
 	}
-	return `<div class="sp-tile sp-settings-tile sp-ai-crit-row" data-i="${i}">`
-		+ `<div class="sp-ai-row-title">${c.brand ? esc(c.brand) : 'All brands'}</div>`
+	return `<div class="sp-card sp-card--inset sp-settings-tile sp-ai-crit-row" data-i="${i}">`
+		+ `<div class="sp-row__title">${c.brand ? esc(c.brand) : 'All brands'}</div>`
 		+ `<div class="sp-ai-row-text">${esc(c.details)}</div>`
-		+ `<div class="sp-ai-row-actions"><button type="button" class="unique sp-btn sp-icon-btn sp-icon-edit sp-ai-crit-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
+		+ `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-edit sp-ai-crit-edit" title="Edit" aria-label="Edit">${ICON_EDIT}</button>${trash}</div>`
 		+ '</div>';
 }
 
@@ -5770,7 +5835,7 @@ function renderAiPrompts(wrap) {
 	html += '<div class="sp-card-body">';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">The tone &amp; personality the AI writes review replies in. Leave <strong>Brand</strong> blank for one voice across the company, or add a row per brand (matched to the review\'s brand) — e.g. Babe\'s vs Bubba\'s.</p>';
 	html += '<div id="sp-ai-voices-list">' + (_spAiVoices.length ? _spAiVoices.map((v, i) => aiVoiceRowHtml(v, i)).join('') : '<p class="sp-help-text">No voice set yet — replies use a neutral default tone.</p>') + '</div>';
-	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-ai-voice-add">+ Add Voice</button></div>';
+	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn" id="sp-ai-voice-add">+ Add Voice</button></div>';
 	html += '</div>';
 	html += '</div>';
 
@@ -5780,7 +5845,7 @@ function renderAiPrompts(wrap) {
 	html += '<div class="sp-card-body">';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Extra context to weave into a reply — but <strong>only when the review mentions a topic</strong>. Example: keyword <em>green beans</em> + details explaining a recent recipe change; mentioned → factored in, otherwise ignored.</p>';
 	html += '<div id="sp-ai-prompts-list">' + (_spAiPrompts.length ? _spAiPrompts.map((p, i) => aiPromptRowHtml(p, i)).join('') : '<p class="sp-help-text">No prompts yet. Add one below.</p>') + '</div>';
-	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-ai-prompt-add">+ Add Prompt</button></div>';
+	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn" id="sp-ai-prompt-add">+ Add Prompt</button></div>';
 	html += '<div class="sp-report-form-actions"><span class="sp-help-text" id="sp-ai-prompts-status">Changes save automatically.</span></div>';
 	html += '</div>';
 	html += '</div>';
@@ -5791,7 +5856,7 @@ function renderAiPrompts(wrap) {
 	html += '<div class="sp-card-body">';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Standing guidance woven into <strong>every reply to a 3★-or-lower review</strong> — no keyword needed. Tell the AI how you want bad reviews handled (own the issue, apologize, offer to make it right, point them to a contact…). Leave <strong>Brand</strong> blank to apply to all, or add a row per brand — e.g. Babe\'s vs Bubba\'s.</p>';
 	html += '<div id="sp-ai-crit-list">' + (_spAiCritical.length ? _spAiCritical.map((c, i) => aiCriticalRowHtml(c, i)).join('') : '<p class="sp-help-text">No critical-review guidance yet — low-rated reviews use the default tone.</p>') + '</div>';
-	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-ai-crit-add">+ Add Critical Prompt</button></div>';
+	html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn" id="sp-ai-crit-add">+ Add Critical Prompt</button></div>';
 	html += '</div>';
 	html += '</div>';
 	wrap.innerHTML = html;
@@ -5864,12 +5929,76 @@ function renderAiPrompts(wrap) {
 	}));
 }
 
-/* ---- Notifications routing matrix (Settings → Notifications) ---- */
+/* ---- Settings → Notifications: everyone's own channels + (god / System Admin) app-wide setup ---- */
+
+const SP_NOTIF_CHANNELS = [['app', 'App'], ['push', 'Push'], ['email', 'Email'], ['sms', 'Text']];
 
 async function loadNotificationSettings() {
 	const wrap = $('#sp-admin-notifications-content');
 	if (!wrap) return;
 	wrap.innerHTML = '<div class="sp-loading"></div>';
+	let me;
+	try {
+		const res = await spAjax('site_pulse_get_my_notif_prefs', {});
+		if (!res.success) { wrap.innerHTML = '<p>Could not load notification settings.</p>'; return; }
+		me = res.data;
+	} catch (e) { wrap.innerHTML = '<p>Could not load notification settings.</p>'; return; }
+
+	wrap.innerHTML = '<div class="sp-stack"><div id="sp-np-mine"></div>' + (me.is_admin ? '<div id="sp-np-admin"><div class="sp-loading"></div></div>' : '') + '</div>';
+	spRenderMyNotifPrefs($('#sp-np-mine', wrap), me);
+	if (me.is_admin) spLoadNotifAdmin($('#sp-np-admin', wrap));
+}
+
+// "How you're notified": one row per kind of alert, a checkbox per channel the app allows.
+function spRenderMyNotifPrefs(host, me) {
+	const g = me.globals || {};
+	const chans = SP_NOTIF_CHANNELS.filter(([k]) => g[k]);
+	const prefs = me.prefs || {};
+	const ro = !!me.read_only;
+
+	let html = '<div class="sp-card sp-settings-card sp-np-card">';
+	html += '<h3>How you\u2019re notified</h3>';
+	html += '<p class="sp-help-text">Pick how you want to hear about each kind of alert. Changes save automatically.</p>';
+	html += `<div class="sp-np" style="--sp-np-cols:${chans.length}">`;
+	html += '<div class="sp-np__head"><span></span>' + chans.map(([, l]) => `<span>${l}</span>`).join('') + '</div>';
+	(me.categories || []).forEach(c => {
+		html += `<div class="sp-np__row"><div class="sp-np__main"><div class="sp-np__title">${esc(c.label)}</div><div class="sp-field__hint">${esc(c.desc)}</div></div>`;
+		chans.forEach(([k, l]) => {
+			if (!(c.channels || []).includes(k)) { html += '<span class="sp-np__cell sp-np__na" aria-hidden="true">\u2014</span>'; return; }
+			const on = !!(prefs[c.key] && prefs[c.key][k]);
+			html += `<label class="sp-np__cell"><input type="checkbox" class="sp-np-cb" data-cat="${esc(c.key)}" data-ch="${k}"${on ? ' checked' : ''}${ro ? ' disabled' : ''}><span class="sp-np__lbl">${l}</span></label>`;
+		});
+		html += '</div>';
+	});
+	html += '</div>';
+	const notes = [];
+	if (g.push) notes.push('<strong>Push</strong> works on each phone or computer once you allow it there from the bell.');
+	if (g.sms && !me.texting) notes.push('<strong>Text</strong> starts once you add your mobile number from the bell.');
+	if (ro) notes.push('You\u2019re viewing as someone else, so their choices are read-only.');
+	if (notes.length) html += '<p class="sp-help-text sp-np__notes">' + notes.join(' ') + '</p>';
+	html += '<span class="sp-help-text" id="sp-np-status"></span>';
+	html += '</div>';
+	host.innerHTML = html;
+
+	let t = null;
+	$$('.sp-np-cb', host).forEach(cb => cb.addEventListener('change', () => {
+		const out = {};
+		$$('.sp-np-cb', host).forEach(x => { (out[x.dataset.cat] = out[x.dataset.cat] || {})[x.dataset.ch] = x.checked ? 1 : 0; });
+		const st = $('#sp-np-status', host);
+		if (st) st.textContent = 'Saving\u2026';
+		clearTimeout(t);
+		t = setTimeout(async () => {
+			try {
+				const res = await spAjax('site_pulse_save_my_notif_prefs', { prefs: JSON.stringify(out) });
+				if (st) st.textContent = res.success ? 'Saved.' : (res.data?.message || 'Could not save.');
+			} catch (e) { if (st) st.textContent = 'Could not save.'; }
+		}, 350);
+	}));
+}
+
+// App-wide switches + who gets notified — god / System Admin only (the server enforces it too).
+async function spLoadNotifAdmin(wrap) {
+	if (!wrap) return;
 
 	let data;
 	try {
@@ -5879,6 +6008,7 @@ async function loadNotificationSettings() {
 	} catch (e) { wrap.innerHTML = '<p>Could not load notification settings.</p>'; return; }
 
 	const events = data.events || {};
+	const hasEvents = Object.keys(events).length > 0;
 	const columns = data.columns || {};
 	const routing = data.routing || {};
 	const emailOn = String(data.email_enabled) === '1';
@@ -5886,7 +6016,7 @@ async function loadNotificationSettings() {
 	const smsOn   = String(data.sms_enabled) === '1';   // switch on AND Twilio ready (drives the Text column)
 	const smsSwitch = String(data.sms_switch) === '1';  // switch alone (drives the checkbox + the SMS card)
 	// Channel columns are hidden when their app-level switch is off (their per-event values are kept).
-	const colKeys = Object.keys(columns).filter(ck => (ck !== 'email' || emailOn) && (ck !== 'push' || pushOn) && (ck !== 'sms' || smsOn));
+	const colKeys = Object.keys(columns);   // 'dashboard' (Banner) + recipients; channels are per person now
 
 	// A row with no columns set arrives as an empty array []. Reading row['push'] on an array returns
 	// Array.prototype.push (a truthy function!) — which falsely checked the box. Test for an OWN property.
@@ -5894,27 +6024,30 @@ async function loadNotificationSettings() {
 
 	// Global notifications card — app-wide switches.
 	let html = '<div class="sp-card sp-settings-card">';
-	html += '<h3>Global notifications</h3>';
-	html += '<p class="sp-help-text" style="margin:0 0 12px;">App-wide switches. Turning one off hides its column below and stops every notification of that kind (including new-message emails). Each person still opts in from the bell: push per device, texts once with their mobile number.</p>';
-	html += `<label class="sp-reminder-toggle" style="display:block;margin-bottom:8px;"><input type="checkbox" id="sp-gn-email"${emailOn ? ' checked' : ''}> Allow email notifications for this app</label>`;
-	html += `<label class="sp-reminder-toggle" style="display:block;margin-bottom:8px;"><input type="checkbox" id="sp-gn-push"${pushOn ? ' checked' : ''}> Allow push notifications for this app</label>`;
-	html += `<label class="sp-reminder-toggle" style="display:block;"><input type="checkbox" id="sp-gn-sms"${smsSwitch ? ' checked' : ''}> Allow text notifications for this app</label>`;
+	html += '<h3>App-wide notifications</h3>';
+	html += '<p class="sp-help-text" style="margin:0 0 12px;">Only System Admins see this. Turning a channel off removes it from everyone\u2019s choices above and stops every notification of that kind. Each person still opts in from the bell: push per device, texts once with their mobile number.</p>';
+	html += '<div class="sp-options">';
+	html += `<label class="sp-check-row"><input type="checkbox" id="sp-gn-email"${emailOn ? ' checked' : ''}> Allow email notifications for this app</label>`;
+	html += `<label class="sp-check-row"><input type="checkbox" id="sp-gn-push"${pushOn ? ' checked' : ''}> Allow push notifications for this app</label>`;
+	html += `<label class="sp-check-row"><input type="checkbox" id="sp-gn-sms"${smsSwitch ? ' checked' : ''}> Allow text notifications for this app</label>`;
+	html += '</div>';
 	html += '<span class="sp-help-text" id="sp-gn-status" style="display:block;margin-top:8px;"></span>';
-	if (pushOn) html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-push-test-btn">Send test notification to my devices</button> <span class="sp-help-text" id="sp-push-test-status" style="margin-left:12px;"></span></div>';
+	if (pushOn) html += '<div style="margin-top:12px;"><button type="button" class="unique sp-btn" id="sp-push-test-btn">Send test notification to my devices</button> <span class="sp-help-text" id="sp-push-test-status" style="margin-left:12px;"></span></div>';
 	html += '</div>';
 
-	// Individual notifications matrix.
+	// Who gets notified (only when this install has situations to route).
+	if (hasEvents) {
 	html += '<div class="sp-card sp-settings-card">';
-	html += '<h3>Individual notifications</h3>';
-	html += '<p class="sp-help-text" style="margin:0 0 16px;">For each situation pick the delivery channels and who is notified. <strong>Dashboard</strong> shows a banner, <strong>Email</strong> emails it, <strong>Push</strong> wakes devices, <strong>Bell</strong> is the in-app notification, <strong>Text</strong> sends an SMS (bundled into one digest per person so bursts don\'t flood — recipients opt in from the bell). <strong>User</strong> = the person the event is about; <strong>User\'s Supervisor</strong> = their direct supervisor; the rest notify everyone in that role.</p>';
+	html += '<h3>Who gets notified</h3>';
+	html += '<p class="sp-help-text" style="margin:0 0 16px;">For each situation, tick who hears about it. <strong>User</strong> = the person it\u2019s about; <strong>User\u2019s Supervisor</strong> = their direct supervisor; the rest notify everyone in that role. <strong>Banner</strong> also puts it on their dashboard. How each person hears (app, push, email, text) is their own choice above.</p>';
 
-	// Divider between delivery channels and recipients — class lands on the first recipient column.
-	const channelCols = ['dashboard', 'email', 'push', 'bell', 'sms'];
+	// Divider between the Banner column and the recipients — class lands on the first recipient column.
+	const channelCols = ['dashboard'];
 	const firstPeopleCol = colKeys.find(ck => !channelCols.includes(ck));
 	const divCls = ck => (ck === firstPeopleCol ? ' sp-col-divider' : '');
 
-	html += '<div class="sp-card sp-table-card sp-admin-table-wrap"><table class="sp-table sp-notif-table">';
-	html += '<thead class="sp-thead"><tr><th>Situation</th>';
+	html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card sp-admin-table-wrap"><table class="sp-table sp-notif-table">';
+	html += '<thead><tr><th>Situation</th>';
 	colKeys.forEach(ck => { html += `<th class="sp-notif-col${divCls(ck)}">${esc(columns[ck])}</th>`; });
 	html += '</tr></thead><tbody>';
 
@@ -5929,6 +6062,7 @@ async function loadNotificationSettings() {
 	html += '</tbody></table></div>';
 	html += '<div style="margin-top:12px;"><span class="sp-help-text" id="sp-notif-status">Changes save automatically.</span></div>';
 	html += '</div>';
+	}
 
 	if (smsSwitch) html += '<div id="sp-org-sms-nudge"></div>'; // org text-alert defaults, filled by spLoadOrgSmsNudge()
 
@@ -6017,17 +6151,25 @@ function renderAdminUsers(wrap, data) {
 	// Keep the sort across reloads (e.g. after a delete); reset the search box.
 	_spUsers = { users: users || [], roles, locations, mileageLocations, sort: _spUsers.sort || { col: 'display_name', dir: 'asc' }, search: '' };
 
-	let html = '<div class="sp-admin-toolbar">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-user-btn">+ Add User</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-link-user-btn">Link Existing WP User</button>';
+	// One toolbar line: search + sort (once there are users), then the actions.
+	const hasUsers = users && users.length > 0;
+	const sorts = [['display_name|asc', 'Name A–Z'], ['display_name|desc', 'Name Z–A'], ['role_label|asc', 'Role'], ['location_name|asc', 'Location'], ['status|asc', 'Status'], ['last_active|desc', 'Recently active'], ['last_active|asc', 'Least recently active']];
+	const cur = `${_spUsers.sort.col}|${_spUsers.sort.dir}`;
+	let html = '<div class="sp-toolbar">';
+	if (hasUsers) {
+		html += `<div class="sp-control sp-control--lead"><span class="sp-control__icon">${spIcon('search')}</span><input type="search" class="sp-input sp-users-search" placeholder="Search names…" aria-label="Search users" autocomplete="off"></div>`;
+		html += '<select class="sp-select sp-users-sortby" aria-label="Sort users">' + sorts.map(([v, l]) => `<option value="${v}"${v === cur ? ' selected' : ''}>${l}</option>`).join('') + '</select>';
+	}
+	html += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-add-user-btn">+ Add User</button>';
+	html += '<button type="button" class="unique sp-btn" id="sp-link-user-btn">Link Existing WP User</button>';
 	// GOD only: one-click cleanup of orphaned profiles (rows whose WP login is already gone —
 	// they show with blank name/username/email).
 	if (D.isGod) {
-		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-god-purge-orphans">Purge Orphaned Profiles</button>';
+		html += '<button type="button" class="unique sp-btn" id="sp-god-purge-orphans">Purge Orphaned Profiles</button>';
 	}
 	html += '</div>';
 
-	if (!users || users.length === 0) {
+	if (!hasUsers) {
 		html += '<div class="sp-empty-state"><p>No users yet. Create your first user above.</p></div>';
 		html += '<div id="sp-user-form-wrap" hidden></div>';
 		wrap.innerHTML = html;
@@ -6036,20 +6178,7 @@ function renderAdminUsers(wrap, data) {
 		return;
 	}
 
-	html += '<div class="sp-users-toolbar"><input type="search" class="sp-input sp-users-search" placeholder="Search names…" aria-label="Search users"></div>';
-	html += '<div class="sp-card sp-table-card sp-admin-table-wrap"><table class="sp-table sp-admin-table sp-users-table">';
-	html += '<thead class="sp-thead"><tr>'
-		+ '<th class="sp-users-sort" data-sort="display_name">Name</th>'
-		+ '<th class="sp-users-sort" data-sort="user_login">Username</th>'
-		+ '<th class="sp-users-sort" data-sort="user_email">Email</th>'
-		+ '<th class="sp-users-sort" data-sort="role_label">Role</th>'
-		+ '<th class="sp-users-sort" data-sort="location_name">Location</th>'
-		+ '<th class="sp-users-sort" data-sort="status">Status</th>'
-		+ '<th class="sp-users-app" title="Has installed the app to a home screen / desktop">App</th>'
-		+ '<th class="sp-users-sort sp-users-active-col" data-sort="last_active">Last Active</th>'
-		+ '<th></th></tr></thead>';
-	html += '<tbody class="sp-users-tbody"></tbody>';
-	html += '</table></div>';
+	html += '<div class="sp-card sp-card--flush"><div class="sp-list sp-users-list"></div></div>';
 	html += '<div id="sp-user-form-wrap" hidden></div>';
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
@@ -6058,13 +6187,10 @@ function renderAdminUsers(wrap, data) {
 
 	const search = $('.sp-users-search', wrap);
 	if (search) search.addEventListener('input', () => { _spUsers.search = search.value.trim().toLowerCase(); renderUsersRows(wrap); });
-	$$('.sp-users-sort', wrap).forEach(th => {
-		th.addEventListener('click', () => {
-			const col = th.getAttribute('data-sort');
-			if (_spUsers.sort.col === col) _spUsers.sort.dir = _spUsers.sort.dir === 'asc' ? 'desc' : 'asc';
-			else { _spUsers.sort.col = col; _spUsers.sort.dir = 'asc'; }
-			renderUsersRows(wrap);
-		});
+	$('.sp-users-sortby', wrap)?.addEventListener('change', (e) => {
+		const [col, dir] = e.target.value.split('|');
+		_spUsers.sort = { col, dir };
+		renderUsersRows(wrap);
 	});
 
 	renderUsersRows(wrap);
@@ -6088,7 +6214,7 @@ function spWireUsersToolbar(wrap) {
 
 // Filter + sort the users into the tbody, then (re)wire the per-row edit/delete buttons.
 function renderUsersRows(wrap) {
-	const tbody = $('.sp-users-tbody', wrap);
+	const tbody = $('.sp-users-list', wrap);
 	if (!tbody) return;
 	const st = _spUsers;
 
@@ -6112,29 +6238,17 @@ function renderUsersRows(wrap) {
 		return 0;
 	});
 
-	$$('.sp-users-sort', wrap).forEach(th => {
-		const isCol = th.getAttribute('data-sort') === col;
-		th.classList.toggle('sp-sort-asc', isCol && dir === 'asc');
-		th.classList.toggle('sp-sort-desc', isCol && dir === 'desc');
-	});
-
 	if (!rows.length) {
-		tbody.innerHTML = '<tr><td colspan="9" class="sp-users-empty">No users match.</td></tr>';
+		tbody.innerHTML = '<div class="sp-row"><span class="sp-row__main"><span class="sp-meta"><span>No users match.</span></span></span></div>';
 		return;
 	}
 
 	let html = '';
 	rows.forEach(u => {
-		const statusClass = u.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft';
-		html += `<tr data-user-id="${u.user_id}">`;
-		html += `<td>${esc(u.display_name)}</td>`;
-		html += `<td>${esc(u.user_login)}</td>`;
-		html += `<td>${esc(u.user_email)}</td>`;
-		html += `<td>${esc(u.role_label || '—')}</td>`;
-		html += `<td>${esc(u.location_name || '—')}</td>`;
-		html += `<td><span class="unique sp-status-badge ${statusClass}">${u.status}</span></td>`;
-		html += `<td class="sp-users-app">${u.app_installed ? '<span class="sp-app-yes" title="App installed">&#10003;</span>' : '<span class="sp-app-no">&mdash;</span>'}</td>`;
-		html += `<td class="sp-users-active-col">${spLastActive(u.last_active)}</td>`;
+		const meta = [u.user_login, u.user_email, u.role_label, u.location_name].filter(Boolean).map(m => `<span>${esc(m)}</span>`).join('');
+		html += `<div class="sp-row" data-user-id="${u.user_id}"><span class="sp-row__main">`;
+		html += `<span class="sp-row__title">${esc(u.display_name)}</span>`;
+		html += `<span class="sp-meta">${meta}<span>Last active ${spLastActive(u.last_active)}</span></span></span>`;
 		let userActions = iconBtn('edit', 'sp-edit-user-btn', `data-user-id="${u.user_id}"`);
 		// Hard-delete a user (test/mistake cleanup). Regular Gods can delete normal users; only
 		// the super-admin can delete a God. Never your own row or battleplanweb. Server enforces
@@ -6145,8 +6259,9 @@ function renderUsersRows(wrap) {
 		if (canDelete) {
 			userActions += ' ' + iconBtn('delete', 'sp-god-delete-user', `data-user-id="${u.user_id}" data-user-name="${esc(u.display_name)}" title="Delete user"`);
 		}
-		html += `<td><div class="sp-row-actions">${userActions}</div></td>`;
-		html += '</tr>';
+		const chips = (u.status === 'active' ? '' : `<span class="unique sp-status-badge sp-status-draft">${esc(u.status)}</span>`)
+			+ (u.app_installed ? '<span class="sp-chip" title="Has installed the app to a home screen / desktop">App</span>' : '');
+		html += `<span class="sp-row__trail">${chips}${userActions}</span></div>`;
 	});
 	tbody.innerHTML = html;
 	markUniqueSpans(tbody);
@@ -6194,7 +6309,7 @@ function spPermGridHtml(roles, roleId, user, applyStored) {
 	const roleCaps = spRoleCaps(roles, roleId);
 	const overrides = applyStored ? spParseOverrides(user && user.capability_overrides) : {};
 	let h = '<div class="sp-perm-grid">';
-	h += '<div class="sp-perm-row sp-perm-head"><span class="sp-perm-headcols">Default / Override</span><button type="button" class="unique sp-perm-reset">Reset</button></div>';
+	h += '<div class="sp-perm-row sp-perm-head"><span class="sp-perm-headcols">Default / Override</span><button type="button" class="unique sp-btn sp-btn--sm sp-btn--ghost sp-perm-reset">Reset</button></div>';
 	let sawManagePerm = false;
 	Object.keys(spPermCatalog).forEach(cap => {
 		const inRole = roleCaps.includes(cap);
@@ -6232,7 +6347,7 @@ async function showLinkUserForm(roles, locations) {
 
 	let html = '<div class="sp-card sp-report-form-wrap" style="margin-top:20px;">';
 	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Link Existing WP User</h3>';
-	html += '<div class="sp-form-header-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-user-form-cancel">Cancel</button></div></div>';
+	html += '<div class="sp-toolbar"><button type="button" class="unique sp-btn sp-user-form-cancel">Cancel</button></div></div>';
 
 	if (!linkable.length) {
 		html += '<div class="sp-empty-state"><p>Every WordPress user is already a Site Pulse user.</p></div></div>';
@@ -6254,8 +6369,8 @@ async function showLinkUserForm(roles, locations) {
 	html += `<div class="sp-form-group"><label>Home Base</label><select name="location_id" class="sp-select">${locOpts}</select></div>`;
 	html += '</div>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="submit" class="unique sp-btn sp-btn-primary">Link User</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-user-form-cancel">Cancel</button>';
+	html += '<button type="submit" class="unique sp-btn sp-btn--primary">Link User</button>';
+	html += '<button type="button" class="unique sp-btn sp-user-form-cancel">Cancel</button>';
 	html += '</div></form></div>';
 
 	wrap.innerHTML = html;
@@ -6304,9 +6419,9 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
 	// A Save next to the top Cancel lets you save without scrolling to the bottom actions. It's
 	// outside <form>, so it submits the form programmatically (see wiring below).
-	html += '<div class="sp-form-header-actions">';
-	html += `<button type="button" class="unique sp-btn sp-btn-primary sp-user-form-save-top">${isEdit ? 'Save Changes' : 'Create User'}</button>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-user-form-cancel">Cancel</button>';
+	html += '<div class="sp-toolbar">';
+	html += `<button type="button" class="unique sp-btn sp-btn--primary sp-user-form-save-top">${isEdit ? 'Save Changes' : 'Create User'}</button>`;
+	html += '<button type="button" class="unique sp-btn sp-user-form-cancel">Cancel</button>';
 	html += '</div></div>';
 	html += '<form id="sp-user-form">';
 
@@ -6375,15 +6490,15 @@ function showUserForm(user, roles, locations, allUsers, mileageLocations = []) {
 	}
 
 	html += '<div class="sp-report-form-actions">';
-	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Create User'}</button>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-user-form-cancel">Cancel</button>';
+	html += `<button type="submit" class="unique sp-btn sp-btn--primary">${isEdit ? 'Save Changes' : 'Create User'}</button>`;
+	html += '<button type="button" class="unique sp-btn sp-user-form-cancel">Cancel</button>';
 	// Super-admin (battleplanweb) only: manage God membership. The role dropdown has no God option
 	// by design, so this is the sole path. Other Gods never see these.
 	if (isEdit && D.isSuperadmin && user && String(user.user_id) !== String(D.userId)) {
 		if (user.role_slug === 'god') {
-			html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-user-revoke-god" style="margin-left:auto;">Revoke Odin Access</button>';
+			html += '<button type="button" class="unique sp-btn sp-user-revoke-god" style="margin-left:auto;">Revoke Odin Access</button>';
 		} else {
-			html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-user-grant-god" style="margin-left:auto;">Grant Odin Access</button>';
+			html += '<button type="button" class="unique sp-btn sp-user-grant-god" style="margin-left:auto;">Grant Odin Access</button>';
 		}
 	}
 	html += '</div></form></div>';
@@ -6516,15 +6631,15 @@ async function loadAdminLocations() {
 }
 
 function renderAdminLocations(wrap, locations) {
-	let html = '<div class="sp-admin-toolbar">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-location-btn">+ Add Location</button>';
+	let html = '<div class="sp-toolbar">';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-add-location-btn">+ Add Location</button>';
 	html += '</div>';
 
 	if (!locations || locations.length === 0) {
 		html += '<div class="sp-empty-state"><p>No locations yet.</p></div>';
 	} else {
-		html += '<div class="sp-card sp-table-card sp-admin-table-wrap"><table class="sp-table sp-admin-table">';
-		html += '<thead class="sp-thead"><tr><th>Name</th><th>Location #</th><th>Brand</th><th>Reports</th><th>City</th><th>State</th><th>Status</th><th></th></tr></thead>';
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card sp-admin-table-wrap"><table class="sp-table sp-admin-table">';
+		html += '<thead><tr><th>Name</th><th>Location #</th><th>Brand</th><th>Reports</th><th>City</th><th>State</th><th>Status</th><th></th></tr></thead>';
 		html += '<tbody>';
 		locations.forEach(l => {
 			const statusClass = l.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft';
@@ -6582,7 +6697,7 @@ function showLocationForm(loc) {
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-loc-form-cancel">Cancel</button></div>';
+	html += '<button type="button" class="unique sp-btn sp-loc-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-location-form">';
 
 	if (isEdit) html += `<input type="hidden" name="id" value="${loc.id}">`;
@@ -6594,7 +6709,7 @@ function showLocationForm(loc) {
 	// location filter. Hidden 0 + checkbox 1 so clearing it still posts a value (an unchecked checkbox
 	// submits nothing on its own).
 	const isStore = (loc?.is_store ?? 1) != 0;
-	html += '<div class="sp-form-group"><label class="sp-reminder-toggle">';
+	html += '<div class="sp-form-group"><label class="sp-check-row">';
 	html += '<input type="hidden" name="is_store" value="0">';
 	html += `<input type="checkbox" name="is_store" value="1"${isStore ? ' checked' : ''}> Show in Reports`;
 	html += '</label>';
@@ -6629,8 +6744,8 @@ function showLocationForm(loc) {
 	}
 
 	html += '<div class="sp-report-form-actions">';
-	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Add Location'}</button>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-loc-form-cancel">Cancel</button>';
+	html += `<button type="submit" class="unique sp-btn sp-btn--primary">${isEdit ? 'Save Changes' : 'Add Location'}</button>`;
+	html += '<button type="button" class="unique sp-btn sp-loc-form-cancel">Cancel</button>';
 	html += '</div></form></div>';
 
 	wrap.innerHTML = html;
@@ -6804,6 +6919,101 @@ function spSyncFilterSummaries() {
 }
 document.addEventListener('change', (e) => { if (e.target.closest && e.target.closest('[data-sp-filter-field]')) spSyncFilterSummaries(); });
 
+/* Sort dropdowns (.sp-sort) — a styled menu instead of the browser's own <select> popup, which can't be
+   styled (it drew flush-left, unpadded, in the OS font). The real <select> stays: it holds the value,
+   and picking an item sets it and fires its normal 'change', so every screen's sort handler is
+   untouched. Mouse/trackpad only — on phones the native picker IS the right experience. */
+const SP_FINE_POINTER = window.matchMedia('(hover: hover) and (pointer: fine)');
+// Every single-choice dropdown in Site Pulse — sort pills, Filter sheets, form pop-ups, settings — so
+// they all match. (A list box with size > 1 is already drawn in the page, so it's left alone.)
+const SP_MENU_SELECTS = 'body.has-site-pulse select:not([size]):not([multiple])';
+let _spSortMenu = null;
+let _spMenuType = '', _spMenuTypeAt = 0;
+
+function spSortMenuClose(focusSelect = false) {
+	if (!_spSortMenu) return;
+	const { menu, select } = _spSortMenu;
+	menu.remove();
+	(select.closest('.sp-sort') || select).classList.remove('is-open');
+	document.removeEventListener('pointerdown', spSortMenuOutside, true);
+	window.removeEventListener('resize', spSortMenuClose);
+	window.removeEventListener('scroll', spSortMenuOnScroll, true);
+	_spSortMenu = null;
+	if (focusSelect) select.focus();
+}
+function spSortMenuOutside(e) { if (_spSortMenu && !_spSortMenu.menu.contains(e.target) && !(_spSortMenu.select.closest('.sp-sort') || _spSortMenu.select).contains(e.target)) spSortMenuClose(); }
+function spSortMenuOnScroll(e) { if (_spSortMenu && !_spSortMenu.menu.contains(e.target)) spSortMenuClose(); }
+
+function spSortMenuPick(i) {
+	if (!_spSortMenu) return;
+	const { select } = _spSortMenu;
+	const changed = select.selectedIndex !== i;
+	select.selectedIndex = i;
+	spSortMenuClose(true);
+	if (changed) select.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function spSortMenuOpen(select) {
+	spSortMenuClose();
+	const wrap = select.closest('.sp-sort') || select;      // a sort pill, or a Filter-sheet select itself
+	const menu = document.createElement('div');
+	menu.className = 'sp-menu';
+	menu.setAttribute('role', 'listbox');
+	menu.innerHTML = [...select.options].map((o, i) =>
+		`<button type="button" class="unique sp-menu__item${i === select.selectedIndex ? ' is-selected' : ''}" role="option" aria-selected="${i === select.selectedIndex}" data-i="${i}"${o.disabled ? ' disabled' : ''}>`
+		+ `<span>${esc(o.textContent)}</span>${i === select.selectedIndex ? spIcon('check') : ''}</button>`).join('');
+	document.body.appendChild(menu);
+
+	// Centred under the button, at least as wide as it, kept on screen; flips above if there's no room.
+	const r = wrap.getBoundingClientRect();
+	menu.style.minWidth = r.width + 'px';
+	const w = menu.offsetWidth, h = menu.offsetHeight;
+	let left = r.left + r.width / 2 - w / 2;
+	left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+	let top = r.bottom + 6;
+	if (top + h > window.innerHeight - 8 && r.top - h - 6 > 8) top = r.top - h - 6;
+	menu.style.left = left + 'px';
+	menu.style.top = top + 'px';
+
+	wrap.classList.add('is-open');
+	_spSortMenu = { menu, select };
+	menu.addEventListener('click', (e) => { const it = e.target.closest('.sp-menu__item'); if (it && !it.disabled) spSortMenuPick(+it.dataset.i); });
+	menu.addEventListener('keydown', (e) => {
+		const items = $$('.sp-menu__item:not([disabled])', menu);
+		const at = items.indexOf(document.activeElement);
+		if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(items.length - 1, at + 1)]?.focus(); }
+		else if (e.key === 'ArrowUp') { e.preventDefault(); items[Math.max(0, at - 1)]?.focus(); }
+		else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); spSortMenuClose(true); }
+		else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+			// Type to jump, like the native list: letters typed in quick succession build the search.
+			const now = Date.now();
+			_spMenuType = (now - _spMenuTypeAt < 700 ? _spMenuType : '') + e.key.toLowerCase();
+			_spMenuTypeAt = now;
+			const hit = items.find(it => it.textContent.trim().toLowerCase().startsWith(_spMenuType));
+			if (hit) { e.preventDefault(); hit.focus(); hit.scrollIntoView({ block: 'nearest' }); }
+		}
+	});
+	document.addEventListener('pointerdown', spSortMenuOutside, true);
+	window.addEventListener('resize', spSortMenuClose);
+	window.addEventListener('scroll', spSortMenuOnScroll, true);
+	const first = $('.sp-menu__item.is-selected', menu) || $('.sp-menu__item', menu);
+	first?.focus();
+	first?.scrollIntoView({ block: 'nearest' });              // a long list opens on the current choice
+}
+
+document.addEventListener('mousedown', (e) => {
+	const select = e.target.closest && e.target.closest(SP_MENU_SELECTS);
+	if (!select || !SP_FINE_POINTER.matches || e.button !== 0 || select.disabled || select.multiple) return;
+	e.preventDefault();                                    // no native popup
+	if (_spSortMenu && _spSortMenu.select === select) spSortMenuClose(true);
+	else spSortMenuOpen(select);
+});
+document.addEventListener('keydown', (e) => {
+	const select = e.target.closest && e.target.closest(SP_MENU_SELECTS);
+	if (!select || !SP_FINE_POINTER.matches || select.disabled || select.multiple) return;
+	if (e.key === 'Enter' || e.key === ' ' || (e.altKey && e.key === 'ArrowDown')) { e.preventDefault(); spSortMenuOpen(select); }
+});
+
 // A screen's filter fields ([data-sp-filter-field] inside a hidden holder), shown in a sheet. The real
 // controls are moved in while it's open (their change handlers update the list live behind it) and back
 // out when it closes. clear() resets them; onClose() runs after they're back. title defaults to "Filter".
@@ -6909,7 +7119,7 @@ async function spSummarizeActionItems(regenerate) {
 		const why = (res && res.data && res.data.message) || 'The summary couldn’t be generated.';
 		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap sp-summary-modal">'
 			+ `<p>${esc(why)}</p>`
-			+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-ghost sp-sum-close">Close</button></div></div>';
+			+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-sum-close">Close</button></div></div>';
 		markUniqueSpans(backdrop);
 		$('.sp-sum-close', backdrop)?.addEventListener('click', () => closeFormModal());
 		return;
@@ -6924,17 +7134,17 @@ function spRenderActionSummary(backdrop, d) {
 	const scope = (d.scope === 'team') ? 'open action items in view' : 'of your open action items';
 
 	// The same three controls top and bottom — a long brief shouldn't need scrolling to reach them.
-	const controls = '<button type="button" class="unique sp-btn sp-btn-primary sp-sum-again">Summarize Again</button>'
-		+ '<button type="button" class="unique sp-btn sp-btn-secondary sp-sum-copy">Copy</button>'
-		+ '<button type="button" class="unique sp-btn sp-btn-ghost sp-sum-close">Close</button>';
+	const controls = '<button type="button" class="unique sp-btn sp-btn--primary sp-sum-again">Summarize Again</button>'
+		+ '<button type="button" class="unique sp-btn sp-sum-copy">Copy</button>'
+		+ '<button type="button" class="unique sp-btn sp-sum-close">Close</button>';
 
 	let html = '<div class="sp-card sp-report-form-wrap sp-summary-modal">';
 	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Summary</h3>'
-		+ `<div class="sp-panel-header-actions">${controls}</div></div>`;
+		+ `<div class="sp-toolbar sp-toolbar--end">${controls}</div></div>`;
 	html += `<p class="sp-help-text sp-summary-scope"><span class="unique">Across ${parseInt(d.count, 10) || 0} ${esc(scope)}${when ? ' · written ' + esc(when) : ''}</span></p>`;
 	// The list moved after this was written — say so rather than let it quietly mislead.
 	if (d.stale) {
-		html += '<p class="sp-summary-stale"><span class="unique">Your action items have changed since this was written. Summarize again for a current brief.</span></p>';
+		html += '<p class="sp-notice sp-notice--warning"><span class="unique">Your action items have changed since this was written. Summarize again for a current brief.</span></p>';
 	}
 	if (d.overview) html += `<p class="sp-summary-overview">${esc(d.overview)}</p>`;
 
@@ -7070,8 +7280,8 @@ function spActionPhotoSectionHtml() {
 	// match `.sp-report-form-wrap label` and inherit block/uppercase/left-label rules. The hidden file
 	// input is a sibling, triggered by the button's click handler.
 	return '<div class="sp-form-group sp-aai-photo-group"><label class="sp-field-label">Photos</label>'
-		+ '<div class="sp-aai-photos-strip"></div>'
-		+ '<button type="button" class="unique sp-btn sp-btn-ghost sp-aai-photos-add">+ Add Photo</button>'
+		+ '<div class="sp-toolbar sp-aai-photos-strip"></div>'
+		+ '<button type="button" class="unique sp-btn sp-aai-photos-add">+ Add Photo</button>'
 		+ '<input type="file" accept="image/*" multiple class="sp-aai-photos-input" hidden></div>';
 }
 
@@ -7100,7 +7310,7 @@ function spWireActionPhotoSection(backdrop, existing, itemId) {
 		const cell = document.createElement('div');
 		cell.className = 'sp-action-attach';
 		cell.innerHTML = `<span class="sp-action-attach-thumb${isImg ? '' : ' sp-action-attach-file'}">${isImg ? `<img src="${src}" alt="">` : ICON_ATTACH}</span>`
-			+ '<button type="button" class="sp-action-attach-remove" title="Remove photo" aria-label="Remove photo">&times;</button>';
+			+ '<button type="button" class="sp-thumb-x sp-action-attach-remove" title="Remove photo" aria-label="Remove photo">&times;</button>';
 		cell.querySelector('.sp-action-attach-remove').addEventListener('click', onRemove);
 		strip.appendChild(cell);
 		return cell;
@@ -7161,7 +7371,7 @@ async function spAddActionItem() {
 	const dueDaysForPriority = { high: 3, medium: 7, low: 14 };
 	const due = spDatePlusDays(dueDaysForPriority.medium);
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Add Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Add Action Item</h3><button type="button" class="unique sp-btn sp-aai-cancel">Cancel</button></div>';
 	html += '<label class="sp-field-label">To-do</label>';
 	html += '<textarea class="sp-input sp-aai-desc" rows="2" placeholder="What needs to get done?"></textarea>';
 
@@ -7179,14 +7389,14 @@ async function spAddActionItem() {
 			+ '<input type="text" class="sp-input sp-aai-people-search" placeholder="Search people…">'
 			+ '<div class="sp-msg-contacts sp-aai-people-list">' + picks + '</div>'
 			+ '</div></div></div>';
-		html += '<div class="sp-aai-grid">' + labelField + peopleField + urgencyField + dueField + '</div>';
+		html += '<div class="sp-grid sp-grid--wide">' + labelField + peopleField + urgencyField + dueField + '</div>';
 	} else {
 		// No people to assign → Label spans full width above the urgency/due pair.
 		html += labelField;
-		html += '<div class="sp-aai-grid">' + urgencyField + dueField + '</div>';
+		html += '<div class="sp-grid sp-grid--wide">' + urgencyField + dueField + '</div>';
 	}
 	html += spActionPhotoSectionHtml();
-	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-aai-save">Add</button><button type="button" class="unique sp-btn sp-btn-ghost sp-aai-cancel">Cancel</button></div>';
+	html += '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn--primary sp-aai-save">Add</button><button type="button" class="unique sp-btn sp-aai-cancel">Cancel</button></div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -7257,7 +7467,7 @@ async function spEditActionItem(item) {
 	const opt = p => `<option value="${p}"${p === prio ? ' selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`;
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Action Item</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button></div>';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Action Item</h3><button type="button" class="unique sp-btn sp-aae-cancel">Cancel</button></div>';
 	html += '<label class="sp-field-label">To-do</label>';
 	html += `<textarea class="sp-input sp-aae-desc" rows="2" placeholder="What needs to get done?">${esc(item.description || '')}</textarea>`;
 
@@ -7276,15 +7486,15 @@ async function spEditActionItem(item) {
 			+ '<input type="text" class="sp-input sp-aai-people-search" placeholder="Search people…">'
 			+ '<div class="sp-msg-contacts sp-aai-people-list">' + picks + '</div>'
 			+ '</div></div></div>';
-		html += '<div class="sp-aai-grid">' + labelField + peopleField + urgencyField + dueField + '</div>';
+		html += '<div class="sp-grid sp-grid--wide">' + labelField + peopleField + urgencyField + dueField + '</div>';
 	} else {
 		html += labelField;
-		html += '<div class="sp-aai-grid">' + urgencyField + dueField + '</div>';
+		html += '<div class="sp-grid sp-grid--wide">' + urgencyField + dueField + '</div>';
 	}
 	html += spActionPhotoSectionHtml();
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-aae-save">Save</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-aae-cancel">Cancel</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary sp-aae-save">Save</button>';
+	html += '<button type="button" class="unique sp-btn sp-aae-cancel">Cancel</button>';
 	html += `<button type="button" class="unique sp-btn sp-btn--danger sp-btn--icon sp-aae-delete" aria-label="Delete" title="Delete">${spIcon('trash')}</button>`;
 	html += '</div>';
 	html += '</div>';
@@ -7356,7 +7566,7 @@ async function spDeleteActionItem(item, btn) {
 			title: 'Delete action item',
 			message: 'This action item is shared with other people. Delete it for everyone, or just remove yourself and leave it for the others?',
 			options: [
-				{ label: 'Delete for everyone', value: 'all', class: 'sp-btn-primary sp-btn-delete' },
+				{ label: 'Delete for everyone', value: 'all', class: 'sp-btn--primary sp-btn--danger sp-btn-delete' },
 				{ label: 'Just remove me', value: 'me', class: 'sp-btn-secondary' },
 				{ label: 'Cancel', value: null, class: 'sp-btn-ghost' },
 			],
@@ -7547,7 +7757,7 @@ function spPeoplePicks(contacts, sharedIds, locked) {
 
 // Labels as solid pills on a line of their own.
 function spRowPills(labels) {
-	return labels.length ? `<span class="sp-review-tags">${labels.map(l => `<span class="sp-chip sp-chip--mark">${esc(l)}</span>`).join('')}</span>` : '';
+	return labels.length ? `<span class="sp-toolbar">${labels.map(l => `<span class="sp-chip sp-chip--mark">${esc(l)}</span>`).join('')}</span>` : '';
 }
 // Who shares it: their faces (the directory photo chat uses), else initials — only when it's more than
 // just you. where: 'trail' (right side, desktop) or 'under' (below the pills, phones); CSS shows one.
@@ -7584,8 +7794,8 @@ function spActionItemRow(item, mode, custom) {
 	const vt = item.visible_to;
 	let trail = '';
 	if (mode === 'pending') {
-		trail = `<button type="button" class="unique sp-btn sp-btn--icon sp-icon-btn" data-sp-review="approve" data-item-id="${item.id}" aria-label="Approve">${spIcon('check')}</button>`
-			+ `<button type="button" class="unique sp-btn sp-btn--icon sp-icon-btn sp-icon-delete" data-sp-review="reject" data-item-id="${item.id}" aria-label="Reject">${spIcon('x')}</button>`;
+		trail = `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm" data-sp-review="approve" data-item-id="${item.id}" aria-label="Approve">${spIcon('check')}</button>`
+			+ `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete" data-sp-review="reject" data-item-id="${item.id}" aria-label="Reject">${spIcon('x')}</button>`;
 	} else {
 		trail = spRowTrail(vt, custom);
 	}
@@ -7611,7 +7821,9 @@ function spActionGroupHTML(title, rows, tone) {
    Below 1280px it's always the plain one-column list. */
 const SP_COL_LISTS = ['#sp-directory-grid', '#sp-notes-list', '#sp-job-list', '#sp-emails-list', '#sp-remails-list',
 	'#sp-reviews-list', '#sp-agency-reviews-list', '#sp-survey-list', '#sp-fleet-list', '#sp-reports-list', '#sp-review-list',
-	'#sp-store-orders', '#sp-store-customers', '#sp-store-products', '#sp-store-inventory'];
+	'#sp-store-orders', '#sp-store-customers', '#sp-store-products', '#sp-store-inventory', '#sp-evt-list',
+	'#sp-book-list', '#sp-book-passes', '#sp-store-cats', '#sp-store-tags', '#sp-book-offerings', '#sp-book-customers', '#sp-wc-list', '#sp-cc-customers-list', '#sp-mileage-list',
+	'#sp-book-resources-list', '#sp-admin-users-content'];
 const SP_COL_MODES = ['1', '2', 'cards'];
 const _spColsMem = {};      // this visit's choices; work even where the browser blocks storage
 const spWide = () => window.matchMedia('(min-width: 1280px)').matches;
@@ -7654,7 +7866,9 @@ function spApplyColsClass(panel, n) {
 function spApplyColsSplit(list) {
 	const panel = list.closest('.sp-panel');
 	const two = !!panel && panel.classList.contains('is-2col') && spWide();
+	const cards = !!panel && panel.classList.contains('is-cards') && spWide();
 	$$('.sp-card--flush > .sp-list', list).forEach(ul => {
+		spTuneCardWidth(ul, cards);
 		const rows = Array.from(ul.children);
 		rows.forEach(r => r.classList.remove('is-col-top', 'is-col-end'));
 		if (!two || rows.length < 2 || ul.querySelector('[data-sp-reorder]')) {
@@ -7668,6 +7882,31 @@ function spApplyColsSplit(list) {
 		[rows[0], rows[half]].forEach(r => r && r.classList.add('is-col-top'));
 		[rows[half - 1], rows[rows.length - 1]].forEach(r => r && r.classList.add('is-col-end'));
 	});
+}
+
+// Cards: how wide a card has to be so its lines don't wrap, judged from the rows' own text (characters ×
+// font size) plus the thumbnail and the trail. The 75th-percentile row sets the list's minimum card width,
+// so a wordy list (titles + several fields) drops to 3 across while a short one stays 4 or 5. Worked out
+// from content, not from the laid-out heights, so the result can never flip-flop. Rows ending in an amount
+// keep the CSS width (their amount wraps under the text).
+function spTuneCardWidth(ul, cards) {
+	if (!cards || ul.querySelector('.sp-row__value')) { ul.style.removeProperty('--sp-tile-min'); return; }
+	const needs = Array.from(ul.children).filter(r => r.matches('.sp-row')).map(r => {
+		const main = r.querySelector('.sp-row__main');
+		if (!main) return 0;
+		let text = 0;
+		Array.from(main.children).forEach(c => {
+			const fs = parseFloat(getComputedStyle(c).fontSize) || 16;
+			const chars = (c.textContent || '').replace(/\s+/g, ' ').trim().length + (c.matches('.sp-meta') ? (c.children.length - 1) * 3 : 0);
+			text = Math.max(text, chars * fs * (c.matches('.sp-row__title') ? 0.56 : 0.5));
+		});
+		const lead = r.querySelector('.sp-row__lead'), trail = r.querySelector('.sp-row__trail');
+		return text + (lead ? lead.offsetWidth + 12 : 0) + (trail ? trail.offsetWidth + 12 : 0) + 34;
+	}).filter(Boolean).sort((a, b) => a - b);
+	if (!needs.length) { ul.style.removeProperty('--sp-tile-min'); return; }
+	const p75 = needs[Math.min(needs.length - 1, Math.floor(needs.length * 0.75))];
+	// (Never fewer than 3 across — the CSS caps the track at a third of the row; two is the two-column layout.)
+	ul.style.setProperty('--sp-tile-min', Math.round(Math.min(440, Math.max(280, p75)) / 20) * 20 + 'px');
 }
 
 // The plain lists: tag each, add the toggle to its screen's toolbar (or a new one above the list), set
@@ -7904,7 +8143,7 @@ function spOpenActionItem(id, opts = {}) {
 	}
 
 	if (atts.length) {
-		body += '<div class="sp-action-item-attachments">' + atts.map(a => {
+		body += '<div class="sp-toolbar">' + atts.map(a => {
 			const isImg = (a.mime || '').indexOf('image/') === 0;
 			return `<div class="sp-action-attach"><button type="button" class="unique sp-action-attach-thumb${isImg ? '' : ' sp-action-attach-file'}" data-sp-attach data-url="${esc(a.url)}" data-mime="${esc(a.mime || '')}" data-name="${esc(a.name || '')}">`
 				+ (isImg ? `<img src="${esc(a.url)}" alt="${esc(a.name || '')}" loading="lazy">` : ICON_ATTACH) + '</button></div>';
@@ -8203,10 +8442,8 @@ function renderNotes() {
 	if (!notes.length) {
 		list.innerHTML = _spNotes.length
 			? spEmptyHTML({ icon: 'note', panel: $('#sp-panel-notes'), title: 'No notes match', text: 'Nothing matches this search.', filteredTitle: 'No notes match these filters' })
-			: `<div class="sp-card"><div class="sp-empty"><span class="sp-empty__icon">${spIcon('note', 'sp-icon--lg')}</span><span class="sp-empty__title">No notes yet</span>`
-				+ `<span>Keep running notes, a dated log and photos in one place, just for you or shared.</span>`
-				+ `<button type="button" class="unique sp-btn sp-btn--primary" data-sp-new-note>${spIcon('plus')} New note</button></div></div>`;
-		$('[data-sp-new-note]', list)?.addEventListener('click', () => spOpenNote(0));
+			// No button here — Add Note lives in the bottom bar, like every screen's Add.
+			: spEmptyHTML({ icon: 'note', panel: $('#sp-panel-notes'), title: 'No notes yet', text: 'Keep running notes, a dated log and photos in one place, just for you or shared. Press Add Note to start one.' });
 		return;
 	}
 	// Drag handles only in "My own order", as on Action Items.
@@ -8278,7 +8515,7 @@ async function spDeleteNote(n) {
 			title: 'Delete note',
 			message: 'This note is shared with other people. Delete it for everyone, or just remove it from your notes and leave it with them?',
 			options: [
-				{ label: 'Delete for everyone', value: 'all', class: 'sp-btn-primary sp-btn-delete' },
+				{ label: 'Delete for everyone', value: 'all', class: 'sp-btn--primary sp-btn--danger sp-btn-delete' },
 				{ label: 'Just remove me', value: 'me', class: 'sp-btn-secondary' },
 				{ label: 'Cancel', value: null, class: 'sp-btn-ghost' },
 			],
@@ -8340,7 +8577,7 @@ async function spOpenNote(id) {
 	const st = { note, id: note ? note.id : 0, version: note ? note.version : 0, dirty: false, saving: null, resolving: false, timer: null, closing: false, peopleDirty: false };
 
 	let html = '<div class="sp-card sp-report-form-wrap sp-note-editor">';
-	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3 class="sp-ne-heading">${note ? 'Note' : 'New Note'}</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-ne-close">Close</button></div>`;
+	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3 class="sp-ne-heading">${note ? 'Note' : 'New Note'}</h3><button type="button" class="unique sp-btn sp-ne-close">Close</button></div>`;
 	html += `<input type="text" class="sp-input sp-ne-title" maxlength="200" placeholder="Title" value="${esc(note ? note.title : '')}">`;
 	html += `<textarea class="sp-input sp-ne-body" rows="14" placeholder="Start typing…">${esc(note ? note.body : '')}</textarea>`;
 	html += '<div class="sp-savestate sp-ne-status" aria-live="polite"></div>';
@@ -8359,17 +8596,17 @@ async function spOpenNote(id) {
 	} else if (!isOwner) {
 		peopleField = `<div><label class="sp-field-label">Shared by</label><p class="sp-meta sp-ne-shared-by"><span>${spPersonHTML(note.owner_name || '', ((note.members || []).find(p => String(p.id) === String(note.owner_id)) || {}).photo || '')}</span></p></div>`;
 	}
-	html += peopleField ? '<div class="sp-aai-grid">' + labelField + peopleField + '</div>' : labelField;
+	html += peopleField ? '<div class="sp-grid sp-grid--wide">' + labelField + peopleField + '</div>' : labelField;
 
 	html += spActionPhotoSectionHtml();
 
 	html += '<div class="sp-form-group sp-ne-log"><label class="sp-field-label">Log</label>';
 	html += '<div class="sp-ne-entry-add"><textarea class="sp-input sp-ne-entry-text" rows="2" placeholder="Add a dated entry…"></textarea>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-ne-entry-save">Add to Log</button></div>';
+	html += '<button type="button" class="unique sp-btn sp-ne-entry-save">Add to Log</button></div>';
 	html += '<div class="sp-ne-entries"></div></div>';
 
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-ne-done">Done</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary sp-ne-done">Done</button>';
 	html += `<button type="button" class="unique sp-btn sp-btn--danger sp-btn--icon sp-ne-delete" aria-label="Delete" title="Delete">${spIcon('trash')}</button>`;
 	html += '</div></div>';
 	backdrop.innerHTML = html;
@@ -8439,7 +8676,7 @@ async function spOpenNote(id) {
 			title: 'This note changed',
 			message: `${who} saved changes to this note while you were editing. Keep your version (it replaces theirs), or load theirs? If you load theirs, your text is copied to the clipboard first.`,
 			options: [
-				{ label: 'Keep mine', value: 'mine', class: 'sp-btn-primary' },
+				{ label: 'Keep mine', value: 'mine', class: 'sp-btn--primary' },
 				{ label: 'Load theirs', value: 'theirs', class: 'sp-btn-secondary' },
 			],
 		});
@@ -8521,8 +8758,8 @@ async function spOpenNote(id) {
 		const box = $('.sp-ne-entries', backdrop);
 		const ents = st.note ? (st.note.entries || []) : [];
 		if (!ents.length) { box.innerHTML = '<p class="sp-meta">No log entries yet.</p>'; return; }
-		box.innerHTML = '<ul class="sp-ne-entry-list">' + ents.map(e =>
-			`<li class="sp-ne-entry" data-entry-id="${e.id}"><div class="sp-ne-entry-body">${esc(e.body)}</div>`
+		box.innerHTML = '<ul class="sp-stack sp-stack--sm sp-ne-entry-list">' + ents.map(e =>
+			`<li class="sp-card sp-card--well sp-ne-entry" data-entry-id="${e.id}"><div class="sp-ne-entry-body">${esc(e.body)}</div>`
 			+ `<div class="sp-ne-entry-meta"><span class="unique">${esc(e.name)} · ${esc(spNoteWhen(e.ts))}${e.edited ? ' · edited' : ''}</span>`
 			+ (e.can_edit ? iconBtn('edit', 'sp-ne-entry-edit', `data-entry-id="${e.id}"`) + iconBtn('delete', 'sp-ne-entry-del', `data-entry-id="${e.id}"`) : '')
 			+ '</div></li>').join('') + '</ul>';
@@ -8545,7 +8782,7 @@ async function spOpenNote(id) {
 			const ed = document.createElement('div');
 			ed.className = 'sp-ne-entry-editor';
 			ed.innerHTML = `<textarea class="sp-input" rows="2">${esc(entry.body)}</textarea>`
-				+ '<div class="sp-ne-entry-editor-actions"><button type="button" class="unique sp-btn sp-btn-primary sp-ne-entry-upd">Save</button><button type="button" class="unique sp-btn sp-btn-ghost sp-ne-entry-cancel">Cancel</button></div>';
+				+ '<div class="sp-toolbar"><button type="button" class="unique sp-btn sp-btn--primary sp-ne-entry-upd">Save</button><button type="button" class="unique sp-btn sp-ne-entry-cancel">Cancel</button></div>';
 			bodyDiv.hidden = true;
 			bodyDiv.after(ed);
 			markUniqueSpans(ed);
@@ -8591,7 +8828,7 @@ async function spOpenNote(id) {
 			const cell = document.createElement('div');
 			cell.className = 'sp-action-attach';
 			cell.innerHTML = `<button type="button" class="unique sp-action-attach-thumb"><img src="${esc(a.url)}" alt="${esc(a.name || '')}"></button>`
-				+ '<button type="button" class="sp-action-attach-remove" title="Remove photo" aria-label="Remove photo">&times;</button>';
+				+ '<button type="button" class="sp-thumb-x sp-action-attach-remove" title="Remove photo" aria-label="Remove photo">&times;</button>';
 			cell.querySelector('.sp-action-attach-thumb').addEventListener('click', () => spMsgAttachModal(a.url, a.mime, a.name));
 			cell.querySelector('.sp-action-attach-remove').addEventListener('click', async () => {
 				if (!await spConfirm('Remove this photo?')) return;
@@ -8709,9 +8946,8 @@ function spApiKeyDefs(data) {
 			help: 'Runs in visitors\' browsers — the route map and place search. Restrict by <strong>Website (HTTP referrer)</strong> to <code>rovin.work</code>, and enable <strong>Maps JavaScript API</strong> + <strong>Places API (New)</strong>.',
 		},
 		// Store payment keys. Only shown when the Store module is on — a site that doesn't
-		// sell anything shouldn't be invited to paste in payment credentials. There is
-		// deliberately NO publishable-key field: Checkout is a redirect, so nothing Stripe
-		// runs in the browser, and a field that does nothing is a field someone will fill in.
+		// sell anything shouldn't be invited to paste in payment credentials. The publishable
+		// key is only used when E-Commerce is set to take payment on the site's own checkout page.
 		...(data.store_module_on ? [
 		{
 			label: 'Stripe Secret Key (Store)' + (data.store_stripe_secret_set ? ' — ' + (data.store_stripe_mode === 'live' ? 'LIVE mode' : 'test mode') : ''),
@@ -8721,11 +8957,18 @@ function spApiKeyDefs(data) {
 			help: 'Takes payment for the online store. <strong>Use a restricted key (<code>rk_…</code>), not your full secret key</strong> — create one at <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe → Developers → API keys → Create restricted key</a> with write access to <em>Checkout Sessions</em> and <em>Refunds</em> and nothing else (write includes read, which refunds and the order-confirmation check also need). Selling memberships that renew also needs <em>Subscriptions</em> (write), <em>Invoices</em> (read) and <em>Customer portal</em> (write), and the customer portal saved once under Stripe → Settings → Billing. Then a stolen key can\'t move money out or export your customers. Test keys and live keys are both fine here — the mode is read from the key itself, so there is no switch to forget. Stored encrypted (AES-256-GCM) with a key derived from this site\'s wp-config salts, so a database dump on its own cannot reveal it.',
 		},
 		{
+			label: 'Stripe Publishable Key (Store)' + (data.store_stripe_pk_set ? ' — ' + (data.store_stripe_pk_mode === 'live' ? 'LIVE mode' : 'test mode') + (data.store_stripe_secret_set && data.store_stripe_mode && data.store_stripe_pk_mode !== data.store_stripe_mode ? ' (does not match the secret key — not used)' : '') : ''),
+			settingKey: 'store_stripe_publishable', inputId: 'sp-setting-store-stripe-pk',
+			set: data.store_stripe_pk_set, masked: data.store_stripe_pk_forced ? 'set in wp-config.php' : data.store_stripe_pk_masked,
+			placeholder: 'pk_live_… or pk_test_…',
+			help: 'Only needed to take payment on your own checkout page (E-Commerce → Payment processor → Where customers pay). Copy the <strong>Publishable key</strong> from <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe → Developers → API keys</a>, from the same mode as the secret key above. It is meant to be public, so no restricted version is needed.',
+		},
+		{
 			label: 'Stripe Webhook Signing Secret (Store)',
 			settingKey: 'store_stripe_webhook', inputId: 'sp-setting-store-stripe-webhook',
 			set: data.store_stripe_webhook_set, masked: data.store_stripe_forced ? 'set in wp-config.php' : data.store_stripe_webhook_masked,
 			placeholder: 'whsec_…',
-			help: 'How the site knows a payment confirmation really came from Stripe. In <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener">Stripe → Developers → Webhooks</a> add an endpoint pointing at <code>' + esc(data.store_webhook_url || '') + '</code>, subscribe it to <code>checkout.session.completed</code>, <code>checkout.session.expired</code>, <code>checkout.session.async_payment_succeeded</code>, <code>checkout.session.async_payment_failed</code>, <code>charge.refunded</code> and <code>charge.refund.updated</code>, then paste its signing secret here. The two refund events keep refunds you make in the Stripe dashboard in step with Store → Orders. If you sell memberships that renew, also add <code>invoice.paid</code>, <code>customer.subscription.updated</code> and <code>customer.subscription.deleted</code>. <strong>Without this, paid orders are never confirmed</strong> — the customer is charged and the order sits unpaid.',
+			help: 'How the site knows a payment confirmation really came from Stripe. In <a href="https://dashboard.stripe.com/webhooks" target="_blank" rel="noopener">Stripe → Developers → Webhooks</a> add an endpoint pointing at <code>' + esc(data.store_stripe_webhook_url || data.store_webhook_url || '') + '</code>, subscribe it to <code>checkout.session.completed</code>, <code>checkout.session.expired</code>, <code>checkout.session.async_payment_succeeded</code>, <code>checkout.session.async_payment_failed</code>, <code>charge.refunded</code> and <code>charge.refund.updated</code>, then paste its signing secret here. The two refund events keep refunds you make in the Stripe dashboard in step with Store → Orders. If you sell memberships that renew, also add <code>invoice.paid</code>, <code>customer.subscription.updated</code> and <code>customer.subscription.deleted</code>. <strong>Without this, paid orders are never confirmed</strong> — the customer is charged and the order sits unpaid.',
 		},
 		] : []),
 		{
@@ -8747,17 +8990,17 @@ function spProbeBlock() {
 		'<div class="sp-help-text" style="margin:0 0 8px;">Finds which endpoint and auth style this key answers on. Leave blank to sweep the likely candidates, or paste a full <code>https://</code> URL to test it directly. A sweep fires several requests and can take up to a minute.</div>' +
 		'<div style="display:grid;grid-template-columns:1fr auto;gap:8px;">' +
 			'<input type="text" id="sp-bl-probe-url" class="sp-input" placeholder="(optional) https://…/some/endpoint">' +
-			'<button type="button" class="unique sp-btn sp-btn-secondary sp-bl-probe-run">Run Probe</button>' +
+			'<button type="button" class="unique sp-btn sp-bl-probe-run">Run Probe</button>' +
 		'</div>' +
 		'<div id="sp-bl-probe-out"></div>' +
 		// Manual sync so a first import doesn't wait for the nightly cron.
 		'<label style="margin-top:14px;">Review sync</label>' +
 		'<div class="sp-help-text" style="margin:0 0 8px;">Pulls reviews from every Reputation Manager report into the Reviews panel. Google and Facebook rows are ignored — those keep coming from their own feeds. Runs nightly on its own; this is for the first import or a spot-check.</div>' +
 		'<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
-			'<button type="button" class="unique sp-btn sp-btn-primary sp-bl-sync-run">Sync Reviews Now</button>' +
-			'<button type="button" class="unique sp-btn sp-btn-ghost sp-bl-sync-run" data-force="1">Force Full Re-sync</button>' +
-			'<button type="button" class="unique sp-btn sp-btn-ghost sp-bl-paging-run">Diagnose Paging</button>' +
-			'<button type="button" class="unique sp-btn sp-btn-ghost sp-bl-dirs-run">List Platforms</button>' +
+			'<button type="button" class="unique sp-btn sp-btn--primary sp-bl-sync-run">Sync Reviews Now</button>' +
+			'<button type="button" class="unique sp-btn sp-bl-sync-run" data-force="1">Force Full Re-sync</button>' +
+			'<button type="button" class="unique sp-btn sp-bl-paging-run">Diagnose Paging</button>' +
+			'<button type="button" class="unique sp-btn sp-bl-dirs-run">List Platforms</button>' +
 		'</div>' +
 		'<div id="sp-bl-sync-out"></div>' +
 	'</div>';
@@ -8786,10 +9029,10 @@ function renderApiKeys(wrap, data) {
 		h += '<div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;">';
 		if (o.set) {
 			h += `<div><span class="unique sp-status-badge sp-status-submitted">Active</span> <span class="unique" style="color:var(--sp-text-light);font-size:13px;">${esc(o.masked || '')}</span></div>`;
-			h += `<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-delete sp-forget-setting-key" data-key="${o.settingKey}" data-label="${esc(o.label)}">Forget Key</button>`;
+			h += `<button type="button" class="unique sp-btn sp-btn--danger sp-btn-delete sp-forget-setting-key" data-key="${o.settingKey}" data-label="${esc(o.label)}">Forget Key</button>`;
 		} else {
 			h += `<input type="text" id="${o.inputId}" class="sp-input" placeholder="${esc(o.placeholder)}">`;
-			h += `<button type="button" class="unique sp-btn sp-btn-primary sp-save-setting-key" data-key="${o.settingKey}" data-input="${o.inputId}">Save Key</button>`;
+			h += `<button type="button" class="unique sp-btn sp-btn--primary sp-save-setting-key" data-key="${o.settingKey}" data-input="${o.inputId}">Save Key</button>`;
 		}
 		h += '</div>';
 		if (o.help) h += `<div class="sp-help-text">${o.help}</div>`;
@@ -9038,7 +9281,7 @@ async function loadCcSettings() {
 	html += field('pwa_background_color', 'Splash background', s.pwa_background_color, '#ffffff');
 	html += field('pwa_icon_url', 'App icon URL', s.pwa_icon_url, 'https://…/app-icon.png', 'Media Library URL of a square icon. Blank = the child-theme app icon / Site Icon.');
 	html += field('push_contact', 'Push contact', s.push_contact, 'mailto:you@domain.com', 'VAPID contact address for push (defaults to the site admin email).');
-	html += '<div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-cc-settings-save">Save</button><span class="sp-help-text" id="sp-cc-settings-status"></span></div>';
+	html += '<div style="margin-top:6px;display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-cc-settings-save">Save</button><span class="sp-help-text" id="sp-cc-settings-status"></span></div>';
 	html += '</div>';
 
 	wrap.innerHTML = html;
@@ -9090,16 +9333,18 @@ function renderColorScheme(wrap, data) {
 	html += `<img id="sp-appicon-preview" src="${esc(data.app_icon_built || '')}" alt="" style="width:56px;height:56px;border-radius:12px;border:1px solid var(--sp-border);object-fit:cover;${data.app_icon_built ? '' : 'display:none;'}">`;
 	html += `<input type="text" id="sp-appicon-url" class="sp-input" value="${esc(data.app_icon || '')}" placeholder="https://…/app-icon.webp" style="flex:1 1 320px;min-width:240px;">`;
 	html += '</div>';
-	html += '<div style="margin-top:10px;display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-appicon-save">Save Icon</button><span class="sp-help-text" id="sp-appicon-status"></span></div>';
+	html += '<div style="margin-top:10px;display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-appicon-save">Save Icon</button><span class="sp-help-text" id="sp-appicon-status"></span></div>';
 	html += '</div>';
 
 	// Dashboard news feed — keywords for the full-width Google Alerts widget on the dashboard.
 	html += '<div class="sp-card sp-settings-card">';
 	html += '<h3>Dashboard News Feed</h3>';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Show a Google Alerts feed across the top of everyone’s dashboard — enter the keywords to track (usually your brand name).</p>';
-	html += `<label class="sp-reminder-toggle" style="margin:0 0 12px;"><input type="checkbox" id="sp-alert-enabled"${(String(data.news_enabled) !== '0') ? ' checked' : ''}> Show news feed on dashboards</label>`;
+	html += '<div class="sp-stack sp-stack--sm">';
+	html += `<label class="sp-check-row"><input type="checkbox" id="sp-alert-enabled"${(String(data.news_enabled) !== '0') ? ' checked' : ''}> Show news feed on dashboards</label>`;
 	html += `<input type="text" id="sp-alert-keywords" class="sp-input" value="${esc(data.alert_keywords || '')}" placeholder="e.g. Babe&#39;s Chicken" style="max-width:24em;">`;
-	html += '<div style="margin-top:10px;display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-alert-save">Save</button><span class="sp-help-text" id="sp-alert-status"></span></div>';
+	html += '<div style="display:flex;align-items:center;gap:12px;"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-alert-save">Save</button><span class="sp-help-text" id="sp-alert-status"></span></div>';
+	html += '</div>';
 	html += '</div>';
 
 	html += '<div class="sp-card sp-settings-card">';
@@ -9110,9 +9355,9 @@ function renderColorScheme(wrap, data) {
 	html += '<p class="sp-help-text">Up to three colors from your logo, used by "Match my company colors". Click a swatch for the color wheel, or type a hex code. Leave a slot blank if you have fewer.</p>';
 	html += '<div class="sp-brand-rows" id="sp-brand-rows"></div>';
 	html += '<p class="sp-help-text" id="sp-color-result"></p>';
-	html += '<div class="sp-brand-controls">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-color-save" disabled>Save</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-color-reset">Reset to Default</button>';
+	html += '<div class="sp-toolbar">';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-color-save" disabled>Save</button>';
+	html += '<button type="button" class="unique sp-btn" id="sp-color-reset">Reset to Default</button>';
 	html += '<span class="sp-color-status" id="sp-color-status"></span>';
 	html += '</div>';
 	html += '</div>';
@@ -9178,7 +9423,7 @@ function renderColorScheme(wrap, data) {
 		const grid = $('#sp-preset-grid', wrap);
 		if (!grid) return;
 		const mine = validBrand();
-		grid.innerHTML = `<button type="button" class="unique sp-swatch${choice === '' ? ' is-active' : ''}" data-sp-preset="">${chips(mine.length ? mine : ['#ffffff'])}<span class="sp-swatch__name">Match my company colors</span><span class="sp-swatch__fits">Closest preset, tuned to your logo</span></button>`
+		grid.innerHTML = `<button type="button" class="unique sp-swatch${choice === '' ? ' is-active' : ''}" data-sp-preset="">${chips(mine.length ? mine : ['#ffffff'])}<span class="sp-swatch__name">Match my company colors</span><span class="sp-swatch__fits">Your colors, adjusted only if needed</span></button>`
 			+ presets.map(p => `<button type="button" class="unique sp-swatch${choice === p.slug ? ' is-active' : ''}" data-sp-preset="${esc(p.slug)}">${chips([p.brand, p.canvas, p.accent])}<span class="sp-swatch__name">${esc(p.name)}</span><span class="sp-swatch__fits">For ${esc(p.fits)} logos</span></button>`).join('');
 		markUniqueSpans(grid);
 	};
@@ -9193,9 +9438,12 @@ function renderColorScheme(wrap, data) {
 	/* ---- Live preview of the current choice ---- */
 	const describe = (a) => {
 		if (!a || !a.brand) return '';
-		return choice === ''
-			? `Closest preset: ${a.name}. Brand ${a.brand}, accent ${a.accent}, page tint ${a.canvas}.`
-			: `${a.name} preset.`;
+		if (choice !== '') return `${a.name} preset.`;
+		const k = a.kept || {};
+		const part = (label, hex, kept) => `${label} ${hex}${kept ? ' (yours, as-is)' : ''}`;
+		const all = k.brand && k.accent;
+		return (all ? 'Your colors work as-is. ' : `Adjusted toward the ${a.name} preset where needed. `)
+			+ `${part('Brand', a.brand, k.brand)}, ${part('accent', a.accent, k.accent)}, ${part('page tint', a.canvas, k.canvas)}.`;
 	};
 	let previewTimer = 0;
 	const preview = async () => {
@@ -9283,15 +9531,159 @@ function renderColorScheme(wrap, data) {
 
 /* ---- Store settings ---- */
 
-async function loadStoreAdmin() {
-	const wrap = $('#sp-store-settings');
+/*--------------------------------------------------------------
+# Settings → Profile — the signed-in person's own WordPress account
+# (includes-site-pulse-profile.php). Two cards: About You, and Change Password.
+--------------------------------------------------------------*/
+
+async function loadProfile() {
+	const box = $('#sp-profile');
+	if (!box) return;
+	box.innerHTML = SP_LIST_SKELETON;
+	let d;
+	try {
+		const res = await spAjax('site_pulse_profile_get', {});
+		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load your profile.') + '</div>'; return; }
+		d = res.data;
+	} catch (e) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load your profile.') + '</div>'; return; }
+
+	const ro = d.read_only;
+	const dis = ro ? ' disabled' : '';
+	const field = (id, label, value, type = 'text', extra = '') =>
+		`<div class="sp-form-group"><label for="${id}">${label}</label><input type="${type}" id="${id}" class="sp-input" value="${esc(value || '')}"${extra}${dis}></div>`;
+	const displayOpts = (opts, cur) => opts.map(o => `<option value="${esc(o)}"${o === cur ? ' selected' : ''}>${esc(o)}</option>`).join('');
+
+	box.innerHTML = (ro ? '<div class="sp-notice sp-notice--warning">You\'re viewing as someone else, so this is their profile, shown read-only. Stop viewing as them to change your own.</div>' : '')
+		+ '<div class="sp-card sp-settings-card sp-profile-card"><h3>About You</h3>'
+		+   '<p class="sp-help-text">This is your website login. Changes here update it everywhere, including WordPress.</p>'
+		+   '<div class="sp-pf-photo">'
+		+     '<div id="sp-pf-photo-img"></div>'
+		+     '<div class="sp-pf-photo__side"><div class="sp-pf-photo__label">Profile photo</div><div class="sp-help-text" id="sp-pf-photo-note"></div>'
+		+       (ro ? '' : '<div class="sp-toolbar"><input type="file" id="sp-pf-photo-input" accept="image/*" hidden><button type="button" class="unique sp-btn" id="sp-pf-photo-btn">Upload Photo</button><button type="button" class="unique sp-btn" id="sp-pf-photo-rm">Remove</button></div>')
+		+   '</div></div>'
+		+   `<div class="sp-form-group"><label for="sp-pf-user">Username <span class="sp-help-text">(can't be changed)</span></label><input type="text" id="sp-pf-user" class="sp-input sp-input--locked" value="${esc(d.username)}" readonly tabindex="-1" aria-readonly="true"></div>`
+		+   '<div class="sp-form-row">' + field('sp-pf-first', 'First name', d.first_name, 'text', ' autocomplete="given-name"') + field('sp-pf-last', 'Last name', d.last_name, 'text', ' autocomplete="family-name"') + '</div>'
+		+   '<div class="sp-form-row">' + field('sp-pf-nick', 'Nickname', d.nickname)
+		+     `<div class="sp-form-group"><label for="sp-pf-display">Name shown to others</label><select id="sp-pf-display" class="sp-select"${dis}>${displayOpts(d.display_opts || [], d.display_name)}</select></div></div>`
+		+   field('sp-pf-email', 'Email', d.email, 'email', ' autocomplete="email"')
+		+   field('sp-pf-url', 'Website <span class="sp-help-text">(optional)</span>', d.url, 'url', ' placeholder="https://"')
+		+   `<div class="sp-form-group"><label for="sp-pf-bio">About you <span class="sp-help-text">(optional)</span></label><textarea id="sp-pf-bio" class="sp-textarea" rows="3"${dis}>${esc(d.bio || '')}</textarea></div>`
+		+   (ro ? '' : '<div class="sp-actions"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-pf-save">Save Profile</button></div>')
+		+ '</div>'
+		+ '<div class="sp-card sp-settings-card sp-profile-card"><h3>Change Password</h3>'
+		+   '<p class="sp-help-text">At least 8 characters. Changing it signs you out on your other devices; you stay signed in here.</p>'
+		+   field('sp-pf-cur', 'Current password', '', 'password', ' autocomplete="current-password"')
+		+   '<div class="sp-form-row">' + field('sp-pf-new', 'New password', '', 'password', ' autocomplete="new-password" minlength="8"') + field('sp-pf-new2', 'New password again', '', 'password', ' autocomplete="new-password"') + '</div>'
+		+   `<label class="sp-check-row"><input type="checkbox" id="sp-pf-show"${dis}> Show passwords</label>`
+		+   (ro ? '' : '<div class="sp-actions"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-pf-pass">Change Password</button></div>')
+		+ '</div>';
+	markUniqueSpans(box);
+
+	// Profile photo: their own picture wins everywhere (incl. the Company Directory); none → the directory's.
+	const paintPhoto = () => {
+		const img = $('#sp-pf-photo-img'), note = $('#sp-pf-photo-note'), rm = $('#sp-pf-photo-rm');
+		const src = d.photo || d.dir_photo;
+		const name = [d.first_name, d.last_name].filter(Boolean).join(' ') || d.display_name || d.username || '?';
+		// Same face as chat: the photo, or the coloured initials circle — just bigger.
+		img.innerHTML = src ? `<span class="sp-avatar sp-avatar--xl"><img src="${esc(src)}" alt=""></span>`
+			: spAvatarHTML(name).replace('class="sp-avatar', 'class="sp-avatar sp-avatar--xl');
+		note.textContent = d.photo ? 'Shown on your messages, action items and in the directory.'
+			: d.dir_photo ? 'Using your Company Directory photo. Upload your own to replace it.'
+			: 'Add a photo so people can put a face to your name.';
+		if (rm) rm.hidden = !d.photo;
+	};
+	paintPhoto();
+	if (ro) return;
+
+	const photoInput = $('#sp-pf-photo-input'), photoBtn = $('#sp-pf-photo-btn');
+	photoBtn.addEventListener('click', () => photoInput.click());
+	photoInput.addEventListener('change', async () => {
+		const file = photoInput.files[0];
+		photoInput.value = '';
+		if (!file) return;
+		if (file.size > 10 * 1024 * 1024) { spAlert('That picture is too large (max 10 MB).'); return; }
+		const fd = new FormData();
+		fd.append('action', 'site_pulse_profile_photo_upload');
+		fd.append('nonce', spGetNonce());
+		fd.append('file', file);
+		photoBtn.disabled = true; photoBtn.textContent = 'Uploading\u2026';
+		try {
+			const json = await (await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd })).json();
+			if (json.success) { d.photo = json.data.photo; paintPhoto(); spToast('Photo saved.'); }
+			else spAlert(json.data?.message || 'Upload failed.');
+		} catch (e) { spAlert('Upload failed \u2014 check your connection and try again.'); }
+		photoBtn.disabled = false; photoBtn.textContent = 'Upload Photo';
+	});
+	$('#sp-pf-photo-rm').addEventListener('click', async () => {
+		try {
+			const r = await spAjax('site_pulse_profile_photo_remove', {});
+			if (r.success) { d.photo = ''; d.dir_photo = r.data.dir_photo || ''; paintPhoto(); spToast('Photo removed.'); }
+			else spAlert(r.data?.message || 'Couldn\u2019t remove the photo.');
+		} catch (e) { spAlert('Couldn\u2019t remove the photo.'); }
+	});
+
+	// Nickname / first / last change what "Name shown to others" can be (WordPress offers combinations).
+	const refreshDisplay = () => {
+		const f = $('#sp-pf-first').value.trim(), l = $('#sp-pf-last').value.trim(), n = $('#sp-pf-nick').value.trim();
+		const sel = $('#sp-pf-display'), cur = sel.value;
+		const opts = [...new Set([d.username, n, f, l, f && l ? `${f} ${l}` : '', f && l ? `${l} ${f}` : ''].filter(Boolean))];
+		sel.innerHTML = displayOpts(opts, opts.includes(cur) ? cur : (f && l ? `${f} ${l}` : n || d.username));
+	};
+	['#sp-pf-first', '#sp-pf-last', '#sp-pf-nick'].forEach(s => $(s).addEventListener('input', refreshDisplay));
+
+	$('#sp-pf-show').addEventListener('change', (e) => { ['#sp-pf-cur', '#sp-pf-new', '#sp-pf-new2'].forEach(s => { $(s).type = e.target.checked ? 'text' : 'password'; }); });
+
+	$('#sp-pf-save').addEventListener('click', async (e) => {
+		const btn = e.currentTarget;
+		btn.disabled = true;
+		try {
+			const r = await spAjax('site_pulse_profile_save', {
+				first_name: $('#sp-pf-first').value, last_name: $('#sp-pf-last').value, nickname: $('#sp-pf-nick').value,
+				display_name: $('#sp-pf-display').value, email: $('#sp-pf-email').value, url: $('#sp-pf-url').value, bio: $('#sp-pf-bio').value,
+			});
+			if (r.success) spToast(r.data.message, 5000); else spAlert(r.data?.message || 'Couldn\'t save your profile.');
+		} catch (err) { spAlert('Couldn\'t save — check your connection and try again.'); }
+		btn.disabled = false;
+	});
+
+	$('#sp-pf-pass').addEventListener('click', async (e) => {
+		const cur = $('#sp-pf-cur').value, n1 = $('#sp-pf-new').value, n2 = $('#sp-pf-new2').value;
+		if (!cur) { spAlert('Enter your current password.'); return; }
+		if (n1.length < 8) { spAlert('Your new password must be at least 8 characters.'); return; }
+		if (n1 !== n2) { spAlert('The two new passwords don\'t match.'); return; }
+		const btn = e.currentTarget;
+		btn.disabled = true;
+		try {
+			// Field names avoid "password" — WP Engine's firewall strips POST fields with that name.
+			const r = await spAjax('site_pulse_profile_password', { sp_cur_pass: cur, sp_new_pass: n1, sp_new_pass2: n2 });
+			if (r.success) {
+				['#sp-pf-cur', '#sp-pf-new', '#sp-pf-new2'].forEach(s => { $(s).value = ''; });
+				spToast(r.data.message, 6000);
+				// The new auth cookie changed the session, so fetch a nonce that matches it.
+				if (typeof spRefreshNonce === 'function') spRefreshNonce();
+			} else spAlert(r.data?.message || 'Couldn\'t change your password.');
+		} catch (err) { spAlert('Couldn\'t change your password — check your connection and try again.'); }
+		btn.disabled = false;
+	});
+}
+
+// The store's settings are split over two screens by what they're FOR:
+//   Settings → Store        how the shop LOOKS — products, options, the buy button, colours.
+//   Settings → E-Commerce   how it WORKS — payment, tax, shipping, emails, and the Extras
+//                           (memberships, agreements, downloads) with their cards.
+// Same data, same endpoints; each screen draws and saves only its own sections.
+const SP_ECOM_SECTIONS = ['Payment processor', 'Service fee', 'Sales tax', 'Shipping', 'Extras'];
+
+async function loadStoreAdmin(part = 'store') {
+	const wrap = $(part === 'ecommerce' ? '#sp-ecom-settings' : '#sp-store-settings');
 	if (!wrap) return;
 	wrap.innerHTML = SP_LIST_SKELETON;
 
 	try {
 		const res = await spAjax('site_pulse_store_settings', {});
 		if (!res.success) { wrap.innerHTML = '<div class="sp-card">' + spWidgetEmpty(spErrorText(res, 'Couldn\'t load the store settings.')) + '</div>'; return; }
-		renderStoreAdmin(wrap, res.data);
+		renderStoreAdmin(wrap, res.data, part);
+		if (part !== 'ecommerce') return;
 		loadStoreShipping();
 		loadStoreNotify();
 		loadStoreMemberPlans();
@@ -9304,7 +9696,8 @@ async function loadStoreAdmin() {
 
 // Fields are drawn from the server's declarations, so adding a setting is a row in
 // sp_store_setting_defs() and nothing here changes.
-function renderStoreAdmin(wrap, data) {
+function renderStoreAdmin(wrap, data, part = 'store') {
+	const ecom = part === 'ecommerce';
 	// Each section is its own settings card, matching Settings -> Booking: h3 band, a
 	// line of help, the controls, then a right-aligned save. Fields carry their own
 	// section, so grouping is declared server-side — a new group is a key in
@@ -9313,14 +9706,21 @@ function renderStoreAdmin(wrap, data) {
 	const groups = [];
 	(data.fields || []).forEach(f => {
 		const name = f.section || 'General';
+		if (SP_ECOM_SECTIONS.includes(name) !== ecom) return;      // the other screen's section
 		let g = groups.find(x => x.name === name);
 		if (!g) groups.push(g = { name, fields: [] });
 		g.fields.push(f);
 	});
 
+	// E-Commerce cards in a fixed order (Payment, Service fee, Sales tax, Shipping, Extras), whatever order the fields arrive in.
+	if (ecom) groups.sort((a, b) => SP_ECOM_SECTIONS.indexOf(a.name) - SP_ECOM_SECTIONS.indexOf(b.name));
+
 	const intros = {
 		'General'          : 'How products, options and the buy button look and behave across the shop.',
-		'Tax and shipping' : 'What is added on top of the price at checkout. Shipping rates themselves are set in their own card below.',
+		'Payment processor': 'Who takes the money, how order numbers start, and whether customers can use discount codes. Checkout covers products and paid bookings alike.',
+		'Service fee'      : 'A fee added to every order, on the items only (before shipping and tax), so the cost of taking payments online is passed on to the customer. It shows at checkout and on the receipt as one &ldquo;Service fee&rdquo; line. What it has added up to is under E-Commerce &rarr; Service Fees.',
+		'Sales tax'        : 'Whether tax is added at checkout, and how it is worked out.',
+		'Shipping'         : 'How postage is priced at checkout: from the Shipping Rates table below, or by driving distance for freight and heavy items.',
 		'Colors'           : 'Leave a colour blank to keep using the website&rsquo;s own palette. Only the ones you set are overridden.',
 		'Extras'           : 'Features most shops never need. Each stays out of the way until you switch it on.',
 	};
@@ -9335,7 +9735,7 @@ function renderStoreAdmin(wrap, data) {
 		// that belongs on the screen rather than being discovered by a customer at checkout.
 		// A configuration that cannot work outranks the ready/not-ready line, because a
 		// store that takes money and charges no tax looks healthy until it isn't.
-		if (gi === 0) {
+		if (gi === 0 && ecom) {
 			if (data.warning) {
 				html += '<div class="sp-notice sp-notice--warning"><span class="sp-store-notice-text">' + data.warning + '</span></div>';
 			}
@@ -9349,23 +9749,38 @@ function renderStoreAdmin(wrap, data) {
 			}
 		}
 
-		g.fields.forEach(f => { html += spStoreFieldHtml(f); });
+		// Consecutive fields with the same `row` sit side by side in one grid line.
+		g.fields.forEach((f, fi) => {
+			const prev = g.fields[fi - 1], next = g.fields[fi + 1];
+			if (f.row && (!prev || prev.row !== f.row)) html += '<div class="sp-grid">';
+			html += spStoreFieldHtml(f);
+			if (f.row && (!next || next.row !== f.row)) html += '</div>';
+		});
 
 		// Every card saves the whole set, so the button is always next to what was changed.
 		html += '<div class="sp-actions sp-store-save-row">';
 		html += '<button type="button" class="unique sp-btn sp-btn--primary sp-store-save-settings">Save Settings</button>';
 		html += '<span class="sp-help-text sp-store-settings-saved"></span>';
 		html += '</div></div>';
+
+		// The rates table (and the distance settings, when that is on) sit right under the Shipping card.
+		if (ecom && g.name === 'Shipping') {
+			html += '<div id="sp-store-shipping"></div>';
+			html += '<div id="sp-store-distance"></div>';
+		}
 	});
 
 	// Shipping rates are a CRUD table rather than a declared field, so they get
 	// their own card below the settings. Filled by its own request. Emails likewise:
 	// their copy is edited as a set and saved by its own endpoint, as on Booking.
-	html += '<div id="sp-store-plans"></div>';
-	html += '<div id="sp-store-agreements"></div>';
-	html += '<div id="sp-store-distance"></div>';
-	html += '<div id="sp-store-shipping"></div>';
-	html += '<div id="sp-store-emails"></div>';
+	if (ecom) {
+		html += '<div id="sp-store-plans"></div>';
+		html += '<div id="sp-store-agreements"></div>';
+		html += '<div id="sp-store-emails"></div>';
+	} else if (!data.stripe_ready) {
+		// The look screen still says when nobody can buy, and where that's fixed.
+		html = '<div class="sp-notice sp-notice--warning"><span class="sp-store-notice-text"><strong>Checkout is switched off</strong>, so the Add to Cart button is hidden from customers. Payment is set up under <strong>Settings &rarr; E-Commerce</strong>.</span></div>' + html;
+	}
 
 	wrap.innerHTML = '<div class="sp-stack sp-store-settings">' + html + '</div>';
 	markUniqueSpans(wrap);
@@ -9390,7 +9805,7 @@ function spStoreFieldHtml(f) {
 		html += '<input type="color" class="sp-store-swatch" value="' + esc(eff || '#000000') + '"'
 			+ ' title="' + esc(f.help || f.label) + '" aria-label="' + esc(f.label) + '">';
 		html += '<span class="sp-store-color-label">' + esc(f.label) + '</span>';
-		html += '<code class="sp-store-hex">' + esc(eff || '—') + '</code>';
+		html += '<code class="sp-field__hint sp-store-hex">' + esc(eff || '—') + '</code>';
 		html += '<button type="button" class="sp-store-color-reset unique sp-btn sp-btn--ghost sp-btn--sm" style="'
 			+ (isOv ? '' : 'visibility:hidden;') + '">Reset</button>';
 		html += '</div>';
@@ -9398,15 +9813,15 @@ function spStoreFieldHtml(f) {
 	}
 
 	// .sp-form-group gives the label the same heading as every other settings field (e.g. Settings ->
-	// API Keys); the options sit in .sp-radio-row.
+	// API Keys); the options are .sp-check-row lines in a small stack.
 	html += '<div class="sp-form-group">';
 	html += '<label>' + esc(f.label) + '</label>';
 
 	if (f.type === 'choice') {
-		html += '<div class="sp-radio-row">';
+		html += '<div class="sp-options">';
 		Object.keys(f.choices || {}).forEach(key => {
 			const id = 'sp-store-set-' + f.key + '-' + key;
-			html += '<label class="sp-radio-inline" for="' + id + '">';
+			html += '<label class="sp-check-row" for="' + id + '">';
 			html += '<input type="radio" id="' + id + '" name="sp-store-set-' + esc(f.key) + '" value="' + esc(key) + '" data-key="' + esc(f.key) + '"' + (f.value === key ? ' checked' : '') + '>';
 			html += '<div>' + esc(f.choices[key]) + '</div>';
 			html += '</label>';
@@ -9418,7 +9833,7 @@ function spStoreFieldHtml(f) {
 		html += '<input type="checkbox" id="' + id + '" data-key="' + esc(f.key) + '" value="1"' + (f.value === '1' ? ' checked' : '') + '> Switched on';
 		html += '</label>';
 	} else {
-		html += '<input type="text" class="sp-input sp-store-short" data-key="' + esc(f.key) + '" value="' + esc(f.value) + '">';
+		html += '<input type="text" class="sp-input sp-store-short" data-key="' + esc(f.key) + '" value="' + esc(f.value) + '" placeholder="' + esc(f.placeholder || '') + '">';
 	}
 
 	// Help text is authored server-side and may contain markup, so it is injected
@@ -9472,7 +9887,9 @@ function spStoreBindSettings(wrap) {
 		saveBtns.forEach(b => { b.disabled = true; });
 		if (note) note.textContent = 'Saving…';
 		try {
-			const res = await spAjax('site_pulse_store_save_settings', { settings });
+			// Only this screen's settings — the other half (Store vs E-Commerce) is left as it is.
+			const keys = [...new Set($$('[data-key]', wrap).map(el => el.dataset.key))];
+			const res = await spAjax('site_pulse_store_save_settings', { settings, keys });
 			if (note) note.textContent = res.success ? 'Saved.' : 'Could not save.';
 			// An Extras switch changes which cards and emails exist, so redraw those two.
 			if (res.success) { loadStoreMemberPlans(); loadStoreAgreements(); loadStoreNotify(); loadStoreDistance(); loadStoreShipping(); }
@@ -9495,12 +9912,12 @@ async function loadStoreAgreements() {
 		const res = await spAjax('site_pulse_store_agreements', {});
 		if (!res.success || !res.data.on) { box.innerHTML = ''; return; }
 
-		const block = (a) => `<div class="sp-book-template sp-agreement-row" data-aid="${parseInt(a.id, 10) || 0}">
-			<div class="sp-book-template-head">
+		const block = (a) => `<div class="sp-card sp-card--inset sp-book-template sp-agreement-row" data-aid="${parseInt(a.id, 10) || 0}">
+			<div class="sp-toolbar sp-book-template-head">
 				<input type="text" class="sp-input sp-ag-title" value="${esc(a.title || '')}" placeholder="e.g. Purchase Terms &amp; Limited Warranty">
 				<label class="sp-check-row"><input type="checkbox" class="sp-ag-sign"${a.signature ? ' checked' : ''}> Ask for a typed signature</label>
-				${a.products ? `<span class="sp-book-template-when">On ${a.products} product${a.products === 1 ? '' : 's'}</span>` : ''}
-				<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-icon-delete sp-ag-del" title="Remove this agreement" aria-label="Remove this agreement">${spIcon('trash')}</button>
+				${a.products ? `<span class="sp-field__hint sp-book-template-when">On ${a.products} product${a.products === 1 ? '' : 's'}</span>` : ''}
+				<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete sp-ag-del" title="Remove this agreement" aria-label="Remove this agreement">${spIcon('trash')}</button>
 			</div>
 			<textarea class="sp-textarea sp-ag-body" rows="8" placeholder="The full text the customer reads and accepts.">${esc(a.body || '')}</textarea>
 		</div>`;
@@ -9510,7 +9927,7 @@ async function loadStoreAgreements() {
 		html += '<p class="sp-help-text">Terms a customer must accept at checkout before buying certain products. Tick which ones a product needs in its Extras. '
 			+ 'Each order keeps a copy of exactly what its customer agreed to, with the name they typed, the time and their IP address, so editing the wording here never changes a past order.</p>';
 		html += '<div class="sp-book-templates" id="sp-ag-list">' + (res.data.agreements || []).map(block).join('') + '</div>';
-		html += `<div class="sp-store-add-row"><button type="button" class="unique sp-btn sp-btn--sm" id="sp-ag-add">${spIcon('plus')} Add agreement</button></div>`;
+		html += `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--sm" id="sp-ag-add">${spIcon('plus')} Add agreement</button></div>`;
 		html += '<div class="sp-actions sp-store-save-row"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-ag-save">Save Agreements</button>'
 			+ '<span id="sp-ag-saved" class="sp-help-text"></span></div>';
 		html += '</div>';
@@ -9571,7 +9988,7 @@ async function loadStoreDistance() {
 			<td><input type="text" class="sp-input" data-f="to" inputmode="decimal" value="${esc(String(b.to ?? ''))}"></td>
 			<td><input type="text" class="sp-input" data-f="rate" inputmode="decimal" value="${esc(String(b.rate ?? ''))}" placeholder="0.30"></td>
 			<td><input type="text" class="sp-input" data-f="fee" inputmode="decimal" value="${esc(String(b.fee ?? ''))}" placeholder="0.00"></td>
-			<td><button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-icon-delete sp-dist-del" title="Remove this band" aria-label="Remove this band">${spIcon('trash')}</button></td></tr>`;
+			<td><button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete sp-dist-del" title="Remove this band" aria-label="Remove this band">${spIcon('trash')}</button></td></tr>`;
 
 		let html = '<div class="sp-card sp-settings-card">';
 		html += '<h3>Shipping by Distance</h3>';
@@ -9587,9 +10004,9 @@ async function loadStoreDistance() {
 
 		html += '<div class="sp-table-wrap"><table class="sp-table sp-store-bands"><thead><tr><th>From (miles)</th><th>To (miles)</th><th>$ per mile</th><th>+ Flat $</th><th></th></tr></thead><tbody id="sp-dist-body">'
 			+ ((d.bands || []).length ? d.bands : [{ from: 0, to: '', rate: '' }]).map(bandRow).join('') + '</tbody></table></div>';
-		html += `<div class="sp-store-add-row"><button type="button" class="unique sp-btn sp-btn--sm" id="sp-dist-add">${spIcon('plus')} Add band</button></div>`;
+		html += `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--sm" id="sp-dist-add">${spIcon('plus')} Add band</button></div>`;
 
-		html += '<div class="sp-store-panel"><strong>Check an address</strong><div class="sp-help-text">Uses the saved settings, so save first. Try the address on a past order to make sure the figure matches.</div>'
+		html += '<div class="sp-card sp-card--well sp-store-panel"><strong>Check an address</strong><div class="sp-help-text">Uses the saved settings, so save first. Try the address on a past order to make sure the figure matches.</div>'
 			+ '<div class="sp-grid">'
 			+ '<div class="sp-form-group"><label>Street</label><input type="text" class="sp-input" data-t="address1"></div>'
 			+ '<div class="sp-form-group"><label>City</label><input type="text" class="sp-input" data-t="city"></div>'
@@ -9679,20 +10096,27 @@ function spShippingRow(r) {
 	const v = k => esc(r[k] === undefined || r[k] === null ? '' : String(r[k]));
 	const sel = m => (r.method === m ? ' selected' : '');
 
-	return '<tr class="sp-ship-row" data-id="' + (parseInt(r.id, 10) || 0) + '">'
-		+ '<td><input type="text" class="sp-input" data-f="name" value="' + v('name') + '" placeholder="Standard Shipping"></td>'
-		+ '<td><select class="sp-select" data-f="method">'
-			+ '<option value="flat"' + sel('flat') + '>Flat</option>'
-			+ '<option value="free"' + (r.method === 'free' ? ' selected' : '') + '>Free</option>'
-			+ '</select></td>'
-		+ '<td><input type="text" class="sp-input" data-f="amount" value="' + v('amount') + '" placeholder="0.00"></td>'
-		+ '<td><input type="text" class="sp-input" data-f="per_item" value="' + v('per_item') + '" placeholder="0.00"></td>'
-		+ '<td><input type="text" class="sp-input" data-f="min_subtotal" value="' + v('min_subtotal') + '" placeholder="any"></td>'
-		+ '<td><input type="text" class="sp-input" data-f="max_subtotal" value="' + v('max_subtotal') + '" placeholder="any"></td>'
-		+ '<td><input type="text" class="sp-input" data-f="estimate" value="' + v('estimate') + '" placeholder="3-5 business days"></td>'
-		+ '<td class="sp-store-center"><input type="checkbox" data-f="active" aria-label="Active"' + (r.active === 0 ? '' : ' checked') + '></td>'
-		+ '<td class="sp-store-center"><button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-icon-delete sp-ship-del" title="Remove this rate" aria-label="Remove this rate">' + spIcon('trash') + '</button></td>'
-		+ '</tr>';
+	// Two lines per rate: what it is (name, type, estimate, on/off, remove), then what it costs and
+	// which orders it applies to. Every input keeps its data-f, which is all the save reads.
+	const field = (label, input) => `<label class="sp-field"><span class="sp-field__label">${label}</span>${input}</label>`;
+	return '<div class="sp-ship-row" data-id="' + (parseInt(r.id, 10) || 0) + '">'
+		+ '<div class="sp-ship-line sp-ship-line--about">'
+		+   field('Name', '<input type="text" class="sp-input" data-f="name" value="' + v('name') + '" placeholder="Standard Shipping">')
+		+   field('Type', '<select class="sp-select" data-f="method">'
+				+ '<option value="flat"' + sel('flat') + '>Flat</option>'
+				+ '<option value="free"' + sel('free') + '>Free</option>'
+				+ '</select>')
+		+   field('Delivery estimate', '<input type="text" class="sp-input" data-f="estimate" value="' + v('estimate') + '" placeholder="3-5 business days">')
+		+   field('Active', '<input type="checkbox" data-f="active"' + (r.active === 0 ? '' : ' checked') + '>')
+		+   '<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete sp-ship-del" title="Remove this rate" aria-label="Remove this rate">' + spIcon('trash') + '</button>'
+		+ '</div>'
+		+ '<div class="sp-ship-line sp-ship-line--price">'
+		+   field('Amount', '<input type="text" class="sp-input" data-f="amount" value="' + v('amount') + '" placeholder="0.00">')
+		+   field('+ per extra item', '<input type="text" class="sp-input" data-f="per_item" value="' + v('per_item') + '" placeholder="0.00">')
+		+   field('Order $ from', '<input type="text" class="sp-input" data-f="min_subtotal" value="' + v('min_subtotal') + '" placeholder="any">')
+		+   field('Order $ to', '<input type="text" class="sp-input" data-f="max_subtotal" value="' + v('max_subtotal') + '" placeholder="any">')
+		+ '</div>'
+		+ '</div>';
 }
 
 function renderStoreShipping(wrap, rates) {
@@ -9703,21 +10127,10 @@ function renderStoreShipping(wrap, rates) {
 		+ 'Leave <em>Order $ from</em> and <em>to</em> blank to let a rate apply to any order; set <em>from</em> to 75 on a Free rate to get free shipping over $75. '
 		+ 'The first matching rate is not special &mdash; the customer sees every rate that matches and picks one.'
 		+ '</p>';
-	html += '<div class="sp-table-wrap">';
-	html += '<table class="sp-table sp-store-rates"><thead><tr>'
-		+ '<th>Name</th>'
-		+ '<th>Type</th>'
-		+ '<th>Amount</th>'
-		+ '<th>+ per extra item</th>'
-		+ '<th>Order $ from</th>'
-		+ '<th>Order $ to</th>'
-		+ '<th>Delivery estimate</th>'
-		+ '<th class="sp-store-center">Active</th><th></th>'
-		+ '</tr></thead><tbody id="sp-ship-body">';
-
-	(rates.length ? rates : []).forEach(r => { html += spShippingRow(r); });
-	html += '</tbody></table></div>';
-	html += `<div class="sp-store-add-row"><button type="button" class="unique sp-btn sp-btn--sm" id="sp-ship-add">${spIcon('plus')} Add rate</button></div>`;
+	html += '<div class="sp-ship-rows" id="sp-ship-body">';
+	rates.forEach(r => { html += spShippingRow(r); });
+	html += '</div>';
+	html += `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--sm" id="sp-ship-add">${spIcon('plus')} Add rate</button></div>`;
 
 	html += '<div class="sp-actions sp-store-save-row">';
 	html += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-ship-save">Save Shipping Rates</button>';
@@ -9733,7 +10146,7 @@ function renderStoreShipping(wrap, rates) {
 	// from the server.
 	body.addEventListener('click', e => {
 		const del = e.target.closest('.sp-ship-del');
-		if (del) del.closest('tr').remove();
+		if (del) del.closest('.sp-ship-row').remove();
 	});
 
 	$('#sp-ship-add', wrap).addEventListener('click', () => {
@@ -9743,9 +10156,9 @@ function renderStoreShipping(wrap, rates) {
 	const saveBtn = $('#sp-ship-save', wrap);
 	saveBtn.addEventListener('click', async () => {
 		const rates = [];
-		$$('.sp-ship-row', wrap).forEach(tr => {
-			const row = { id: parseInt(tr.dataset.id, 10) || 0 };
-			$$('[data-f]', tr).forEach(el => {
+		$$('.sp-ship-row', wrap).forEach(rowEl => {
+			const row = { id: parseInt(rowEl.dataset.id, 10) || 0 };
+			$$('[data-f]', rowEl).forEach(el => {
 				row[el.dataset.f] = el.type === 'checkbox' ? (el.checked ? 1 : 0) : el.value;
 			});
 			rates.push(row);
@@ -9768,7 +10181,7 @@ function renderStoreShipping(wrap, rates) {
 }
 
 
-/* ---- Store emails (Settings → Store) ---- */
+/* ---- Store emails (Settings → E-Commerce) ---- */
 
 // Same editor as Settings → Booking → Notifications, so a client who has rewritten
 // one has already learned the other. Template blocks carry data-tpl, NOT data-key:
@@ -9804,10 +10217,10 @@ function renderStoreNotify(box, d) {
 
 	html += '<div class="sp-book-templates">';
 	(d.templates || []).forEach(t => {
-		html += `<div class="sp-book-template" data-tpl="${esc(t.key)}">
-			<div class="sp-book-template-head">
+		html += `<div class="sp-card sp-card--inset sp-book-template" data-tpl="${esc(t.key)}">
+			<div class="sp-toolbar sp-book-template-head">
 				<label class="sp-check-row"><input type="checkbox" class="sp-sn-on"${t.enabled ? ' checked' : ''}> <strong>${esc(t.label)}</strong></label>
-				<span class="sp-book-template-when">${esc(t.when)}${t.to === 'staff' ? ' · to staff' : ''}</span>
+				<span class="sp-field__hint sp-book-template-when">${esc(t.when)}${t.to === 'staff' ? ' · to staff' : ''}</span>
 				<button type="button" class="unique sp-btn sp-btn--sm sp-sn-test">Send Test</button>
 			</div>
 			<input type="text" class="sp-input sp-sn-subject" value="${esc(t.subject)}" placeholder="Subject">
@@ -9891,10 +10304,11 @@ function spStoreFact(label, value) {
 function spStoreHead(title) {
 	return `<div class="sp-card-header"><h3>${esc(title)}</h3></div>`;
 }
-function spStoreFoot(saveLabel, saveCls, disabled, del = '') {
+function spStoreFoot(saveLabel, saveCls, disabled, del = '', dup = '') {
 	return `<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn--primary ${saveCls}"${disabled ? ' disabled' : ''}>${esc(saveLabel)}</button>`
 		+ '<button type="button" class="unique sp-btn sp-book-cancel">Cancel</button>'
-		+ (del ? `<button type="button" class="unique sp-btn sp-btn-delete" data-act="trash">${esc(del)}</button>` : '')
+		+ (dup ? `<button type="button" class="unique sp-btn" data-act="duplicate" title="Start a new product from this one">${esc(dup)}</button>` : '')
+		+ (del ? `<button type="button" class="unique sp-btn sp-btn--danger sp-btn-delete" data-act="trash">${esc(del)}</button>` : '')
 		+ '</div>';
 }
 
@@ -9945,6 +10359,99 @@ function initStoreOrders() {
 		if (row) spStoreOrderDetail(parseInt(row.dataset.orderId, 10), row.dataset.orderNumber);
 	});
 	$('#sp-store-order-more')?.addEventListener('click', (e) => { if (e.target.closest('button')) loadStoreOrders(true); });
+}
+
+/*
+ * E-Commerce → Service Fees. Totals for the chosen range, then one row per month: sales (items
+ * after discounts), the card share, the Site Pulse share owed to Battle Plan, and the two together.
+ */
+let _spStoreFeesInit = false;
+let _spStoreFeesSeq = 0;
+function initStoreFees() {
+	if (_spStoreFeesInit) return;
+	_spStoreFeesInit = true;
+	$$('[data-sp-store-fee-range]').forEach(tab => tab.addEventListener('click', () => {
+		$$('[data-sp-store-fee-range]').forEach(b => b.classList.toggle('is-active', b === tab));
+		loadStoreFees();
+	}));
+}
+
+async function loadStoreFees() {
+	const box = $('#sp-store-fees');
+	if (!box) return;
+	const seq = ++_spStoreFeesSeq;
+	box.innerHTML = SP_LIST_SKELETON;
+	const range = $('[data-sp-store-fee-range].is-active')?.dataset.spStoreFeeRange || 'month';
+	let res;
+	try { res = await spAjax('site_pulse_store_fees', { range }); } catch (e) {}
+	if (seq !== _spStoreFeesSeq) return;
+	if (!res || !res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(spErrorText(res, 'Couldn\'t load the revenue report.')) + '</div>'; return; }
+
+	const d = res.data, t = d.totals, r = d.rates || {};
+	const pct = v => `${Number(v || 0).toString()}%`;
+	const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+	// Each section is one card; its figures are well tiles inside it (no cards in cards).
+	const tile = (label, value, sub) => '<div class="sp-card sp-card--well sp-card--stat"><div class="sp-stat sp-stat--start">'
+		+ `<div class="sp-stat__label">${esc(label)}${sub ? ` <span class="sp-stat__sub">${esc(sub)}</span>` : ''}</div>`
+		+ `<div class="sp-stat__value">${esc(value)}</div></div></div>`;
+	const section = (title, inner) => `<section class="sp-card sp-stack"><h2 class="sp-card__title">${esc(title)}</h2>${inner}</section>`;
+
+	if (!t.orders && !t.renewals) {
+		box.innerHTML = spEmptyHTML({ icon: 'receipt', title: 'No payments in this range', text: 'Revenue appears here as soon as a customer pays.' });
+		markUniqueSpans(box);
+		return;
+	}
+
+	// The bottom line.
+	let h = section('Overview', '<div class="sp-grid sp-grid--stats">'
+		+ tile('Collected', t.paid, `${plural(t.orders, 'order', 'orders')}${t.renewals ? ` + ${plural(t.renewals, 'renewal', 'renewals')}` : ''}`)
+		+ tile('Refunds', t.refunds || '$0.00', 'given back')
+		+ tile('Net revenue', t.net, 'collected less refunds')
+		+ tile('Sales', t.sales, 'before fees, shipping and tax')
+		+ '</div>');
+
+	// What sold — only the kinds this shop has sold in the range.
+	const kinds = [
+		['products', spTerm('product', true), t.units ? plural(t.units, 'item', 'items') : ''],
+		['downloads', 'Downloads', ''],
+		['memberships', 'Memberships', t.renewals ? `incl. ${plural(t.renewals, 'renewal', 'renewals')}` : ''],
+		['bookings', 'Bookings', t.seats ? plural(t.seats, 'seat', 'seats') : ''],
+	].filter(([k]) => (t.has || {})[k]);
+	if (kinds.length) h += section('What Sold', '<div class="sp-grid sp-grid--stats">' + kinds.map(([k, label, sub]) => tile(label, t[k], sub)).join('') + '</div>');
+
+	// Money that isn't sales: fees, shipping, tax, discounts.
+	h += section('Fees, Shipping & Tax', '<div class="sp-grid sp-grid--stats">'
+		+ tile('Service fees', t.fees, 'paid by customers')
+		+ tile('Card processing', t.card, `${pct(r.card)} now`)
+		+ tile('Site Pulse fee', t.platform, `${pct(r.platform)} now · owed to Battle Plan Web Design`)
+		+ tile('Shipping', t.shipping, 'charged to customers')
+		+ tile('Sales tax', t.tax, 'collected, to be paid over')
+		+ (t.discounts ? tile('Discounts', t.discounts, 'taken off by codes') : '')
+		+ '</div>');
+
+	// Best sellers by revenue.
+	const best = (title, rows, unit) => rows.length
+		? `<div class="sp-stack sp-stack--sm"><h3 class="sp-stat__label">${esc(title)}</h3><div class="sp-list">`
+			+ rows.map(x => `<div class="sp-row"><span class="sp-row__main"><span class="sp-row__title">${esc(x.name)}</span><span class="sp-meta"><span>${esc(plural(x.qty, unit[0], unit[1]))}</span></span></span><span class="sp-row__value">${esc(x.total)}</span></div>`).join('')
+			+ '</div></div>'
+		: '';
+	const tops = best(`Top ${spTerm('product', true)}`, (d.top || {}).products || [], ['sold', 'sold']) + best(`Top ${spTerm('service', true)}`, (d.top || {}).bookings || [], ['seat', 'seats']);
+	if (tops) h += section('Best Sellers', `<div class="sp-split">${tops}</div>`);
+
+	// Month by month.
+	if (d.months && d.months.length > 1 || (d.months || []).length && d.range === 'all') {
+		h += section('By Month', '<div class="sp-list">' + d.months.map(mo => {
+			const parts = [['products', spTerm('product', true)], ['downloads', 'Downloads'], ['memberships', 'Memberships'], ['bookings', 'Bookings']]
+				.filter(([k]) => (mo.has || {})[k]).map(([k, l]) => `<span>${l} ${esc(mo[k])}</span>`).join('');
+			return '<div class="sp-row"><span class="sp-row__main">'
+				+ `<span class="sp-row__title">${esc(mo.label)}</span>`
+				+ `<span class="sp-meta">${parts}<span>Fees ${esc(mo.fees)}</span>${mo.refunds ? `<span>Refunds ${esc(mo.refunds)}</span>` : ''}</span>`
+				+ `</span><span class="sp-row__value" title="Net revenue">${esc(mo.net)}</span></div>`;
+		}).join('') + '</div>');
+	}
+
+	box.innerHTML = h;
+	markUniqueSpans(box);
 }
 
 async function loadStoreOrders(more) {
@@ -9999,7 +10506,7 @@ function spStoreOrderRow(o) {
 		+ `<span class="sp-row__lead">${spAvatarHTML(o.customer)}</span>`
 		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(o.customer)}</span>`
 		+   `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
-		+   (chips ? `<span class="sp-review-tags">${chips}</span>` : '')
+		+   (chips ? `<span class="sp-toolbar">${chips}</span>` : '')
 		+ '</span>'
 		+ `<span class="sp-row__trail"><span class="sp-row__value">${esc(o.total)}</span>${spIcon('chev-r')}</span></button>`;
 }
@@ -10065,7 +10572,7 @@ async function spStoreOrderDetail(id, number) {
 		const canRefund = !!ctx.can_refund && !!o.can_refund;
 		$('.sp-sheet__title', sheet).textContent = `Order ${o.number}`;
 
-		let h = `<div class="sp-stack sp-stack--sm"><span class="sp-review-tags">${spStoreBadge(o.payment)}${spStoreBadge(o.progress)}</span><p class="sp-meta sp-meta--lg"><span>Placed ${esc(o.placed_full)}</span></p></div>`;
+		let h = `<div class="sp-stack sp-stack--sm"><span class="sp-toolbar">${spStoreBadge(o.payment)}${spStoreBadge(o.progress)}</span><p class="sp-meta sp-meta--lg"><span>Placed ${esc(o.placed_full)}</span></p></div>`;
 
 		// Who: one tap to email or call.
 		const contact = [];
@@ -10088,6 +10595,7 @@ async function spStoreOrderDetail(id, number) {
 		h += sum('Subtotal', esc(o.subtotal), ' sp-store-sum--first');
 		if (o.discount) h += sum('Discount' + (o.discount_code ? ` (${esc(o.discount_code)})` : ''), '−' + esc(o.discount));
 		if (o.ships)    h += sum('Shipping' + (o.shipping_method ? ` (${esc(o.shipping_method)})` : ''), esc(o.shipping));
+		if (o.fee)      h += sum(`Service fee<span class="sp-meta"><span>${esc(o.fee_split)}</span></span>`, esc(o.fee));
 		if (o.tax)      h += sum('Tax', esc(o.tax));
 		h += sum('Total', esc(o.total), ' sp-store-sum--total');
 		if (o.refunded) h += sum('Refunded', '−' + esc(o.refunded));
@@ -10109,7 +10617,7 @@ async function spStoreOrderDetail(id, number) {
 		// What the customer agreed to, exactly as they saw it: the snapshot, not today's wording.
 		(o.agreements || []).forEach(a => facts.push(spStoreFact('Agreement accepted',
 			`<details class="sp-store-agreement-rec"><summary><strong>${esc(a.title)}</strong>${a.name ? ` · signed “${esc(a.name)}”` : ''} · ${esc(a.when)}</summary>`
-			+ `<span class="sp-meta"><span>From IP ${esc(a.ip)}</span></span><div class="sp-store-agreement-body">${esc(a.body)}</div></details>`)));
+			+ `<span class="sp-meta"><span>From IP ${esc(a.ip)}</span></span><div class="sp-card sp-card--well sp-store-agreement-body">${esc(a.body)}</div></details>`)));
 		if (o.cancel_reason && o.status === 'cancelled') facts.push(spStoreFact('Why it was cancelled', esc(o.cancel_reason)));
 		if (!canManage && o.staff_notes) facts.push(spStoreFact('Staff note', esc(o.staff_notes)));
 		if (facts.length) h += `<div class="sp-card sp-card--flush"><div class="sp-list">${facts.join('')}</div></div>`;
@@ -10124,10 +10632,25 @@ async function spStoreOrderDetail(id, number) {
 				+ '</div></div></div>';
 		}
 
+		// The processor's own ids, to find this sale in Stripe when something needs checking.
+		const pr = o.processor || {};
+		const refs = (pr.refs || []).concat((o.payments || []).filter(p => p.ref).map(p => ({ label: `${p.kind} · ${p.when}`, id: p.ref, url: '' })));
+		if (refs.length) {
+			h += `<div class="sp-section"><h3 class="sp-section__title">${esc(pr.name || 'Processor')} Details${pr.mode === 'test' ? ' <span class="sp-chip sp-chip--warning">Test mode</span>' : ''}</h3><div class="sp-card sp-card--flush"><div class="sp-list">`
+				+ refs.map(r => '<div class="sp-row"><span class="sp-row__main">'
+					+ `<span class="sp-row__title">${esc(r.label)}</span>`
+					+ `<span class="sp-meta"><span>${esc(r.id)}</span></span>`
+					+ '</span><span class="sp-row__trail">'
+					+ `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn" data-copy-ref="${esc(r.id)}" title="Copy" aria-label="Copy">${spIcon('copy')}</button>`
+					+ (r.url ? `<a class="unique sp-btn sp-btn--ghost sp-icon-btn" href="${esc(r.url)}" target="_blank" rel="noopener" title="Open in ${esc(pr.name)}" aria-label="Open in ${esc(pr.name)}">${spIcon('external')}</a>` : '')
+					+ '</span></div>').join('')
+				+ '</div></div></div>';
+		}
+
 		if (canManage) {
 			h += '<label class="sp-field"><span class="sp-field__label">Staff note <span class="sp-field__hint">(only staff see this)</span></span>'
 				+ `<textarea id="sp-so-note" class="sp-textarea" rows="2">${esc(o.staff_notes || '')}</textarea></label>`
-				+ '<div class="sp-store-add-row"><button type="button" class="unique sp-btn sp-btn--sm" data-act="note">Save note</button></div>';
+				+ '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--sm" data-act="note">Save note</button></div>';
 		}
 
 		// The less frequent actions, as rows under everything else.
@@ -10143,6 +10666,10 @@ async function spStoreOrderDetail(id, number) {
 				+ '</div></div>';
 		}
 		$('.sp-sheet__body', sheet).innerHTML = `<div class="sp-stack">${h}</div>`;
+		$$('[data-copy-ref]', sheet).forEach(btn => btn.addEventListener('click', () => {
+			if (!navigator.clipboard) return;
+			navigator.clipboard.writeText(btn.dataset.copyRef).then(() => spToast('Copied.')).catch(() => {});
+		}));
 
 		// The main actions stay in reach at the foot: shipping first, then Refund.
 		let f = '';
@@ -10276,9 +10803,9 @@ function initStoreProducts() {
 		const sel = $('#sp-store-product-status');
 		if (sel) { sel.value = tab.dataset.spStoreProductStatus; loadStoreProducts(); }
 	}));
-	['sp-store-product-cat', 'sp-store-product-sort'].forEach(id => document.getElementById(id)?.addEventListener('change', () => loadStoreProducts()));
+	['sp-store-product-cat', 'sp-store-product-tag', 'sp-store-product-sort'].forEach(id => document.getElementById(id)?.addEventListener('change', () => loadStoreProducts()));
 	$('[data-sp-store-product-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-store-product-filter-holder]'), {
-		clear: () => { const c = $('#sp-store-product-cat'); if (c) c.value = '0'; loadStoreProducts(); },
+		clear: () => { ['#sp-store-product-cat', '#sp-store-product-tag'].forEach(s => { const el = $(s); if (el) el.value = ''; }); loadStoreProducts(); },
 	}));
 	$('#sp-store-product-new')?.addEventListener('click', () => spStoreProductEditor(0));
 
@@ -10302,22 +10829,24 @@ async function loadStoreProducts(more) {
 			search: $('#sp-store-product-search')?.value || '',
 			status: $('#sp-store-product-status')?.value || '',
 			category: $('#sp-store-product-cat')?.value || 0,
+			tag: $('#sp-store-product-tag')?.value || 0,
 			sort: $('#sp-store-product-sort')?.value || '',
 			page: S.page,
 		});
 		if (seq !== S.seq) return;
-		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load products. Try again in a moment.') + '</div>'; return; }
+		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || `Couldn't load ${spTerm('product', true, true)}. Try again in a moment.`) + '</div>'; return; }
 
 		S.rows  = more ? S.rows.concat(res.data.products || []) : (res.data.products || []);
 		S.pages = res.data.pages || 1;
 		S.cats  = res.data.categories || [];
+		S.tags  = res.data.tags || [];
 		const cnt = $('#sp-store-product-count');
-		if (cnt) cnt.textContent = `${res.data.total || 0} ${res.data.total === 1 ? 'product' : 'products'}`;
+		if (cnt) cnt.textContent = `${res.data.total || 0} ${spTerm('product', res.data.total !== 1, true)}`;
 		spStoreFillCategoryFilter();
 		spStoreRenderProducts();
 		spSyncFilterSummaries();
 	} catch (e) {
-		if (seq === S.seq) box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load products. Try again in a moment.') + '</div>';
+		if (seq === S.seq) box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(`Couldn't load ${spTerm('product', true, true)}. Try again in a moment.`) + '</div>';
 	}
 }
 
@@ -10325,18 +10854,28 @@ function spStoreFillCategoryFilter() {
 	const sel = $('#sp-store-product-cat');
 	if (!sel) return;
 	const keep = sel.value;
-	sel.innerHTML = '<option value="0">All categories</option>' + _spStoreProducts.cats
+	// '' = no filter, so "All categories" doesn't count as one ("Filter · 1" on a clean screen).
+	sel.innerHTML = '<option value="">All categories</option>' + _spStoreProducts.cats
 		.map(c => `<option value="${c.id}">${'— '.repeat(c.depth)}${esc(c.name)}</option>`).join('');
-	sel.value = _spStoreProducts.cats.some(c => String(c.id) === keep) ? keep : '0';
+	sel.value = _spStoreProducts.cats.some(c => String(c.id) === keep) ? keep : '';
+
+	const tagSel = $('#sp-store-product-tag');
+	if (!tagSel) return;
+	const tags = _spStoreProducts.tags || [];
+	const keepTag = tagSel.value;
+	tagSel.innerHTML = '<option value="">All tags</option>' + tags.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
+	tagSel.value = tags.some(t => String(t.id) === keepTag) ? keepTag : '';
+	// No tags on this site = nothing to filter by; keep the Filter sheet uncluttered.
+	tagSel.closest('[data-sp-filter-field]')?.toggleAttribute('hidden', !tags.length && !keepTag);
 }
 
 // One product as a row: its main photo, the name, price · categories, and what to know at a glance
 // (hidden, stock, on sale, how many versions).
 function spStoreProductRow(p) {
 	const thumb = p.thumb
-		? `<span class="sp-row__thumb" style="background-image:url('${esc(p.thumb)}')" role="img" aria-label="Product photo"></span>`
+		? `<span class="sp-row__thumb" style="background-image:url('${esc(p.thumb)}')" role="img" aria-label="${esc(spTerm('product'))} photo"></span>`
 		: `<span class="sp-row__thumb">${spIcon('image')}</span>`;
-	const meta = [p.price || 'No price yet', (p.categories || []).join(', ')].filter(Boolean);
+	const meta = [p.price || 'No price yet', (p.categories || []).join(', '), (p.tags || []).map(t => '#' + t).join(' ')].filter(Boolean);
 	const chips = [
 		p.for_sale ? '' : '<span class="sp-chip sp-chip--warning">Hidden</span>',
 		p.on_sale ? '<span class="sp-chip sp-chip--success">On sale</span>' : '',
@@ -10347,8 +10886,8 @@ function spStoreProductRow(p) {
 		+ `<span class="sp-row__lead">${thumb}</span>`
 		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(p.title)}</span>`
 		+   `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
-		+   (chips ? `<span class="sp-review-tags">${chips}</span>` : '')
-		+ `</span><span class="sp-row__trail">${spIcon('chev-r')}</span></button>`;
+		+   (chips ? `<span class="sp-toolbar">${chips}</span>` : '')
+		+ `</span><span class="sp-row__trail">${spEditMark()}</span></button>`;
 }
 
 function spStoreRenderProducts() {
@@ -10362,9 +10901,9 @@ function spStoreRenderProducts() {
 		? `<div class="sp-card sp-card--flush"><div class="sp-list">${S.rows.map(spStoreProductRow).join('')}</div></div>`
 		: spEmptyHTML({
 			icon: 'box', panel: $('#sp-panel-store-products'),
-			title: searching || tabbed ? 'No products here' : 'No products yet',
-			text: searching ? 'Nothing matches this search.' : (tabbed ? 'Nothing on this tab.' : 'Press Add Product to put the first one in your shop.'),
-			filteredTitle: 'No products match these filters',
+			title: searching || tabbed ? `No ${spTerm('product', true, true)} here` : `No ${spTerm('product', true, true)} yet`,
+			text: searching ? 'Nothing matches this search.' : (tabbed ? 'Nothing on this tab.' : `Press Add ${spTerm('product')} to put the first one in your shop.`),
+			filteredTitle: `No ${spTerm('product', true, true)} match these filters`,
 		});
 	markUniqueSpans(box);
 	if (more) { more.innerHTML = S.rows.length ? spStoreMoreHTML(S) : ''; markUniqueSpans(more); }
@@ -10422,7 +10961,7 @@ function spStoreReconcileVariants(P) {
 		return {
 			id: 0, option1: c[0] || '', option2: c[1] || '', option3: c[2] || '',
 			sku: '', price: seed.price || '', sale_price: seed.sale_price || '',
-			stock: '', stockOrig: '', track_stock: !!seed.track_stock, allow_backorder: !!seed.allow_backorder,
+			stock: '', stockOrig: '', track_stock: !!seed.track_stock, show_stock: seed.show_stock !== false && !!seed.track_stock, allow_backorder: !!seed.allow_backorder,
 			weight_grams: seed.weight_grams || 0, committed: 0, remove: false, orphan: false,
 		};
 	});
@@ -10443,15 +10982,61 @@ async function spStoreProductEditor(id) {
 	let res;
 	try { res = await spAjax('site_pulse_store_product_get', { id }); } catch (e) {}
 	if (!res || !res.success) {
-		backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p>${esc(res?.data?.message || 'Could not load that product.')}</p>`
+		backdrop.innerHTML = `<div class="sp-card sp-report-form-wrap"><p>${esc(res?.data?.message || `Could not load that ${spTerm('product', false, true)}.`)}</p>`
 			+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-book-cancel">Close</button></div></div>';
 		$$('.sp-book-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
 		return;
 	}
-	spStoreProductEditorOpen(backdrop, res.data.product, res.data.categories || [], []);
+	spStoreProductEditorOpen(backdrop, res.data.product, res.data.categories || [], [], res.data.tags || []);
 }
 
-function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
+// A saved product as a NEW, unsaved one: same price, options, versions, stock settings,
+// fields and categories; no photos, SEO, SKUs or downloads, which belong to one product only.
+// Nothing exists until it is saved, so Cancel leaves no stray copy behind.
+function spStoreProductCopy(src) {
+	const ex = Object.assign({}, src.extras || {});
+	if (ex.downloads) ex.downloads = Object.assign({}, ex.downloads, { files: [] });
+	return Object.assign({}, src, {
+		id: 0,
+		copied: true,
+		title: (src.title || '') + ' (copy)',
+		gallery: [],
+		variants: (src.variants || []).filter(v => !v.archived).map(v => Object.assign({}, v, { id: 0, sku: '', committed: 0 })),
+		seo_title: '',
+		seo_desc: '',
+		url: '',
+		wp_edit_url: '',
+		extras: ex,
+	});
+}
+
+// true = square (within 2%), false = not square, null = the browser can't read it
+// (an iPhone HEIC outside Safari) — unknown is never treated as "not square".
+async function spImageIsSquare(file) {
+	let w = 0, h = 0;
+	try {
+		if (window.createImageBitmap) {
+			const bmp = await createImageBitmap(file);
+			w = bmp.width; h = bmp.height;
+			bmp.close && bmp.close();
+		}
+	} catch (e) {}
+	if (!w || !h) {
+		const url = URL.createObjectURL(file);
+		try {
+			const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+			w = img.naturalWidth; h = img.naturalHeight;
+		} catch (e) {
+			return null;
+		} finally {
+			URL.revokeObjectURL(url);
+		}
+	}
+	if (!w || !h) return null;
+	return Math.abs(w - h) / Math.max(w, h) <= 0.02;
+}
+
+function spStoreProductEditorOpen(backdrop, src, cats, warnings, tags) {
 	// Working copy. Every edit lands here as it is typed, so a redraw (options changing
 	// the variant table) never loses anything.
 	const P = {
@@ -10461,47 +11046,78 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		content: src.content,
 		menu_order: src.menu_order,
 		categories: new Set(src.categories || []),
+		tags: new Set(src.tags || []),
 		options: (src.options || []).map(o => ({ name: o.name, values: (o.values || []).join(', ') })),
-		variants: (src.variants || []).map(v => Object.assign({}, v, { stockOrig: v.stock, remove: false, orphan: false })),
+		// A copy's stock has never been saved, so it always goes up with the first save.
+		variants: (src.variants || []).map(v => Object.assign({}, v, { stockOrig: src.copied ? '' : v.stock, remove: false, orphan: false })),
 		gallery: (src.gallery || []).slice(),
 		ships: !!src.ships,
+		kind: src.kind || 'product',
 		seo_title: src.seo_title || '',
 		seo_desc: src.seo_desc || '',
 		optionCount: 0,
+		fields: {},
 	};
+	// This site's own layout + product fields (sp_store_product_setup filter in the site's code).
+	const setup = src.setup || {};
+	const hide = new Set(setup.hide || []);
+	const customFields = setup.fields || [];
+	customFields.forEach(f => { P.fields[f.key] = f.value || ''; });
+	const hid = key => (hide.has(key) ? ' hidden' : '');
 	if (!P.options.length) P.options.push({ name: '', values: '' });
 	spStoreReconcileVariants(P);
+	// Variations stay out of sight until the product is marked as having them. A saved
+	// product that already has options opens with the box ticked.
+	const hasOptionText = () => P.options.some(o => (o.name || '').trim() || (o.values || '').trim());
+	let usesVariations = hasOptionText();
 	let cats_ = cats;
+	let tags_ = tags || [];
 	let blocksLocked = !!src.has_blocks;
 	let uploading = 0;
 
 	const isNew = !P.id;
 	let html = '<div class="sp-card sp-report-form-wrap sp-book-form sp-store-editor">';
-	html += spStoreHead(isNew ? 'Add Product' : 'Edit Product');
+	html += spStoreHead(`${isNew ? 'Add' : 'Edit'} ${spTerm('product')}`);
 	html += '<div id="sp-pe-warnings"></div>';
 
 	// ---- Name + status
 	html += '<div class="sp-grid">';
-	html += `<div class="sp-form-group"><label for="sp-pe-title">Product name</label><input type="text" id="sp-pe-title" class="sp-input" value="${esc(P.title)}" maxlength="200"></div>`;
-	html += '<div class="sp-form-group"><label>In the shop</label><div class="sp-radio-row">'
-		+ `<label class="sp-radio-inline"><input type="radio" name="sp-pe-status" value="publish"${P.status === 'publish' ? ' checked' : ''}><div>For sale</div></label>`
-		+ `<label class="sp-radio-inline"><input type="radio" name="sp-pe-status" value="draft"${P.status !== 'publish' ? ' checked' : ''}><div>Hidden for now</div></label>`
+	html += `<div class="sp-form-group"><label for="sp-pe-title">${esc(spTerm('product'))} name</label><input type="text" id="sp-pe-title" class="sp-input" value="${esc(P.title)}" maxlength="200"></div>`;
+	html += '<div class="sp-form-group"><label>In the shop</label><div class="sp-options sp-options--inline">'
+		+ `<label class="sp-check-row"><input type="radio" name="sp-pe-status" value="publish"${P.status === 'publish' ? ' checked' : ''}><div>For sale</div></label>`
+		+ `<label class="sp-check-row"><input type="radio" name="sp-pe-status" value="draft"${P.status !== 'publish' ? ' checked' : ''}><div>Hidden for now</div></label>`
 		+ '</div></div>';
 	html += '</div>';
 
+	// ---- Site-defined fields (Artist, Size, ...), right under the name.
+	if (customFields.length) {
+		html += '<div class="sp-grid">';
+		customFields.forEach(f => {
+			const id = `sp-pe-cf-${f.key}`;
+			const attrs = `id="${id}" data-cf="${esc(f.key)}"`;
+			let input;
+			if (f.type === 'textarea') input = `<textarea ${attrs} class="sp-textarea" rows="3" placeholder="${esc(f.placeholder)}">${esc(P.fields[f.key])}</textarea>`;
+			else if (f.type === 'select') input = `<select ${attrs} class="sp-select"><option value=""></option>`
+				+ (f.options || []).map(o => `<option value="${esc(o.value)}"${o.value === P.fields[f.key] ? ' selected' : ''}>${esc(o.label)}</option>`).join('') + '</select>';
+			else input = `<input type="${f.type === 'number' ? 'number' : (f.type === 'date' ? 'date' : 'text')}" ${attrs} class="sp-input" value="${esc(P.fields[f.key])}" placeholder="${esc(f.placeholder)}">`;
+			html += `<div class="sp-form-group"><label for="${id}">${esc(f.label)}${f.hint ? ` <span class="sp-field__hint">(${esc(f.hint)})</span>` : ''}</label>${input}</div>`;
+		});
+		html += '</div>';
+	}
+
 	// ---- Photos
 	html += '<div class="sp-form-group"><label>Photos <span class="sp-field__hint">(the first is the main picture)</span></label>'
-		+ '<div id="sp-pe-photos" class="sp-store-photos"></div>'
+		+ '<div id="sp-pe-photos" class="sp-toolbar"></div>'
 		+ '<input type="file" id="sp-pe-file" accept="image/*" multiple hidden></div>';
 
 	// ---- Description
-	html += '<div class="sp-form-group"><label>Description</label>';
+	html += `<div class="sp-form-group"${hid('description')}><label>Description</label>`;
 	if (blocksLocked) {
 		html += '<div class="sp-notice sp-notice--warning sp-pe-blocks"><span class="sp-store-notice-text">This description was laid out in the WordPress editor. Editing it here keeps the words but loses that layout. '
 			+ (src.wp_edit_url ? `<a href="${esc(src.wp_edit_url)}" target="_blank" rel="noopener">Edit it in WordPress</a> instead, or ` : '')
 			+ '</span><button type="button" class="unique sp-btn sp-btn--sm" data-act="unlock-desc">Edit here anyway</button></div>';
 	}
-	html += '<div class="sp-store-rte-bar" role="toolbar" aria-label="Formatting">'
+	html += '<div class="sp-toolbar sp-store-rte-bar" role="toolbar" aria-label="Formatting">'
 		+ '<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="bold" title="Bold"><strong>B</strong></button>'
 		+ '<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="italic" title="Italic"><em>I</em></button>'
 		+ '<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="h3" title="Heading">Heading</button>'
@@ -10514,28 +11130,41 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 	html += '</div>';
 
 	// ---- Price, options, variants
-	html += '<div class="sp-store-section"><h4>Price and options</h4>';
+	html += '<div class="sp-section sp-section-store"><h4 class="sp-section__title">Price and options</h4>';
+	html += '<div class="sp-options sp-options--inline">'
+		+ [['product', 'Tangible Product'], ['membership', 'Membership'], ['download', 'Download']].map(([v, l]) =>
+			`<label class="sp-check-row"><input type="radio" name="sp-pe-kind" value="${v}"${P.kind === v ? ' checked' : ''}><div>${l}</div></label>`).join('')
+		+ '</div>';
+	html += '<div class="sp-options">';
 	html += `<label class="sp-check-row"><input type="checkbox" id="sp-pe-ships"${P.ships ? ' checked' : ''}> Ships to the customer</label>`;
-	html += '<p class="sp-help-text">Untick for downloads, memberships, or anything not shipped. No shipping charges will be applied.</p>';
-	html += '<div id="sp-pe-options"></div>';
+	html += `<label class="sp-check-row"><input type="checkbox" id="sp-pe-has-options"${usesVariations ? ' checked' : ''}> Does this ${esc(spTerm('product', false, true))} come in various sizes, colors, etc.?</label>`;
+	html += '</div>';
+	html += `<div id="sp-pe-options"${usesVariations ? '' : ' hidden'}></div>`;
 	html += '<div id="sp-pe-variants"></div>';
 	html += '</div>';
 
 	// ---- Categories
-	html += '<div class="sp-store-section"><h4>Categories</h4><div id="sp-pe-cats" class="sp-store-cats"></div>'
-		+ '<div class="sp-store-inline-add"><input type="text" id="sp-pe-newcat" class="sp-input" placeholder="New category name">'
+	html += `<div class="sp-section sp-section-store"${hid('categories')}><h4 class="sp-section__title">Categories</h4>`
+		+ '<div id="sp-pe-cats" class="sp-store-cats"></div>'
+		+ '<div class="sp-toolbar"><input type="text" id="sp-pe-newcat" class="sp-input" placeholder="New category name">'
 		+ '<button type="button" class="unique sp-btn sp-btn--sm" data-act="add-cat">Add Category</button></div></div>';
+
+	// ---- Tags: flat labels that cut across categories.
+	html += `<div class="sp-section sp-section-store"${hid('tags')}><h4 class="sp-section__title">Tags</h4>`
+		+ '<div id="sp-pe-tags" class="sp-store-cats"></div>'
+		+ '<div class="sp-toolbar"><input type="text" id="sp-pe-newtag" class="sp-input" placeholder="New tag name">'
+		+ '<button type="button" class="unique sp-btn sp-btn--sm" data-act="add-tag">Add Tag</button></div></div>';
 
 	// ---- Extras: drawn only when a switched-on feature has something to offer here, so a
 	// plain shop never sees an empty Extras heading.
 	const ex = src.extras || {};
-	if (ex.membership || ex.agreements || ex.downloads) html += '<div class="sp-store-section"><h4>Extras</h4>';
+	if (ex.membership || ex.agreements || ex.downloads) html += '<div class="sp-section sp-section-store"><h4 class="sp-section__title">Extras</h4>';
 	if (ex.downloads) {
 		html += '<div class="sp-form-group"><label>Files the buyer gets <span class="sp-field__hint">(private links in their receipt and account page)</span></label>'
 			+ '<div id="sp-pe-files"></div>'
 			+ (isNew
-				? '<div class="sp-help-text">Save the product first, then add its files.</div>'
-				: `<div class="sp-store-add-row"><span class="sp-help-text">Up to ${esc(ex.downloads.max)} each. Added straight away; no need to press Save.</span><button type="button" class="unique sp-btn sp-btn--sm" data-act="file-add">${spIcon('plus')} Add a File</button></div>`
+				? `<div class="sp-help-text">Save the ${esc(spTerm('product', false, true))} first, then add its files.</div>`
+				: `<div class="sp-toolbar sp-toolbar--end"><span class="sp-help-text">Up to ${esc(ex.downloads.max)} each. Added straight away; no need to press Save.</span><button type="button" class="unique sp-btn sp-btn--sm" data-act="file-add">${spIcon('plus')} Add a File</button></div>`
 				+ `<input type="file" id="sp-pe-dlfile" accept="${esc(ex.downloads.types)}" hidden>`)
 			+ '</div>';
 	}
@@ -10544,7 +11173,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		html += '<div class="sp-form-group"><label>Buyer must accept <span class="sp-field__hint">(at checkout)</span></label>'
 			+ ((ex.agreements.all || []).length
 				? ex.agreements.all.map(a => `<label class="sp-check-row"><input type="checkbox" data-agreement="${a.id}"${chosen.includes(Number(a.id)) ? ' checked' : ''}> ${esc(a.title)}${a.signature ? ' <span class="sp-field__hint">(signature)</span>' : ''}</label>`).join('')
-				: '<div class="sp-help-text">Write an agreement first, under Settings &rarr; Store.</div>')
+				: '<div class="sp-help-text">Write an agreement first, under Settings &rarr; E-Commerce.</div>')
 			+ '</div>';
 	}
 	if (ex.membership) {
@@ -10552,25 +11181,26 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 			+ '<option value="0">No membership</option>'
 			+ (ex.membership.plans || []).map(p => `<option value="${p.id}"${parseInt(ex.membership.plan, 10) === p.id ? ' selected' : ''}>${esc(p.name)}</option>`).join('')
 			+ '</select>'
-			+ ((ex.membership.plans || []).length ? '' : '<div class="sp-help-text">Set up a membership plan first, under Settings &rarr; Store.</div>')
+			+ ((ex.membership.plans || []).length ? '' : '<div class="sp-help-text">Set up a membership plan first, under Settings &rarr; E-Commerce.</div>')
 			+ '</div>';
 	}
 	if (ex.membership || ex.agreements || ex.downloads) html += '</div>';
 
 	// ---- Search engines + position, folded away: most products never need them changed.
-	html += '<details class="sp-store-section sp-store-more"><summary>Search engines and shop position</summary>';
+	html += `<details class="sp-section sp-section-store sp-store-more"${hid('seo')}><summary class="sp-section__title">`
+		+ 'Search engines and shop position</summary>';
 	html += `<div class="sp-form-group"><label for="sp-pe-seo-title">Search result title <span class="sp-field__hint">(blank uses the product name)</span></label><input type="text" id="sp-pe-seo-title" class="sp-input" value="${esc(P.seo_title)}" maxlength="120"><div class="sp-help-text" data-count="sp-pe-seo-title" data-max="60"></div></div>`;
 	html += `<div class="sp-form-group"><label for="sp-pe-seo-desc">Search result description</label><textarea id="sp-pe-seo-desc" class="sp-textarea" rows="2" maxlength="320">${esc(P.seo_desc)}</textarea><div class="sp-help-text" data-count="sp-pe-seo-desc" data-max="155"></div></div>`;
 	html += `<div class="sp-form-group"><label for="sp-pe-order">Position in the shop <span class="sp-field__hint">(lower numbers come first when sorted by Featured)</span></label><input type="number" id="sp-pe-order" class="sp-input sp-store-num" value="${parseInt(P.menu_order, 10) || 0}"></div>`;
 	html += '</details>';
 
 	// ---- The way out, and the rarely-needed links.
-	html += '<div class="sp-store-editor-links">';
+	html += '<div class="sp-toolbar">';
 	if (src.url && !isNew) html += `<a href="${esc(src.url)}" target="_blank" rel="noopener">View in the shop</a>`;
 	if (src.wp_edit_url) html += `<a href="${esc(src.wp_edit_url)}" target="_blank" rel="noopener">Open in WordPress</a>`;
 	html += '</div>';
 
-	html += spStoreFoot('Save Product', 'sp-pe-save', false, isNew ? '' : 'Remove product');
+	html += spStoreFoot(`Save ${spTerm('product')}`, 'sp-pe-save', false, isNew ? '' : `Remove ${spTerm('product', false, true)}`, isNew ? '' : 'Duplicate');
 	html += '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -10614,7 +11244,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 			const known = g.tag === '' || tags.some(t => t.tag === g.tag);
 			return `<div class="sp-store-photo" data-i="${i}">
 				<img src="${esc(g.url)}" alt="">
-				<button type="button" class="unique sp-store-photo-x" data-act="photo-remove" title="Remove photo" aria-label="Remove photo">${spIcon('x')}</button>
+				<button type="button" class="unique sp-thumb-x sp-store-photo-x" data-act="photo-remove" title="Remove photo" aria-label="Remove photo">${spIcon('x')}</button>
 				<div class="sp-store-photo-move">
 					<button type="button" class="unique sp-btn sp-btn--ghost" data-act="photo-left" title="Move earlier" aria-label="Move earlier"${i === 0 ? ' disabled' : ''}>${spIcon('chev-l')}</button>
 					<button type="button" class="unique sp-btn sp-btn--ghost" data-act="photo-right" title="Move later" aria-label="Move later"${i === P.gallery.length - 1 ? ' disabled' : ''}>${spIcon('chev-r')}</button>
@@ -10635,8 +11265,27 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 
 	const fileIn = $('#sp-pe-file', backdrop);
 	fileIn.addEventListener('change', async () => {
-		const files = Array.from(fileIn.files || []);
+		let files = Array.from(fileIn.files || []);
 		fileIn.value = '';
+
+		// Square photos sit best in the shop's square frames. A non-square one still works
+		// (it shows whole, with the frame's grey either side), but ask first.
+		const shapes = D.storeSquareOk ? [] : await Promise.all(files.map(spImageIsSquare));
+		const odd = files.filter((f, i) => shapes[i] === false);
+		if (odd.length) {
+			const ok = await spConfirm({
+				title: 'Square photos work best',
+				text: `Square photos work best as product photos. ${odd.length === 1 ? `"${odd[0].name}" is not square.` : `${odd.length} of these photos are not square.`} Please confirm you want to use ${odd.length === 1 ? 'a non-square image' : 'non-square images'}.`,
+				ok: odd.length === 1 ? 'Use It Anyway' : 'Use Them Anyway',
+				cancel: odd.length === 1 ? 'Leave It Out' : 'Leave Them Out',
+			});
+			if (ok) {
+				D.storeSquareOk = true;
+				spAjax('site_pulse_store_square_ok', {}).catch(() => {});
+			} else files = files.filter(f => !odd.includes(f));
+			if (!files.length) return;
+		}
+
 		for (const file of files) {
 			uploading++;
 			drawPhotos();
@@ -10659,19 +11308,18 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 	// ---- Options + variants
 	const drawOptions = () => {
 		const box = $('#sp-pe-options', backdrop);
-		let h = '<div class="sp-store-options">';
+		let h = '<div class="sp-stack sp-stack--sm sp-store-options">';
 		P.options.forEach((o, i) => {
 			h += `<div class="sp-store-option" data-oi="${i}">
 				<div class="sp-form-group"><label>${i === 0 ? 'Variations' : 'And different'}</label><input type="text" class="sp-input" data-of="name" value="${esc(o.name)}" placeholder="${['Size', 'Color', 'Material'][i]}"></div>
-				<div class="sp-form-group sp-store-option-values"><label>Choices <span class="sp-field__hint">(separate with commas)</span></label><input type="text" class="sp-input" data-of="values" value="${esc(o.values)}" placeholder="${['Small, Medium, Large', 'Black, White', 'Cotton, Wool'][i]}"></div>
-				${P.options.length > 1 || o.name || o.values ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-store-option-x" data-act="option-remove" title="Remove this option" aria-label="Remove this option">${spIcon('x')}</button>` : ''}
+				<div class="sp-form-group sp-store-option-values"><label>Choices <span class="sp-field__hint sp-field__hint--inline">(separate with commas)</span></label><input type="text" class="sp-input" data-of="values" value="${esc(o.values)}" placeholder="${['Small, Medium, Large', 'Black, White', 'Cotton, Wool'][i]}"></div>
+				${P.options.length > 1 || o.name || o.values ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-store-option-x" data-act="option-remove" title="Remove this option" aria-label="Remove this option">${spIcon('x')}</button>` : ''}
 			</div>`;
 		});
 		h += '</div>';
 		if (P.options.length < 3 && P.options.every(o => (o.name || '').trim() !== '')) {
-			h += `<div class="sp-store-add-row"><button type="button" class="unique sp-btn sp-btn--sm" data-act="option-add">${spIcon('plus')} Add another option</button></div>`;
+			h += `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--sm" data-act="option-add">${spIcon('plus')} Add another option</button></div>`;
 		}
-		if (!P.optionCount) h += '<p class="sp-help-text">Leave the option blank for a product that comes in only one version.</p>';
 		box.innerHTML = h;
 		markUniqueSpans(box);
 	};
@@ -10684,7 +11332,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		let h = '';
 
 		if (multi && live.length > 1) {
-			h += '<div class="sp-store-bulk">'
+			h += '<div class="sp-toolbar sp-store-bulk">'
 				+ '<span>Every version:</span>'
 				+ '<input type="text" class="sp-input" id="sp-pe-bulk-price" inputmode="decimal" placeholder="Price">'
 				+ '<button type="button" class="unique sp-btn sp-btn--sm" data-act="bulk-price">Set Price</button>'
@@ -10697,7 +11345,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 
 		h += '<div class="sp-store-variant-scroll"><table class="sp-table sp-store-variants"><thead><tr>';
 		names.forEach(n => { h += `<th>${esc(n)}</th>`; });
-		h += `<th>Price</th><th>Sale price</th><th>Count stock</th><th>In stock</th><th>SKU</th>${P.ships ? '<th>Weight</th>' : ''}${multi ? '<th></th>' : ''}</tr></thead><tbody>`;
+		h += `<th>Price</th><th>Sale price</th><th>Count stock</th><th>Show stock</th><th>In stock</th><th>SKU</th>${P.ships ? '<th>Weight</th>' : ''}${multi ? '<th></th>' : ''}</tr></thead><tbody>`;
 
 		P.variants.forEach((v, i) => {
 			const cls = v.orphan ? ' class="sp-store-orphan"' : '';
@@ -10706,6 +11354,9 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 			h += `<td><input type="text" class="sp-input" data-vf="price" inputmode="decimal" value="${esc(v.price)}" placeholder="0.00"></td>`;
 			h += `<td><input type="text" class="sp-input" data-vf="sale_price" inputmode="decimal" value="${esc(v.sale_price)}" placeholder="—"></td>`;
 			h += `<td class="sp-store-center"><input type="checkbox" data-vf="track_stock"${v.track_stock ? ' checked' : ''} title="Count this one's stock, so it can sell out"></td>`;
+			// Show stock follows Count stock but can be unticked on its own: a one-of-a-kind piece
+			// still sells out, it just never says "Only 1 left".
+			h += `<td class="sp-store-center"><input type="checkbox" data-vf="show_stock"${v.track_stock && v.show_stock !== false ? ' checked' : ''}${v.track_stock ? '' : ' disabled'} title="Show shoppers how many are left (untick for one-of-a-kind pieces)"></td>`;
 			h += `<td>${v.track_stock
 				? `<input type="number" class="sp-input" data-vf="stock" value="${esc(v.stock)}" placeholder="0">${v.committed ? `<div class="sp-field__hint">${v.committed} in checkouts</div>` : ''}`
 				: '<span class="sp-field__hint">Always available</span>'}</td>`;
@@ -10731,13 +11382,22 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		const box = $('#sp-pe-cats', backdrop);
 		box.innerHTML = cats_.length
 			? cats_.map(c => `<label class="sp-check-row" style="padding-left:${c.depth * 18}px"><input type="checkbox" data-cat="${c.id}"${P.categories.has(c.id) ? ' checked' : ''}> ${esc(c.name)}</label>`).join('')
-			: '<p class="sp-help-text">No categories yet. Add one below if you want to group products.</p>';
+			: `<p class="sp-help-text">No categories yet. Add one below if you want to group ${esc(spTerm('product', true, true))}.</p>`;
+		markUniqueSpans(box);
+	};
+
+	const drawTags = () => {
+		const box = $('#sp-pe-tags', backdrop);
+		box.innerHTML = tags_.length
+			? tags_.map(t => `<label class="sp-check-row"><input type="checkbox" data-tag="${t.id}"${P.tags.has(t.id) ? ' checked' : ''}> ${esc(t.name)}</label>`).join('')
+			: `<p class="sp-help-text">No tags yet. Add one below to label ${esc(spTerm('product', true, true))} across categories (Organic, Gift Idea).</p>`;
 		markUniqueSpans(box);
 	};
 
 	drawOptions();
 	drawVariants();
 	drawCats();
+	drawTags();
 
 	// ---- Downloads (Extras). Uploaded and removed immediately against the saved product.
 	let files = (ex.downloads && ex.downloads.files) ? ex.downloads.files.slice() : [];
@@ -10779,6 +11439,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		if (t.id === 'sp-pe-seo-title') P.seo_title = t.value;
 		if (t.id === 'sp-pe-seo-desc') P.seo_desc = t.value;
 		if (t.id === 'sp-pe-order') P.menu_order = t.value;
+		if (t.dataset.cf) P.fields[t.dataset.cf] = t.value;
 		const oRow = t.closest('[data-oi]');
 		if (oRow && t.dataset.of) P.options[parseInt(oRow.dataset.oi, 10)][t.dataset.of] = t.value;
 		const vRow = t.closest('[data-vi]');
@@ -10788,13 +11449,49 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 		const t = e.target;
 		if (t.name === 'sp-pe-status') P.status = t.value;
 		if (t.id === 'sp-pe-ships') { P.ships = t.checked; drawVariants(); }
+		// The type sets Ships to its usual answer; the box can still be changed by hand
+		// (a tangible product picked up in store, say).
+		if (t.name === 'sp-pe-kind') {
+			P.kind = t.value;
+			P.ships = t.value === 'product';
+			$('#sp-pe-ships', backdrop).checked = P.ships;
+			// Memberships and downloads never run out, so their stock isn't counted.
+			if (!P.ships) P.variants.forEach(v => { v.track_stock = false; v.show_stock = false; });
+			drawVariants();
+		}
+		if (t.id === 'sp-pe-has-options') {
+			const box = $('#sp-pe-options', backdrop);
+			if (t.checked) {
+				usesVariations = true;
+				box.hidden = false;
+				$('[data-of="name"]', box)?.focus();
+				return;
+			}
+			// Unticking means "one version only", so the options go: hidden options would
+			// still multiply the price table and save as variants.
+			const clear = () => {
+				usesVariations = false;
+				box.hidden = true;
+				P.options = [{ name: '', values: '' }];
+				spStoreReconcileVariants(P); drawOptions(); drawVariants(); drawPhotos();
+			};
+			if (!hasOptionText()) { clear(); return; }
+			spConfirm({
+				title: 'Remove the variations?',
+				text: `This ${spTerm('product', false, true)} will be sold in one version only. The sizes, colors, etc. you entered will be removed when you save.`,
+				ok: 'Remove Them',
+				cancel: 'Keep Them',
+			}).then(ok => { if (ok) clear(); else t.checked = true; });
+			return;
+		}
 		if (t.dataset.cat) { const id = parseInt(t.dataset.cat, 10); if (t.checked) P.categories.add(id); else P.categories.delete(id); }
+		if (t.dataset.tag) { const id = parseInt(t.dataset.tag, 10); if (t.checked) P.tags.add(id); else P.tags.delete(id); }
 		if (t.closest('[data-oi]') && t.dataset.of) { spStoreReconcileVariants(P); drawOptions(); drawVariants(); drawPhotos(); }
 		const vRow = t.closest('[data-vi]');
 		if (vRow && t.type === 'checkbox' && t.dataset.vf) {
 			const v = P.variants[parseInt(vRow.dataset.vi, 10)];
 			v[t.dataset.vf] = t.checked;
-			if (t.dataset.vf === 'track_stock') drawVariants();
+			if (t.dataset.vf === 'track_stock') { v.show_stock = t.checked; drawVariants(); }
 		}
 		if (t.dataset.act === 'photo-tag') P.gallery[parseInt(t.closest('[data-i]').dataset.i, 10)].tag = t.value;
 	});
@@ -10865,7 +11562,7 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 			return;
 		}
 		if (act === 'bulk-endsale') { P.variants.forEach(v => { v.sale_price = ''; }); drawVariants(); return; }
-		if (act === 'bulk-track')   { P.variants.forEach(v => { v.track_stock = true; }); drawVariants(); return; }
+		if (act === 'bulk-track')   { P.variants.forEach(v => { if (!v.track_stock) v.show_stock = true; v.track_stock = true; }); drawVariants(); return; }
 
 		if (act === 'unlock-desc') {
 			blocksLocked = false;
@@ -10892,13 +11589,35 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 			return;
 		}
 
+		if (act === 'add-tag') {
+			const input = $('#sp-pe-newtag', backdrop);
+			const name = (input.value || '').trim();
+			if (!name) { input.focus(); return; }
+			b.disabled = true;
+			try {
+				const r = await spAjax('site_pulse_store_tag_add', { name });
+				if (!r.success) { spToast(r.data?.message || 'Could not add that tag.'); return; }
+				tags_ = r.data.tags || tags_;
+				P.tags.add(parseInt(r.data.id, 10));
+				input.value = '';
+				drawTags();
+			} catch (err) { spToast('Could not add that tag.'); }
+			finally { b.disabled = false; }
+			return;
+		}
+
+		if (act === 'duplicate') {
+			spStoreProductEditorOpen(spFormModal(), spStoreProductCopy(src), cats_, [], tags_);
+			return;
+		}
+
 		if (act === 'trash') {
-			if (!await spConfirm(`Remove "${P.title || 'this product'}" from your shop? It can be brought back from the Trash in WordPress, and past orders are not affected.`)) return;
+			if (!await spConfirm(`Remove "${P.title || `this ${spTerm('product', false, true)}`}" from your shop? It can be brought back from the Trash in WordPress, and past orders are not affected.`)) return;
 			try {
 				const r = await spAjax('site_pulse_store_product_trash', { id: P.id });
 				if (!r.success) { spToast(r.data?.message || 'Could not remove it.'); return; }
 				closeFormModal();
-				spToast(r.data.message || 'Product removed.', 5000);
+				spToast(r.data.message || `${spTerm('product')} removed.`, 5000);
 				loadStoreProducts();
 			} catch (err) { spToast('Could not remove it.'); }
 		}
@@ -10907,10 +11626,13 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 	$$('.sp-book-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
 
 	spBookOnClick(backdrop, 'sp-pe-save', async () => {
+		// Site-defined fields are read from the boxes themselves at save time, not only from
+		// typing events: a dropdown picked without an 'input' event still saves.
+		$$('[data-cf]', backdrop).forEach(el => { P.fields[el.dataset.cf] = el.value; });
 		if (!(P.title || '').trim()) { spBookSetMsg(backdrop, 'Give the product a name.'); $('#sp-pe-title', backdrop)?.focus(); return; }
 		if (uploading) { spBookSetMsg(backdrop, 'Wait for the photos to finish uploading.'); return; }
 		const live = P.variants.filter(v => !v.remove);
-		if (!live.length) { spBookSetMsg(backdrop, 'Keep at least one version of the product.'); return; }
+		if (!live.length) { spBookSetMsg(backdrop, `Keep at least one version of the ${spTerm('product', false, true)}.`); return; }
 		if (live.some(v => String(v.price || '').trim() === '') && !await spConfirm('Some versions have no price, so they will sell for $0.00. Save anyway?')) return;
 
 		spBookBusy(backdrop, 'sp-pe-save', true);
@@ -10920,39 +11642,43 @@ function spStoreProductEditorOpen(backdrop, src, cats, warnings) {
 				id: P.id,
 				title: P.title,
 				status: P.status,
-				content: blocksLocked ? (src.content || '') : desc.innerHTML,
+				// A hidden description box (site setup) keeps whatever text was saved.
+				content: (blocksLocked || hide.has('description')) ? (src.content || '') : desc.innerHTML,
 				menu_order: P.menu_order,
 				seo_title: P.seo_title,
 				seo_desc: P.seo_desc,
 				ships: P.ships ? 1 : 0,
+				kind: P.kind,
 				// Sent only while the Extras field is on screen; absent means "leave it alone".
 				...($('#sp-pe-plan', backdrop) ? { grants_plan: $('#sp-pe-plan', backdrop).value } : {}),
 				...(ex.agreements ? { agreements: JSON.stringify($$('[data-agreement]', backdrop).filter(c => c.checked).map(c => c.dataset.agreement)) } : {}),
 				categories: JSON.stringify(Array.from(P.categories)),
+				tags: JSON.stringify(Array.from(P.tags)),
 				options: JSON.stringify(P.options.filter(o => (o.name || '').trim() !== '').map(o => ({ name: o.name, values: o.values }))),
+				fields: JSON.stringify(P.fields),
 				gallery: JSON.stringify(P.gallery.map(g => ({ id: g.id, tag: g.tag }))),
 				variants: JSON.stringify(P.variants.map(v => ({
 					id: v.id, remove: v.remove ? 1 : 0,
 					option1: v.option1 || '', option2: v.option2 || '', option3: v.option3 || '',
 					sku: v.sku || '', price: v.price || '', sale_price: v.sale_price || '',
-					track_stock: v.track_stock ? 1 : 0, allow_backorder: v.allow_backorder ? 1 : 0,
+					track_stock: v.track_stock ? 1 : 0, show_stock: (v.track_stock && v.show_stock !== false) ? 1 : 0, allow_backorder: v.allow_backorder ? 1 : 0,
 					weight_grams: parseInt(v.weight_grams, 10) || 0,
 					stock: (v.track_stock && String(v.stock) !== String(v.stockOrig)) ? (parseInt(v.stock, 10) || 0) : '',
 				}))),
 			});
-			if (!r.success) { spBookSetMsg(backdrop, r.data?.message || 'Could not save the product.'); spBookBusy(backdrop, 'sp-pe-save', false); return; }
+			if (!r.success) { spBookSetMsg(backdrop, r.data?.message || `Could not save the ${spTerm('product', false, true)}.`); spBookBusy(backdrop, 'sp-pe-save', false); return; }
 
 			if (r.data.warnings && r.data.warnings.length) {
 				// Reopen on the saved product so the warnings sit next to what they are about.
-				spStoreProductEditorOpen(backdrop, r.data.product, cats_, r.data.warnings);
+				spStoreProductEditorOpen(backdrop, r.data.product, cats_, r.data.warnings, tags_);
 				spToast(r.data.message);
 			} else {
 				closeFormModal();
-				spToast(r.data.message || 'Product saved.');
+				spToast(r.data.message || `${spTerm('product')} saved.`);
 			}
 			if ($('#sp-panel-store-products')?.classList.contains('active')) loadStoreProducts();
 		} catch (err) {
-			spBookSetMsg(backdrop, 'Could not save the product. Check your connection and try again.');
+			spBookSetMsg(backdrop, `Could not save the ${spTerm('product', false, true)}. Check your connection and try again.`);
 			spBookBusy(backdrop, 'sp-pe-save', false);
 		}
 	});
@@ -11027,7 +11753,7 @@ async function loadStoreInventory() {
 			return `<button type="button" class="unique sp-row" data-vid="${r.variant_id}">`
 				+ `<span class="sp-row__main"><span class="sp-row__title">${esc(r.product)}</span>`
 				+   `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
-				+   (r.state ? `<span class="sp-review-tags">${spStoreBadge(r.state)}</span>` : '')
+				+   (r.state ? `<span class="sp-toolbar">${spStoreBadge(r.state)}</span>` : '')
 				+ '</span>'
 				+ `<span class="sp-row__trail"><span class="sp-store-avail"><span class="sp-row__value">${r.available}</span><span class="sp-field__hint">can sell</span></span>${spIcon('chev-r')}</span></button>`;
 		}).join('') + '</div></div>';
@@ -11158,7 +11884,7 @@ function spStoreCategoriesRender(rows) {
 	// One category per row: the name, how many products are in it, rename and delete.
 	// A plain div, not a button row: the row itself goes nowhere, the two buttons do.
 	box.innerHTML = '<div class="sp-card sp-card--flush"><div class="sp-list">' + rows.map(r => {
-		const n = r.count === 1 ? '1 product' : `${r.count} products`;
+		const n = `${r.count} ${spTerm('product', r.count !== 1, true)}`;
 		const inside = r.children ? `<span>${r.children} ${r.children === 1 ? 'category' : 'categories'} inside</span>` : '';
 		return `<div class="sp-row" style="padding-left:${16 + r.depth * 18}px">`
 			+   '<span class="sp-row__main">'
@@ -11243,7 +11969,7 @@ async function spStoreCategoryDelete(row) {
 		? ` Anything inside it moves up a level.`
 		: '';
 	const text = row.count
-		? `${row.count === 1 ? '1 product is' : row.count + ' products are'} in this category. `
+		? `${row.count} ${spTerm('product', row.count !== 1, true)} ${row.count === 1 ? 'is' : 'are'} in this category. `
 			+ `Deleting it does not delete them — they stay exactly as they are and simply leave the group.${moves}`
 		: `Nothing is in this category yet.${moves}`;
 
@@ -11261,7 +11987,136 @@ async function spStoreCategoryDelete(row) {
 
 
 /*--------------------------------------------------------------
-# Store — Membership plans (Settings → Store, only while Memberships is on)
+# Store — Tags
+#
+# Flat labels that cut across categories. Same screen as Categories without the
+# nesting: add, rename (web address kept), delete (products kept).
+--------------------------------------------------------------*/
+
+const _spStoreTags = { wired: false, rows: [] };
+
+function initStoreTags() {
+	const S = _spStoreTags;
+	if (S.wired) return;
+	S.wired = true;
+
+	$('#sp-store-tag-new')?.addEventListener('click', () => spStoreTagSheet(null));
+
+	$('#sp-store-tags')?.addEventListener('click', (e) => {
+		const btn = e.target.closest('[data-tag-act]');
+		if (!btn) return;
+		const row = S.rows.find(r => String(r.id) === btn.dataset.id);
+		if (!row) return;
+		if (btn.dataset.tagAct === 'edit') spStoreTagSheet(row);
+		if (btn.dataset.tagAct === 'delete') spStoreTagDelete(row);
+	});
+}
+
+async function loadStoreTags() {
+	const box = $('#sp-store-tags');
+	if (!box) return;
+	box.innerHTML = SP_LIST_SKELETON;
+	try {
+		const res = await spAjax('site_pulse_store_tags', {});
+		if (!res.success) {
+			box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(spErrorText(res, 'Couldn\'t load the tags.')) + '</div>';
+			return;
+		}
+		spStoreTagsRender(res.data.rows || []);
+	} catch (e) {
+		box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load the tags. Try again in a moment.') + '</div>';
+	}
+}
+
+function spStoreTagsRender(rows) {
+	const S = _spStoreTags;
+	S.rows = rows;
+
+	const cnt = $('#sp-store-tag-count');
+	if (cnt) cnt.textContent = rows.length ? `${rows.length} ${rows.length === 1 ? 'tag' : 'tags'}` : '';
+
+	const box = $('#sp-store-tags');
+	if (!box) return;
+
+	if (!rows.length) {
+		box.innerHTML = spEmptyHTML({
+			icon: 'box',
+			title: 'No tags yet',
+			text: 'Tags label products across categories — Organic, Gift Idea, Made in Texas. Add one here, then tick it on the product itself.',
+		});
+		return;
+	}
+
+	box.innerHTML = '<div class="sp-card sp-card--flush"><div class="sp-list">' + rows.map(r => {
+		const n = `${r.count} ${spTerm('product', r.count !== 1, true)}`;
+		return '<div class="sp-row">'
+			+   '<span class="sp-row__main">'
+			+     `<strong class="sp-row__title">${esc(r.name)}</strong>`
+			+     `<span class="sp-meta"><span>${n}</span></span>`
+			+   '</span>'
+			+   `<span class="sp-row__trail">${iconBtn('edit', '', `data-tag-act="edit" data-id="${r.id}" title="Rename"`)}`
+			+     `${iconBtn('delete', '', `data-tag-act="delete" data-id="${r.id}"`)}</span>`
+			+ '</div>';
+	}).join('') + '</div></div>';
+	markUniqueSpans(box);
+}
+
+// Add (row = null) or rename.
+function spStoreTagSheet(row) {
+	const isNew = !row;
+	const body = '<div class="sp-stack">'
+		+ `<label class="sp-field"><span class="sp-field__label">Name</span>`
+		+   `<input type="text" class="sp-input" data-f="name" value="${isNew ? '' : esc(row.name)}" placeholder="Gift Idea" autocomplete="off"></label>`
+		+ (isNew ? '' : '<p class="sp-help-text">Renaming does not change the tag&rsquo;s web address, so any links to it keep working.</p>')
+		+ '</div>';
+
+	const s = spSheetOpen({
+		title: isNew ? 'Add tag' : 'Rename tag',
+		body,
+		foot: '<button type="button" class="unique sp-btn sp-btn--primary" data-save>Save</button>'
+			+ '<button type="button" class="unique sp-btn" data-sp-sheet-cancel>Cancel</button>',
+	});
+	s.classList.add('sp-sheet--narrow');
+	$('[data-sp-sheet-cancel]', s)?.addEventListener('click', () => spSheetClose());
+	$('[data-f="name"]', s)?.focus();
+
+	$('[data-save]', s).addEventListener('click', async (e) => {
+		const b = e.currentTarget;
+		const name = ($('[data-f="name"]', s)?.value || '').trim();
+		if (!name) { spToast('Type a name for the tag.'); return; }
+		b.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_store_tag_save', { id: isNew ? 0 : row.id, name });
+			if (!res.success) { spToast(spErrorText(res, 'That didn\'t save.'), 6000); b.disabled = false; return; }
+			spStoreTagsRender(res.data.rows || []);
+			spSheetClose();
+			spToast(isNew ? 'Tag added.' : 'Tag renamed.');
+		} catch (err) {
+			spToast(spErrorText(null, 'That didn\'t save.'), 6000);
+			b.disabled = false;
+		}
+	});
+}
+
+async function spStoreTagDelete(row) {
+	const text = row.count
+		? `${row.count} ${spTerm('product', row.count !== 1, true)} ${row.count === 1 ? 'has' : 'have'} this tag. Deleting it does not delete them — they simply lose the tag.`
+		: `No ${spTerm('product', true, true)} have this tag yet.`;
+
+	if (!await spConfirm({ title: `Delete ${row.name}?`, text, ok: 'Delete', danger: true })) return;
+
+	try {
+		const res = await spAjax('site_pulse_store_tag_delete', { id: row.id });
+		if (!res.success) { spToast(spErrorText(res, 'Couldn\'t delete that tag.'), 6000); return; }
+		spStoreTagsRender(res.data.rows || []);
+		spToast('Tag deleted.');
+	} catch (e) {
+		spToast(spErrorText(null, 'Couldn\'t delete that tag.'), 6000);
+	}
+}
+
+/*--------------------------------------------------------------
+# Store — Membership plans (Settings → E-Commerce, only while Memberships is on)
 #
 # A plan is what a membership gives and for how long. What it UNLOCKS is either
 # a whole section (every Lesson) or chosen pages — the same _sp_member_plan meta
@@ -11291,12 +12146,12 @@ async function loadStoreMemberPlans() {
 				html += `<button type="button" class="unique sp-row" data-act="plan-edit" data-id="${p.id}">`
 					+ `<span class="sp-row__main"><span class="sp-row__title">${esc(p.name)}</span>`
 					+ `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
-					+ (p.status !== 'active' ? '<span class="sp-review-tags"><span class="sp-chip">Archived</span></span>' : '')
-					+ `</span><span class="sp-row__trail">${spIcon('chev-r')}</span></button>`;
+					+ (p.status !== 'active' ? '<span class="sp-toolbar"><span class="sp-chip">Archived</span></span>' : '')
+					+ `</span><span class="sp-row__trail">${spEditMark()}</span></button>`;
 			});
 			html += '</div></div>';
 		}
-		html += `<div class="sp-store-add-row"><button type="button" class="unique sp-btn sp-btn--sm" data-act="plan-new">${spIcon('plus')} Add plan</button></div>`;
+		html += `<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--sm" data-act="plan-new">${spIcon('plus')} Add plan</button></div>`;
 		html += '</div>';
 		box.innerHTML = html;
 		markUniqueSpans(box);
@@ -11336,9 +12191,9 @@ function spStorePlanForm(plan, d) {
 			+ '</div>';
 	}
 
-	html += '<div class="sp-form-group"><label>And these pages</label><div id="sp-mp-pages" class="sp-store-chiplist"></div>'
-		+ '<div class="sp-store-inline-add"><input type="search" id="sp-mp-find" class="sp-input" placeholder="Find a page to add&hellip;"></div>'
-		+ '<div id="sp-mp-results" class="sp-store-results"></div></div>';
+	html += '<div class="sp-form-group"><label>And these pages</label><div id="sp-mp-pages" class="sp-toolbar"></div>'
+		+ '<div class="sp-toolbar"><input type="search" id="sp-mp-find" class="sp-input" placeholder="Find a page to add&hellip;"></div>'
+		+ '<div id="sp-mp-results" class="sp-toolbar"></div></div>';
 
 	html += `<div class="sp-form-group"><label for="sp-mp-desc">Notes <span class="sp-field__hint">(optional, for staff)</span></label><textarea id="sp-mp-desc" class="sp-textarea" rows="2">${esc(plan.description || '')}</textarea></div>`;
 	if (plan.id) {
@@ -11495,20 +12350,20 @@ async function loadStoreCustomers(more) {
 		// One person as a row: name, email · orders · last order, their plans, and what they've spent.
 		box.innerHTML = S.rows.length
 			? '<div class="sp-card sp-card--flush"><div class="sp-list">' + S.rows.map(c => {
-				const meta = [c.name ? c.email : '', `${c.orders} ${c.orders === 1 ? 'order' : 'orders'}`, c.last ? `Last ${c.last}` : ''].filter(Boolean);
+				const meta = [c.name ? c.email : '', c.orders || !c.bookings ? `${c.orders} ${c.orders === 1 ? 'order' : 'orders'}` : '', c.bookings ? `${c.bookings} ${c.bookings === 1 ? 'booking' : 'bookings'}` : '', c.last ? `Last ${c.last}` : ''].filter(Boolean);
 				const plans = S.membersOn ? (c.plans || []).map(p => spStoreBadge({ label: p.name, tone: p.state.tone })).join('') : '';
 				return `<button type="button" class="unique sp-row" data-email="${esc(c.email)}" data-name="${esc(c.name || '')}">`
 					+ `<span class="sp-row__lead">${spAvatarHTML(c.name || c.email)}</span>`
 					+ `<span class="sp-row__main"><span class="sp-row__title">${esc(c.name || c.email)}</span>`
 					+   `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
-					+   (plans ? `<span class="sp-review-tags">${plans}</span>` : '')
+					+   (plans ? `<span class="sp-toolbar">${plans}</span>` : '')
 					+ '</span>'
 					+ `<span class="sp-row__trail"><span class="sp-row__value">${esc(c.spent)}</span>${spIcon('chev-r')}</span></button>`;
 			}).join('') + '</div></div>'
 			: spEmptyHTML({
 				icon: 'users',
 				title: searching ? 'No customers match that search' : 'No customers here',
-				text: searching ? 'Try a name or an email.' : 'Everyone who buys appears here.',
+				text: searching ? 'Try a name, email or phone.' : 'Everyone who buys or books appears here.',
 			});
 		markUniqueSpans(box);
 
@@ -11538,7 +12393,7 @@ async function spStoreCustomerDetail(email, name) {
 
 		const contact = [`<a class="unique sp-btn" href="mailto:${esc(c.email)}">${spIcon('mail')} Email</a>`];
 		if (c.phone) contact.push(`<a class="unique sp-btn" href="tel:${esc(c.phone)}">${spIcon('phone')} Call</a>`);
-		const facts = [c.email, c.phone, `${(c.orders || []).length} ${(c.orders || []).length === 1 ? 'order' : 'orders'}`];
+		const facts = [c.email, c.phone, `${(c.orders || []).length} ${(c.orders || []).length === 1 ? 'order' : 'orders'}`, (c.bookings || []).length ? `${c.bookings.length} ${c.bookings.length === 1 ? 'booking' : 'bookings'}` : ''];
 		if (d.members_on) facts.push(c.has_account ? (c.member_only ? 'Member login' : 'Staff account') : 'No account yet');
 		let h = `<p class="sp-meta sp-meta--lg">${facts.filter(Boolean).map(f => `<span>${esc(f)}</span>`).join('')}</p>`
 			+ `<div class="sp-actions sp-actions--fit">${contact.join('')}</div>`;
@@ -11551,8 +12406,8 @@ async function spStoreCustomerDetail(email, name) {
 				? '<div class="sp-card sp-card--flush"><div class="sp-list">' + c.memberships.map(m => `<div class="sp-row sp-store-membership" data-mid="${m.id}"><span class="sp-row__main">`
 					+ `<span class="sp-row__title">${esc(m.plan)}</span>`
 					+ `<span class="sp-meta"><span>${esc(m.source)}</span><span>since ${esc(m.since)}</span>${m.live ? `<span>until ${esc(m.until)}</span>` : ''}</span>`
-					+ `<span class="sp-review-tags">${spStoreBadge(m.state)}</span>`
-					+ (d.can_manage ? '<span class="sp-store-membership-acts">'
+					+ `<span class="sp-toolbar">${spStoreBadge(m.state)}</span>`
+					+ (d.can_manage ? '<span class="sp-toolbar">'
 						+ `<button type="button" class="unique sp-btn sp-btn--sm" data-mact="extend">${m.live ? 'Extend' : 'Renew'}</button>`
 						+ (c.member_only ? '<button type="button" class="unique sp-btn sp-btn--sm" data-mact="link">Email sign-in link</button>' : '')
 						+ (m.live ? '<button type="button" class="unique sp-btn sp-btn--sm sp-btn--danger" data-mact="cancel">Cancel membership</button>' : '')
@@ -11566,10 +12421,20 @@ async function spStoreCustomerDetail(email, name) {
 		h += (c.orders || []).length
 			? '<div class="sp-card sp-card--flush"><div class="sp-list">' + c.orders.map(o => `<button type="button" class="unique sp-row" data-order-id="${o.id}" data-order-number="${esc(o.number)}">`
 				+ `<span class="sp-row__main"><span class="sp-row__title">${esc(o.number)}</span><span class="sp-meta"><span>${esc(o.placed)}</span></span>`
-				+ `<span class="sp-review-tags">${o.payment && o.payment.tone !== 'success' ? spStoreBadge(o.payment) : ''}${spStoreBadge(o.progress)}</span></span>`
+				+ `<span class="sp-toolbar">${o.payment && o.payment.tone !== 'success' ? spStoreBadge(o.payment) : ''}${spStoreBadge(o.progress)}</span></span>`
 				+ `<span class="sp-row__trail"><span class="sp-row__value">${esc(o.total)}</span>${spIcon('chev-r')}</span></button>`).join('') + '</div></div>'
 			: '<p class="sp-help-text">No orders yet.</p>';
 		h += '</div>';
+
+		// Bookings (Booking module): appointments, service calls, class seats — free RSVPs included.
+		if (Array.isArray(c.bookings) && c.bookings.length) {
+			h += '<div class="sp-section"><h3 class="sp-section__title">Bookings</h3><div class="sp-card sp-card--flush"><div class="sp-list">'
+				+ c.bookings.map(b => `<button type="button" class="unique sp-row" data-booking-id="${b.id}">`
+					+ `<span class="sp-row__main"><span class="sp-row__title">${esc(b.service || 'Booking')}</span>`
+					+ `<span class="sp-meta"><span>${esc(b.when)}</span>${b.dates > 1 ? `<span>${b.dates} dates</span>` : ''}</span></span>`
+					+ `<span class="sp-row__trail">${typeof spBookStatusChip === 'function' ? spBookStatusChip(b.status) : ''}<span class="sp-row__value">${esc(b.price)}</span>${spIcon('chev-r')}</span></button>`).join('')
+				+ '</div></div></div>';
+		}
 
 		$('.sp-sheet__body', sheet).innerHTML = `<div class="sp-stack">${h}</div>`;
 		markUniqueSpans(sheet);
@@ -11579,6 +12444,8 @@ async function spStoreCustomerDetail(email, name) {
 	sheet.addEventListener('click', async (e) => {
 		const ord = e.target.closest('[data-order-id]');
 		if (ord) { spStoreOrderDetail(parseInt(ord.dataset.orderId, 10), ord.dataset.orderNumber); return; }
+		const bk = e.target.closest('[data-booking-id]');
+		if (bk && typeof spBookDetail === 'function') { spBookDetail(parseInt(bk.dataset.bookingId, 10)); return; }
 		if (e.target.closest('[data-act="give"]')) { spStoreGiveMembership(d.customer.email, d.customer.name); return; }
 
 		const b = e.target.closest('[data-mact]');
@@ -11644,15 +12511,21 @@ async function loadAdminModules() {
 	try {
 		const res = await spAjax('site_pulse_get_modules', {});
 		if (!res.success) { wrap.innerHTML = '<p>Error loading modules.</p>'; return; }
-		renderAdminModules(wrap, res.data.modules || []);
+		renderAdminModules(wrap, res.data.modules || [], res.data.superadmin_visible !== false);
 	} catch (err) {
 		wrap.innerHTML = '<p>Error loading modules.</p>';
 	}
 }
 
-function renderAdminModules(wrap, modules) {
+function renderAdminModules(wrap, modules, visible) {
 	// One row per module: its switch, name and what it does. Saved together; applies on the next load.
 	let html = '<div class="sp-stack">';
+	// Superadmin visibility — saves the moment it's flipped (separate from the module list).
+	html += '<div class="sp-card sp-card--flush"><div class="sp-list">'
+		+ '<label class="sp-row sp-module-row">'
+		+ `<span class="sp-row__lead"><input type="checkbox" id="sp-super-visible"${visible ? ' checked' : ''}></span>`
+		+ '<span class="sp-row__main"><span class="sp-row__title">Visible to other users</span><span class="sp-row__text" id="sp-super-visible-note">When on, everyone can see you in Users and message you. When off, you’re hidden from everyone except people given "See protected admin in lists". Saves right away.</span></span>'
+		+ '</label></div></div>';
 	html += '<p class="sp-help-text">Turn features on or off for this install. A module that\'s off disappears from the menu and its permissions go inactive; its saved settings are kept. Changes take effect on the next page load.</p>';
 	html += '<div class="sp-card sp-card--flush"><div class="sp-list">';
 	modules.forEach(m => {
@@ -11667,6 +12540,17 @@ function renderAdminModules(wrap, modules) {
 
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
+
+	const vis = $('#sp-super-visible', wrap);
+	vis?.addEventListener('change', async () => {
+		vis.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_save_superadmin_visible', { visible: vis.checked ? '1' : '0' });
+			if (!res.success) { vis.checked = !vis.checked; spAlert(res.data?.message || 'Error saving.'); }
+			else spToast(vis.checked ? 'You’re visible to other users.' : 'You’re hidden from other users.');
+		} catch (err) { vis.checked = !vis.checked; spAlert('Error saving.'); }
+		vis.disabled = false;
+	});
 
 	const saveBtn = $('#sp-save-modules', wrap);
 	saveBtn.addEventListener('click', async () => {
@@ -11710,9 +12594,9 @@ function tierGridHtml(caps) {
 	if (!groups.length) return '';
 	let html = '<div class="sp-arole-grid">';
 	groups.forEach(g => {
-		html += `<div class="sp-arole-modgroup" data-module="${esc(g.key)}">`;
-		html += `<div class="sp-arole-modhead"><span class="sp-arole-modtitle">${esc(g.label)}</span>`;
-		html += '<span class="sp-arole-modquick"><button type="button" class="unique sp-btn sp-btn-ghost sp-arole-all">All</button><button type="button" class="unique sp-btn sp-btn-ghost sp-arole-none">None</button></span></div>';
+		html += `<div class="sp-card sp-card--inset sp-arole-modgroup" data-module="${esc(g.key)}">`;
+		html += `<div class="sp-arole-modhead"><span class="sp-card__eyebrow">${esc(g.label)}</span>`;
+		html += '<span class="sp-toolbar"><button type="button" class="unique sp-btn sp-btn--sm sp-arole-all">All</button><button type="button" class="unique sp-btn sp-btn--sm sp-arole-none">None</button></span></div>';
 		html += '<div class="sp-arole-modcaps">';
 		g.caps.forEach(c => {
 			const checked = caps.includes(c.cap) ? ' checked' : '';
@@ -11743,8 +12627,8 @@ function renderAdminTiers(wrap) {
 	const { roles, counts } = spTierData;
 	const tiers = tierNumbers(roles);
 
-	let html = '<div class="sp-admin-toolbar">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-tier-btn">+ Add Role</button>';
+	let html = '<div class="sp-toolbar">';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-add-tier-btn">+ Add Role</button>';
 	html += '</div>';
 	html += '<p class="sp-help-text" style="margin:0 0 16px;">Rename or reorder roles (top = most senior), and tick what each can do — grouped by module. Fine-tune one individual below.</p>';
 	html += '<div id="sp-tier-form-wrap" hidden></div>';
@@ -11759,12 +12643,12 @@ function renderAdminTiers(wrap) {
 			try { caps = JSON.parse(r.capabilities || '[]') || []; } catch (e) {}
 			html += `<div class="sp-card sp-tier-card sp-arole-card" data-id="${r.id}">`;
 			html += '<div class="sp-arole-head">';
-			html += `<span class="unique sp-tier-badge">${tiers[r.id]}</span>`;
+			html += `<span class="unique sp-chip sp-chip--mark">${tiers[r.id]}</span>`;
 			html += `<input type="text" class="sp-input sp-tier-name" value="${esc(r.label)}" aria-label="Role name">`;
 			html += `<span class="sp-tier-count">${n} member${n === 1 ? '' : 's'}</span>`;
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-up" title="Move up"${idx === 0 ? ' disabled' : ''}>&uarr;</button>`;
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-tier-down" title="Move down"${idx === roles.length - 1 ? ' disabled' : ''}>&darr;</button>`;
-			html += `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete sp-tier-delete"${n ? ' disabled title="Reassign members first"' : ' title="Delete" aria-label="Delete"'}>${ICON_DELETE}</button>`;
+			html += `<button type="button" class="unique sp-btn sp-tier-up" title="Move up"${idx === 0 ? ' disabled' : ''}>&uarr;</button>`;
+			html += `<button type="button" class="unique sp-btn sp-tier-down" title="Move down"${idx === roles.length - 1 ? ' disabled' : ''}>&darr;</button>`;
+			html += `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete sp-tier-delete"${n ? ' disabled title="Reassign members first"' : ' title="Delete" aria-label="Delete"'}>${ICON_DELETE}</button>`;
 			html += '</div>';
 			html += `<div class="sp-arole-body">${tierGridHtml(caps)}</div>`;
 			html += '</div>';
@@ -11843,14 +12727,14 @@ async function populateRolesUserPicker() {
 function showTierForm() {
 	const wrap = spFormModal();
 
-	let html = '<div class="sp-tier-form">';
+	let html = '<div class="sp-card sp-tier-form">';
 	html += '<h3>New Role</h3>';
 	html += '<div class="sp-form-group"><label>Role Name</label>';
 	html += '<input type="text" id="sp-new-tier-name" class="sp-input" placeholder="e.g. Shift Lead"></div>';
 	html += '<p class="sp-help-text" style="margin:0 0 12px;">Tick its permissions afterward on the role card.</p>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-create-tier-btn">Create Role</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-cancel-tier-btn">Cancel</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-create-tier-btn">Create Role</button>';
+	html += '<button type="button" class="unique sp-btn" id="sp-cancel-tier-btn">Cancel</button>';
 	html += '</div></div>';
 
 	wrap.innerHTML = html;
@@ -11960,23 +12844,23 @@ function renderReviewSettings() {
 	html += '<p class="sp-help-text" style="margin:0 0 14px">The “super categories” reviews are ranked into. Each can have sub-categories that guide the AI (e.g. <em>Quality</em> → Food, Ingredients, Presentation). Saving re-analyzes all reviews under the new categories.</p>';
 	html += '<div id="sp-rc-list">';
 	_spReviewCats.forEach((c, ci) => {
-		html += `<div class="sp-rc-cat sp-tile" data-ci="${ci}" style="border:1px solid var(--sp-border);border-radius:8px;padding:12px;margin-bottom:12px">`;
+		html += `<div class="sp-card sp-card--inset sp-rc-cat" data-ci="${ci}">`;
 		html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">';
 		html += `<input type="text" class="sp-input sp-rc-name" value="${esc(c.name || '')}" placeholder="Category (e.g. Quality)" style="font-weight:600">`;
-		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-rc-del-cat" data-ci="${ci}" title="Remove category">&times;</button>`;
+		html += `<button type="button" class="unique sp-btn sp-rc-del-cat" data-ci="${ci}" title="Remove category">&times;</button>`;
 		html += '</div>';
 		html += '<div class="sp-rc-subs" style="padding-left:14px">';
 		(c.subs || []).forEach((s, si) => {
 			html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">';
 			html += `<input type="text" class="sp-input sp-rc-sub" value="${esc(s)}" placeholder="Sub-category (e.g. Food)">`;
-			html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-rc-del-sub" data-ci="${ci}" data-si="${si}" title="Remove sub-category">&times;</button>`;
+			html += `<button type="button" class="unique sp-btn sp-rc-del-sub" data-ci="${ci}" data-si="${si}" title="Remove sub-category">&times;</button>`;
 			html += '</div>';
 		});
-		html += `<button type="button" class="unique sp-btn sp-btn-ghost sp-rc-add-sub" data-ci="${ci}">+ Add sub-category</button>`;
+		html += `<button type="button" class="unique sp-btn sp-rc-add-sub" data-ci="${ci}">+ Add sub-category</button>`;
 		html += '</div></div>';
 	});
 	html += '</div>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-rc-add-cat">+ Add Category</button>';
+	html += '<button type="button" class="unique sp-btn sp-rc-add-cat">+ Add Category</button>';
 	html += '<span class="sp-help-text sp-rc-status" style="margin-left:10px"></span>';
 	html += '</div>';
 	html += '</div>';
@@ -12129,7 +13013,7 @@ async function loadAdminTemplates(focusId) {
 function renderAdminTemplates(wrap, templates) {
 	// Reports are fully client-managed: add a new one, rename, change frequency/first-due, add/remove
 	// fields, or delete. Each report auto-generates "Submit …"/"View all …" permissions (Roles/Individual).
-	let html = '<div class="sp-admin-toolbar" style="margin-bottom:16px;"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-add-report-btn">+ Add Report</button></div>';
+	let html = '<div class="sp-toolbar" style="margin-bottom:16px;"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-add-report-btn">+ Add Report</button></div>';
 
 	const chevronSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
 
@@ -12149,8 +13033,8 @@ function renderAdminTemplates(wrap, templates) {
 			html += '<span class="sp-template-drag" title="Drag to reorder" aria-label="Drag to reorder">&#9776;</span>';
 			html += `<span class="sp-template-title"><strong>${esc(t.name)}</strong> <span class="unique sp-status-badge ${statusClass}">${statusLabel}</span></span>`;
 			html += '</div>';
-			html += `<div class="sp-template-head-actions">`;
-			html += `<button type="button" class="unique sp-btn sp-icon-btn sp-template-collapse-btn" data-id="${t.id}" aria-expanded="${isOpen ? 'true' : 'false'}" title="${isOpen ? 'Collapse' : 'Expand'}" aria-label="Expand or collapse report">${chevronSvg}</button>`;
+			html += `<div class="sp-toolbar sp-toolbar--nowrap">`;
+			html += `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-template-collapse-btn" data-id="${t.id}" aria-expanded="${isOpen ? 'true' : 'false'}" title="${isOpen ? 'Collapse' : 'Expand'}" aria-label="Expand or collapse report">${chevronSvg}</button>`;
 			html += iconBtn('edit', 'sp-edit-template-btn', `data-id="${t.id}"`);
 			html += '</div></div>';
 
@@ -12164,20 +13048,20 @@ function renderAdminTemplates(wrap, templates) {
 
 			html += '<div class="sp-template-fields">';
 			if (t.fields && t.fields.length > 0) {
-				html += '<div class="sp-field-list">';
+				html += '<div class="sp-card sp-card--flush"><div class="sp-list sp-field-list">';
 				t.fields.forEach((f, i) => {
-					const archived = f.display_order >= 999 ? ' sp-field-archived' : '';
-					html += `<div class="sp-field-item${archived}" data-field-id="${f.id}" data-index="${i}" draggable="true">`;
-					html += `<span class="sp-field-drag">&#9776;</span>`;
-					html += `<span class="sp-field-label">${esc(f.label || f.section || '')}</span>`;
-					html += `<span class="sp-field-type">${esc(f.field_type)}</span>`;
+					const archived = f.display_order >= 999 ? ' is-muted' : '';
+					html += `<div class="sp-row sp-field-item${archived}" data-field-id="${f.id}" data-index="${i}" draggable="true">`;
+					html += `<span class="sp-drag">&#9776;</span>`;
+					html += `<span class="sp-row__main"><span class="sp-row__title">${esc(f.label || f.section || '')}</span></span>`;
+					html += `<span class="sp-row__trail"><span class="sp-field__hint">${esc(f.field_type)}</span>`;
 					html += iconBtn('edit', 'sp-edit-field-btn', `data-field-id="${f.id}" data-template-id="${t.id}"`);
 					html += iconBtn('delete', 'sp-delete-field-btn', `data-field-id="${f.id}" data-template-id="${t.id}" title="Delete field"`);
-					html += '</div>';
+					html += '</span></div>';
 				});
-				html += '</div>';
+				html += '</div></div>';
 			}
-			html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-add-field-btn" data-template-id="${t.id}" style="margin-top:10px;">+ Add Field</button>`;
+			html += `<button type="button" class="unique sp-btn sp-add-field-btn" data-template-id="${t.id}">+ Add Field</button>`;
 			html += '</div></div></div>';
 		});
 		html += '</div>';
@@ -12370,7 +13254,7 @@ function spGrantPicker(label, items, valKey, checked, field) {
 		((set.has(String(b[valKey])) ? 1 : 0) - (set.has(String(a[valKey])) ? 1 : 0)) ||
 		String(a.label || a.name || '').localeCompare(String(b.label || b.name || '')));
 	const rows = sorted.map(i =>
-		`<label class="sp-pa-row"><input type="checkbox" class="sp-pa-cb" value="${esc(String(i[valKey]))}"${set.has(String(i[valKey])) ? ' checked' : ''}><span class="sp-pa-name">${esc(i.label || i.name || '')}</span></label>`
+		`<label class="sp-check-row sp-pa-row"><input type="checkbox" class="sp-pa-cb" value="${esc(String(i[valKey]))}"${set.has(String(i[valKey])) ? ' checked' : ''}><span class="sp-pa-name">${esc(i.label || i.name || '')}</span></label>`
 	).join('');
 	return '<div class="sp-pa-picker sp-report-grant">'
 		+ `<button type="button" class="sp-select sp-pa-toggle">${esc(label)}${nOn ? ` · ${nOn}` : ''}</button>`
@@ -12416,7 +13300,7 @@ function showTemplateForm(tpl) {
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-tpl-form-cancel">Cancel</button></div>';
+	html += '<button type="button" class="unique sp-btn sp-tpl-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-template-form">';
 	if (isEdit) html += `<input type="hidden" name="id" value="${tpl.id}">`;
 
@@ -12443,11 +13327,11 @@ function showTemplateForm(tpl) {
 	const rolesList   = spTemplateRoles.length ? spTemplateRoles : [{slug:'manager',label:'GM'},{slug:'supervisor',label:'Supervisor'},{slug:'admin',label:'Administrator'},{slug:'owner',label:'Owner'},{slug:'user',label:'User'}];
 
 	html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">';
-	html += '<div class="sp-form-group"><label>Who Submits The Report</label><div class="sp-role-user-row">';
+	html += '<div class="sp-form-group"><label>Who Submits The Report</label><div class="sp-toolbar">';
 	html += spGrantPicker('Roles', rolesList, 'slug', submitRoles, 'submit_role_slugs');
 	html += spGrantPicker('People', spTemplateUsers, 'user_id', submitUsers, 'submit_user_ids');
 	html += '</div></div>';
-	html += '<div class="sp-form-group"><label>Who Views The Report</label><div class="sp-role-user-row">';
+	html += '<div class="sp-form-group"><label>Who Views The Report</label><div class="sp-toolbar">';
 	html += spGrantPicker('Roles', rolesList, 'slug', viewRoles, 'view_role_slugs');
 	html += spGrantPicker('People', spTemplateUsers, 'user_id', viewUsers, 'view_user_ids');
 	html += '</div></div>';
@@ -12471,7 +13355,7 @@ function showTemplateForm(tpl) {
 	html += '<div class="sp-form-group"><label>Email each submission to <span class="sp-help-text" style="font-weight:400;">(optional)</span></label>';
 	html += `<input type="text" name="email_on_submit" class="sp-input" value="${esc(tpl?.email_on_submit || '')}" placeholder="owner@company.com"></div>`;
 	html += '</div>';
-	html += `<div class="sp-form-group"><label class="sp-reminder-toggle"><input type="checkbox" name="send_reminders" value="1"${tpl?.send_reminders == 1 ? ' checked' : ''}> Send &ldquo;report due&rdquo; reminders on this schedule</label>`;
+	html += `<div class="sp-form-group"><label class="sp-check-row"><input type="checkbox" name="send_reminders" value="1"${tpl?.send_reminders == 1 ? ' checked' : ''}> Send &ldquo;report due&rdquo; reminders on this schedule</label>`;
 	html += '<div class="sp-help-text">When on, this report shows up in Settings &rarr; Notifications so you can pick which roles get the due-date alert.</div></div>';
 
 	// Which header items the report shows (all ticked for a new report, or one that never chose).
@@ -12481,10 +13365,10 @@ function showTemplateForm(tpl) {
 		+ '</div></div>';
 
 	html += '<div class="sp-report-form-actions">';
-	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Create Report'}</button>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-tpl-form-cancel">Cancel</button>';
+	html += `<button type="submit" class="unique sp-btn sp-btn--primary">${isEdit ? 'Save Changes' : 'Create Report'}</button>`;
+	html += '<button type="button" class="unique sp-btn sp-tpl-form-cancel">Cancel</button>';
 	// Delete lives in here, not on the list row, so it's never one stray tap away.
-	if (isEdit) html += '<button type="button" class="unique sp-btn sp-btn-delete sp-tpl-form-delete">Delete report</button>';
+	if (isEdit) html += '<button type="button" class="unique sp-btn sp-btn--danger sp-btn-delete sp-tpl-form-delete">Delete report</button>';
 	html += '</div></form></div>';
 
 	wrap.innerHTML = html;
@@ -12533,7 +13417,7 @@ function showFieldForm(field, templateId) {
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
 	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${title}</h3>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-field-form-cancel">Cancel</button></div>';
+	html += '<button type="button" class="unique sp-btn sp-field-form-cancel">Cancel</button></div>';
 	html += '<form id="sp-field-form">';
 	if (isEdit) html += `<input type="hidden" name="id" value="${field.id}">`;
 	html += `<input type="hidden" name="template_id" value="${templateId}">`;
@@ -12577,9 +13461,9 @@ function showFieldForm(field, templateId) {
 	if (!optSource && field?.options) { try { const a = JSON.parse(field.options); if (Array.isArray(a)) customOptsText = a.join('\n'); } catch (e) {} }
 
 	html += `<div class="sp-form-group" id="sp-field-options-group"${isSelect ? '' : ' hidden'}><label>Drop Down Options</label>`;
-	html += '<div class="sp-opt-mode">';
-	html += `<label class="sp-opt-mode-choice"><input type="radio" name="opt_mode" value="custom"${optMode === 'custom' ? ' checked' : ''}> Custom list</label>`;
-	html += `<label class="sp-opt-mode-choice"><input type="radio" name="opt_mode" value="import"${optMode === 'import' ? ' checked' : ''}> Import from a site list</label>`;
+	html += '<div class="sp-options sp-options--inline">';
+	html += `<label class="sp-check-row"><input type="radio" name="opt_mode" value="custom"${optMode === 'custom' ? ' checked' : ''}> Custom list</label>`;
+	html += `<label class="sp-check-row"><input type="radio" name="opt_mode" value="import"${optMode === 'import' ? ' checked' : ''}> Import from a site list</label>`;
 	html += '</div>';
 	html += `<div id="sp-opt-custom"${optMode === 'custom' ? '' : ' hidden'}>`;
 	html += `<textarea name="select_options" class="sp-textarea" rows="4" placeholder="One option per line">${esc(customOptsText)}</textarea>`;
@@ -12625,8 +13509,8 @@ function showFieldForm(field, templateId) {
 	html += `<input type="text" name="help_text" class="sp-input" value="${esc(field?.help_text || '')}"></div>`;
 
 	html += '<div class="sp-report-form-actions">';
-	html += `<button type="submit" class="unique sp-btn sp-btn-primary">${isEdit ? 'Save Changes' : 'Add Field'}</button>`;
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-field-form-cancel">Cancel</button>';
+	html += `<button type="submit" class="unique sp-btn sp-btn--primary">${isEdit ? 'Save Changes' : 'Add Field'}</button>`;
+	html += '<button type="button" class="unique sp-btn sp-field-form-cancel">Cancel</button>';
 	html += '</div></form></div>';
 
 	wrap.innerHTML = html;
@@ -12830,7 +13714,7 @@ async function loadCcCustomers() {
 		const cnt = $('#sp-cc-cust-count');
 		if (cnt) cnt.textContent = `${items.length} ${items.length === 1 ? 'customer' : 'customers'}`;
 		if (!items.length) { list.innerHTML = '<div class="sp-empty">No customers yet.</div>'; return; }
-		list.innerHTML = items.map(ccCustCard).join('');
+		list.innerHTML = '<div class="sp-card sp-card--flush"><div class="sp-list">' + items.map(ccCustCard).join('') + '</div></div>';
 		markUniqueSpans(list);
 	} catch (e) {
 		list.innerHTML = '<div class="sp-empty">Error loading customers.</div>';
@@ -12839,19 +13723,13 @@ async function loadCcCustomers() {
 
 function ccCustCard(c) {
 	const sub = c.subscribed
-		? '<span class="unique sp-status-badge sp-status-review">Subscribed</span>'
+		? '<span class="unique sp-status-badge sp-status-reviewed">Subscribed</span>'
 		: '<span class="unique sp-status-badge sp-status-draft">No app</span>';
-	const meta = [c.location, c.equipment ? `${c.equipment} unit${c.equipment === 1 ? '' : 's'}` : ''].filter(Boolean).join(' &middot; ');
-	return `<div class="sp-card sp-cc-cust-card">
-		<div class="sp-card-body sp-cc-cust-body">
-			<div class="sp-cc-cust-main">
-				<span class="unique sp-cc-cust-name">${esc(c.name)}</span>
-				${c.contact ? `<span class="unique sp-cc-cust-contact">${esc(c.contact)}</span>` : ''}
-				${meta ? `<span class="unique sp-cc-cust-meta">${meta}</span>` : ''}
-			</div>
-			${sub}
-		</div>
-	</div>`;
+	const meta = [c.contact ? esc(c.contact) : '', c.location ? esc(c.location) : '', c.equipment ? `${c.equipment} unit${c.equipment === 1 ? '' : 's'}` : ''].filter(Boolean);
+	return '<div class="sp-row"><span class="sp-row__main">'
+		+ `<span class="sp-row__title">${esc(c.name)}</span>`
+		+ (meta.length ? `<span class="sp-meta">${meta.map(m => `<span>${m}</span>`).join('')}</span>` : '')
+		+ `</span><span class="sp-row__trail">${sub}</span></div>`;
 }
 
 // --- Push composer (segment broadcast) ---
@@ -12941,12 +13819,12 @@ async function loadCcSchedule() {
 
 function ccSchedCard(r) {
 	const when = [r.preferred_date, r.preferred_window].filter(Boolean).join(' ') || 'No preference';
-	const badge = r.status === 'new' ? 'sp-status-pending' : (r.status === 'dismissed' ? 'sp-status-draft' : 'sp-status-review');
+	const badge = r.status === 'new' ? 'sp-status-pending' : (r.status === 'dismissed' ? 'sp-status-draft' : 'sp-status-reviewed');
 	const actions = _spCcSchedCanManage
 		? `<div class="sp-cc-sched-actions">
-			<button type="button" class="unique sp-btn sp-btn-ghost" data-sched="scheduled" data-id="${r.id}">Scheduled</button>
-			<button type="button" class="unique sp-btn sp-btn-ghost" data-sched="done" data-id="${r.id}">Done</button>
-			<button type="button" class="unique sp-btn sp-btn-ghost" data-sched="dismissed" data-id="${r.id}">Dismiss</button>
+			<button type="button" class="unique sp-btn" data-sched="scheduled" data-id="${r.id}">Scheduled</button>
+			<button type="button" class="unique sp-btn" data-sched="done" data-id="${r.id}">Done</button>
+			<button type="button" class="unique sp-btn" data-sched="dismissed" data-id="${r.id}">Dismiss</button>
 		</div>` : '';
 	return `<div class="sp-card sp-cc-sched-card" data-id="${r.id}">
 		<div class="sp-card-body">
@@ -12998,9 +13876,9 @@ function dirIcon(key) {
 // phone icon (phone-cell for cell, phone receiver for work). No CELL/WORK text labels.
 function dirContactsHtml(e) {
 	const items = [];
-	if (e.email)      items.push(`<a class="unique sp-btn sp-btn-ghost sp-dir-cbtn sp-dir-email-btn" href="mailto:${esc(e.email)}">${dirIcon('email')}<span>${esc(e.email)}</span></a>`);
-	if (e.cell_phone) items.push(`<a class="unique sp-btn sp-btn-ghost sp-dir-cbtn" href="tel:${esc(e.cell_phone)}" title="Cell">${dirIcon('phone-cell')}<span>${esc(e.cell_phone)}</span></a>`);
-	if (e.sec_phone)  items.push(`<a class="unique sp-btn sp-btn-ghost sp-dir-cbtn" href="tel:${esc(e.sec_phone)}" title="Work">${dirIcon('phone')}<span>${esc(e.sec_phone)}</span></a>`);
+	if (e.email)      items.push(`<a class="unique sp-btn sp-btn--sm sp-dir-cbtn sp-dir-email-btn" href="mailto:${esc(e.email)}">${dirIcon('email')}<span>${esc(e.email)}</span></a>`);
+	if (e.cell_phone) items.push(`<a class="unique sp-btn sp-btn--sm sp-dir-cbtn" href="tel:${esc(e.cell_phone)}" title="Cell">${dirIcon('phone-cell')}<span>${esc(e.cell_phone)}</span></a>`);
+	if (e.sec_phone)  items.push(`<a class="unique sp-btn sp-btn--sm sp-dir-cbtn" href="tel:${esc(e.sec_phone)}" title="Work">${dirIcon('phone')}<span>${esc(e.sec_phone)}</span></a>`);
 	return items.length ? `<div class="sp-dir-contact-btns">${items.join('')}</div>` : '';
 }
 
@@ -13080,7 +13958,8 @@ function renderDirectory() {
 
 // The person's photo, else their initials.
 function dirAvatar(e) {
-	if (e.photo_url) return `<span class="sp-avatar sp-avatar--lg"><img src="${esc(e.photo_url)}" alt="" loading="lazy"></span>`;
+	const face = e.face_url || e.photo_url;
+	if (face) return `<span class="sp-avatar sp-avatar--lg"><img src="${esc(face)}" alt="" loading="lazy"></span>`;
 	return spAvatarHTML([e.first_name, e.last_name].filter(Boolean).join(' ') || '?').replace('class="sp-avatar', 'class="sp-avatar sp-avatar--lg');
 }
 
@@ -13096,7 +13975,7 @@ function dirCard(e) {
 		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(name)}</span>${meta.length ? `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>` : ''}</span>`
 		+ '<span class="sp-row__trail">'
 		+   (inactive ? '<span class="sp-chip">Inactive</span>' : '')
-		+   (phone ? `<a class="unique sp-btn sp-btn--ghost sp-icon-btn" href="tel:${esc(phone)}" title="Call ${esc(name)}" aria-label="Call ${esc(name)}">${spIcon('phone')}</a>` : '')
+		+   (phone ? `<a class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm" href="tel:${esc(phone)}" title="Call ${esc(name)}" aria-label="Call ${esc(name)}">${spIcon('phone')}</a>` : '')
 		+   spIcon('chev-r')
 		+ '</span></div>';
 }
@@ -13146,8 +14025,8 @@ function openDirDetail(e) {
 	const rows = details.map(([k, v]) => `<div class="sp-row"><span class="sp-row__main"><span class="sp-meta"><span>${esc(k)}</span></span><span class="sp-dir-detail-val">${esc(v)}</span></span></div>`).join('');
 
 	// Their picture, large and centered at the top (the same circle as the edit form), then who they are.
-	const photo = e.photo_url
-		? `<div class="sp-dir-photo" style="background-image:url('${esc(e.photo_url)}')"></div>`
+	const photo = (e.face_url || e.photo_url)
+		? `<div class="sp-dir-photo" style="background-image:url('${esc(e.face_url || e.photo_url)}')"></div>`
 		: `<div class="sp-dir-photo sp-dir-photo-empty">${esc(dirInitials(e))}</div>`;
 	// Position · brand · store (and Inactive) sit left-aligned right under the name, in the sheet header.
 	const sub = (meta.length || e.status === 'inactive')
@@ -13210,8 +14089,9 @@ function openDirForm(emp) {
 				<div class="sp-dir-photo-edit">
 					${photoBox}
 					<input type="file" id="sp-dirf-photo-input" accept="image/*" hidden>
-					<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-dirf-photo-btn">Photo</button>
+					<button type="button" class="unique sp-btn" id="sp-dirf-photo-btn">Photo</button>
 					<input type="hidden" id="sp-dirf-photo-url" value="${esc(e.photo_url || '')}">
+					${e.face_url && e.face_url !== e.photo_url ? '<div class="sp-help-text">The directory shows their own profile photo instead.</div>' : ''}
 				</div>
 				<div class="sp-dir-form-names">
 					<div class="sp-form-row">
@@ -13257,8 +14137,8 @@ function openDirForm(emp) {
 			<div class="sp-form-group"><label>Other info</label><textarea id="sp-dirf-other" class="sp-textarea" rows="2">${esc(e.other_info || '')}</textarea></div>
 
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-dirf-save">${isEdit ? 'Save' : 'Add'}</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-dirf-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-dirf-save">${isEdit ? 'Save' : 'Add'}</button>
+				<button type="button" class="unique sp-btn" id="sp-dirf-cancel">Cancel</button>
 				${isEdit ? `<button type="button" class="unique sp-btn sp-btn--danger sp-btn--icon" id="sp-dirf-delete" title="Delete" aria-label="Delete">${spIcon('trash')}</button>` : ''}
 			</div>
 		</div>`;
@@ -13369,7 +14249,7 @@ function initJobsites() {
 		if (sel) { sel.value = tab.dataset.spJobStatus; loadJobsites(); }
 	}));
 	$('[data-sp-job-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-job-filter-holder]'), {
-		clear: () => { const a = $('#sp-job-filter-author'); if (a) a.value = '0'; loadJobsites(); },
+		clear: () => { const a = $('#sp-job-filter-author'); if (a) a.value = ''; loadJobsites(); },
 		onClose: spJobFilterLabel,
 	}));
 	_spJobWired = true;
@@ -13412,10 +14292,10 @@ async function loadJobsites(more = false) {
 function jobFillAuthors(authors) {
 	const sel = $('#sp-job-filter-author');
 	if (!sel) return;
-	const cur = sel.value || '0';
-	sel.innerHTML = '<option value="0">All users</option>' + authors.map(a =>
+	const cur = sel.value || '';
+	sel.innerHTML = '<option value="">All users</option>' + authors.map(a =>
 		`<option value="${a.id}">${esc(a.name)}${String(a.id) === String(D.userId) ? ' (me)' : ''}</option>`).join('');
-	sel.value = authors.some(a => String(a.id) === cur) ? cur : '0';
+	sel.value = authors.some(a => String(a.id) === cur) ? cur : '';
 }
 
 function renderJobsites() {
@@ -13453,11 +14333,11 @@ function jobCard(j) {
 		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(j.title)}</span>`
 		+   (where ? `<span class="sp-meta"><span>${esc(where)}</span></span>` : '')
 		+   (meta.length ? `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>` : '')
-		+   (chips.length ? `<span class="sp-review-tags">${chips.join('')}</span>` : '')
+		+   (chips.length ? `<span class="sp-toolbar">${chips.join('')}</span>` : '')
 		+ '</span>'
 		+ '<span class="sp-row__trail">'
-		+   (j.link ? `<a class="unique sp-btn sp-btn--ghost sp-icon-btn" href="${esc(j.link)}" target="_blank" rel="noopener" title="View the live page" aria-label="View the live page">${spIcon('external')}</a>` : '')
-		+   (j.can_edit ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-icon-delete" data-sp-job-trash title="${live ? 'Move to drafts' : 'Delete'}" aria-label="${live ? 'Move to drafts' : 'Delete'}">${spIcon('trash')}</button>${spIcon('chev-r')}` : '')
+		+   (j.link ? `<a class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm" href="${esc(j.link)}" target="_blank" rel="noopener" title="View the live page" aria-label="View the live page">${spIcon('external')}</a>` : '')
+		+   (j.can_edit ? `${spEditMark()}<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-sp-job-trash title="${live ? 'Move to drafts' : 'Delete'}" aria-label="${live ? 'Move to drafts' : 'Delete'}">${spIcon('trash')}</button>` : '')
 		+ '</span></div>';
 }
 
@@ -13517,7 +14397,7 @@ async function openJobForm(id) {
 			</div>
 			<div class="sp-form-row">
 				<div class="sp-form-group sp-grow2"><label>Street address</label><input type="text" id="sp-jobf-address" class="sp-input" value="${esc(j.address || '')}"></div>
-				${_spJobMeta.can_locate ? '<div class="sp-form-group sp-job-locate"><label>&nbsp;</label><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-jobf-locate">Use my location</button></div>' : ''}
+				${_spJobMeta.can_locate ? '<div class="sp-form-group sp-job-locate"><label>&nbsp;</label><button type="button" class="unique sp-btn" id="sp-jobf-locate">Use my location</button></div>' : ''}
 			</div>
 			<div class="sp-form-row">
 				<div class="sp-form-group sp-grow2"><label>City</label><input type="text" id="sp-jobf-city" class="sp-input" value="${esc(j.city || '')}"></div>
@@ -13527,7 +14407,7 @@ async function openJobForm(id) {
 			<div class="sp-form-group">
 				<div class="sp-job-label-row">
 					<label for="sp-jobf-desc">${isEdit && j.ai_ran ? 'Description (live on the website)' : 'What did you do on this job?'}</label>
-					<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-jobf-ai-text">AI Rewrite</button>
+					<button type="button" class="unique sp-btn" id="sp-jobf-ai-text">AI Rewrite</button>
 				</div>
 				<textarea id="sp-jobf-desc" class="sp-textarea" rows="6" placeholder="Describe the problem, what you did, and the result. AI will polish it for the website.">${esc(j.description || '')}</textarea>
 				${showOriginal ? `<details class="sp-job-original"><summary>What was originally typed</summary><div>${esc(j.original)}</div></details>` : ''}
@@ -13535,17 +14415,17 @@ async function openJobForm(id) {
 			<div class="sp-form-group">
 				<div class="sp-job-label-row">
 					<label>Photos <span class="unique sp-help-text">(up to 4 — drag to reorder; the first is the main photo; leave a caption blank and AI writes one)</span></label>
-					<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-jobf-ai-caps">AI Rewrite</button>
+					<button type="button" class="unique sp-btn" id="sp-jobf-ai-caps">AI Rewrite</button>
 				</div>
 				<div class="sp-job-photos" id="sp-jobf-photos"></div>
 				<input type="file" id="sp-jobf-file" accept="image/*" hidden>
 			</div>
-			<label class="sp-job-check"><input type="checkbox" id="sp-jobf-priority"${j.priority ? ' checked' : ''}> High-priority job (shown first on its pages)</label>
-			${isEdit && j.status !== 'publish' && (_spJobMeta.can_manage || !j.duplicate_of) ? '<label class="sp-job-check"><input type="checkbox" id="sp-jobf-publish"> Publish it to the website</label>' : ''}
+			<label class="sp-check-row"><input type="checkbox" id="sp-jobf-priority"${j.priority ? ' checked' : ''}> High-priority job (shown first on its pages)</label>
+			${isEdit && j.status !== 'publish' && (_spJobMeta.can_manage || !j.duplicate_of) ? '<label class="sp-check-row"><input type="checkbox" id="sp-jobf-publish"> Publish it to the website</label>' : ''}
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-jobf-save">${isEdit ? 'Save' : 'Add Jobsite'}</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-jobf-cancel">Cancel</button>
-				${isEdit ? `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete" id="sp-jobf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-jobf-save">${isEdit ? 'Save' : 'Add Jobsite'}</button>
+				<button type="button" class="unique sp-btn" id="sp-jobf-cancel">Cancel</button>
+				${isEdit ? `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete" id="sp-jobf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
 			</div>
 		</div>`;
 	document.body.appendChild(modal);
@@ -13567,7 +14447,7 @@ async function openJobForm(id) {
 	const drawPhotos = () => {
 		photosEl.innerHTML = slots.map((s, i) => s
 			? `<div class="sp-job-photo" data-i="${i}">
-				<div class="sp-job-photo-img" style="background-image:url('${esc(s.url)}')"><button type="button" class="unique sp-job-photo-x" data-i="${i}" aria-label="Remove photo">&times;</button></div>
+				<div class="sp-job-photo-img" style="background-image:url('${esc(s.url)}')"><button type="button" class="unique sp-thumb-x sp-job-photo-x" data-i="${i}" aria-label="Remove photo">&times;</button></div>
 				<input type="text" class="sp-input sp-job-cap" data-i="${i}" placeholder="Caption (optional)" value="${esc(s.caption || '')}">
 			</div>`
 			: `<button type="button" class="unique sp-job-photo sp-job-photo-add" data-i="${i}">${s === undefined ? 'Uploading…' : '+ Photo'}</button>`
@@ -13728,6 +14608,853 @@ async function openJobForm(id) {
 	markUniqueSpans(modal);
 }
 
+/*--------------------------------------------------------------
+# Events (the website's events CPT — list + add/edit modal)
+# Every save goes through sp_events_save() on the server: the same ACF fields wp-admin writes, plus the
+# recurrence → date blocks → start/end span derivations the editor's save runs.
+--------------------------------------------------------------*/
+
+/* ==========================================================================
+   Website Content — the site's pages, posts and opted-in content types
+   (includes-site-pulse-content.php). Layout pages edit only the text inside
+   each [txt] block; shortcodes in that text are locked <code> chips.
+   ========================================================================== */
+const _spWc = { wired: false, type: '', types: [], items: [], perms: {}, page: 1, more: false, seq: 0, searchT: null };
+
+function initContent() {
+	const panel = $('#sp-panel-content');
+	if (!panel || _spWc.wired) return;
+	$('#sp-wc-search')?.addEventListener('input', () => { clearTimeout(_spWc.searchT); _spWc.searchT = setTimeout(() => loadContent(), 300); });
+	$('#sp-wc-sort')?.addEventListener('change', () => loadContent());
+	$('#sp-wc-add-btn')?.addEventListener('click', () => openContentForm(0));
+	$('#sp-wc-types')?.addEventListener('click', (e) => {
+		const tab = e.target.closest('[data-sp-wc-type]');
+		if (!tab || tab.dataset.spWcType === _spWc.type) return;
+		_spWc.type = tab.dataset.spWcType;
+		loadContent();
+	});
+	$$('[data-sp-wc-view]', panel).forEach(tab => tab.addEventListener('click', () => {
+		$$('[data-sp-wc-view]', panel).forEach(t => t.classList.toggle('is-active', t === tab));
+		loadContent();
+	}));
+	$('#sp-wc-list')?.addEventListener('click', (e) => {
+		if (e.target.closest('a')) return;                       // the live page link
+		const row = e.target.closest('[data-sp-wc]');
+		if (!row) return;
+		const it = _spWc.items.find(x => String(x.id) === String(row.dataset.spWc));
+		if (!it) return;
+		if (e.target.closest('[data-sp-wc-trash]')) { contentTrash(it); return; }
+		if (it.can_edit) openContentForm(it.id);
+	});
+	$('#sp-wc-more')?.addEventListener('click', (e) => { if (e.target.closest('button')) loadContent(true); });
+	_spWc.wired = true;
+}
+
+function spWcView() {
+	return $('#sp-panel-content [data-sp-wc-view].is-active')?.dataset.spWcView || 'all';
+}
+
+async function loadContent(more) {
+	const list = $('#sp-wc-list');
+	if (!list) return;
+	const seq = ++_spWc.seq;
+	_spWc.page = more ? _spWc.page + 1 : 1;
+	if (!more) list.innerHTML = SP_LIST_SKELETON;
+	try {
+		const res = await spAjax('site_pulse_content_list', {
+			type:   _spWc.type,
+			view:   spWcView(),
+			sort:   $('#sp-wc-sort')?.value || 'recent',
+			search: $('#sp-wc-search')?.value.trim() || '',
+			page:   _spWc.page,
+		});
+		if (seq !== _spWc.seq) return;
+		if (!res.success) { list.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load the website content. Try again in a moment.') + '</div>'; return; }
+		const d = res.data;
+		_spWc.type = d.type;
+		_spWc.types = d.types || [];
+		_spWc.perms = d.perms || {};
+		_spWc.items = more ? _spWc.items.concat(d.items || []) : (d.items || []);
+		_spWc.more = !!d.has_more;
+		renderContentChrome(d);
+		renderContent();
+	} catch (e) {
+		if (seq === _spWc.seq) list.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load the website content. Try again in a moment.') + '</div>';
+	}
+}
+
+// Type tabs, the Add button and the count line — all depend on the type and what this person may do.
+function renderContentChrome(d) {
+	const tabs = $('#sp-wc-types');
+	if (tabs) {
+		tabs.innerHTML = _spWc.types.map(t => `<button type="button" class="unique sp-tab${t.type === _spWc.type ? ' is-active' : ''}" role="tab" data-sp-wc-type="${esc(t.type)}">${esc(t.label)}</button>`).join('');
+		tabs.hidden = _spWc.types.length < 2;
+	}
+	const cur = _spWc.types.find(t => t.type === _spWc.type) || {};
+	const add = $('#sp-wc-add-btn');
+	if (add) {
+		add.hidden = !cur.can_create;
+		const lbl = $('#sp-wc-add-label');
+		if (lbl) lbl.textContent = `Add ${cur.singular || ''}`.trim();
+	}
+	const cnt = $('#sp-wc-count');
+	if (cnt) {
+		const c = d.counts || {};
+		const noun = (cur.label || 'items').toLowerCase();
+		cnt.textContent = `${d.total} ${noun}` + (c.pending ? ` · ${c.pending} waiting for review` : '') + (c.draft ? ` · ${c.draft} draft${c.draft === 1 ? '' : 's'}` : '');
+	}
+	const search = $('#sp-wc-search');
+	if (search) search.placeholder = `Search ${(cur.label || '').toLowerCase()}`.trim();
+}
+
+function renderContent() {
+	const list = $('#sp-wc-list');
+	if (!list) return;
+	const cur = _spWc.types.find(t => t.type === _spWc.type) || {};
+	const noun = (cur.label || 'content').toLowerCase();
+	const view = spWcView();
+	const empty = {
+		all:     { title: `No ${noun} yet`, text: cur.can_create ? 'Add one and it can go straight onto the website.' : 'There is nothing here you can edit.' },
+		publish: { title: `No published ${noun}`, text: 'Anything live on the website shows here.' },
+		draft:   { title: 'No drafts', text: 'Drafts are saved but not on the website yet.' },
+		pending: { title: 'Nothing waiting for review', text: 'When someone sends something for review, it shows here.' },
+	}[view] || {};
+	list.innerHTML = _spWc.items.length
+		? `<div class="sp-card sp-card--flush"><div class="sp-list">${_spWc.items.map(contentRow).join('')}</div></div>`
+		: spEmptyHTML({ icon: 'doc', panel: $('#sp-panel-content'), title: empty.title, text: empty.text });
+	const more = $('#sp-wc-more');
+	if (more) more.innerHTML = _spWc.more ? '<button type="button" class="unique sp-btn">Load more</button>' : '';
+	markUniqueSpans(list);
+}
+
+function contentRow(it) {
+	const thumb = it.thumb
+		? `<span class="sp-row__thumb" style="background-image:url('${esc(it.thumb)}')" role="img" aria-label="Photo"></span>`
+		: `<span class="sp-row__thumb">${spIcon('doc')}</span>`;
+	const tone = { publish: 'success', draft: 'warning', pending: 'brand' }[it.status] || '';
+	const meta = [`Changed ${it.modified}`];
+	if (!it.mine && it.author) meta.push(`by ${it.author}`);
+	return `<div class="sp-row"${it.can_edit ? ' data-sp-open' : ''} data-sp-wc="${it.id}">`
+		+ `<span class="sp-row__lead">${thumb}</span>`
+		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(it.title)}</span>`
+		+   `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
+		+   `<span class="sp-toolbar"><span class="sp-chip${tone ? ' sp-chip--' + tone : ''}">${esc(it.status_label)}</span></span>`
+		+ '</span>'
+		+ '<span class="sp-row__trail">'
+		+   (it.link ? `<a class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm" href="${esc(it.link)}" target="_blank" rel="noopener" title="View the live page" aria-label="View the live page">${spIcon('external')}</a>` : '')
+		+   (it.can_edit ? spEditMark() : '')
+		+   (it.can_delete ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-sp-wc-trash title="Delete" aria-label="Delete">${spIcon('trash')}</button>` : '')
+		+ '</span></div>';
+}
+
+async function contentTrash(it) {
+	if (!await spConfirm(`Delete "${it.title}"?\n\nIt comes off the website. It can still be restored from the WordPress trash.`)) return;
+	try {
+		const r = await spAjax('site_pulse_content_trash', { id: it.id });
+		if (r.success) { spToast('Deleted.'); loadContent(); }
+		else spAlert(r.data?.message || 'Something went wrong — please try again.');
+	} catch (e) { spAlert('Something went wrong — check your connection and try again.'); }
+}
+
+async function contentUploadPhoto(file, type) {
+	const fd = new FormData();
+	fd.append('action', 'site_pulse_content_upload');
+	fd.append('nonce', spGetNonce());
+	fd.append('type', type);
+	fd.append('file', file);
+	try {
+		const res  = await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd });
+		const json = await res.json();
+		if (json.success) return json.data;
+		spAlert(json.data?.message || 'Upload failed.');
+	} catch (e) { spAlert('Upload failed — check your connection and try again.'); }
+	return null;
+}
+
+async function openContentForm(id) {
+	const r = await spAjax('site_pulse_content_get', id ? { id } : { type: _spWc.type });
+	if (!r.success) { spAlert(r.data?.message || 'Could not open that.'); return; }
+	const it = r.data.item;
+	const isEdit = !!id;
+	let photo = it.photo ? { ...it.photo } : null;              // { id, url } | null | undefined (uploading)
+	const single = it.singular || 'Item';
+
+	// Status choices: what this person may do from where the item is now.
+	const choices = it.can_publish
+		? [['publish', 'Published (live on the website)'], ['draft', 'Draft (not on the website)']].concat(it.status === 'pending' ? [['pending', 'Leave it waiting for review']] : [])
+		: [['draft', 'Draft (not on the website)'], ['pending', 'Submit for review (someone who can publish approves it)']];
+	const cur = choices.some(c => c[0] === it.status) ? it.status : (isEdit ? 'draft' : (it.can_publish ? 'publish' : 'draft'));
+
+	const areaOrder = ['top', 'content', 'bottom'].filter(k => it.areas[k]);
+	const areaNames = { top: 'Top of page', content: 'Page content', bottom: 'Bottom of page' };
+	const anyLayout = areaOrder.some(k => it.areas[k].layout);
+	const showAreaNames = areaOrder.length > 1;
+
+	let editorsHtml = '';
+	areaOrder.forEach(k => {
+		const a = it.areas[k];
+		if (showAreaNames) editorsHtml += `<h4 class="sp-wc-area">${areaNames[k]}</h4>`;
+		if (a.layout && !a.blocks.length) {
+			editorsHtml += '<p class="sp-help-text">There is no editable text here. Its layout is managed in WordPress.</p>';
+			return;
+		}
+		a.blocks.forEach((b, n) => {
+			const label = a.layout ? (b.label || `Text block ${n + 1}`) : '';
+			editorsHtml += '<div class="sp-form-group sp-wc-block">'
+				+ (label ? `<label>${esc(label)}</label>` : (showAreaNames ? '' : '<label>Content</label>'))
+				+ `<div class="sp-store-rte sp-input sp-wc-rte" contenteditable="true" role="textbox" aria-multiline="true" data-area="${k}" data-i="${b.i}"></div>`
+				+ '</div>';
+		});
+	});
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-wc-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal sp-wc-form">
+			<h3>${isEdit ? 'Edit ' + esc(single) : 'Add ' + esc(single)}</h3>
+			${!it.mine && it.author ? `<p class="sp-help-text">Written by ${esc(it.author)}.</p>` : ''}
+			<div class="sp-form-group"><label for="sp-wcf-title">Title</label><input type="text" id="sp-wcf-title" class="sp-input" value="${esc(it.title)}"></div>
+
+			<div class="sp-form-group"><label>Status</label><div class="sp-options">
+				${choices.map(c => `<label class="sp-check-row"><input type="radio" name="sp-wcf-status" value="${c[0]}"${c[0] === cur ? ' checked' : ''}> ${esc(c[1])}</label>`).join('')}
+			</div></div>
+
+			${it.has_photo ? `<div class="sp-form-group"><label>Featured photo</label><div class="sp-evt-photo" id="sp-wcf-photo"></div><input type="file" id="sp-wcf-file" accept="image/*" hidden></div>` : ''}
+
+			<div class="sp-store-section">
+				${anyLayout ? '<p class="sp-help-text">The page design stays exactly as it is. Only the text is editable. The grey tags are buttons, phone numbers and other pieces the site fills in: you can move or delete them, but not change them.</p>' : ''}
+				<div class="sp-toolbar sp-store-rte-bar sp-wc-rte-bar" role="toolbar" aria-label="Formatting">
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="bold" title="Bold"><strong>B</strong></button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="italic" title="Italic"><em>I</em></button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="h2" title="Heading">Heading</button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="h3" title="Subheading">Subheading</button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="insertUnorderedList" title="Bulleted list">&bull; List</button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="link" title="Link">Link</button>
+					<button type="button" class="unique sp-btn sp-btn--sm" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+				</div>
+				${editorsHtml}
+			</div>
+
+			${it.has_excerpt ? `<div class="sp-form-group"><label for="sp-wcf-excerpt">Short summary <span class="unique sp-help-text">(shown in post lists; blank uses the start of the post)</span></label><textarea id="sp-wcf-excerpt" class="sp-textarea" rows="3">${esc(it.excerpt)}</textarea></div>` : ''}
+
+			${it.categories.length ? `<div class="sp-form-group"><label>Categories</label><div class="sp-store-cats">${it.categories.map(c => `<label class="sp-check-row"><input type="checkbox" data-wc-cat value="${c.id}"${it.cats.includes(c.id) ? ' checked' : ''}> ${esc(c.name)}</label>`).join('')}</div></div>` : ''}
+
+			${it.has_seo ? `<details class="sp-store-section sp-store-more"><summary>Search engines</summary>
+				<div class="sp-form-group"><label for="sp-wcf-seo-title">Search result title <span class="unique sp-help-text">(blank uses the title)</span></label><input type="text" id="sp-wcf-seo-title" class="sp-input" value="${esc(it.seo_title)}" maxlength="120"></div>
+				<div class="sp-form-group"><label for="sp-wcf-seo-desc">Search result description</label><textarea id="sp-wcf-seo-desc" class="sp-textarea" rows="2" maxlength="320">${esc(it.seo_desc)}</textarea></div>
+			</details>` : ''}
+
+			<div class="sp-toolbar">
+				${it.link ? `<a href="${esc(it.link)}" target="_blank" rel="noopener">View on the website</a>` : ''}
+				${!it.link && it.preview ? `<a href="${esc(it.preview)}" target="_blank" rel="noopener">Preview the saved version</a>` : ''}
+				${it.wp_edit_url ? `<a href="${esc(it.wp_edit_url)}" target="_blank" rel="noopener">Open in WordPress</a>` : ''}
+			</div>
+
+			<div class="sp-modal-actions">
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-wcf-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-wcf-cancel">Cancel</button>
+				${it.can_delete ? `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete" id="sp-wcf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
+			</div>
+		</div>`;
+	document.body.appendChild(modal);
+	// Before the editors are filled: markUniqueSpans would otherwise rewrite the page's own spans,
+	// and that change would be saved into the content.
+	markUniqueSpans(modal);
+
+	const q = (sel) => modal.querySelector(sel);
+	const editors = $$('.sp-wc-rte', modal);
+	editors.forEach(el => {
+		const b = it.areas[el.dataset.area].blocks.find(x => String(x.i) === el.dataset.i);
+		el.innerHTML = b ? b.html : '';
+		el.dataset.orig = el.innerHTML;                          // as the browser normalised it: "changed" = differs from this
+	});
+
+	const dirty = () => editors.some(el => el.innerHTML !== el.dataset.orig);
+	const close = async (force) => {
+		if (!force && dirty() && !await spConfirm('Close without saving? Your text changes will be lost.')) return;
+		modal.remove();
+	};
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+	q('#sp-wcf-cancel').addEventListener('click', () => close());
+
+	// ── Formatting bar: acts on whichever text block was used last ──
+	let active = editors[0] || null;
+	editors.forEach(el => el.addEventListener('focus', () => { active = el; }));
+	const bar = q('.sp-wc-rte-bar');
+	if (!editors.length) bar.hidden = true;
+	bar.addEventListener('mousedown', (e) => { if (e.target.closest('[data-cmd]')) e.preventDefault(); });
+	bar.addEventListener('click', (e) => {
+		const b = e.target.closest('[data-cmd]');
+		if (!b || !active) return;
+		active.focus();
+		const cmd = b.dataset.cmd;
+		if (cmd === 'h2' || cmd === 'h3') {
+			const inIt = document.queryCommandValue('formatBlock').toLowerCase() === cmd;
+			document.execCommand('formatBlock', false, inIt ? 'p' : cmd);
+		} else if (cmd === 'link') {
+			const url = prompt('Link to (web address or /page/):', 'https://');
+			if (url && url !== 'https://') document.execCommand('createLink', false, url);
+		} else {
+			document.execCommand(cmd, false, null);
+		}
+	});
+	// Paste as plain text: formatting pasted from Word or a web page brings someone else's fonts.
+	editors.forEach(el => el.addEventListener('paste', (e) => {
+		e.preventDefault();
+		const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+		document.execCommand('insertText', false, text);
+	}));
+
+	// ── Featured photo ──
+	const photoEl = q('#sp-wcf-photo'), fileInput = q('#sp-wcf-file');
+	const drawPhoto = () => {
+		if (!photoEl) return;
+		photoEl.innerHTML = photo
+			? `<div class="sp-evt-photo-img" style="background-image:url('${esc(photo.url)}')"><button type="button" class="unique sp-thumb-x sp-job-photo-x" aria-label="Remove photo">&times;</button></div>`
+			: `<button type="button" class="unique sp-job-photo sp-job-photo-add">${photo === undefined ? 'Uploading…' : '+ Photo'}</button>`;
+	};
+	drawPhoto();
+	photoEl?.addEventListener('click', (e) => {
+		if (e.target.closest('.sp-job-photo-x')) { photo = null; drawPhoto(); return; }
+		if (e.target.closest('.sp-job-photo-add') && photo !== undefined) fileInput.click();
+	});
+	fileInput?.addEventListener('change', async () => {
+		const f = fileInput.files && fileInput.files[0];
+		fileInput.value = '';
+		if (!f) return;
+		photo = undefined; drawPhoto();
+		const up = await contentUploadPhoto(f, it.type);
+		photo = up ? { id: up.id, url: up.url } : null;
+		drawPhoto();
+	});
+
+	q('#sp-wcf-delete')?.addEventListener('click', async () => {
+		if (!await spConfirm(`Delete "${it.title}"?\n\nIt comes off the website. It can still be restored from the WordPress trash.`)) return;
+		const d = await spAjax('site_pulse_content_trash', { id: it.id });
+		if (!d.success) { spAlert(d.data?.message || 'Could not delete it.'); return; }
+		modal.remove();
+		spToast('Deleted.');
+		loadContent();
+	});
+
+	// ── Save: only the text blocks that changed are sent ──
+	q('#sp-wcf-save').addEventListener('click', async () => {
+		if (photo === undefined) { spAlert('Please wait for the photo to finish uploading.'); return; }
+		const title = q('#sp-wcf-title').value.trim();
+		if (!title) { spAlert('Give it a title.'); q('#sp-wcf-title').focus(); return; }
+
+		const blocks = {};
+		editors.forEach(el => {
+			if (isEdit && el.innerHTML === el.dataset.orig) return;
+			(blocks[el.dataset.area] = blocks[el.dataset.area] || {})[el.dataset.i] = el.innerHTML;
+		});
+		const data = {
+			id: it.id, type: it.type, title,
+			status: modal.querySelector('input[name="sp-wcf-status"]:checked')?.value || 'draft',
+			fingerprint: it.fingerprint,
+			blocks: JSON.stringify(blocks),
+		};
+		if (it.has_photo) data.photo_id = photo ? photo.id : 0;
+		if (it.has_excerpt) data.excerpt = q('#sp-wcf-excerpt').value;
+		if (it.categories.length) data.cats = JSON.stringify($$('[data-wc-cat]:checked', modal).map(c => parseInt(c.value, 10)));
+		if (it.has_seo) { data.seo_title = q('#sp-wcf-seo-title').value; data.seo_desc = q('#sp-wcf-seo-desc').value; }
+
+		const btn = q('#sp-wcf-save');
+		btn.disabled = true;
+		try {
+			const res = await spAjax('site_pulse_content_save', data);
+			if (!res.success) { spAlert(res.data?.message || 'Could not save.'); btn.disabled = false; return; }
+			modal.remove();
+			spToast(res.data.message || 'Saved.', 5000);
+			loadContent();
+		} catch (e) {
+			spAlert('Could not save — check your connection and try again.');
+			btn.disabled = false;
+		}
+	});
+
+	if (!isEdit) q('#sp-wcf-title').focus();
+}
+
+let _spEvtWired = false;
+let _spEvtData = [];
+let _spEvtMeta = { can_manage: false, categories: [] };
+let _spEvtSearchT = null;
+let _spEvtSeq = 0;
+
+const SP_EVT_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const SP_EVT_NTH = ['first', 'second', 'third', 'fourth', 'fifth', 'last'];
+const SP_EVT_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function initEvents() {
+	if (!$('#sp-panel-events') || _spEvtWired) return;
+	const panel = $('#sp-panel-events');
+	$('#sp-evt-search')?.addEventListener('input', () => { clearTimeout(_spEvtSearchT); _spEvtSearchT = setTimeout(() => loadEvents(), 300); });
+	$('#sp-evt-sort')?.addEventListener('change', () => loadEvents());
+	$('#sp-evt-add-btn')?.addEventListener('click', () => openEventForm(0));
+	$$('[data-sp-evt-view]', panel).forEach(tab => tab.addEventListener('click', () => {
+		$$('[data-sp-evt-view]', panel).forEach(t => t.classList.toggle('is-active', t === tab));
+		loadEvents();
+	}));
+	$('#sp-evt-list')?.addEventListener('click', (e) => {
+		if (e.target.closest('a')) return;                       // the live page link
+		const row = e.target.closest('[data-sp-evt]');
+		if (!row) return;
+		const ev = _spEvtData.find(x => String(x.id) === String(row.dataset.spEvt));
+		if (!ev) return;
+		if (e.target.closest('[data-sp-evt-trash]')) { eventTrash(ev); return; }
+		openEventForm(ev.id);
+	});
+	_spEvtWired = true;
+}
+
+function spEvtView() {
+	return $('#sp-panel-events [data-sp-evt-view].is-active')?.dataset.spEvtView || 'upcoming';
+}
+
+async function loadEvents() {
+	const list = $('#sp-evt-list');
+	if (!list) return;
+	const seq = ++_spEvtSeq;
+	list.innerHTML = SP_LIST_SKELETON;
+	try {
+		const res = await spAjax('site_pulse_events_list', {
+			search: $('#sp-evt-search')?.value.trim() || '',
+			view:   spEvtView(),
+			sort:   $('#sp-evt-sort')?.value || 'soon',
+		});
+		if (seq !== _spEvtSeq) return;                           // a newer load already started
+		if (!res.success) { list.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load events. Try again in a moment.') + '</div>'; return; }
+		const d = res.data;
+		_spEvtData = d.events || [];
+		_spEvtMeta = spEvtMetaFrom(d);
+		const cnt = $('#sp-evt-count');
+		if (cnt) cnt.textContent = `${d.total} ${d.total === 1 ? 'event' : 'events'}`;
+		renderEvents();
+	} catch (e) {
+		if (seq === _spEvtSeq) list.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load events. Try again in a moment.') + '</div>';
+	}
+}
+
+function spEvtMetaFrom(d) {
+	return { loaded: true, can_manage: !!d.can_manage, categories: d.categories || [], booking_on: !!d.booking_on, book_services: d.book_services || [], book_admin: !!d.book_admin };
+}
+
+// The editor's meta (permissions, categories, bookings) when it's opened from outside Events (Booking → Offerings).
+async function spEvtLoadMeta() {
+	try {
+		const r = await spAjax('site_pulse_events_list', { view: 'all', search: '', sort: 'soon' });
+		if (r.success) _spEvtMeta = spEvtMetaFrom(r.data);
+	} catch (e) {}
+}
+
+function renderEvents() {
+	const list = $('#sp-evt-list');
+	if (!list) return;
+	const view = spEvtView();
+	const empty = {
+		upcoming: { title: 'No upcoming events', text: _spEvtMeta.can_manage ? 'Add one and it shows on the website calendar.' : 'Nothing is scheduled yet.' },
+		past:     { title: 'No past events', text: 'Events land here once their last date has passed.' },
+		draft:    { title: 'No drafts', text: 'Events saved as drafts (and ones that have finished) show here.' },
+		all:      { title: 'No events yet', text: _spEvtMeta.can_manage ? 'Add one and it shows on the website calendar.' : 'Nothing is scheduled yet.' },
+	}[view] || {};
+	list.innerHTML = _spEvtData.length
+		? `<div class="sp-card sp-card--flush"><div class="sp-list">${_spEvtData.map(eventCard).join('')}</div></div>`
+		: spEmptyHTML({ icon: 'calendar', panel: $('#sp-panel-events'), title: empty.title, text: empty.text });
+	markUniqueSpans(list);
+}
+
+// One event as a row: its photo, title, next date (+ how many more), venue, and status chips.
+function eventCard(ev) {
+	const thumb = ev.thumb
+		? `<span class="sp-row__thumb" style="background-image:url('${esc(ev.thumb)}')" role="img" aria-label="Event photo"></span>`
+		: `<span class="sp-row__thumb">${spIcon('calendar')}</span>`;
+	const when = ev.no_dates ? 'No dates set' : ev.when + (ev.more ? ` · +${ev.more} more date${ev.more === 1 ? '' : 's'}` : '');
+	const where = [ev.venue, ev.location].filter(Boolean).join(', ');
+	const chips = [];
+	if (ev.status !== 'publish') chips.push(`<span class="sp-chip sp-chip--warning">${ev.expired ? 'Finished' : 'Draft'}</span>`);
+	if (ev.recurring) chips.push('<span class="sp-chip">Repeats</span>');
+	if (ev.featured) chips.push('<span class="sp-chip sp-chip--brand">Featured</span>');
+	if (ev.booking) chips.push(`<span class="sp-chip ${ev.booking.active ? 'sp-chip--success' : 'sp-chip--warning'}">${!ev.booking.active ? 'Booking inactive' : !ev.booking.dates ? 'Booking: no dates yet' : ev.booking.series ? `${ev.booking.taken} of ${ev.booking.capacity} enrolled${ev.booking.started ? ' · in progress' : ''}` : `${ev.booking.taken} of ${ev.booking.capacity} seats booked`}</span>`);
+	const manage = _spEvtMeta.can_manage;
+	return `<div class="sp-row" data-sp-open data-sp-evt="${ev.id}">`
+		+ `<span class="sp-row__lead">${thumb}</span>`
+		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(ev.title)}</span>`
+		+   `<span class="sp-meta"><span>${esc(when)}</span></span>`
+		+   (where ? `<span class="sp-meta"><span>${esc(where)}</span></span>` : '')
+		+   '<span class="sp-row__foot">'
+		+     (chips.length ? `<span class="sp-toolbar">${chips.join('')}</span>` : '')
+		+     '<span class="sp-row__trail">'
+		+       (ev.link ? `<a class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm" href="${esc(ev.link)}" target="_blank" rel="noopener" title="View the live page" aria-label="View the live page">${spIcon('external')}</a>` : '')
+		+       spEditMark()
+		+       (manage ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-sp-evt-trash title="Delete" aria-label="Delete">${spIcon('trash')}</button>` : '')
+		+     '</span>'
+		+   '</span>'
+		+ '</span></div>';
+}
+
+async function eventTrash(ev) {
+	if (!await spConfirm(`Delete "${ev.title}"?\n\nIt comes off the website calendar. It can still be restored from the WordPress trash.`)) return;
+	try {
+		const r = await spAjax('site_pulse_events_trash', { id: ev.id });
+		if (r.success) { spToast('Event deleted.'); loadEvents(); }
+		else spAlert(r.data?.message || 'Something went wrong — please try again.');
+	} catch (e) { spAlert('Something went wrong — check your connection and try again.'); }
+}
+
+async function eventUploadPhoto(file, postId) {
+	const fd = new FormData();
+	fd.append('action', 'site_pulse_events_upload');
+	fd.append('nonce', spGetNonce());
+	fd.append('post_id', postId || 0);
+	fd.append('file', file);
+	try {
+		const res  = await fetch(D.ajaxUrl || '/wp-admin/admin-ajax.php', { method: 'POST', credentials: 'same-origin', body: fd });
+		const json = await res.json();
+		if (json.success) return json.data;
+		spAlert(json.data?.message || 'Upload failed.');
+	} catch (e) { spAlert('Upload failed — check your connection and try again.'); }
+	return null;
+}
+
+function spEvtCap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// The editor's Booking section (only where the Booking module is on): ONE dropdown linking the event
+// to a class / session offering from Booking → Offerings. The offering owns the dates, seats and price;
+// the event's dates come from it. An offering linked to another event is listed but can't be picked.
+function spEvtBookingHTML(cur, evId) {
+	const svcs = _spEvtMeta.book_services || [];
+	const opts = svcs.map(s => {
+		const elsewhere = s.event_id && s.event_id !== evId;
+		const label = [s.name, s.price, s.series ? 'all dates together' : '', s.status !== 'active' ? 'turned off' : (!s.upcoming ? 'no upcoming dates' : '')].filter(Boolean).join(' · ')
+			+ (elsewhere ? ` — linked to “${s.event_title}”` : '');
+		return `<option value="${s.id}"${s.id === cur ? ' selected' : ''}${elsewhere ? ' disabled' : ''}>${esc(label)}</option>`;
+	}).join('');
+	return `<div class="sp-card sp-card--inset sp-evt-book">
+		<div class="sp-form-group">
+			<label for="sp-evtf-booksvc">Booking</label>
+			<select id="sp-evtf-booksvc" class="sp-select"><option value="0">None — nothing to sign up for</option>${opts}</select>
+			<p class="sp-help-text">Let people sign up through an offering from Booking → Offerings (a free RSVP is an offering with no price). The offering sets the dates, seats and price, and this event's dates come from it.${svcs.length ? '' : ' There are no class offerings yet — add one in Booking → Offerings first.'}</p>
+		</div>
+		<div data-sp-evt-bookinfo></div>
+	</div>`;
+}
+
+// Add / edit one event. Read-only for view_events without manage_events (fields disabled, no Save).
+// copied = just made by Duplicate (shows a hint about the new run's dates).
+async function openEventForm(id, copied = false, ctx = {}) {
+	let ev = {};
+	if (id) {
+		const r = await spAjax('site_pulse_events_get', { id });
+		if (!r.success) { spAlert(r.data?.message || 'Could not load that event.'); return; }
+		ev = r.data.event;
+	}
+	const isEdit = !!id;
+	const canEdit = _spEvtMeta.can_manage;
+	const today = new Date().toISOString().slice(0, 10);
+	let blocks = (ev.blocks && ev.blocks.length) ? ev.blocks.map(b => ({ ...b })) : [{ s_date: '', e_date: '', s_time: '', e_time: '' }];
+	const rule = Object.assign({ freq: 'weekly', interval: 1, weekdays: [], monthmode: 'weekday', nth: 'first', weekday: 'saturday', monthday: 1, month: 1, start: today, until: '', s_time: '', e_time: '' }, ev.recurrence || {});
+	let photo = ev.photo ? { ...ev.photo } : null;                // { id, url } | null | undefined (uploading)
+	const cats = _spEvtMeta.categories || [];
+	const evCats = (ev.categories || []).map(String);
+	const dateType = ['recurring', 'period'].includes(ev.date_type) ? ev.date_type : 'specific';
+
+	const opt = (val, label, cur) => `<option value="${esc(String(val))}"${String(val) === String(cur) ? ' selected' : ''}>${esc(label)}</option>`;
+
+	const modal = document.createElement('div');
+	modal.id = 'sp-evt-modal';
+	modal.className = 'sp-modal-backdrop';
+	modal.innerHTML = `
+		<div class="sp-modal sp-evt-form">
+			<h3>${isEdit ? (canEdit ? 'Edit Event' : 'Event') : 'Add Event'}</h3>
+			${copied ? `<p class="sp-help-text">A copy of the event, saved as a draft so it isn't on the calendar yet. ${ev.book_service ? 'Its booking was copied too (same price and seats, no dates) — give it this run\'s dates under Booking below, then untick draft and save.' : 'Change the dates for this run, then untick draft and save.'}</p>` : ''}
+			${isEdit && ev.status !== 'publish' ? `<p class="sp-help-text">${ev.expired ? 'This event has finished, so it came off the website. Give it a new date and publish it to bring it back.' : 'This event is a draft (not on the website).'}</p>` : ''}
+			<div class="sp-form-group"><label for="sp-evtf-title">Event name</label><input type="text" id="sp-evtf-title" class="sp-input" value="${esc(ev.title || '')}"></div>
+
+			<p class="sp-help-text" data-sp-evt-booked-dates hidden>The dates come from the booking linked below.</p>
+			<div class="sp-form-group" data-sp-evt-when>
+				<label>When</label>
+				<div class="sp-options">
+					<label class="sp-check-row"><input type="radio" name="sp-evtf-type" value="specific"${dateType === 'specific' ? ' checked' : ''}> Specific dates</label>
+					<label class="sp-check-row"><input type="radio" name="sp-evtf-type" value="recurring"${dateType === 'recurring' ? ' checked' : ''}> Repeats</label>
+					<label class="sp-check-row"><input type="radio" name="sp-evtf-type" value="period"${dateType === 'period' ? ' checked' : ''}> Ending on</label>
+				</div>
+			</div>
+
+			<div class="sp-stack sp-stack--sm sp-evt-dates" data-sp-evt-pane="specific"${dateType !== 'recurring' ? '' : ' hidden'}>
+				<p class="sp-help-text" data-sp-evt-period hidden>For something open over a stretch of days, like a sign-up period. The calendar shows it only on the first day (Begins) and the last day (Ends).</p>
+				<p class="sp-help-text">One block per date range — leave Ends blank for a single day. Add more blocks for dates that aren't back to back (e.g. June 10–12 and June 15–18).</p>
+				<div id="sp-evtf-blocks"></div>
+				<button type="button" class="unique sp-btn" id="sp-evtf-add-block">+ Add dates</button>
+			</div>
+
+			<div class="sp-stack sp-stack--sm sp-evt-dates" data-sp-evt-pane="recurring"${dateType === 'recurring' ? '' : ' hidden'}>
+				<div class="sp-form-row">
+					<div class="sp-form-group"><label for="sp-evtf-freq">Repeats</label><select id="sp-evtf-freq" class="sp-select">${opt('weekly', 'Weekly', rule.freq)}${opt('monthly', 'Monthly', rule.freq)}${opt('yearly', 'Yearly', rule.freq)}</select></div>
+					<div class="sp-form-group"><label for="sp-evtf-interval">How often</label><select id="sp-evtf-interval" class="sp-select">${opt(1, 'Every time', rule.interval)}${opt(2, 'Every other', rule.interval)}</select></div>
+				</div>
+				<div class="sp-form-group" data-sp-evt-freq="weekly">
+					<label>On</label>
+					<div class="sp-toolbar sp-evt-weekdays">${SP_EVT_DAYS.map(d => `<label class="sp-check-row"><input type="checkbox" value="${d}"${(rule.weekdays || []).includes(d) ? ' checked' : ''}> ${spEvtCap(d).slice(0, 3)}</label>`).join('')}</div>
+				</div>
+				<div data-sp-evt-freq="monthly yearly">
+					<div class="sp-form-row">
+						<div class="sp-form-group" data-sp-evt-freq="yearly"><label for="sp-evtf-month">Month</label><select id="sp-evtf-month" class="sp-select">${SP_EVT_MONTHS.map((m, i) => opt(i + 1, m, rule.month)).join('')}</select></div>
+						<div class="sp-form-group"><label for="sp-evtf-monthmode">On the</label><select id="sp-evtf-monthmode" class="sp-select">${opt('weekday', 'Day of the week (e.g. 3rd Saturday)', rule.monthmode)}${opt('monthday', 'Date (e.g. the 15th)', rule.monthmode)}</select></div>
+					</div>
+					<div class="sp-form-row" data-sp-evt-mode="weekday">
+						<div class="sp-form-group"><label for="sp-evtf-nth">Which</label><select id="sp-evtf-nth" class="sp-select">${SP_EVT_NTH.map(n => opt(n, spEvtCap(n), rule.nth)).join('')}</select></div>
+						<div class="sp-form-group"><label for="sp-evtf-weekday">Day</label><select id="sp-evtf-weekday" class="sp-select">${SP_EVT_DAYS.map(d => opt(d, spEvtCap(d), rule.weekday)).join('')}</select></div>
+					</div>
+					<div class="sp-form-row" data-sp-evt-mode="monthday">
+						<div class="sp-form-group"><label for="sp-evtf-monthday">Date</label><input type="number" id="sp-evtf-monthday" class="sp-input" min="1" max="31" value="${esc(String(rule.monthday || 1))}"></div>
+					</div>
+				</div>
+				<div class="sp-form-row">
+					<div class="sp-form-group"><label for="sp-evtf-start">Starting</label><input type="date" id="sp-evtf-start" class="sp-input" value="${esc(rule.start || today)}"></div>
+					<div class="sp-form-group"><label for="sp-evtf-until">Until <span class="unique sp-help-text">(blank = ongoing)</span></label><input type="date" id="sp-evtf-until" class="sp-input" value="${esc(rule.until || '')}"></div>
+				</div>
+				<div class="sp-form-row">
+					<div class="sp-form-group"><label for="sp-evtf-rs">Start time</label><input type="time" id="sp-evtf-rs" class="sp-input" value="${esc(rule.s_time || '')}"></div>
+					<div class="sp-form-group"><label for="sp-evtf-re">End time</label><input type="time" id="sp-evtf-re" class="sp-input" value="${esc(rule.e_time || '')}"></div>
+				</div>
+			</div>
+
+			<div class="sp-form-row">
+				<div class="sp-form-group"><label for="sp-evtf-venue">Venue</label><input type="text" id="sp-evtf-venue" class="sp-input" value="${esc(ev.venue || '')}"></div>
+				<div class="sp-form-group"><label for="sp-evtf-location">Location</label><input type="text" id="sp-evtf-location" class="sp-input" value="${esc(ev.location || '')}" placeholder="City, address…"></div>
+			</div>
+			<div class="sp-form-group"><label for="sp-evtf-link">Venue website <span class="unique sp-help-text">(optional)</span></label><input type="url" id="sp-evtf-link" class="sp-input" value="${esc(ev.venue_link || '')}" placeholder="https://"></div>
+
+			<div class="sp-form-group"><label for="sp-evtf-excerpt">Short summary <span class="unique sp-help-text">(shown on event teasers)</span></label><textarea id="sp-evtf-excerpt" class="sp-textarea" rows="2">${esc(ev.excerpt || '')}</textarea></div>
+			<div class="sp-form-group"><label for="sp-evtf-content">Description</label><textarea id="sp-evtf-content" class="sp-textarea" rows="7">${esc(ev.content || '')}</textarea></div>
+
+			<div class="sp-form-group">
+				<label>Photo <span class="unique sp-help-text">(shown on the calendar and the event page)</span></label>
+				<div class="sp-evt-photo" id="sp-evtf-photo"></div>
+				<input type="file" id="sp-evtf-file" accept="image/*" hidden>
+			</div>
+
+			${cats.length ? `<div class="sp-form-group"><label>Categories</label><div class="sp-toolbar sp-evt-cats">${cats.map(c => `<label class="sp-check-row"><input type="checkbox" value="${c.id}"${evCats.includes(String(c.id)) ? ' checked' : ''}> ${esc(c.name)}</label>`).join('')}</div></div>` : ''}
+
+			${_spEvtMeta.booking_on ? spEvtBookingHTML(ev.book_service || 0, id || 0) : ''}
+
+			<label class="sp-check-row"><input type="checkbox" id="sp-evtf-featured"${ev.featured ? ' checked' : ''}> Featured (shown in the event teasers on the website)</label>
+			<label class="sp-check-row"><input type="checkbox" id="sp-evtf-draft"${isEdit && ev.status !== 'publish' ? ' checked' : ''}> Keep it as a draft (not on the website yet)</label>
+
+			${isEdit && ev.wp_edit_url ? `<p class="sp-help-text"><a href="${esc(ev.wp_edit_url)}" target="_blank" rel="noopener">Open in WordPress</a> for anything not on this form.</p>` : ''}
+
+			<div class="sp-modal-actions">
+				${canEdit ? `<button type="button" class="unique sp-btn sp-btn--primary" id="sp-evtf-save">${isEdit ? 'Save' : 'Add Event'}</button>` : ''}
+				<button type="button" class="unique sp-btn" id="sp-evtf-cancel">${canEdit ? 'Cancel' : 'Close'}</button>
+				${isEdit && canEdit ? '<button type="button" class="unique sp-btn" id="sp-evtf-dup" title="Start a new event from this one">Duplicate</button>' : ''}
+				${isEdit && canEdit ? `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete" id="sp-evtf-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>` : ''}
+			</div>
+		</div>`;
+	document.body.appendChild(modal);
+
+	const q = (sel) => modal.querySelector(sel);
+	const close = () => modal.remove();
+	modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+	q('#sp-evtf-cancel').addEventListener('click', close);
+
+	// ── Specific dates: one row per block ──
+	const blocksEl = q('#sp-evtf-blocks');
+	const drawBlocks = () => {
+		blocksEl.innerHTML = blocks.map((b, i) => `
+			<div class="sp-card sp-card--inset sp-evt-block" data-i="${i}">
+				<div class="sp-form-group"><label>Starts</label><input type="date" class="sp-input" data-k="s_date" value="${esc(b.s_date || '')}"></div>
+				<div class="sp-form-group"><label>Ends</label><input type="date" class="sp-input" data-k="e_date" value="${esc(b.e_date && b.e_date !== b.s_date ? b.e_date : '')}"></div>
+				<div class="sp-form-group"><label>From</label><input type="time" class="sp-input" data-k="s_time" value="${esc(b.s_time || '')}"></div>
+				<div class="sp-form-group"><label>To</label><input type="time" class="sp-input" data-k="e_time" value="${esc(b.e_time || '')}"></div>
+				${blocks.length > 1 ? `<button type="button" class="unique sp-btn sp-btn--ghost sp-evt-block-del" data-sp-evt-del="${i}">${spIcon('trash')} Remove these dates</button>` : ''}
+			</div>`).join('');
+		markUniqueSpans(blocksEl);
+	};
+	drawBlocks();
+	blocksEl.addEventListener('input', (e) => {
+		const inp = e.target.closest('[data-k]'); if (!inp) return;
+		blocks[+inp.closest('.sp-evt-block').dataset.i][inp.dataset.k] = inp.value;
+	});
+	blocksEl.addEventListener('click', (e) => {
+		const del = e.target.closest('[data-sp-evt-del]'); if (!del) return;
+		blocks.splice(+del.dataset.spEvtDel, 1); drawBlocks();
+	});
+	q('#sp-evtf-add-block').addEventListener('click', () => {
+		const last = blocks[blocks.length - 1] || {};
+		blocks.push({ s_date: '', e_date: '', s_time: last.s_time || '', e_time: last.e_time || '' });
+		drawBlocks();
+	});
+
+	// ── Booking link: picking a booking hides the event's own dates (they come from the booking) ──
+	const bookSel = q('#sp-evtf-booksvc');
+	const bookLinked = () => +(bookSel?.value || 0) > 0;
+	let bookDates = ev.book_dates || [];
+	const drawBookInfo = () => {
+		const box = q('[data-sp-evt-bookinfo]');
+		if (!box) return;
+		const sid = +(bookSel.value || 0);
+		if (!sid) { box.innerHTML = ''; return; }
+		const svc = (_spEvtMeta.book_services || []).find(s => s.id === sid) || {};
+		const saved = sid === (ev.book_service || 0);
+		let html = '';
+		if (saved) {
+			html += bookDates.length
+				? `<div class="sp-evt-book-dates"><div class="sp-help-text">Upcoming dates</div>${bookDates.map(s => `<div class="sp-evt-book-date"><div>${esc(s.label)} · ${esc(s.time)}</div><div>${s.seats_taken} of ${s.capacity} booked</div></div>`).join('')}</div>`
+				: '<p class="sp-help-text">This booking has no upcoming dates yet.</p>';
+		} else {
+			html += '<p class="sp-help-text">Its dates show here, and on the calendar, once you save.</p>';
+		}
+		if (_spEvtMeta.book_admin && typeof spBookScheduleForm === 'function') {
+			html += `<div class="sp-toolbar"><button type="button" class="unique sp-btn sp-btn--sm" data-sp-evt-bookdates>${spIcon('calendar')} ${saved && bookDates.length ? 'Edit dates' : 'Add dates'}</button></div>`;
+		}
+		box.innerHTML = html;
+		const btn = box.querySelector('[data-sp-evt-bookdates]');
+		if (btn) btn.addEventListener('click', () => spBookScheduleForm(sid, {
+			name: svc.name,
+			onDone: async () => {
+				if (!saved || !id) return;
+				const r = await spAjax('site_pulse_events_get', { id });
+				if (r.success) { bookDates = r.data.event.book_dates || []; drawBookInfo(); }
+			},
+		}));
+	};
+	if (bookSel) {
+		bookSel.addEventListener('change', () => { drawBookInfo(); syncPanes(); });
+		drawBookInfo();
+	}
+	q('#sp-evtf-dup')?.addEventListener('click', async () => {
+		const b = q('#sp-evtf-dup');
+		b.disabled = true;
+		try {
+			const r = await spAjax('site_pulse_events_duplicate', { id });
+			if (r.success) { close(); await loadEvents(); openEventForm(r.data.id, true); return; }   // the list reload also refreshes the booking dropdown (the copied booking is new)
+			spAlert(r.data?.message || 'Could not duplicate that event.');
+		} catch (e) { spAlert('Could not duplicate — check your connection and try again.'); }
+		b.disabled = false;
+	});
+
+	// ── Specific / Repeats, and which recurrence fields apply ──
+	const syncPanes = () => {
+		// Linked to a booking: the booking owns the dates, so the event's own date fields step aside.
+		const linked = bookLinked();
+		q('[data-sp-evt-when]').hidden = linked;
+		q('[data-sp-evt-booked-dates]').hidden = !linked;
+		if (linked) { modal.querySelectorAll('[data-sp-evt-pane]').forEach(p => { p.hidden = true; }); return; }
+		const type = modal.querySelector('input[name="sp-evtf-type"]:checked')?.value || 'specific';
+		// "Ending on" uses the same date blocks as Specific dates — only the calendar treats it differently.
+		const pane = type === 'period' ? 'specific' : type;
+		modal.querySelectorAll('[data-sp-evt-pane]').forEach(p => { p.hidden = p.dataset.spEvtPane !== pane; });
+		modal.querySelectorAll('[data-sp-evt-period]').forEach(p => { p.hidden = type !== 'period'; });
+		const freq = q('#sp-evtf-freq').value, mode = q('#sp-evtf-monthmode').value;
+		modal.querySelectorAll('[data-sp-evt-freq]').forEach(el => { el.hidden = !el.dataset.spEvtFreq.split(' ').includes(freq); });
+		modal.querySelectorAll('[data-sp-evt-mode]').forEach(el => { el.hidden = el.dataset.spEvtMode !== mode; });
+	};
+	modal.querySelectorAll('input[name="sp-evtf-type"]').forEach(r => r.addEventListener('change', syncPanes));
+	q('#sp-evtf-freq').addEventListener('change', syncPanes);
+	q('#sp-evtf-monthmode').addEventListener('change', syncPanes);
+	syncPanes();
+
+	// ── Photo (one: the featured image) ──
+	const photoEl = q('#sp-evtf-photo'), fileInput = q('#sp-evtf-file');
+	const drawPhoto = () => {
+		photoEl.innerHTML = photo
+			? `<div class="sp-evt-photo-img" style="background-image:url('${esc(photo.url)}')">${canEdit ? '<button type="button" class="unique sp-thumb-x sp-job-photo-x" aria-label="Remove photo">&times;</button>' : ''}</div>`
+			: (canEdit ? `<button type="button" class="unique sp-job-photo sp-job-photo-add">${photo === undefined ? 'Uploading…' : '+ Photo'}</button>` : '<span class="sp-help-text">No photo</span>');
+		markUniqueSpans(photoEl);
+	};
+	drawPhoto();
+	photoEl.addEventListener('click', (e) => {
+		if (e.target.closest('.sp-job-photo-x')) { photo = null; drawPhoto(); return; }
+		if (e.target.closest('.sp-job-photo-add') && photo !== undefined) fileInput.click();
+	});
+	fileInput.addEventListener('change', async () => {
+		const f = fileInput.files && fileInput.files[0];
+		fileInput.value = '';
+		if (!f) return;
+		photo = undefined; drawPhoto();
+		const up = await eventUploadPhoto(f, id);
+		photo = up ? { id: up.id, url: up.url } : null;
+		drawPhoto();
+	});
+
+	if (!canEdit) {
+		modal.querySelectorAll('input, select, textarea').forEach(el => { el.disabled = true; });
+		q('#sp-evtf-add-block').hidden = true;
+		markUniqueSpans(modal);
+		return;
+	}
+
+	// ── Save ──
+	q('#sp-evtf-save').addEventListener('click', async () => {
+		if (photo === undefined) { spAlert('Please wait for the photo to finish uploading.'); return; }
+		const val = (sel) => q(sel).value.trim();
+		const type = modal.querySelector('input[name="sp-evtf-type"]:checked')?.value || 'specific';
+		const title = val('#sp-evtf-title');
+		if (!title) { spAlert('Give the event a name.'); return; }
+
+		const cleanBlocks = blocks.filter(b => b.s_date).map(b => ({ s_date: b.s_date, e_date: b.e_date || b.s_date, s_time: b.s_time || '', e_time: b.e_time || '' }));
+		const recurrence = {
+			freq: q('#sp-evtf-freq').value,
+			interval: +q('#sp-evtf-interval').value,
+			weekdays: [...modal.querySelectorAll('.sp-evt-weekdays input:checked')].map(c => c.value),
+			monthmode: q('#sp-evtf-monthmode').value,
+			nth: q('#sp-evtf-nth').value,
+			weekday: q('#sp-evtf-weekday').value,
+			monthday: +q('#sp-evtf-monthday').value || 1,
+			month: +q('#sp-evtf-month').value || 1,
+			start: q('#sp-evtf-start').value,
+			until: q('#sp-evtf-until').value,
+			s_time: q('#sp-evtf-rs').value,
+			e_time: q('#sp-evtf-re').value,
+		};
+		if (!bookLinked()) {   // a linked event's dates come from its booking
+			if (type !== 'recurring' && !cleanBlocks.length) { spAlert('Add at least one date.'); return; }
+			if (type !== 'recurring' && cleanBlocks.some(b => b.e_date < b.s_date)) { spAlert('An end date is before its start date.'); return; }
+			if (type === 'recurring' && !recurrence.start) { spAlert('Pick the date it starts repeating.'); return; }
+			if (type === 'recurring' && recurrence.freq === 'weekly' && !recurrence.weekdays.length) { spAlert('Pick at least one day of the week.'); return; }
+		}
+
+		const data = {
+			id: id || 0,
+			title,
+			date_type: type,
+			blocks: JSON.stringify(cleanBlocks),
+			recurrence: JSON.stringify(recurrence),
+			venue: val('#sp-evtf-venue'),
+			location: val('#sp-evtf-location'),
+			venue_link: val('#sp-evtf-link'),
+			excerpt: val('#sp-evtf-excerpt'),
+			content: q('#sp-evtf-content').value,
+			featured: q('#sp-evtf-featured').checked ? 1 : 0,
+			status: q('#sp-evtf-draft').checked ? 'draft' : 'publish',
+			photo_id: photo ? photo.id : 0,
+		};
+		if (cats.length) data.categories = JSON.stringify([...modal.querySelectorAll('.sp-evt-cats input:checked')].map(c => +c.value));
+		if (bookSel) data.book_service = +(bookSel.value || 0);
+
+		const sbtn = q('#sp-evtf-save');
+		sbtn.disabled = true; sbtn.textContent = 'Saving…';
+		try {
+			const r = await spAjax('site_pulse_events_save', data);
+			if (r.success) { close(); spToast(r.data.message || 'Saved.', 5000); loadEvents(); if (ctx.onSaved) ctx.onSaved(); return; }
+			spAlert(r.data?.message || 'Error saving.');
+		} catch (e) { spAlert('Error saving — check your connection and try again.'); }
+		sbtn.disabled = false; sbtn.textContent = isEdit ? 'Save' : 'Add Event';
+	});
+
+	q('#sp-evtf-delete')?.addEventListener('click', async () => {
+		if (!await spConfirm(`Delete "${ev.title}"? It comes off the website calendar (it can still be restored from the WordPress trash).`)) return;
+		const r = await spAjax('site_pulse_events_trash', { id });
+		if (r.success) { close(); spToast('Event deleted.'); loadEvents(); }
+		else spAlert(r.data?.message || 'Error deleting.');
+	});
+
+	markUniqueSpans(modal);
+}
+
 
 /*--------------------------------------------------------------
 # Customer Emails (Customer Feedback → Emails)
@@ -13846,15 +15573,15 @@ function spEmailCardHTML(m, o) {
 	].filter(Boolean).join('');
 	const actions = o.canAct
 		? `<button type="button" class="unique sp-btn sp-btn--sm${handled ? '' : ' sp-btn--primary'} ${o.toggleCls}" data-id="${m.id}" data-status="${handled ? 'new' : 'handled'}">${handled ? 'Mark new' : 'Mark handled'}</button>`
-			+ `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete ${o.deleteCls}" data-id="${m.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`
+			+ `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete ${o.deleteCls}" data-id="${m.id}" title="Delete" aria-label="Delete">${ICON_DELETE}</button>`
 		: '';
-	return `<article class="unique sp-card sp-email-card${handled ? ' is-handled' : ''}">`
-		+ `<div class="unique sp-review-head">${spMsgAvatar(o.who, '')}`
-		+   `<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(o.title)}</span>${meta ? `<span class="unique sp-meta">${meta}</span>` : ''}</div></div>`
-		+ ((o.chips || handled) ? `<div class="unique sp-review-tags">${o.chips || ''}${handled ? '<span class="unique sp-chip sp-chip--success">Handled</span>' : ''}</div>` : '')
-		+ (m.message ? `<p class="unique sp-review-body">${esc(m.message)}</p>` : '')
+	return `<article class="unique sp-card sp-card-email${handled ? ' is-handled' : ''}">`
+		+ `<div class="unique sp-card__head">${spMsgAvatar(o.who, '')}`
+		+   `<div class="unique sp-row__main"><span class="unique sp-row__title sp-row__title-review">${esc(o.title)}</span>${meta ? `<span class="unique sp-meta">${meta}</span>` : ''}</div></div>`
+		+ ((o.chips || handled) ? `<div class="unique sp-toolbar">${o.chips || ''}${handled ? '<span class="unique sp-chip sp-chip--success">Handled</span>' : ''}</div>` : '')
+		+ (m.message ? `<p class="unique sp-prose">${esc(m.message)}</p>` : '')
 		+ (contact ? `<p class="unique sp-meta sp-contact">${contact}</p>` : '')
-		+ (actions ? `<div class="unique sp-review-actions">${actions}</div>` : '')
+		+ (actions ? `<div class="unique sp-toolbar">${actions}</div>` : '')
 		+ '</article>';
 }
 
@@ -13887,14 +15614,21 @@ async function onEmailsListClick(e) {
 let _spRemails = [];
 let _spRemailsSearchT = null;
 let _spRemailsWired = false;
+let _spRemailsToSet = false;   // the To filter's starting value has come back from the server
+let _spRemailsSeq = 0;
 
 function initRoutedEmails() {
 	if (_spRemailsWired) return;
 	_spRemailsWired = true;
 	$('#sp-remails-search')?.addEventListener('input', () => { clearTimeout(_spRemailsSearchT); _spRemailsSearchT = setTimeout(loadRoutedEmails, 300); });
 	$('#sp-remails-filter-status')?.addEventListener('change', loadRoutedEmails);
+	$('#sp-remails-filter-to')?.addEventListener('change', loadRoutedEmails);
 	const panel = $('#sp-panel-emails-routed');
 	if (panel) spWireEmailTabs(panel, '#sp-remails-filter-status');
+	$('[data-sp-remails-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-remails-filter-holder]'), {
+		clear: () => { const el = $('#sp-remails-filter-to'); if (el) el.value = ''; loadRoutedEmails(); },
+		onClose: spEmailsFilterLabel,
+	}));
 	$('#sp-remails-list')?.addEventListener('click', onRoutedEmailsListClick);
 }
 
@@ -13907,14 +15641,34 @@ async function loadRoutedEmails() {
 		status: $('#sp-remails-filter-status')?.value || 'new',
 		search: $('#sp-remails-search')?.value.trim() || '',
 	};
+	if (_spRemailsToSet) params.to = $('#sp-remails-filter-to')?.value || '';
+	else params.to_default = 1;
+	const seq = ++_spRemailsSeq;
 	try {
 		const res = await spAjax('site_pulse_emails_list', params);
+		if (seq !== _spRemailsSeq) return;   // a newer load is on its way; don't undo a newer pick
 		if (!res.success) { spEmailsError(list, res.data?.message); return; }
 		_spRemails = res.data.emails || [];
+		_spRemailsToSet = true;
+		spRemailsSyncToFilter(res.data);
 		const cnt = $('#sp-remails-count');
 		if (cnt) cnt.textContent = `${spComma(res.data.new_count || 0)} new · ${spComma(res.data.handled_count || 0)} handled`;
 		renderRoutedEmails();
-	} catch (e) { spEmailsError(list); }
+	} catch (e) { if (seq === _spRemailsSeq) spEmailsError(list); }
+}
+
+// The To dropdown lists the addresses this viewer can see, showing what the server filtered by. With
+// only one address there's nothing to choose, so the Filter button stays hidden.
+function spRemailsSyncToFilter(d) {
+	const sel = $('#sp-remails-filter-to');
+	if (!sel) return;
+	const vals = d.to_emails || [];
+	sel.innerHTML = '<option value="">All recipients</option>' + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+	sel.value = d.to || '';
+	sel.closest('[data-sp-filter-field]').hidden = vals.length < 2;
+	const btn = $('[data-sp-remails-filters]');
+	if (btn) btn.hidden = vals.length < 2;
+	spEmailsFilterLabel();
 }
 
 function renderRoutedEmails() {
@@ -14015,7 +15769,7 @@ function renderCmThread(data) {
 	const c = data.conversation || {};
 	const plat = c.platform === 'instagram' ? 'Instagram' : 'Facebook';
 	let html = '<div class="sp-card-header sp-header sp-msg-thread-header">';
-	html += `<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn sp-msg-back sp-cm-back" aria-label="Back to messages">${spIcon('arrow-l')}</button>`;
+	html += `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-msg-back sp-cm-back" aria-label="Back to messages">${spIcon('arrow-l')}</button>`;
 	html += spMsgAvatar(c.customer_name, '');
 	html += `<div class="sp-msg-thread-heading"><div class="sp-msg-thread-title-wrap"><span class="sp-msg-thread-title">${esc(c.customer_name)}</span></div>`
 		+ `<div class="sp-meta"><span class="unique sp-chip sp-cm-tag sp-cm-${c.platform}">${plat}</span>${c.page_name ? `<span>${esc(c.page_name)}</span>` : ''}</div></div>`;
@@ -14069,6 +15823,14 @@ function spCopyText(text, btn) {
 		btn.textContent = 'Copied';
 		setTimeout(() => { btn.textContent = was; }, 1500);
 	}).catch(() => {});
+}
+
+// What this business calls what it sells / books (Settings: E-Commerce and Booking). key 'product' | 'service'.
+function spTerm(key, many = false, lower = false) {
+	const d = { product: ['Product', 'Products'], service: ['Service', 'Services'] }[key] || ['', ''];
+	const t = (D.terms && D.terms[key]) || {};
+	const w = many ? (t.many || d[1]) : (t.one || d[0]);
+	return lower ? w.toLowerCase() : w;
 }
 
 function esc(str) {
@@ -14350,14 +16112,14 @@ function renderReviewStats(d) {
 	const cards = [];
 	// Count tile — clicking it clears any topic filter (shows all reviews again).
 	cards.push(
-		'<div class="sp-tile sp-feedback-stat-tile sp-tile-clickable" data-topic="">' +
-			`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Reviews</div><div class="sp-survey-stat-value">${esc(spComma(d.count || 0))}</div></div>` +
+		'<div class="sp-card sp-card--stat is-clickable" data-topic="">' +
+			`<div class="sp-stat sp-stat--start"><div class="sp-stat__label">Reviews</div><div class="sp-stat__value">${esc(spComma(d.count || 0))}</div></div>` +
 		'</div>'
 	);
 	// Average rating tile with a 5→1 star distribution (not a topic filter).
 	cards.push(
-		'<div class="sp-tile sp-feedback-stat-tile">' +
-			`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Average rating</div><div class="sp-survey-stat-value">${d.avg != null ? esc(Number(d.avg).toFixed(1)) : '—'}</div></div>` +
+		'<div class="sp-card sp-card--stat">' +
+			`<div class="sp-stat sp-stat--start"><div class="sp-stat__label">Average rating</div><div class="sp-stat__value">${d.avg != null ? esc(Number(d.avg).toFixed(1)) : '—'}</div></div>` +
 			spStarDistBars(d.stardist) +
 		'</div>'
 	);
@@ -14366,21 +16128,21 @@ function renderReviewStats(d) {
 		// Headline is the category's average 1-5 rating (the "ranking"); mention count shown in parens.
 		const avg = (t.avg_score != null) ? Number(t.avg_score).toFixed(1) : '—';
 		cards.push(
-			`<div class="sp-tile sp-feedback-stat-tile sp-tile-clickable" data-topic="${esc(t.label)}">` +
-				'<div class="sp-survey-stat-left">' +
-					`<div class="sp-survey-stat-label">${esc(t.label)} <span class="sp-survey-stat-sub">${esc(spComma(t.mentions))} mentions</span></div>` +
-					`<div class="sp-survey-stat-value">${avg}<span class="sp-survey-stat-unit"> / 5</span></div>` +
+			`<div class="sp-card sp-card--stat is-clickable" data-topic="${esc(t.label)}">` +
+				'<div class="sp-stat sp-stat--start">' +
+					`<div class="sp-stat__label">${esc(t.label)} <span class="sp-stat__sub">${esc(spComma(t.mentions))} mentions</span></div>` +
+					`<div class="sp-stat__value">${avg}<span class="sp-stat__unit"> / 5</span></div>` +
 				'</div>' +
 				spSentimentBars(t) +
 			'</div>'
 		);
 	});
 
-	let html = `<div class="sp-survey-stat-grid">${cards.join('')}</div>`;
+	let html = `<div class="sp-grid sp-grid--stats sp-grid-review">${cards.join('')}</div>`;
 	// Longer ranges depend on the background back-fill; warn while any location is still being walked.
 	const range = $('#sp-reviews-stat-range')?.value || '30';
 	if (d.syncing && range !== '30') {
-		html += `<div class="sp-reviews-stat-note">Older reviews are still syncing in the background — figures for this range will keep rising until the full history finishes loading.</div>`;
+		html += `<div class="sp-field__hint">Older reviews are still syncing in the background — figures for this range will keep rising until the full history finishes loading.</div>`;
 	}
 	if (d.untagged > 0) {
 		// Auto-analyze: kick the same loop the button runs, once per fresh load, so new reviews get their
@@ -14390,10 +16152,10 @@ function renderReviewStats(d) {
 		const aBtn = $('#sp-reviews-analyze-btn');
 		if (aBtn && !aBtn.disabled && !_spReviewsAutoAnalyzed) {
 			_spReviewsAutoAnalyzed = true; // guard against re-triggering (e.g. chart toggle, or un-taggable rows)
-			html += `<div class="sp-reviews-stat-note">Analyzing ${spComma(d.untagged)} new review${d.untagged === 1 ? '' : 's'}…</div>`;
+			html += `<div class="sp-field__hint">Analyzing ${spComma(d.untagged)} new review${d.untagged === 1 ? '' : 's'}…</div>`;
 			setTimeout(analyzeReviews, 50);
 		} else {
-			html += `<div class="sp-reviews-stat-note">${spComma(d.untagged)} review${d.untagged === 1 ? '' : 's'} not yet analyzed${aBtn ? ' — click “Analyze reviews” above for complete topic stats' : ' — analysis runs automatically in the background'}.</div>`;
+			html += `<div class="sp-field__hint">${spComma(d.untagged)} review${d.untagged === 1 ? '' : 's'} not yet analyzed${aBtn ? ' — click “Analyze reviews” above for complete topic stats' : ' — analysis runs automatically in the background'}.</div>`;
 		}
 	}
 	box.innerHTML = html;
@@ -14403,15 +16165,15 @@ function renderReviewStats(d) {
 
 // Highlight the topic card matching the active filter (the "Reviews"/all card is never highlighted).
 function spMarkActiveStatCard() {
-	$$('#sp-reviews-stats .sp-tile-clickable').forEach(c => {
+	$$('#sp-reviews-stats .is-clickable').forEach(c => {
 		const topic = c.getAttribute('data-topic') || '';
-		c.classList.toggle('sp-tile-active', !!topic && topic === spReviewTopicFilter);
+		c.classList.toggle('is-active', !!topic && topic === spReviewTopicFilter);
 	});
 }
 
 // Click a stat card → filter the list to that topic (toggle off if it's already active; the count card clears).
 function onReviewStatClick(e) {
-	const card = e.target.closest('.sp-tile-clickable');
+	const card = e.target.closest('#sp-reviews-stats .is-clickable');
 	if (!card) return;
 	const topic = card.getAttribute('data-topic') || '';
 	spReviewTopicFilter = (topic && spReviewTopicFilter === topic) ? '' : topic;
@@ -14428,11 +16190,11 @@ function spStarDistBars(dist) {
 // Positive / Neutral / Negative split for one topic tile — bar or pie per the user's choice.
 function spSentimentBars(t) {
 	const segs = [
-		{ label: 'Pos', pct: t.pos_pct || 0, cls: 'sp-rev-fill-pos' },
-		{ label: 'Neu', pct: t.neu_pct || 0, cls: 'sp-rev-fill-neu' },
-		{ label: 'Neg', pct: t.neg_pct || 0, cls: 'sp-rev-fill-neg' },
+		{ label: 'Pos', pct: t.pos_pct || 0, cls: 'sp-rate-good' },
+		{ label: 'Neu', pct: t.neu_pct || 0, cls: 'sp-rate-neutral' },
+		{ label: 'Neg', pct: t.neg_pct || 0, cls: 'sp-rate-bad' },
 	];
-	return spDistChart(segs, { labelClass: 'sp-rev-bar-lbl' });
+	return spDistChart(segs, { wide: true });
 }
 
 // "Showing X of Y reviews" — footer count. X = rows loaded so far (pages appended), Y = total stored
@@ -14627,7 +16389,7 @@ const SP_SOURCE_ICON_PX = 25;
 
 // Multi-colour Google "G" — marks the source platform next to the star row.
 const SP_GOOGLE_ICON =
-	`<svg class="unique sp-review-platform-icon" viewBox="0 0 48 48" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" aria-hidden="true">` +
+	`<svg class="unique sp-source-icon" viewBox="0 0 48 48" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" aria-hidden="true">` +
 		'<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>' +
 		'<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>' +
 		'<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>' +
@@ -14636,7 +16398,7 @@ const SP_GOOGLE_ICON =
 
 // Facebook recommendation badge (used in place of the Google icon on FB review cards).
 const SP_FB_ICON =
-	`<svg class="unique sp-review-platform-icon" viewBox="0 0 24 24" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" aria-hidden="true">` +
+	`<svg class="unique sp-source-icon" viewBox="0 0 24 24" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" aria-hidden="true">` +
 		'<path fill="#1877F2" d="M24 12c0-6.627-5.373-12-12-12S0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078V12h3.047V9.356c0-3.007 1.792-4.668 4.533-4.668 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874V12h3.328l-.532 3.469h-2.796v8.385C19.612 22.954 24 17.99 24 12z"/>' +
 	'</svg>';
 
@@ -14644,7 +16406,7 @@ const SP_FB_ICON =
 // themes itself, so a platform with no logo file still reads as a deliberate mark.
 function spSourceMonogram(label) {
 	const ch = (String(label || '?').trim()[0] || '?').toUpperCase();
-	return `<svg class="unique sp-review-platform-icon" viewBox="0 0 24 24" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" role="img" aria-label="` + esc(label) + '">' +
+	return `<svg class="unique sp-source-icon" viewBox="0 0 24 24" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" role="img" aria-label="` + esc(label) + '">' +
 		'<circle cx="12" cy="12" r="12" fill="currentColor" opacity=".18"></circle>' +
 		'<text x="12" y="16.5" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">' + esc(ch) + '</text>' +
 	'</svg>';
@@ -14663,7 +16425,7 @@ function spSourceIcon(source) {
 	const label = meta.label || slug;
 	// `icon` is only set when the server confirmed the file exists, so this can't render broken.
 	if (meta.icon && D.logoBase) {
-		return `<img class="unique sp-review-platform-icon" src="${esc(D.logoBase)}/${esc(meta.icon)}.webp" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" alt="${esc(label)}" title="${esc(label)}" loading="lazy">`;
+		return `<img class="unique sp-source-icon" src="${esc(D.logoBase)}/${esc(meta.icon)}.webp" width="${SP_SOURCE_ICON_PX}" height="${SP_SOURCE_ICON_PX}" alt="${esc(label)}" title="${esc(label)}" loading="lazy">`;
 	}
 	return spSourceMonogram(label);
 }
@@ -14682,12 +16444,12 @@ function renderReviewTags(tags) {
 	if (!Array.isArray(tags) || !tags.length) return '';
 	const chips = tags.map(t => {
 		const s = String(t.sentiment || '').toLowerCase();
-		const cls = s === 'negative' ? 'sp-review-tag-neg' : (s === 'neutral' ? 'sp-review-tag-neutral' : 'sp-review-tag-pos');
+		const cls = s === 'negative' ? ' sp-chip--danger' : (s === 'neutral' ? '' : ' sp-chip--success');
 		const score = parseInt(t.score, 10);
-		const badge = (score >= 1 && score <= 5) ? `<span class="unique sp-review-tag-score">${score}/5</span>` : '';
-		return `<span class="unique sp-chip sp-review-tag ${cls}" data-topic="${esc(t.label)}" role="button" tabindex="0" title="Filter to ${esc(t.label)}">${esc(t.label)}${badge}</span>`;
+		const badge = (score >= 1 && score <= 5) ? `<span class="unique sp-chip__count">${score}/5</span>` : '';
+		return `<span class="unique sp-chip sp-chip-review${cls}" data-topic="${esc(t.label)}" role="button" tabindex="0" title="Filter to ${esc(t.label)}">${esc(t.label)}${badge}</span>`;
 	}).join('');
-	return `<div class="unique sp-review-tags">${chips}</div>`;
+	return `<div class="unique sp-toolbar">${chips}</div>`;
 }
 
 // One review as a card, shared by Reviews and Client Reviews: avatar, who and when (and which store),
@@ -14696,19 +16458,19 @@ function renderReviewTags(tags) {
 // edited, tags, reply, notes, actions, forms }.
 function spReviewCardShell(o) {
 	const photo = o.photoUrl
-		? `<img class="unique sp-review-avatar" src="${esc(o.photoUrl)}" alt="" referrerpolicy="no-referrer">`
-		: '<div class="unique sp-review-avatar sp-review-avatar-blank"></div>';
+		? `<img class="unique sp-avatar sp-avatar-review" src="${esc(o.photoUrl)}" alt="" referrerpolicy="no-referrer">`
+		: '<div class="unique sp-avatar sp-avatar-review is-blank"></div>';
 	const rating = parseInt(o.rating, 10) || 0;
-	const editTag = o.edited ? '<span class="unique sp-review-edited" title="The reviewer edited this review after posting">Edited</span> ' : '';
+	const editTag = o.edited ? '<span class="unique sp-chip sp-chip--mark" title="The reviewer edited this review after posting">Edited</span> ' : '';
 	const body = o.comment
-		? `<p class="unique sp-review-body">${editTag}${esc(o.comment)}</p>`
-		: `<p class="unique sp-review-body sp-review-nobody">${editTag}No comment, just a rating.</p>`;
-	return `<article class="unique sp-card sp-review-card${o.warn ? ' sp-review-warning' : ''}" ${o.attrs}>`
-		+ '<div class="unique sp-review-head">'
+		? `<p class="unique sp-prose">${editTag}${esc(o.comment)}</p>`
+		: `<p class="unique sp-prose is-empty">${editTag}No comment, just a rating.</p>`;
+	return `<article class="unique sp-card sp-card-review${o.warn ? ' is-warning' : ''}" ${o.attrs}>`
+		+ '<div class="unique sp-card__head">'
 		+   photo
-		+   `<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(o.author)}</span>`
-		+     `<span class="unique sp-meta">${o.date ? `<span class="unique sp-review-date">${esc(o.date)}</span>` : ''}${o.store ? `<span class="unique sp-review-store">${esc(o.store)}</span>` : ''}</span></div>`
-		+   `<span class="unique sp-review-rating">${spSourceIcon(o.source)}<span class="unique sp-review-stars" title="${rating} of 5">${starString(rating)}</span></span>`
+		+   `<div class="unique sp-row__main"><span class="unique sp-row__title sp-row__title-review">${esc(o.author)}</span>`
+		+     `<span class="unique sp-meta">${o.date ? `<span class="unique sp-review-date">${esc(o.date)}</span>` : ''}${o.store ? `<span class="unique">${esc(o.store)}</span>` : ''}</span></div>`
+		+   `<span class="unique sp-row__trail">${spSourceIcon(o.source)}<span class="unique sp-rating-stars" title="${rating} of 5">${starString(rating)}</span></span>`
 		+ '</div>'
 		+ body + (o.tags || '') + (o.reply || '') + (o.notes || '') + (o.actions || '') + (o.forms || '')
 		+ '</article>';
@@ -14717,7 +16479,7 @@ function spReviewCardShell(o) {
 // The owner reply (or a handling note): a meta line, then the text.
 function spReviewThreadItem(cls, label, date, by, text) {
 	const meta = [`<span class="unique"><b>${esc(label)}</b></span>`, date ? `<span class="unique">${esc(date)}</span>` : '', by ? `<span class="unique">${esc(by)}</span>` : ''].join('');
-	return `<div class="unique ${cls}"><div class="unique sp-meta">${meta}</div><p class="unique">${esc(text)}</p></div>`;
+	return `<div class="unique ${cls}"><div class="unique sp-meta">${meta}</div><p class="unique sp-prose">${esc(text)}</p></div>`;
 }
 
 function renderReviewCard(r) {
@@ -14731,12 +16493,12 @@ function renderReviewCard(r) {
 
 	// Owner reply, stamped with the date it was posted and who posted it.
 	const reply = r.reply
-		? spReviewThreadItem('sp-review-reply', 'Owner reply', (r.reply.updateTime ? spReviewDate(r.reply.updateTime) : ''), r.reply.by, r.reply.comment)
+		? spReviewThreadItem('sp-quote', 'Owner reply', (r.reply.updateTime ? spReviewDate(r.reply.updateTime) : ''), r.reply.by, r.reply.comment)
 		: '';
 
 	// Internal handling notes (timestamped) printed under the owner reply, oldest first.
 	const notesHtml = (r.notes && r.notes.length)
-		? '<div class="unique sp-review-notes">' + r.notes.map(n => spReviewThreadItem('sp-review-note', 'Note', (n.time ? spReviewDate(n.time) : ''), n.by, n.note)).join('') + '</div>'
+		? '<div class="unique sp-stack sp-stack--sm">' + r.notes.map(n => spReviewThreadItem('sp-quote sp-quote--mark', 'Note', (n.time ? spReviewDate(n.time) : ''), n.by, n.note)).join('') + '</div>'
 		: '';
 
 	// Poor reviews (1–3★) are "open" complaints until Marked Closed: a red outline + a handling-note log.
@@ -14768,14 +16530,14 @@ function renderReviewCard(r) {
 		const sig = (D.replySignature || '').trim();
 		const signed = sig && r.reply && (r.reply.comment || '').trim().toLowerCase().endsWith(sig.toLowerCase());
 		const sigNote = (sig && !signed)
-			? `<div class="unique sp-review-reply-sig">Signed automatically: ${esc(sig)}</div>`
+			? `<div class="unique sp-field__hint">Signed automatically: ${esc(sig)}</div>`
 			: '';
 
 		if (canReply) form =
-			`<div class="unique sp-review-reply-form ${r.reply ? 'sp-review-reply-edit' : 'sp-review-reply-new'}" data-id="${id}" hidden>` +
-				`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
+			`<div class="unique sp-stack sp-stack--sm sp-review-reply-form ${r.reply ? 'sp-review-reply-edit' : 'sp-review-reply-new'}" data-id="${id}" hidden>` +
+				`<textarea class="unique sp-textarea sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
 				sigNote +
-				'<div class="unique sp-review-reply-formbtns">' +
+				'<div class="unique sp-toolbar">' +
 					`<button type="button" class="${bs} sp-btn--primary sp-review-reply-save" data-id="${id}">Post reply</button>` +
 					`<button type="button" class="${bs} sp-review-reply-regen" data-id="${id}">Regenerate</button>` +
 					`<button type="button" class="${bs} sp-btn--ghost sp-review-reply-cancel" data-id="${id}">Cancel</button>` +
@@ -14796,9 +16558,9 @@ function renderReviewCard(r) {
 			actionBtns += '<span class="unique sp-chip sp-chip--success sp-review-closed-tag">Closed</span>';
 		}
 		noteForm =
-			`<div class="unique sp-review-note-form" data-id="${id}" hidden>` +
-				`<textarea class="unique sp-input sp-review-note-input" rows="3" placeholder="What has been done so far"></textarea>` +
-				'<div class="unique sp-review-note-formbtns">' +
+			`<div class="unique sp-stack sp-stack--sm sp-review-note-form" data-id="${id}" hidden>` +
+				`<textarea class="unique sp-textarea sp-review-note-input" rows="3" placeholder="What has been done so far"></textarea>` +
+				'<div class="unique sp-toolbar">' +
 					`<button type="button" class="${bs} sp-btn--primary sp-review-note-save" data-id="${id}">Save note</button>` +
 					`<button type="button" class="${bs} sp-btn--ghost sp-review-note-cancel" data-id="${id}">Cancel</button>` +
 				'</div>' +
@@ -14807,7 +16569,7 @@ function renderReviewCard(r) {
 
 	// An open poor review says so where the actions are, beside the red outline.
 	if (warnOpen) actionBtns = '<span class="unique sp-chip sp-chip--danger">Open</span>' + actionBtns;
-	if (actionBtns) actions = '<div class="unique sp-review-actions">' + actionBtns + '</div>';
+	if (actionBtns) actions = '<div class="unique sp-toolbar">' + actionBtns + '</div>';
 
 	// Reviewer edited their review after posting (updateTime meaningfully later than createTime) → flag it.
 	// 60s tolerance avoids false positives from Google's sub-minute create/update timestamp jitter.
@@ -14833,7 +16595,7 @@ function spReviewDate(iso) {
 
 async function onReviewListClick(e) {
 	// A sentiment chip filters the list to that topic — same effect as clicking the matching stat card.
-	const tag = e.target.closest('.sp-review-tag');
+	const tag = e.target.closest('.sp-chip-review');
 	if (tag && tag.dataset.topic) {
 		spReviewTopicFilter = (spReviewTopicFilter === tag.dataset.topic) ? '' : tag.dataset.topic;
 		spMarkActiveStatCard();
@@ -14892,7 +16654,7 @@ async function onReviewListClick(e) {
 
 // Replace a single review card in place (after add-note / close) without reloading the whole list.
 function spReplaceReviewCard(id, rev) {
-	const card = document.querySelector(`.sp-review-card[data-id="${CSS.escape(id)}"]`);
+	const card = document.querySelector(`.sp-card-review[data-id="${CSS.escape(id)}"]`);
 	if (!card) return;
 	const tmp = document.createElement('div');
 	tmp.innerHTML = renderReviewCard(rev);
@@ -15017,16 +16779,16 @@ function initAgencyReviews() {
 	$('#sp-agency-reviews-list')?.addEventListener('change', (e) => {
 		const f = e.target.closest('.sp-fb-photo');
 		if (f && f.files && f.files[0]) {
-			const card = f.closest('.sp-review-card');
+			const card = f.closest('.sp-card-review');
 			const t = f.closest('.sp-fb-photo-label')?.querySelector('.sp-fb-photo-text');
 			if (t) t.textContent = '✓ Photo';
-			const av = card?.querySelector('.sp-review-avatar');
+			const av = card?.querySelector('.sp-avatar-review');
 			if (av) {
 				const url = URL.createObjectURL(f.files[0]);
 				av.style.backgroundImage = `url(${url})`;
 				av.style.backgroundSize = 'cover';
 				av.style.backgroundPosition = 'center';
-				av.classList.remove('sp-review-avatar-blank');
+				av.classList.remove('is-blank');
 			}
 		}
 	});
@@ -15035,21 +16797,21 @@ function initAgencyReviews() {
 	$('#sp-agency-reviews-list')?.addEventListener('input', (e) => {
 		const box = e.target.closest('.sp-fb-name');
 		if (box) {
-			const a = box.closest('.sp-review-card')?.querySelector('.sp-review-author');
+			const a = box.closest('.sp-card-review')?.querySelector('.sp-row__title-review');
 			if (a) a.textContent = box.value || 'Facebook user';
 			return;
 		}
-		const auth = e.target.closest('.sp-review-author[contenteditable="true"]');
+		const auth = e.target.closest('.sp-row__title-review[contenteditable="true"]');
 		if (auth) {
-			const box2 = auth.closest('.sp-review-card')?.querySelector('.sp-fb-name');
+			const box2 = auth.closest('.sp-card-review')?.querySelector('.sp-fb-name');
 			if (box2) box2.value = auth.textContent.trim();
 		}
 	});
 	// Finish inline name editing: commit to the box and drop edit mode.
 	$('#sp-agency-reviews-list')?.addEventListener('focusout', (e) => {
-		const auth = e.target.closest('.sp-review-author[contenteditable="true"]');
+		const auth = e.target.closest('.sp-row__title-review[contenteditable="true"]');
 		if (auth) {
-			const box = auth.closest('.sp-review-card')?.querySelector('.sp-fb-name');
+			const box = auth.closest('.sp-card-review')?.querySelector('.sp-fb-name');
 			if (box) box.value = auth.textContent.trim();
 			auth.removeAttribute('contenteditable');
 		}
@@ -15290,7 +17052,7 @@ function renderAgencyReviewCard(c, r) {
 	const photoUrl = r.photo ? r.photo.replace(/=s\d+-c[\w-]*$/, '=s400-c') : '';
 
 	const reply = ( ! isFb && r.reply )
-		? spReviewThreadItem('sp-review-reply', 'Owner reply', '', r.reply.by, r.reply.comment)
+		? spReviewThreadItem('sp-quote', 'Owner reply', '', r.reply.by, r.reply.comment)
 		: '';
 
 	// Two send buttons: "Post review" omits the photo; "Post with photo" includes it (only offered when
@@ -15309,13 +17071,13 @@ function renderAgencyReviewCard(c, r) {
 	// FB recommendations are anonymous: add the name (look it up on FB) + optionally a photo, then post to
 	// the client site as a testimonial. No reply (read-only on FB). Posting removes it from this list.
 	const actions = isFb
-		? '<div class="unique sp-review-actions sp-fb-actions">' +
+		? '<div class="unique sp-toolbar">' +
 				`<input type="text" class="unique sp-input sp-fb-name" data-site="${sk}" data-id="${id}" placeholder="Customer name">` +
 				`<label class="${bs} sp-fb-photo-label"><span class="unique sp-fb-photo-text">Add photo</span><input type="file" class="sp-fb-photo" accept="image/*" data-site="${sk}" data-id="${id}" hidden></label>` +
 				( c.site_url ? `<button type="button" class="${bs} sp-btn--primary sp-fb-post-btn" data-site="${sk}" data-id="${id}">Post to site</button>` : '' ) +
 				`<button type="button" class="${bs} sp-btn--ghost sp-agency-dismiss-btn" data-site="${sk}" data-id="${id}">Remove</button>` +
 			'</div>'
-		: '<div class="unique sp-review-actions">' +
+		: '<div class="unique sp-toolbar">' +
 				`<button type="button" class="${bs} sp-agency-draft-btn" data-site="${sk}" data-id="${id}">Draft reply</button>` +
 				`<button type="button" class="${bs} sp-btn--primary sp-agency-generate-btn" data-site="${sk}" data-id="${id}">Generate reply</button>` +
 				pushBtns +
@@ -15323,9 +17085,9 @@ function renderAgencyReviewCard(c, r) {
 			'</div>';
 
 	const form = isFb ? '' :
-		`<div class="unique sp-review-reply-form ${r.reply ? 'sp-review-reply-edit' : 'sp-review-reply-new'}" data-site="${sk}" data-id="${id}" hidden>` +
-			`<textarea class="unique sp-input sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
-			'<div class="unique sp-review-reply-formbtns">' +
+		`<div class="unique sp-stack sp-stack--sm sp-review-reply-form ${r.reply ? 'sp-review-reply-edit' : 'sp-review-reply-new'}" data-site="${sk}" data-id="${id}" hidden>` +
+			`<textarea class="unique sp-textarea sp-review-reply-input" rows="3" placeholder="Write a public reply…">${r.reply ? esc(r.reply.comment) : ''}</textarea>` +
+			'<div class="unique sp-toolbar">' +
 				`<button type="button" class="${bs} sp-btn--primary sp-agency-reply-save" data-site="${sk}" data-id="${id}">Post reply</button>` +
 				`<button type="button" class="${bs} sp-agency-reply-regen" data-site="${sk}" data-id="${id}">Regenerate</button>` +
 				`<button type="button" class="${bs} sp-btn--ghost sp-agency-reply-cancel" data-site="${sk}" data-id="${id}">Cancel</button>` +
@@ -15350,10 +17112,10 @@ function agencyFindReview(site, id) {
 async function onAgencyReviewListClick(e) {
 	// FB cards: the avatar is a photo upload, and the name is click-to-edit inline — both mirror the
 	// fields used by "Post to site". (FB cards are the ones carrying a .sp-fb-name input.)
-	const fbCard = e.target.closest('.sp-review-card');
+	const fbCard = e.target.closest('.sp-card-review');
 	if (fbCard && fbCard.querySelector('.sp-fb-name')) {
-		if (e.target.closest('.sp-review-avatar')) { fbCard.querySelector('.sp-fb-photo')?.click(); return; }
-		const auth = e.target.closest('.sp-review-author');
+		if (e.target.closest('.sp-avatar-review')) { fbCard.querySelector('.sp-fb-photo')?.click(); return; }
+		const auth = e.target.closest('.sp-row__title-review');
 		if (auth && auth.getAttribute('contenteditable') !== 'true') {
 			auth.setAttribute('contenteditable', 'true');
 			auth.focus();
@@ -15405,7 +17167,7 @@ function spFileToDataURL(file) {
 // Post a Facebook recommendation to the client site as a testimonial, with the manually-added name +
 // (optional) uploaded photo. Transient list → on success it's removed (like Google once handled).
 async function postAgencyFbTestimonial(site, id, btn) {
-	const card = btn.closest('.sp-review-card');
+	const card = btn.closest('.sp-card-review');
 	const name = card?.querySelector('.sp-fb-name')?.value.trim() || '';
 	const file = card?.querySelector('.sp-fb-photo')?.files?.[0] || null;
 	if (!name && !await spConfirm('No customer name entered — post without a name?')) return;
@@ -15696,22 +17458,22 @@ function renderSurveysSummary(s) {
 		if (da[k] != null) cards += surveyStatCard(spSurveyDimLabel(k), da[k], dists[k]);
 	});
 
-	box.innerHTML = `<div class="sp-survey-stat-grid">${cards}</div>`;
+	box.innerHTML = `<div class="sp-grid sp-grid--stats sp-grid-survey">${cards}</div>`;
 	spPlaceChartToggle(box);
 }
 
 // Plain count tile — left-justified label + value, no bars.
 function surveyCountCard(count) {
-	return `<div class="sp-tile sp-feedback-stat-tile">` +
-		`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">Comment cards</div><div class="sp-survey-stat-value">${esc(String(count))}</div></div>` +
+	return `<div class="sp-card sp-card--stat">` +
+		`<div class="sp-stat sp-stat--start"><div class="sp-stat__label">Comment cards</div><div class="sp-stat__value">${esc(String(count))}</div></div>` +
 	`</div>`;
 }
 
 // Rating tile — left-justified label + average, with an Amazon-style distribution bar chart on the right.
 function surveyStatCard(label, avg, dist) {
 	const value = (avg != null) ? Number(avg).toFixed(1) : '—';
-	return `<div class="sp-tile sp-feedback-stat-tile">` +
-		`<div class="sp-survey-stat-left"><div class="sp-survey-stat-label">${esc(label)}</div><div class="sp-survey-stat-value">${esc(value)}</div></div>` +
+	return `<div class="sp-card sp-card--stat">` +
+		`<div class="sp-stat sp-stat--start"><div class="sp-stat__label">${esc(label)}</div><div class="sp-stat__value">${esc(value)}</div></div>` +
 		surveyBars(dist) +
 	`</div>`;
 }
@@ -15746,14 +17508,14 @@ function renderSurveyCard(s) {
 	Object.keys(ratings).forEach(k => { if (keys.indexOf(k) === -1) keys.push(k); });
 
 	const rows = keys.map(k =>
-		`<div class="sp-survey-rate-row"><span class="unique sp-survey-rate-label">${esc(spSurveyDimLabel(k))}</span>` +
-		`<span class="unique sp-survey-rate-val ${spRateClass(ratings[k])}">${parseInt(ratings[k], 10) || 0}</span></div>`
+		`<div class="sp-pairs__row"><span class="unique sp-pairs__label">${esc(spSurveyDimLabel(k))}</span>` +
+		`<span class="unique sp-count sp-count--score ${spRateClass(ratings[k])}">${parseInt(ratings[k], 10) || 0}</span></div>`
 	).join('');
 
 	const tags = [s.experience, s.referral].filter(Boolean);
 	// Questions beyond the fixed columns ("What did you order?", visit time, …) as Label: value lines.
 	const extras = (s.extra || []).map(x =>
-		`<div class="sp-survey-extra"><strong>${esc(x.label)}${/[?:.]$/.test(String(x.label || '').trim()) ? '' : ':'}</strong> ${esc(x.value)}</div>`
+		`<div class="sp-pairs__row"><strong class="sp-pairs__label">${esc(x.label)}${/[?:.]$/.test(String(x.label || '').trim()) ? '' : ':'}</strong> ${esc(x.value)}</div>`
 	).join('');
 	const phoneHref = s.phone ? s.phone.replace(/[^\d+]/g, '') : '';
 	const contact = [
@@ -15771,17 +17533,17 @@ function renderSurveyCard(s) {
 	// upload ("Imported"). Server sends s.source = 'web' | 'imported'.
 	const imported = s.source === 'imported';
 	const sourceChip = `<span class="unique sp-chip${imported ? '' : ' sp-chip--brand'}">${imported ? 'Imported' : 'Web'}</span>`;
-	const meta = [date, s.location].filter(Boolean).map((m, i) => `<span class="unique${i ? ' sp-review-store' : ''}">${esc(m)}</span>`).join('');
+	const meta = [date, s.location].filter(Boolean).map((m, i) => `<span class="unique">${esc(m)}</span>`).join('');
 
-	return `<article class="unique sp-card sp-survey-card" data-id="${s.id}">`
-		+ `<div class="unique sp-review-head">${spMsgAvatar(s.name || '?', '')}`
-		+   `<div class="unique sp-review-byline"><span class="unique sp-review-author">${esc(s.name || 'Anonymous')}</span>${meta ? `<span class="unique sp-meta">${meta}</span>` : ''}</div>${sourceChip}</div>`
-		+ (rows ? `<div class="unique sp-survey-rates">${rows}</div>` : '')
+	return `<article class="unique sp-card sp-card-survey" data-id="${s.id}">`
+		+ `<div class="unique sp-card__head">${spMsgAvatar(s.name || '?', '')}`
+		+   `<div class="unique sp-row__main"><span class="unique sp-row__title sp-row__title-review">${esc(s.name || 'Anonymous')}</span>${meta ? `<span class="unique sp-meta">${meta}</span>` : ''}</div>${sourceChip}</div>`
+		+ (rows ? `<div class="unique sp-pairs sp-pairs-survey">${rows}</div>` : '')
 		+ (tags.length ? `<p class="unique sp-meta">${tags.map(t => `<span class="unique">${esc(t)}</span>`).join('')}</p>` : '')
-		+ (extras ? `<div class="unique sp-survey-extras">${extras}</div>` : '')
-		+ (s.comments ? `<p class="unique sp-review-body">${esc(s.comments)}</p>` : '')
+		+ (extras ? `<div class="unique sp-pairs sp-pairs--inline">${extras}</div>` : '')
+		+ (s.comments ? `<p class="unique sp-prose">${esc(s.comments)}</p>` : '')
 		+ (contact ? `<p class="unique sp-meta sp-contact">${contact}</p>` : '')
-		+ `<div class="unique sp-review-actions">${archiveBtn}${editBtn}${del}</div>`
+		+ `<div class="unique sp-toolbar">${archiveBtn}${editBtn}${del}</div>`
 		+ '</article>';
 }
 
@@ -15844,15 +17606,15 @@ function spEditSurvey(s) {
 		const cur = parseInt(ratings[k], 10) || 0;
 		let opts = `<option value=""${cur ? '' : ' selected'}>—</option>`;
 		for (let n = 5; n >= 1; n--) opts += `<option value="${n}"${cur === n ? ' selected' : ''}>${n}</option>`;
-		return `<label class="sp-survey-edit-rate"><span>${esc(spSurveyDimLabel(k))}</span><select class="sp-select sp-sve-rating" data-key="${esc(k)}">${opts}</select></label>`;
+		return `<label class="sp-pairs__row"><span>${esc(spSurveyDimLabel(k))}</span><select class="sp-select sp-sve-rating" data-key="${esc(k)}">${opts}</select></label>`;
 	};
 
 	const field = (label, cls, val, type = 'text') =>
 		`<div><label class="sp-field-label">${label}</label><input type="${type}" class="sp-input ${cls}" value="${esc(val || '')}"></div>`;
 
 	let html = '<div class="sp-card sp-report-form-wrap">';
-	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Comment Card</h3><button type="button" class="unique sp-btn sp-btn-ghost sp-sve-cancel">Cancel</button></div>';
-	html += '<div class="sp-aai-grid">';
+	html += '<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Edit Comment Card</h3><button type="button" class="unique sp-btn sp-sve-cancel">Cancel</button></div>';
+	html += '<div class="sp-grid sp-grid--wide">';
 	html += field('Location', 'sp-sve-location', s.location);
 	html += field('Visit date', 'sp-sve-visit', (s.visit_date || '').slice(0, 10), 'date');
 	html += field('Customer name', 'sp-sve-name', s.name);
@@ -15866,10 +17628,10 @@ function spEditSurvey(s) {
 	html += '<label class="sp-field-label">Comments</label>';
 	html += `<textarea class="sp-input sp-sve-comments" rows="3">${esc(s.comments || '')}</textarea>`;
 	html += '<label class="sp-field-label">Ratings</label>';
-	html += '<div class="sp-survey-edit-rates">' + dimKeys.map(ratingSel).join('') + '</div>';
+	html += '<div class="sp-pairs sp-pairs--columns">' + dimKeys.map(ratingSel).join('') + '</div>';
 	html += '<div class="sp-report-form-actions">';
-	html += '<button type="button" class="unique sp-btn sp-btn-primary sp-sve-save">Save</button>';
-	html += '<button type="button" class="unique sp-btn sp-btn-ghost sp-sve-cancel">Cancel</button>';
+	html += '<button type="button" class="unique sp-btn sp-btn--primary sp-sve-save">Save</button>';
+	html += '<button type="button" class="unique sp-btn sp-sve-cancel">Cancel</button>';
 	html += '</div>';
 	html += '</div>';
 	backdrop.innerHTML = html;
@@ -16018,10 +17780,10 @@ function spImportFieldLabel(templateId, key) {
 function renderImportRow(row, i) {
 	const tplName = esc(spImportTemplate(row.templateId)?.name || 'Report');
 	if (row.status === 'parsing') {
-		return `<div class="sp-card-sm sp-import-card" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><span class="unique sp-import-status">Reading as ${tplName}…</span></div><div class="sp-loading"></div></div>`;
+		return `<div class="sp-card sp-import-card" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><span class="unique sp-import-status">Reading as ${tplName}…</span></div><div class="sp-loading"></div></div>`;
 	}
 	if (row.status === 'error') {
-		return `<div class="sp-card-sm sp-import-card sp-import-card-error" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><button type="button" class="unique sp-btn sp-btn-ghost sp-import-remove" data-i="${i}">Remove</button></div><div class="sp-import-err">${esc(row.error)}</div></div>`;
+		return `<div class="sp-card sp-import-card sp-import-card-error" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><button type="button" class="unique sp-btn sp-import-remove" data-i="${i}">Remove</button></div><div class="sp-import-err">${esc(row.error)}</div></div>`;
 	}
 
 	const d         = row.data || {};
@@ -16039,18 +17801,18 @@ function renderImportRow(row, i) {
 		? ansKeys.map(k => `<div class="sp-import-ans-row"><span class="unique sp-import-ans-label">${esc(spImportFieldLabel(row.templateId, k))}</span><span class="unique sp-import-ans-val">${esc(Array.isArray(ans[k]) ? ans[k].join(', ') : String(ans[k]))}</span></div>`).join('')
 		: '<div class="sp-import-ans-row">No fields were extracted.</div>';
 
-	return `<div class="sp-card-sm sp-import-card" data-i="${i}">` +
+	return `<div class="sp-card sp-import-card" data-i="${i}">` +
 		'<div class="sp-import-card-head">' +
 			`<label class="sp-import-inc"><input type="checkbox" class="sp-import-include" data-i="${i}" ${row.include ? 'checked' : ''}> <span class="unique sp-import-fname">${esc(row.fileName)}</span></label>` +
 			warn +
-			`<button type="button" class="unique sp-btn sp-btn-ghost sp-import-remove" data-i="${i}">Remove</button>` +
+			`<button type="button" class="unique sp-btn sp-import-remove" data-i="${i}">Remove</button>` +
 		'</div>' +
 		`<div class="sp-import-detected">${tplName}${detected ? ' — detected ' + detected : ''}</div>` +
-		'<div class="sp-import-grid">' +
-			`<label class="sp-import-f"><span>Submitted by</span><select class="sp-select sp-import-user" data-i="${i}">${userOpts}</select></label>` +
-			`<label class="sp-import-f"><span>Location</span><select class="sp-select sp-import-loc" data-i="${i}">${locOpts}</select></label>` +
-			`<label class="sp-import-f"><span>Period start</span><input type="date" class="sp-input sp-import-start" data-i="${i}" value="${esc(row.periodStart)}"></label>` +
-			`<label class="sp-import-f"><span>Period end</span><input type="date" class="sp-input sp-import-end" data-i="${i}" value="${esc(row.periodEnd)}"></label>` +
+		'<div class="sp-grid">' +
+			`<label class="sp-field sp-field__label"><span>Submitted by</span><select class="sp-select sp-import-user" data-i="${i}">${userOpts}</select></label>` +
+			`<label class="sp-field sp-field__label"><span>Location</span><select class="sp-select sp-import-loc" data-i="${i}">${locOpts}</select></label>` +
+			`<label class="sp-field sp-field__label"><span>Period start</span><input type="date" class="sp-input sp-import-start" data-i="${i}" value="${esc(row.periodStart)}"></label>` +
+			`<label class="sp-field sp-field__label"><span>Period end</span><input type="date" class="sp-input sp-import-end" data-i="${i}" value="${esc(row.periodEnd)}"></label>` +
 		'</div>' +
 		`<details class="sp-import-details"><summary>Extracted values (${ansKeys.length})</summary><div class="sp-import-ans">${ansRows}</div></details>` +
 	'</div>';
@@ -16202,10 +17964,10 @@ function renderCardRows() {
 
 function renderCardRow(row, i) {
 	if (row.status === 'parsing') {
-		return `<div class="sp-card-sm sp-import-card" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><span class="unique sp-import-status">Reading…</span></div><div class="sp-loading"></div></div>`;
+		return `<div class="sp-card sp-import-card" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><span class="unique sp-import-status">Reading…</span></div><div class="sp-loading"></div></div>`;
 	}
 	if (row.status === 'error') {
-		return `<div class="sp-card-sm sp-import-card sp-import-card-error" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><button type="button" class="unique sp-btn sp-btn-ghost sp-card-import-remove" data-i="${i}">Remove</button></div><div class="sp-import-err">${esc(row.error)}</div></div>`;
+		return `<div class="sp-card sp-import-card sp-import-card-error" data-i="${i}"><div class="sp-import-card-head"><span class="unique sp-import-fname">${esc(row.fileName)}</span><button type="button" class="unique sp-btn sp-card-import-remove" data-i="${i}">Remove</button></div><div class="sp-import-err">${esc(row.error)}</div></div>`;
 	}
 
 	const d          = row.data || {};
@@ -16228,19 +17990,19 @@ function renderCardRow(row, i) {
 
 	const warn = !row.location ? '<span class="unique sp-import-warn">needs location</span>' : '';
 
-	return `<div class="sp-card-sm sp-import-card" data-i="${i}">` +
+	return `<div class="sp-card sp-import-card" data-i="${i}">` +
 		'<div class="sp-import-card-head">' +
 			`<label class="sp-import-inc"><input type="checkbox" class="sp-card-import-include" data-i="${i}" ${row.include ? 'checked' : ''}> <span class="unique sp-import-fname">${esc(row.fileName)}</span></label>` +
 			warn +
 			(avg !== null ? `<span class="unique sp-import-detected">avg ${avg.toFixed(1)}★</span>` : '') +
-			`<button type="button" class="unique sp-btn sp-btn-ghost sp-card-import-remove" data-i="${i}">Remove</button>` +
+			`<button type="button" class="unique sp-btn sp-card-import-remove" data-i="${i}">Remove</button>` +
 		'</div>' +
-		'<div class="sp-import-grid">' +
-			`<label class="sp-import-f"><span>Location</span><select class="sp-select sp-card-loc" data-i="${i}">${locOpts}</select></label>` +
-			`<label class="sp-import-f"><span>Customer name</span><input type="text" class="sp-input sp-card-name" data-i="${i}" value="${esc(row.customerName)}"></label>` +
-			`<label class="sp-import-f"><span>Visit date</span><input type="date" class="sp-input sp-card-visit" data-i="${i}" value="${esc(row.visitDate)}"></label>` +
-			`<label class="sp-import-f"><span>Phone</span><input type="text" class="sp-input sp-card-phone" data-i="${i}" value="${esc(row.phone)}"></label>` +
-			`<label class="sp-import-f"><span>Email</span><input type="text" class="sp-input sp-card-email" data-i="${i}" value="${esc(row.email)}"></label>` +
+		'<div class="sp-grid">' +
+			`<label class="sp-field sp-field__label"><span>Location</span><select class="sp-select sp-card-loc" data-i="${i}">${locOpts}</select></label>` +
+			`<label class="sp-field sp-field__label"><span>Customer name</span><input type="text" class="sp-input sp-card-name" data-i="${i}" value="${esc(row.customerName)}"></label>` +
+			`<label class="sp-field sp-field__label"><span>Visit date</span><input type="date" class="sp-input sp-card-visit" data-i="${i}" value="${esc(row.visitDate)}"></label>` +
+			`<label class="sp-field sp-field__label"><span>Phone</span><input type="text" class="sp-input sp-card-phone" data-i="${i}" value="${esc(row.phone)}"></label>` +
+			`<label class="sp-field sp-field__label"><span>Email</span><input type="text" class="sp-input sp-card-email" data-i="${i}" value="${esc(row.email)}"></label>` +
 		'</div>' +
 		`<details class="sp-import-details"><summary>Ratings &amp; comments (${ratingKeys.length})</summary><div class="sp-import-ans">${ratingRows}${extra}${d.comments ? `<div class="sp-import-ans-row sp-card-comments"><em>${esc(d.comments)}</em></div>` : ''}</div></details>` +
 	'</div>';
@@ -16692,8 +18454,8 @@ function openLegMilesEditor(el) {
 			<div class="sp-form-group"><label>Actual miles</label><input type="number" step="0.01" min="0" id="sp-leg-miles" class="sp-input" value="${(base + adj).toFixed(2)}"></div>
 			<div class="sp-form-group"><label>Reason for change</label><input type="text" id="sp-leg-reason" class="sp-input" value="${esc(reason)}" placeholder="e.g. detour around road closure"></div>
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-leg-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-leg-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-leg-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-leg-cancel">Cancel</button>
 			</div>
 		</div>`;
 	document.body.appendChild(modal);
@@ -16803,7 +18565,7 @@ function spBuildPeriodToolbar(prefix, container, onApply, actionsEl) {
 	if (!container) return ['', ''];
 	container.innerHTML = `<div class="sp-toolbar" id="sp-${prefix}-toolbar">`
 		+ `<button type="button" class="unique sp-filter" data-sp-period>${spIcon('calendar', 'sp-icon--sm')} <span data-sp-period-label></span> ${spIcon('chev-d', 'sp-icon--sm')}</button>`
-		+ `<div class="sp-toolbar-actions" id="sp-${prefix}-toolbar-actions"></div></div>`
+		+ `<div class="sp-toolbar sp-toolbar--end" id="sp-${prefix}-toolbar-actions"></div></div>`
 		+ '<div hidden data-sp-period-dates>'
 		+ `<label class="sp-field" data-sp-filter-field><span class="sp-field__label">From</span><input type="date" id="sp-${prefix}-filter-start" class="sp-input"></label>`
 		+ `<label class="sp-field" data-sp-filter-field><span class="sp-field__label">To</span><input type="date" id="sp-${prefix}-filter-end" class="sp-input"></label>`
@@ -17144,7 +18906,7 @@ async function showMileageForm(entryId = 0) {
 		html += `<div class="sp-notice sp-notice--warning">${spIcon('home')}<span class="sp-notice__text">No home base set, so this day won't start and end at home automatically. ${$('#sp-panel-admin-users') ? 'Set one in Users.' : 'Ask your admin to set one.'}</span></div>`;
 	}
 	html += '<div class="sp-field"><label class="sp-field__label" for="sp-mileage-quick">Quick add route</label>'
-		+ '<div class="sp-mileage-quick">'
+		+ '<div class="sp-toolbar">'
 		+ '<div class="sp-control sp-control--lead sp-control--trail">'
 		+ `<span class="sp-control__icon">${spIcon('pin')}</span>`
 		+ '<input type="text" id="sp-mileage-quick" class="sp-input" placeholder="Type or say stops">'
@@ -17702,7 +19464,7 @@ function showAddLocationModal() {
 		: `The distance will be calculated automatically. Tick "Save to Global Database" to share it with every driver; leave it off to keep it just for your own trips.`;
 	const actionLabel = needsApproval ? 'Submit for Approval' : 'Submit';
 	const globalRow = needsApproval ? '' :
-		`<div class="sp-form-group"><label class="sp-reminder-toggle"><input type="checkbox" id="sp-loc-global"> Save to Global Database</label></div>`;
+		`<div class="sp-form-group"><label class="sp-check-row"><input type="checkbox" id="sp-loc-global"> Save to Global Database</label></div>`;
 
 	const modal = document.createElement('div');
 	modal.id = 'sp-mileage-loc-modal';
@@ -17721,8 +19483,8 @@ function showAddLocationModal() {
 			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-loc-notes" class="sp-textarea" rows="2"></textarea></div>
 			${globalRow}
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-loc-submit">${actionLabel}</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-loc-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-loc-submit">${actionLabel}</button>
+				<button type="button" class="unique sp-btn" id="sp-loc-cancel">Cancel</button>
 			</div>
 		</div>
 	`;
@@ -17784,8 +19546,8 @@ function showAdminAddLocationModal(onSaved) {
 			<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="sp-form-group"><label>Business or personal</label><select id="sp-addloc-business" class="sp-select"><option value="1">Business</option><option value="0">Personal</option></select></div><div class="sp-form-group"><label>Charge To / code <span class="unique sp-text-secondary" style="font-weight:400;">(optional)</span></label><input type="text" id="sp-addloc-code" class="sp-input" placeholder="e.g. 1042"></div></div>
 			<div class="sp-form-group"><label>Notes (optional)</label><textarea id="sp-addloc-notes" class="sp-textarea" rows="2"></textarea></div>
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-addloc-submit">Add Destination</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-addloc-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-addloc-submit">Add Destination</button>
+				<button type="button" class="unique sp-btn" id="sp-addloc-cancel">Cancel</button>
 			</div>
 		</div>
 	`;
@@ -17843,9 +19605,9 @@ function showEditLocationModal(loc, onSaved) {
 			<div class="sp-form-group"><label>Pinned purposes <span class="unique sp-text-secondary" style="font-weight:400;">(one per line — first one pre-fills the purpose when this place is chosen)</span></label><textarea id="sp-editloc-pinned" class="sp-textarea" rows="3" placeholder="Store visit&#10;Manager meeting">${esc(pinned)}</textarea></div>
 			<div class="sp-form-group"><label>Marker image URL <span class="unique sp-text-secondary" style="font-weight:400;">(optional — overrides this location type's default marker on the map; blank = use the default)</span></label><input type="text" id="sp-editloc-marker" class="sp-input" value="${esc(loc.marker_icon || '')}" placeholder="https://rovin.work/wp-content/uploads/brand-logo.png"></div>
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-editloc-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-editloc-cancel">Cancel</button>
-				<button type="button" class="unique sp-btn sp-icon-btn sp-icon-delete" id="sp-editloc-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-editloc-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-editloc-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-delete" id="sp-editloc-delete" title="Delete" aria-label="Delete" style="margin-left:auto;">${ICON_DELETE}</button>
 			</div>
 		</div>
 	`;
@@ -17958,7 +19720,7 @@ async function tollUpload() {
 	const f = file.files[0];
 
 	btn.disabled = true; btn.textContent = 'Uploading…';
-	if (status) { status.hidden = false; status.className = 'sp-toll-status'; status.textContent = 'Reading your toll statement…'; }
+	if (status) { status.hidden = false; status.className = 'sp-notice'; status.textContent = 'Reading your toll statement…'; }
 	$('#sp-toll-days').innerHTML = '';
 
 	try {
@@ -17973,12 +19735,12 @@ async function tollUpload() {
 			: { csv: new TextDecoder('utf-8').decode(buf), filename: f.name };
 		const r = await spAjax('site_pulse_upload_toll_csv', payload);
 		if (!r.success) {
-			if (status) { status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = r.data?.message || 'Upload failed.'; }
+			if (status) { status.className = 'sp-notice sp-notice--danger'; status.textContent = r.data?.message || 'Upload failed.'; }
 		} else {
 			renderTollDays(r.data);
 		}
 	} catch (e) {
-		if (status) { status.className = 'sp-toll-status sp-toll-status-error'; status.textContent = 'Upload failed. Please try again.'; }
+		if (status) { status.className = 'sp-notice sp-notice--danger'; status.textContent = 'Upload failed. Please try again.'; }
 	} finally {
 		btn.disabled = false; btn.textContent = 'Upload';
 	}
@@ -17996,9 +19758,9 @@ function spArrayBufferToBase64(buf) {
 // The "applied" done-state body for a day, with Review (show stored result, no AI) and
 // Re-analyze (send back to Claude) buttons. Shared by upload render + just-applied.
 function tollDoneBodyHtml(total) {
-	return `<div class="sp-toll-status sp-toll-status-ok">✓ $${Number(total || 0).toFixed(2)} in tolls applied to this day. `
-		+ `<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-toll-review-btn">Review</button> `
-		+ `<button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-toll-reanalyze-btn">Re-analyze</button></div>`;
+	return `<div class="sp-notice sp-notice--success">✓ $${Number(total || 0).toFixed(2)} in tolls applied to this day. `
+		+ `<button type="button" class="unique sp-btn sp-btn-tiny sp-toll-review-btn">Review</button> `
+		+ `<button type="button" class="unique sp-btn sp-btn-tiny sp-toll-reanalyze-btn">Re-analyze</button></div>`;
 }
 
 function renderTollDays(data) {
@@ -18009,7 +19771,7 @@ function renderTollDays(data) {
 
 	if (status) {
 		status.hidden = false;
-		status.className = 'sp-toll-status';
+		status.className = 'sp-notice';
 		if (!days.length) {
 			status.textContent = `Found ${data.total_txns} charge${data.total_txns !== 1 ? 's' : ''}, but none fall on a day you logged a trip — nothing to analyze.`;
 			wrap.innerHTML = '';
@@ -18018,7 +19780,7 @@ function renderTollDays(data) {
 		const ign = data.ignored_count ? ` ${data.ignored_count} charge${data.ignored_count !== 1 ? 's' : ''} on non-trip days ${data.ignored_count !== 1 ? 'were' : 'was'} ignored.` : '';
 		const cleaned = (data.skipped_invalid || 0) + (data.skipped_dupes || 0);
 		const cln = cleaned ? ` ${cleaned} invalid or duplicate row${cleaned !== 1 ? 's' : ''} auto-removed.` : '';
-		const allBtnHtml = pending.length ? ` <button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-toll-analyze-all">Analyze all</button>` : '';
+		const allBtnHtml = pending.length ? ` <button type="button" class="unique sp-btn sp-btn-tiny" id="sp-toll-analyze-all">Analyze all</button>` : '';
 		status.innerHTML = `Found <strong>${days.length}</strong> logged day${days.length !== 1 ? 's' : ''} with toll charges.${ign}${cln}${allBtnHtml}`;
 		markUniqueSpans(status);
 	}
@@ -18029,7 +19791,7 @@ function renderTollDays(data) {
 		h += `<div class="sp-toll-day-head"><span class="unique sp-toll-day-date">${tollFmtDate(d.date)}</span>`;
 		h += `<span class="unique sp-toll-day-sep" aria-hidden="true">·</span>`;
 		h += `<span class="unique sp-toll-day-meta">${d.applied ? 'applied' : d.txn_count + ' charge' + (d.txn_count !== 1 ? 's' : '')}</span>`;
-		if (!d.applied) h += `<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny sp-toll-analyze-btn">Analyze</button>`;
+		if (!d.applied) h += `<button type="button" class="unique sp-btn sp-btn-tiny sp-toll-analyze-btn">Analyze</button>`;
 		h += `</div>`;
 		h += `<div class="sp-toll-day-body">${d.applied ? tollDoneBodyHtml(d.total_tolls) : ''}</div>`;
 		h += `</div>`;
@@ -18059,12 +19821,12 @@ async function reconcileTollDay(card) {
 	try {
 		const r = await spAjax('site_pulse_reconcile_toll_day', { entry_id: entryId });
 		if (!r.success) {
-			body.innerHTML = `<div class="sp-toll-status sp-toll-status-error">${esc(r.data?.message || 'Could not analyze this day.')}</div>`;
+			body.innerHTML = `<div class="sp-notice sp-notice--danger">${esc(r.data?.message || 'Could not analyze this day.')}</div>`;
 		} else {
 			renderTollReview(r.data, card, { mode: 'analyze' });
 		}
 	} catch (e) {
-		body.innerHTML = '<div class="sp-toll-status sp-toll-status-error">Something went wrong. Please try again.</div>';
+		body.innerHTML = '<div class="sp-notice sp-notice--danger">Something went wrong. Please try again.</div>';
 	}
 }
 
@@ -18078,12 +19840,12 @@ async function reviewTollDay(card) {
 	try {
 		const r = await spAjax('site_pulse_get_toll_day', { entry_id: entryId });
 		if (!r.success) {
-			body.innerHTML = `<div class="sp-toll-status sp-toll-status-error">${esc(r.data?.message || 'Could not load this day.')}</div>`;
+			body.innerHTML = `<div class="sp-notice sp-notice--danger">${esc(r.data?.message || 'Could not load this day.')}</div>`;
 		} else {
 			renderTollReview(r.data, card, { mode: 'review' });
 		}
 	} catch (e) {
-		body.innerHTML = '<div class="sp-toll-status sp-toll-status-error">Something went wrong. Please try again.</div>';
+		body.innerHTML = '<div class="sp-notice sp-notice--danger">Something went wrong. Please try again.</div>';
 	}
 }
 
@@ -18106,7 +19868,7 @@ function renderTollReview(p, card, opts) {
 	(p.legs || []).forEach(l => { if (l.estimate != null) estMap[l.leg_id] = l.estimate; });
 
 	if (!charges.length) {
-		body.innerHTML = '<div class="sp-toll-status">No toll charges to review for this day.</div>';
+		body.innerHTML = '<div class="sp-notice">No toll charges to review for this day.</div>';
 		return;
 	}
 
@@ -18118,7 +19880,7 @@ function renderTollReview(p, card, opts) {
 		return o;
 	};
 
-	let h = '<table class="sp-table sp-toll-table"><thead class="sp-thead"><tr><th>When</th><th>Road / Gantry</th><th class="sp-m-num">Charge</th><th>Assign to leg</th></tr></thead><tbody>';
+	let h = '<table class="sp-table sp-toll-table"><thead><tr><th>When</th><th>Road / Gantry</th><th class="sp-m-num">Charge</th><th>Assign to leg</th></tr></thead><tbody>';
 	charges.forEach(c => {
 		const cls = c.state === 'ambiguous' ? ' sp-toll-row-amb' : (c.state === 'excluded' ? ' sp-toll-row-exc' : '');
 		const reason = c.reason ? ` title="${esc(c.reason)}"` : '';
@@ -18134,14 +19896,14 @@ function renderTollReview(p, card, opts) {
 	h += '</tbody></table>';
 
 	// Applied total (from the CSV), right-aligned just above the apply buttons.
-	h += '<div class="sp-toll-applied"><span class="sp-toll-applied-label">Tolls from CSV (applied)</span><span class="sp-card-value" data-toll-actual>$0.00</span></div>';
+	h += '<div class="sp-toll-applied"><span class="sp-toll-applied-label">Tolls from CSV (applied)</span><span class="sp-row__value" data-toll-actual>$0.00</span></div>';
 	// Buttons: Cancel always; Apply shows immediately for a fresh/re-analyze, but in Review
 	// mode it only appears once the driver actually changes a leg assignment (then "Apply Changes").
 	const applyLabel  = mode === 'review' ? 'Apply Changes' : 'Apply to this day';
 	const applyHidden = mode === 'review' ? ' hidden' : '';
 	h += '<div class="sp-toll-apply-row">';
-	h += '<button type="button" class="unique sp-btn sp-btn-secondary sp-toll-cancel-btn">Cancel</button>';
-	h += `<button type="button" class="unique sp-btn sp-btn-primary sp-toll-apply-btn"${applyHidden}>${applyLabel}</button>`;
+	h += '<button type="button" class="unique sp-btn sp-toll-cancel-btn">Cancel</button>';
+	h += `<button type="button" class="unique sp-btn sp-btn--primary sp-toll-apply-btn"${applyHidden}>${applyLabel}</button>`;
 	h += '</div>';
 
 	body.innerHTML = h;
@@ -18496,11 +20258,11 @@ function spShowReceiptThumb(wrap, src) {
 	let prev = $('.sp-receipt-preview', wrap);
 	if (!prev) {
 		prev = document.createElement('div');
-		prev.className = 'sp-receipt-preview';
+		prev.className = 'sp-toolbar sp-receipt-preview';
 		const row = $('.sp-receipt-row', wrap);
 		if (row) row.insertAdjacentElement('afterend', prev); else wrap.appendChild(prev);
 	}
-	prev.innerHTML = `<img class="sp-receipt-thumb" alt="Receipt"><button type="button" class="unique sp-btn sp-btn-ghost sp-btn-tiny sp-receipt-remove">Remove</button>`;
+	prev.innerHTML = `<img class="sp-receipt-thumb" alt="Receipt"><button type="button" class="unique sp-btn sp-btn-tiny sp-receipt-remove">Remove</button>`;
 	prev.hidden = false;
 	markUniqueSpans(prev);
 	spImgWithRetry($('.sp-receipt-thumb', prev), src);
@@ -18554,8 +20316,9 @@ function spImgWithRetry(img, src, tries = 3) {
 function spShowReceiptModal(src) {
 	if (!src) return;
 	const back = document.createElement('div');
-	back.className = 'sp-modal-backdrop sp-receipt-modal';
-	back.innerHTML = `<div class="sp-receipt-modal-box"><button type="button" class="unique sp-receipt-modal-close" aria-label="Close">×</button><img alt="Receipt"></div>`;
+	back.className = 'sp-modal-backdrop';
+	back.innerHTML = `<div class="sp-modal sp-modal-wide"><div class="sp-card-header sp-header"><h3>Receipt</h3><button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-receipt-modal-close" aria-label="Close">${spIcon('x')}</button></div>`
+		+ '<div class="sp-attach-modal-body"><img alt="Receipt" class="sp-attach-modal-img"></div></div>';
 	document.body.appendChild(back);
 	markUniqueSpans(back);
 	spImgWithRetry(back.querySelector('img'), src);
@@ -18578,11 +20341,10 @@ function spShowTollModal(txns) {
 		return `<tr><td>${esc(dt)}</td><td>${esc(x.road || '')}</td><td>${esc(x.gantry || '')}</td><td style="text-align:center">${reimb}</td><td class="sp-num">${money(amt)}</td></tr>`;
 	}).join('');
 	const back = document.createElement('div');
-	back.className = 'sp-modal-backdrop sp-toll-modal';
-	back.innerHTML = `<div class="sp-toll-modal-box">
-		<button type="button" class="unique sp-toll-modal-close" aria-label="Close">×</button>
-		<h3 class="sp-toll-modal-title">Toll Statement</h3>
-		<div class="sp-toll-modal-scroll"><table class="sp-table"><thead class="sp-thead"><tr><th>Date / Time</th><th>Road</th><th>Location</th><th>Reimbursed</th><th class="sp-num">Amount</th></tr></thead>
+	back.className = 'sp-modal-backdrop';
+	back.innerHTML = `<div class="sp-modal sp-modal-wide">
+		<div class="sp-card-header sp-header"><h3>Toll Statement</h3><button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-toll-modal-close" aria-label="Close">${spIcon('x')}</button></div>
+		<div class="sp-table-wrap"><table class="sp-table"><thead><tr><th>Date / Time</th><th>Road</th><th>Location</th><th>Reimbursed</th><th class="sp-num">Amount</th></tr></thead>
 		<tbody>${rows || '<tr><td colspan="5">No toll transactions for this period.</td></tr>'}</tbody>
 		<tfoot><tr class="sp-vexp-grand"><td colspan="4" class="sp-rep-total-line">Toll Statement Total</td><td class="sp-num">${money(total)}</td></tr></tfoot>
 		</table></div></div>`;
@@ -18619,7 +20381,7 @@ function spWireFormsPanel(panel, cat) {
 	panel.querySelectorAll('.sp-forms-subchip').forEach(chip => {
 		chip.addEventListener('click', () => {
 			st.filter = chip.dataset.sub || '';
-			panel.querySelectorAll('.sp-forms-subchip').forEach(c => c.classList.toggle('active', c === chip));
+			panel.querySelectorAll('.sp-forms-subchip').forEach(c => c.classList.toggle('is-active', c === chip));
 			renderForms(cat);
 		});
 	});
@@ -18715,7 +20477,7 @@ async function spSubmitFormUpload(panel, cat) {
 	const fileEl = form.querySelector('.sp-forms-field-file');
 	const saveBtn = form.querySelector('.sp-forms-save-btn');
 	const status = form.querySelector('.sp-forms-upload-status');
-	const say = (msg, err) => { if (status) { status.hidden = false; status.classList.toggle('sp-forms-err', !!err); status.textContent = msg; } };
+	const say = (msg, err) => { if (status) { status.hidden = false; status.classList.toggle('sp-flag--danger', !!err); status.textContent = msg; } };
 
 	const editId = parseInt(idEl.value, 10) || 0;
 	const name = nameEl.value.trim();
@@ -18788,7 +20550,7 @@ function renderForms(cat) {
 
 	// Sub-folder chip filter (keep the chips' active state in sync — covers nav deep-links too).
 	const chips = panel.querySelectorAll('.sp-forms-subchip');
-	if (chips.length) chips.forEach(c => c.classList.toggle('active', (c.dataset.sub || '') === (st.filter || '')));
+	if (chips.length) chips.forEach(c => c.classList.toggle('is-active', (c.dataset.sub || '') === (st.filter || '')));
 	if (st.filter) rows = rows.filter(x => x.sub_category === st.filter);
 
 	// Search box → form name (broadened to format/repository on the All view).
@@ -18825,17 +20587,17 @@ function renderForms(cat) {
 	// everyone; Replace/Delete only for an editor on a category panel).
 	let html = '';
 	rows.forEach(x => {
-		const dl = `<a class="unique sp-forms-row-btn sp-forms-download" href="${esc(x.url)}" download="${esc(x.file_name || '')}">Download</a>`;
+		const dl = `<a class="unique sp-btn sp-btn--sm sp-forms-download" href="${esc(x.url)}" download="${esc(x.file_name || '')}">Download</a>`;
 		const edit = (!isAll && x.can_edit)
-			? `<button type="button" class="unique sp-forms-row-btn sp-forms-replace" data-id="${x.id}">Replace</button><button type="button" class="unique sp-forms-row-btn sp-forms-delete" data-id="${x.id}">Delete</button>`
+			? `<button type="button" class="unique sp-btn sp-btn--sm sp-forms-replace" data-id="${x.id}">Replace</button><button type="button" class="unique sp-btn sp-btn--sm sp-btn--danger sp-forms-delete" data-id="${x.id}">Delete</button>`
 			: '';
 		html += '<tr>'
 			+ `<td class="sp-forms-check"><input type="checkbox" class="sp-forms-row-check" data-id="${x.id}" aria-label="Select form"${st.selected.has(x.id) ? ' checked' : ''}></td>`
-			+ `<td class="sp-forms-name"><a class="unique" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${(x.sub_label && (isAll || !st.filter)) ? ` <span class="unique sp-forms-folder-badge">${esc(x.sub_label)}</span>` : ''}</td>`
-			+ `<td><span class="unique sp-forms-repo">${esc(x.category_label || '—')}</span></td>`
-			+ `<td><span class="unique sp-forms-format">${esc(x.format || '—')}</span></td>`
+			+ `<td class="sp-forms-name"><a class="unique" href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name)}</a>${(x.sub_label && (isAll || !st.filter)) ? ` <span class="unique sp-chip">${esc(x.sub_label)}</span>` : ''}</td>`
+			+ `<td><span class="unique sp-chip">${esc(x.category_label || '—')}</span></td>`
+			+ `<td><span class="unique sp-chip sp-chip--mark">${esc(x.format || '—')}</span></td>`
 			+ `<td>${esc(x.date_label || '')}</td>`
-			+ `<td class="sp-forms-actions">${dl}${edit}</td>`
+			+ `<td class="sp-forms-actions"><div class="sp-toolbar sp-toolbar--end">${dl}${edit}</div></td>`
 			+ '</tr>';
 	});
 	tbody.innerHTML = html;
@@ -18980,8 +20742,8 @@ function renderFormSettings(wrap) {
 	html += '<div class="sp-forms-cat-rows">';
 	_spFormCats.forEach((c, i) => { html += spFormCatRow(c, i); });
 	html += '</div>';
-	html += '<button type="button" class="unique sp-btn sp-btn-secondary sp-forms-cat-add">+ Add Repository</button>';
-	html += '<div class="sp-forms-set-foot"><span class="sp-help-text sp-forms-cat-status"></span></div>';
+	html += '<button type="button" class="unique sp-btn sp-forms-cat-add">+ Add Repository</button>';
+	html += '<div class="sp-toolbar"><span class="sp-help-text sp-forms-cat-status"></span></div>';
 	html += '</div>';
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
@@ -19031,7 +20793,7 @@ function spFormCatRow(c, i) {
 		? `<span class="unique sp-forms-cat-count">${c.count} form${c.count === 1 ? '' : 's'}</span>`
 		: '<span class="unique sp-forms-cat-count sp-forms-cat-new">new</span>';
 	const vis = c.visible !== false;
-	return '<div class="sp-forms-cat-row" data-idx="' + i + '" draggable="true">'
+	return '<div class="sp-toolbar sp-forms-cat-row" data-idx="' + i + '" draggable="true">'
 		+ '<span class="unique sp-forms-cat-drag" aria-hidden="true">⠿</span>'
 		+ `<input type="text" class="sp-input sp-forms-cat-label" maxlength="80" value="${esc(c.label)}" placeholder="Repository name">`
 		+ count
@@ -19435,14 +21197,14 @@ function showVexpForm(x) {
 			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Vehicle Expense</h3></div>
 			<div class="sp-card-body">
 			<div class="sp-receipt-row sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
+			<div class="sp-stack sp-card-item">
+				<div class="sp-grid">
 					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-vexp-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
 					<div class="sp-form-group"><label>Category</label><select id="sp-vexp-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'B', x ? x.category : (Object.keys(_spVexp.cats || {})[0] || ''))}</select></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-vexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
@@ -19450,9 +21212,9 @@ function showVexpForm(x) {
 				</div>
 				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-vexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Shell — fuel"></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-vexp-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-vexp-cancel">Cancel</button>
+			<div class="sp-toolbar sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-vexp-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-vexp-cancel">Cancel</button>
 			</div>
 			</div>
 		</div>`;
@@ -19593,23 +21355,23 @@ function showTravForm(x) {
 			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Travel Expense</h3></div>
 			<div class="sp-card-body">
 			<div class="sp-receipt-row sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
+			<div class="sp-stack sp-card-item">
+				<div class="sp-grid">
 					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-trav-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
 					<div class="sp-form-group"><label>Category</label><select id="sp-trav-cat" class="sp-select">${spExpDestOptions(x ? x.section : 'F', x ? x.category : (Object.keys(_spTrav.cats || {})[0] || ''))}</select></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-trav-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 				</div>
 				<div class="sp-form-group"><label>Description</label><input type="text" id="sp-trav-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Delta — DFW to ATL"></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-trav-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-trav-cancel">Cancel</button>
+			<div class="sp-toolbar sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-trav-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-trav-cancel">Cancel</button>
 			</div>
 			</div>
 		</div>`;
@@ -19719,23 +21481,23 @@ function showMealForm(x) {
 			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Business Meal</h3></div>
 			<div class="sp-card-body">
 			<div class="sp-receipt-row sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
+			<div class="sp-stack sp-card-item">
+				<div class="sp-grid">
 					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-meal-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
 					<div class="sp-form-group"><label>Place</label><input type="text" id="sp-meal-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / venue"></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-meal-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
 				</div>
 				<div class="sp-form-group"><label>Category</label><select id="sp-meal-move" class="sp-select">${spExpDestOptions(x ? x.section : 'C', x ? x.category : 'meals')}</select></div>
 				<div class="sp-form-group"><label>Meal Type</label>
-						<div class="sp-radio-row">
-							<label class="sp-radio-inline"><input type="radio" name="sp-meal-type" class="sp-meal-type-radio" value="business"${mealType === 'personal' ? '' : ' checked'}> Business</label>
-							<label class="sp-radio-inline"><input type="radio" name="sp-meal-type" class="sp-meal-type-radio" value="personal"${mealType === 'personal' ? ' checked' : ''}> Personal</label>
+						<div class="sp-options">
+							<label class="sp-check-row"><input type="radio" name="sp-meal-type" class="sp-meal-type-radio" value="business"${mealType === 'personal' ? '' : ' checked'}> Business</label>
+							<label class="sp-check-row"><input type="radio" name="sp-meal-type" class="sp-meal-type-radio" value="personal"${mealType === 'personal' ? ' checked' : ''}> Personal</label>
 						</div>
 						<span class="sp-help-text">Personal (family) meals: the tip is removed from the reimbursed total — tips aren&rsquo;t reimbursed.</span>
 					</div>
@@ -19743,9 +21505,9 @@ function showMealForm(x) {
 				<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-meal-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who attended (required)" required></div>
 				<div class="sp-form-group"><label>Charge To</label><select id="sp-meal-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : (spLastChargeTo() || '99'))}</select></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-meal-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-meal-cancel">Cancel</button>
+			<div class="sp-toolbar sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-meal-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-meal-cancel">Cancel</button>
 			</div>
 			</div>
 		</div>`;
@@ -19872,14 +21634,14 @@ function showShopForm(x) {
 			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${x ? 'Edit' : 'Add'} Competitive Shopping Visit</h3></div>
 			<div class="sp-card-body">
 			<div class="sp-receipt-row sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
+			<div class="sp-stack sp-card-item">
+				<div class="sp-grid">
 					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-shop-date" class="sp-input" value="${esc(x ? x.expense_date : today)}"></div>
 					<div class="sp-form-group"><label>Place</label><input type="text" id="sp-shop-place" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="Restaurant / place shopped"></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-shop-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
@@ -19889,9 +21651,9 @@ function showShopForm(x) {
 					<div class="sp-form-group"><label>Attendees</label><input type="text" id="sp-shop-attendees" class="sp-input" value="${esc(x ? (x.attendees || '') : '')}" placeholder="Who went (optional)"></div>
 				<div class="sp-form-group"><label>Charge To</label><select id="sp-shop-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : (spLastChargeTo() || '99'))}</select></div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-shop-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-shop-cancel">Cancel</button>
+			<div class="sp-toolbar sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-shop-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-shop-cancel">Cancel</button>
 			</div>
 			</div>
 		</div>`;
@@ -19995,7 +21757,7 @@ function spOexpRecurringStrip() {
 			: (_spExpLocked.oexp ? '' : `<button type="button" class="unique sp-btn" data-sp-recurring-add="${esc(t.key)}">Add</button>`);
 		return '<div class="sp-row">'
 			+ `<span class="sp-row__main"><span class="sp-row__title">${esc(t.description || t.account_code || 'Recurring')}</span><span class="sp-meta"><span>$${mileageNumFmt(t.amount)}</span>${t.account_code ? `<span>${esc(t.account_code)}</span>` : ''}</span></span>`
-			+ `<span class="sp-row__trail">${action}<button type="button" class="unique sp-btn sp-btn--ghost sp-icon-btn" data-sp-recurring-stop="${esc(t.key)}" title="Stop recurring" aria-label="Stop recurring">${spIcon('x')}</button></span></div>`;
+			+ `<span class="sp-row__trail">${action}<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm" data-sp-recurring-stop="${esc(t.key)}" title="Stop recurring" aria-label="Stop recurring">${spIcon('x')}</button></span></div>`;
 	}).join('');
 	return `<section class="sp-section"><h2 class="sp-section__title">Recurring</h2><div class="sp-card sp-card--flush"><div class="sp-list">${rows}</div></div></section>`;
 }
@@ -20065,14 +21827,14 @@ function showOexpForm(x) {
 			<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${isEdit ? 'Edit' : 'Add'} Other Expense</h3></div>
 			<div class="sp-card-body">
 			<div class="sp-receipt-row sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">${ICON_CAMERA} Take Photo</button>
 				<input type="file" accept="image/*" capture="environment" class="sp-receipt-input" hidden>
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-receipt-btn">Upload</button>
+				<button type="button" class="unique sp-btn sp-receipt-btn">Upload</button>
 				<input type="file" accept="image/*" class="sp-receipt-input" hidden>
 				<span class="sp-receipt-status sp-help-text" hidden></span>
 			</div>
-			<div class="sp-vexp-fields sp-card-item">
-				<div class="sp-vexp-form-grid">
+			<div class="sp-stack sp-card-item">
+				<div class="sp-grid">
 					<div class="sp-form-group"><label>Date</label><input type="date" id="sp-oexp-date" class="sp-input" value="${esc(x && x.expense_date ? x.expense_date : today)}"></div>
 					<div class="sp-form-group"><label>Account</label><select id="sp-oexp-account" class="sp-select">${spOexpAccountOptions(x ? (x.account_code || '') : '')}</select></div>
 					<div class="sp-form-group"><label>Amount ($)</label><input type="number" step="0.01" min="0" id="sp-oexp-amount" class="sp-input" value="${x ? (parseFloat(x.amount) || 0).toFixed(2) : ''}"></div>
@@ -20081,13 +21843,13 @@ function showOexpForm(x) {
 				<div class="sp-form-group"><label>Vendor</label><input type="text" id="sp-oexp-vendor" class="sp-input" value="${esc(x ? (x.place || '') : '')}" placeholder="e.g. Michael's"></div>
 					<div class="sp-form-group"><label>Description</label><input type="text" id="sp-oexp-desc" class="sp-input" value="${esc(x ? (x.description || '') : '')}" placeholder="e.g. Postage — overnight to vendor"></div>
 				<div class="sp-form-group"><label>Charge To</label><select id="sp-oexp-store" class="sp-select">${mileageChargeOptionsHtml((x && x.store_number) ? x.store_number : (spLastChargeTo() || '99'))}</select></div>
-					<div class="sp-form-group sp-recurring-group">
-						<label for="sp-oexp-recurring">Recurring expense</label><input type="checkbox" id="sp-oexp-recurring" class="sp-recurring-check">
+					<div class="sp-form-group">
+						<label class="sp-check-row"><input type="checkbox" id="sp-oexp-recurring" class="sp-recurring-check"> Recurring expense</label>
 					</div>
 			</div>
-			<div class="sp-vexp-form-actions sp-card-item">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-oexp-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-oexp-cancel">Cancel</button>
+			<div class="sp-toolbar sp-card-item">
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-oexp-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-oexp-cancel">Cancel</button>
 			</div>
 			</div>
 		</div>`;
@@ -20165,8 +21927,8 @@ async function initExpenseReport() {
 		const actions = $('#sp-rep-toolbar-actions');
 		if (actions) {
 			actions.innerHTML =
-				'<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-rep-pdf-btn">PDF</button>' +
-				'<span id="sp-rep-submit-slot" class="sp-rep-submit-slot"></span>';
+				'<button type="button" class="unique sp-btn" id="sp-rep-pdf-btn">PDF</button>' +
+				'<span id="sp-rep-submit-slot" class="sp-toolbar"></span>';
 			markUniqueSpans(actions);
 			$('#sp-rep-pdf-btn', actions).addEventListener('click', () => exportMileagePDF(_spRep.start, _spRep.end));
 		}
@@ -20280,10 +22042,10 @@ function renderExpenseReport(data, opts) {
 	let html = '';
 
 	// --- Report header (Payee / Period / Week Ending / Home Base) ---
-	const headField = (l, v) => `<div class="sp-tile sp-rep-field"><div class="sp-rep-text"><div class="sp-tile-label sp-rep-field-label">${l}</div><div class="sp-tile-value sp-rep-field-value">${esc(v || '—')}</div></div></div>`;
+	const headField = (l, v) => `<div class="sp-card sp-card--well sp-rep-field"><div class="sp-rep-text"><div class="sp-field__label sp-rep-field-label">${l}</div><div class="sp-row__value sp-rep-field-value">${esc(v || '—')}</div></div></div>`;
 	html += '<div class="sp-rep-head">';
 	html += `<div class="sp-rep-head-title">${esc(data.company_name || data.app_name || 'Expense Report')}</div>`;
-	html += '<div class="sp-rep-head-grid">';
+	html += '<div class="sp-grid">';
 	html += headField('Payee', data.user_name);
 	html += headField('Period', data.label);
 	html += headField('Week Ending', data.end ? formatDate(data.end) : '—');
@@ -20299,7 +22061,7 @@ function renderExpenseReport(data, opts) {
 
 	// --- Summary of Expenses — section order A–F, one row per account each section posts to ---
 	html += '<h3 class="sp-rep-section-title">Summary of Expenses</h3>';
-	html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-summary"><thead class="sp-thead"><tr><th>Description</th><th class="sp-num">Amount</th><th>Account</th></tr></thead><tbody>';
+	html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-rep-summary"><thead><tr><th>Description</th><th class="sp-num">Amount</th><th>Account</th></tr></thead><tbody>';
 	summary.rows.forEach(r => {
 		html += `<tr><td>${esc(r.desc)}</td><td class="sp-num">${money(r.amount)}</td><td>${esc(r.account_label || r.account)}</td></tr>`;
 	});
@@ -20309,11 +22071,11 @@ function renderExpenseReport(data, opts) {
 	// Quick-view document buttons: a receipt button on each expense row that has a photo (opens it
 	// full-screen), and one toll button on the Section A total (opens the uploaded toll CSV full-screen).
 	const docReceiptBtn = (url) => url
-		? `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-receipt sp-rep-doc-btn" title="View receipt" aria-label="View receipt" data-url="${esc(url)}">${ICON_RECEIPT}</button>`
+		? `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-receipt sp-rep-doc-btn" title="View receipt" aria-label="View receipt" data-url="${esc(url)}">${ICON_RECEIPT}</button>`
 		: '';
 	const repTollTxns = data.toll_transactions || [];
 	// Same circular icon button as the receipts, with a grid/spreadsheet glyph so it reads as the CSV.
-	const tollDocBtn = `<button type="button" class="unique sp-btn sp-icon-btn sp-icon-receipt sp-rep-toll-btn" title="View toll statement (CSV)" aria-label="View toll statement"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></button>`;
+	const tollDocBtn = `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-icon-receipt sp-rep-toll-btn" title="View toll statement (CSV)" aria-label="View toll statement"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></button>`;
 
 	// --- Section detail tables (only sections that have rows; mirrors the PDF body) ---
 	// A — Mileage: built EXACTLY like the on-screen Mileage screen — the `sp-mileage-table` class
@@ -20321,11 +22083,11 @@ function renderExpenseReport(data, opts) {
 	if (entries.length) {
 		const hasToll = mileageTolls > 0, hasTrl = mileageTrailer > 0;
 		html += '<h3 class="sp-rep-section-title">A — Mileage</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-mileage-table"><thead class="sp-thead"><tr>'
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-mileage-table"><thead><tr>'
 			+ '<th>Date</th><th class="sp-mileage-charge">Charge&nbsp;To</th><th>Route</th><th>Purpose</th>'
-			+ '<th class="sp-th-num">Miles</th><th class="sp-th-num">$</th>'
-			+ (hasTrl ? '<th class="sp-th-num">Trailer</th>' : '')
-			+ (hasToll ? '<th class="sp-th-num">Tolls</th>' : '') + '</tr></thead>';
+			+ '<th class="is-num">Miles</th><th class="is-num">$</th>'
+			+ (hasTrl ? '<th class="is-num">Trailer</th>' : '')
+			+ (hasToll ? '<th class="is-num">Tolls</th>' : '') + '</tr></thead>';
 		entries.forEach(e => {
 			const stops = e.route_stops || [];
 			const dayMiles = parseFloat(e.total_miles) || 0;
@@ -20374,7 +22136,7 @@ function renderExpenseReport(data, opts) {
 		const catLabel = k => (vcats[k] && vcats[k].label) || k || '—';
 		let bGrand = 0;
 		html += '<h3 class="sp-rep-section-title">B — Vehicle Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-rep-table"><thead><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		vehicle.forEach(x => {
 			const amt = parseFloat(x.amount) || 0; bGrand += amt;
 			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(catLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(amt)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
@@ -20386,7 +22148,7 @@ function renderExpenseReport(data, opts) {
 	// C — Business Meals
 	if (meals.length) {
 		html += '<h3 class="sp-rep-section-title">C — Business Meals</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-rep-table"><thead><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		meals.forEach(x => {
 			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
@@ -20397,7 +22159,7 @@ function renderExpenseReport(data, opts) {
 	// D — Competitive Shopping
 	if (shopping.length) {
 		html += '<h3 class="sp-rep-section-title">D — Competitive Shopping</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-rep-table"><thead><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Place</th><th>Business Purpose</th><th>Attendees</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		shopping.forEach(x => {
 			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(x.place || '')}</td><td>${esc(x.business_purpose || '')}</td><td>${esc(x.attendees || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
@@ -20408,7 +22170,7 @@ function renderExpenseReport(data, opts) {
 	// E — Other Expenses
 	if (other.length) {
 		html += '<h3 class="sp-rep-section-title">E — Other Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Vendor</th><th>Description</th><th>Account</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-rep-table"><thead><tr><th>Date</th><th class="sp-charge-col">Charge&nbsp;To</th><th>Vendor</th><th>Description</th><th>Account</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		other.forEach(x => {
 			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td class="sp-charge-col">${esc(x.store_number || '')}</td><td>${esc(x.place || '')}</td><td>${esc(x.description || '')}</td><td>${esc(x.account_code || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
@@ -20420,7 +22182,7 @@ function renderExpenseReport(data, opts) {
 	if (travel.length) {
 		const tcatLabel = k => (tcats[k] && tcats[k].label) || k || '—';
 		html += '<h3 class="sp-rep-section-title">F — Travel Expenses</h3>';
-		html += '<div class="sp-card sp-table-card"><table class="sp-table sp-rep-table"><thead class="sp-thead"><tr><th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
+		html += '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table sp-rep-table"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th class="sp-num">Amount</th><th class="sp-rep-doc-th"></th></tr></thead><tbody>';
 		travel.forEach(x => {
 			html += `<tr><td>${esc(formatDate(x.expense_date))}</td><td>${esc(tcatLabel(x.category))}</td><td>${esc(x.description || '')}</td><td class="sp-num">${money(x.amount)}</td><td class="sp-rep-doc-cell">${docReceiptBtn(x.receipt_url)}</td></tr>`;
 		});
@@ -20451,19 +22213,19 @@ function spRepSubmitControl(data) {
 	const rep = data.report;
 	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
 	if (rep && rep.status === 'submitted') {
-		return `<span class="sp-submit-pill sp-submit-pill-sent" title="Waiting for your supervisor's approval — this period is locked.">Submitted on ${dt(rep.submitted_at)}</span>`;
+		return `<span class="sp-chip sp-chip--warning" title="Waiting for your supervisor's approval — this period is locked.">Submitted on ${dt(rep.submitted_at)}</span>`;
 	}
 	if (rep && rep.status === 'approved') {
-		return `<span class="sp-submit-pill sp-submit-pill-approved" title="${esc(rep.approved_by_name ? 'Approved by ' + rep.approved_by_name : 'Approved')}">Approved on ${dt(rep.approved_at)}</span>`;
+		return `<span class="sp-chip sp-chip--success" title="${esc(rep.approved_by_name ? 'Approved by ' + rep.approved_by_name : 'Approved')}">Approved on ${dt(rep.approved_at)}</span>`;
 	}
 	let h = '';
-	if (rep && rep.status === 'rejected') h += `<span class="sp-submit-pill sp-submit-pill-rejected" title="${esc(rep.reject_note || 'Sent back for edits')}">Sent back</span>`;
+	if (rep && rep.status === 'rejected') h += `<span class="sp-chip sp-chip--danger" title="${esc(rep.reject_note || 'Sent back for edits')}">Sent back</span>`;
 	if (data.can_submit_report && data.submit_paused) {
 		// Temporarily paused server-side — show the button, greyed out and unclickable.
-		h += '<button type="button" class="unique sp-btn sp-btn-primary" disabled title="Submitting expense reports is temporarily paused">Submit for Approval</button>';
+		h += '<button type="button" class="unique sp-btn sp-btn--primary" disabled title="Submitting expense reports is temporarily paused">Submit for Approval</button>';
 	} else if (data.can_submit_report) {
 		h += spRepIsPayPeriod(_spRep.start, _spRep.end)
-			? '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-rep-submit-btn">Submit for Approval</button>'
+			? '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-rep-submit-btn">Submit for Approval</button>'
 			: '<span class="sp-help-text">Pick a single pay period to submit</span>';
 	}
 	return h;
@@ -20529,12 +22291,12 @@ function spApprCard(r) {
 	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
 	const label = r.period_label || (dt(r.period_start) + ' – ' + dt(r.period_end));
 	let pill = '';
-	if (r.status === 'submitted') pill = '<span class="sp-submit-pill sp-submit-pill-sent">Pending</span>';
-	else if (r.status === 'approved') pill = `<span class="sp-submit-pill sp-submit-pill-approved">Approved ${dt(r.approved_at)}</span>`;
-	else if (r.status === 'rejected') pill = '<span class="sp-submit-pill sp-submit-pill-rejected">Sent back</span>';
-	return `<div class="sp-appr-card unique" data-report="${r.id}">`
-		+ `<div class="sp-appr-card-main"><div class="sp-appr-card-name">${esc(r.user_name)}</div><div class="sp-appr-card-sub">${esc(label)} · ${money(r.total_amount)}</div></div>`
-		+ `<div class="sp-appr-card-meta">${pill}<div class="sp-appr-card-date">Submitted ${dt(r.submitted_at)}</div></div></div>`;
+	if (r.status === 'submitted') pill = '<span class="sp-chip sp-chip--warning">Pending</span>';
+	else if (r.status === 'approved') pill = `<span class="sp-chip sp-chip--success">Approved ${dt(r.approved_at)}</span>`;
+	else if (r.status === 'rejected') pill = '<span class="sp-chip sp-chip--danger">Sent back</span>';
+	return `<div class="sp-row sp-appr-card unique" data-sp-open data-report="${r.id}">`
+		+ `<div class="sp-row__main"><div class="sp-row__title">${esc(r.user_name)}</div><div class="sp-meta"><span>${esc(label)}</span><span>${money(r.total_amount)}</span><span>Submitted ${dt(r.submitted_at)}</span></div></div>`
+		+ `<div class="sp-row__trail">${pill}</div></div>`;
 }
 
 function renderApproveList() {
@@ -20545,10 +22307,10 @@ function renderApproveList() {
 	const pending = reps.filter(r => r.status === 'submitted');
 	const done = reps.filter(r => r.status !== 'submitted');
 	let html = `<h3 class="sp-rep-section-title">Pending approval (${pending.length})</h3>`;
-	html += '<div class="sp-appr-list">' + (pending.length ? pending.map(spApprCard).join('') : '<div class="sp-empty-state"><p>Nothing waiting.</p></div>') + '</div>';
+	html += '<div class="sp-card sp-card--flush"><div class="sp-list">' + (pending.length ? pending.map(spApprCard).join('') : '<div class="sp-empty-state"><p>Nothing waiting.</p></div>') + '</div></div>';
 	if (done.length) {
 		html += '<h3 class="sp-rep-section-title">Recently actioned</h3>';
-		html += '<div class="sp-appr-list">' + done.map(spApprCard).join('') + '</div>';
+		html += '<div class="sp-card sp-card--flush"><div class="sp-list">' + done.map(spApprCard).join('') + '</div></div>';
 	}
 	wrap.innerHTML = html;
 	markUniqueSpans(wrap);
@@ -20570,27 +22332,27 @@ async function openReportDetail(r, mode, detail, listWrap) {
 	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
 	const label = r.period_label || (dt(r.period_start) + ' – ' + dt(r.period_end));
 
-	let bar = '<div class="sp-approve-actionbar">';
-	bar += '<button type="button" class="unique sp-btn sp-btn-ghost" data-appr-back>← Back</button>';
+	let bar = '<div class="sp-card sp-card--tint sp-approve-actionbar">';
+	bar += '<button type="button" class="unique sp-btn" data-appr-back>← Back</button>';
 	bar += `<div class="sp-approve-actionbar-title">${esc(r.user_name)} · ${esc(label)} · ${money(r.total_amount)}</div>`;
-	bar += '<div class="sp-approve-actionbar-buttons">';
-	bar += '<button type="button" class="unique sp-btn sp-btn-secondary" data-appr-pdf>Download PDF</button>';
+	bar += '<div class="sp-toolbar">';
+	bar += '<button type="button" class="unique sp-btn" data-appr-pdf>Download PDF</button>';
 	if (mode === 'approve' && r.status === 'submitted') {
-		bar += '<button type="button" class="unique sp-btn sp-btn-secondary sp-appr-reject" data-appr-reject>Send back</button>';
-		bar += '<button type="button" class="unique sp-btn sp-btn-primary" data-appr-approve>Approve</button>';
+		bar += '<button type="button" class="unique sp-btn sp-appr-reject" data-appr-reject>Send back</button>';
+		bar += '<button type="button" class="unique sp-btn sp-btn--primary" data-appr-approve>Approve</button>';
 	} else if (r.status === 'approved') {
-		bar += `<span class="sp-submit-pill sp-submit-pill-approved">Approved on ${dt(r.approved_at)}${r.approved_by_name ? ' by ' + esc(r.approved_by_name) : ''}</span>`;
-		if (D.isGod) bar += '<button type="button" class="unique sp-btn sp-btn-secondary sp-appr-reject" data-appr-reopen>Reopen</button>';
+		bar += `<span class="sp-chip sp-chip--success">Approved on ${dt(r.approved_at)}${r.approved_by_name ? ' by ' + esc(r.approved_by_name) : ''}</span>`;
+		if (D.isGod) bar += '<button type="button" class="unique sp-btn sp-appr-reject" data-appr-reopen>Reopen</button>';
 	} else if (r.status === 'rejected') {
-		bar += '<span class="sp-submit-pill sp-submit-pill-rejected">Sent back</span>';
+		bar += '<span class="sp-chip sp-chip--danger">Sent back</span>';
 	}
 	bar += '</div></div>';
 
 	if (mode === 'approve') {
 		const on = _spAppr.auto.indexOf(parseInt(r.user_id, 10)) !== -1;
-		bar += `<label class="sp-appr-auto"><input type="checkbox" class="sp-recurring-check" data-appr-auto ${on ? 'checked' : ''}><span class="unique">Auto-approve all reports from ${esc(r.user_name)}</span></label>`;
+		bar += `<label class="sp-check-row sp-appr-auto"><input type="checkbox" class="sp-recurring-check" data-appr-auto ${on ? 'checked' : ''}><span class="unique">Auto-approve all reports from ${esc(r.user_name)}</span></label>`;
 	}
-	if (r.reject_note && r.status === 'rejected') bar += `<div class="sp-appr-note">Sent back: ${esc(r.reject_note)}</div>`;
+	if (r.reject_note && r.status === 'rejected') bar += `<div class="sp-field__hint sp-flag--danger">Sent back: ${esc(r.reject_note)}</div>`;
 
 	detail.innerHTML = bar + '<div class="sp-approve-report" id="sp-approve-report-host"></div>';
 	markUniqueSpans(detail);
@@ -20709,10 +22471,10 @@ function renderApprovedList() {
 	if (!reps.length) { wrap.innerHTML = '<div class="sp-empty-state"><p>No approved reports found for this range.</p></div>'; return; }
 	const money = n => '$' + mileageNumFmt(n);
 	const dt = s => s ? fmtReportDate(String(s).slice(0, 10)) : '';
-	let html = '<div class="sp-card sp-table-card"><table class="sp-table"><thead class="sp-thead"><tr><th>Employee</th><th>Period</th><th class="sp-num">Total</th><th>Approved</th><th>By</th><th></th></tr></thead><tbody>';
+	let html = '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card"><table class="sp-table"><thead><tr><th>Employee</th><th>Period</th><th class="sp-num">Total</th><th>Approved</th><th>By</th><th></th></tr></thead><tbody>';
 	reps.forEach(r => {
 		const label = r.period_label || (dt(r.period_start) + ' – ' + dt(r.period_end));
-		html += `<tr class="sp-arch-row unique" data-report="${r.id}"><td>${esc(r.user_name)}</td><td>${esc(label)}</td><td class="sp-num">${money(r.total_amount)}</td><td>${dt(r.approved_at)}</td><td>${esc(r.approved_by_name || '')}</td><td class="sp-num"><button type="button" class="unique sp-btn sp-btn-ghost sp-arch-pdf" data-report="${r.id}">PDF</button></td></tr>`;
+		html += `<tr class="sp-arch-row unique" data-report="${r.id}"><td>${esc(r.user_name)}</td><td>${esc(label)}</td><td class="sp-num">${money(r.total_amount)}</td><td>${dt(r.approved_at)}</td><td>${esc(r.approved_by_name || '')}</td><td class="sp-num"><button type="button" class="unique sp-btn sp-arch-pdf" data-report="${r.id}">PDF</button></td></tr>`;
 	});
 	html += '</tbody></table></div>';
 	wrap.innerHTML = html;
@@ -21208,15 +22970,15 @@ async function exportMileageCSV(start, end) {
 function renderApiTestResult(out, data) {
 	const row = (label, ok, body) => {
 		const dot = ok === true ? '✓' : ok === false ? '✗' : '•';
-		const cls = ok === true ? 'sp-api-ok' : ok === false ? 'sp-api-fail' : '';
-		return `<div class="sp-api-row ${cls}"><strong>${dot} ${esc(label)}</strong><div>${body}</div></div>`;
+		const cls = ok === true ? 'sp-notice--success' : ok === false ? 'sp-notice--danger' : '';
+		return `<div class="sp-notice sp-notice--block ${cls}"><strong>${dot} ${esc(label)}</strong><div>${body}</div></div>`;
 	};
 
 	let html = '';
 	html += row('API key', data.key_source !== 'NOT SET', `Source: <code>${esc(data.key_source)}</code><br>Preview: <code>${esc(data.key_preview)}</code>`);
 
 	if (data.error) {
-		html += `<div class="sp-api-row sp-api-fail"><strong>✗ Setup error</strong><div>${esc(data.error)}</div></div>`;
+		html += `<div class="sp-notice sp-notice--block sp-notice--danger"><strong>✗ Setup error</strong><div>${esc(data.error)}</div></div>`;
 	}
 
 	if (data.geocode) {
@@ -21241,7 +23003,7 @@ function renderApiTestResult(out, data) {
 
 	if (data.geocode && !data.geocode.ok) {
 		const status = data.geocode.status || '';
-		html += '<div class="sp-api-hint">';
+		html += '<div class="sp-notice sp-notice--warning sp-notice--block">';
 		if (status === 'REQUEST_DENIED') html += 'Likely cause: <strong>Geocoding API not enabled</strong> on the project, or the key has API restrictions excluding it. Enable it in Google Cloud Console → APIs & Services → Library.';
 		else if (status === 'OVER_QUERY_LIMIT') html += 'Daily quota exceeded or billing not enabled. Enable billing in Google Cloud Console → Billing.';
 		else if (status === 'INVALID_REQUEST') html += 'Address parameter rejected. Unusual — verify the key has no IP restrictions blocking the WP Engine outbound IP.';
@@ -21250,7 +23012,7 @@ function renderApiTestResult(out, data) {
 	} else if (data.distance_matrix && !data.distance_matrix.ok) {
 		const err = (data.distance_matrix.error || '').toLowerCase();
 		const raw = (data.distance_matrix.raw || '').toLowerCase();
-		html += '<div class="sp-api-hint">';
+		html += '<div class="sp-notice sp-notice--warning sp-notice--block">';
 		if (err.includes('has not been used') || err.includes('is disabled') || raw.includes('service_disabled')) {
 			html += 'Likely cause: <strong>Routes API service is not enabled on the project.</strong> Click the link in the raw response above (or Cloud Console → APIs &amp; Services → Library → Routes API → Enable). Wait ~60 seconds, then re-test.';
 		} else if (raw.includes('api_key_service_blocked') || raw.includes('api key not valid')) {
@@ -21375,15 +23137,15 @@ async function loadAdminMileage() {
 		// Destination approval policy.
 		let secNewDest = card('New Destinations');
 		secNewDest += '<p class="sp-text-secondary">Do new destinations need admin approval before being added to the database? When unchecked, a destination a driver adds goes straight into the database — geocoded and ready to use — with no approval step.</p>';
-		secNewDest += '<div class="sp-toolbar">';
-		secNewDest += `<label class="sp-reminder-toggle"><input type="checkbox" id="sp-mileage-require-approval"${requireApproval ? ' checked' : ''}> Require admin approval for new destinations</label>`;
+		secNewDest += '<div class="sp-options">';
+		secNewDest += `<label class="sp-check-row"><input type="checkbox" id="sp-mileage-require-approval"${requireApproval ? ' checked' : ''}> Require admin approval for new destinations</label>`;
 		secNewDest += '</div>';
 		secNewDest += cardEnd;
 
 		// Import sits with the destination list it adds to, next to the other list-level actions.
-		const destActions = '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-import-btn">Import Destinations</button>'
-			+ '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-geocode-missing" title="Add map coordinates to any destinations that are missing them (e.g. the seeded restaurants)">Geocode Missing</button>'
-			+ '<button type="button" class="unique sp-btn sp-btn-primary" id="sp-mileage-add-dest">+ Add Destination</button>';
+		const destActions = '<button type="button" class="unique sp-btn" id="sp-mileage-import-btn">Import Destinations</button>'
+			+ '<button type="button" class="unique sp-btn" id="sp-mileage-geocode-missing" title="Add map coordinates to any destinations that are missing them (e.g. the seeded restaurants)">Geocode Missing</button>'
+			+ '<button type="button" class="unique sp-btn sp-btn--primary" id="sp-mileage-add-dest">+ Add Destination</button>';
 		let secDest = card('Destinations', destActions);
 
 		// With approval off there's no pending queue, so hide that section — unless leftover
@@ -21394,7 +23156,7 @@ async function loadAdminMileage() {
 			if (pending.length === 0) {
 				secDest += '<p class="sp-text-secondary">No pending locations.</p>';
 			} else {
-				secDest += '<table class="sp-table sp-mileage-table"><thead class="sp-thead"><tr><th>Name</th><th>Address</th><th>Type</th><th>Added by</th><th></th></tr></thead><tbody>';
+				secDest += '<table class="sp-table sp-mileage-table"><thead><tr><th>Name</th><th>Address</th><th>Type</th><th>Added by</th><th></th></tr></thead><tbody>';
 				pending.forEach(l => {
 					secDest += '<tr>';
 					secDest += `<td>${esc(l.name)}</td>`;
@@ -21402,8 +23164,8 @@ async function loadAdminMileage() {
 					secDest += `<td>${esc(l.location_type)}</td>`;
 					secDest += `<td>${esc(l.created_by_name || '')}</td>`;
 					secDest += `<td class="sp-mileage-row-actions">`;
-					secDest += `<button type="button" class="unique sp-btn sp-btn-primary sp-mileage-approve-btn" data-id="${l.id}">Approve</button>`;
-					secDest += `<button type="button" class="unique sp-btn sp-btn-ghost sp-mileage-reject-btn" data-id="${l.id}">Reject</button>`;
+					secDest += `<button type="button" class="unique sp-btn sp-btn--primary sp-mileage-approve-btn" data-id="${l.id}">Approve</button>`;
+					secDest += `<button type="button" class="unique sp-btn sp-mileage-reject-btn" data-id="${l.id}">Reject</button>`;
 					secDest += `</td></tr>`;
 				});
 				secDest += '</tbody></table>';
@@ -21413,7 +23175,7 @@ async function loadAdminMileage() {
 		// Only sub-label the approved list when a Pending section is also shown; otherwise the
 		// "Destinations" header above is the only heading the single list needs.
 		if (showPending) secDest += `<h4>Approved (${approved.length})</h4>`;
-		secDest += '<table class="sp-table sp-mileage-table"><thead class="sp-thead"><tr><th>Name</th><th>Code</th><th>Address</th><th>Category</th><th>Business</th><th></th></tr></thead><tbody>';
+		secDest += '<table class="sp-table sp-mileage-table"><thead><tr><th>Name</th><th>Code</th><th>Address</th><th>Category</th><th>Business</th><th></th></tr></thead><tbody>';
 		approved.forEach(l => {
 			const priv = parseInt(l.is_private) ? ' <span class="unique sp-status-badge sp-status-draft">private</span>' : '';
 			secDest += '<tr>';
@@ -21436,8 +23198,8 @@ async function loadAdminMileage() {
 		let secReminder = card('Daily Reminder Email');
 		secReminder += '<p class="sp-text-secondary">Emails active drivers each morning to log the previous day\'s miles (skips anyone who already logged it). Links straight to quick entry.</p>';
 		secReminder += '<div class="sp-toolbar">';
-		secReminder += `<label class="sp-reminder-toggle"><input type="checkbox" id="sp-mileage-reminder-enabled"${reminders.enabled ? ' checked' : ''}> Send daily reminders</label>`;
-		secReminder += `<div class="sp-toolbar-group"><span class="sp-toolbar-label">Send at</span><select id="sp-mileage-reminder-hour" class="sp-select">${hourOpts}</select></div>`;
+		secReminder += `<label class="sp-check-row"><input type="checkbox" id="sp-mileage-reminder-enabled"${reminders.enabled ? ' checked' : ''}> Send daily reminders</label>`;
+		secReminder += `<div class="sp-toolbar"><span class="sp-toolbar-label">Send at</span><select id="sp-mileage-reminder-hour" class="sp-select">${hourOpts}</select></div>`;
 		secReminder += '</div>';
 		secReminder += cardEnd;
 
@@ -21452,50 +23214,52 @@ async function loadAdminMileage() {
 		let secToll = card('Tolls');
 		const tollMode = toll.mode === 'ntta_csv' ? 'ntta_csv' : 'tollguru';
 		secToll += '<p class="sp-text-secondary">Choose how tolls get onto a reimbursement. <strong>TollGuru</strong> auto-prices each leg where the driver checks the Toll box; <strong>NTTA CSV</strong> means you upload the toll statement and reconcile it against routes (from each driver’s expense report).</p>';
-		secToll += '<div class="sp-toll-mode-choice" style="margin-bottom:14px;">';
-		secToll += `<label class="sp-reminder-toggle" style="display:block;margin-bottom:6px;"><input type="radio" name="sp-toll-mode" value="tollguru"${tollMode === 'tollguru' ? ' checked' : ''}> Use Toll Guru for tolls</label>`;
-		secToll += `<label class="sp-reminder-toggle" style="display:block;"><input type="radio" name="sp-toll-mode" value="ntta_csv"${tollMode === 'ntta_csv' ? ' checked' : ''}> Upload CSVs from NTTA for tolls</label>`;
+		secToll += '<div class="sp-stack sp-stack--sm">';
+		secToll += '<div class="sp-options">';
+		secToll += `<label class="sp-check-row"><input type="radio" name="sp-toll-mode" value="tollguru"${tollMode === 'tollguru' ? ' checked' : ''}> Use Toll Guru for tolls</label>`;
+		secToll += `<label class="sp-check-row"><input type="radio" name="sp-toll-mode" value="ntta_csv"${tollMode === 'ntta_csv' ? ' checked' : ''}> Upload CSVs from NTTA for tolls</label>`;
 		secToll += '</div>';
 
 		// TollGuru configuration — shown only in TollGuru mode (the integration stays intact when off).
-		secToll += `<div id="sp-toll-tollguru-config"${tollMode === 'ntta_csv' ? ' hidden' : ''}>`;
+		secToll += `<div id="sp-toll-tollguru-config" class="sp-stack sp-stack--sm"${tollMode === 'ntta_csv' ? ' hidden' : ''}>`;
 		secToll += `<p class="sp-text-secondary">${toll.key_set ? 'TollGuru API key: <strong>set &#10003;</strong>' : 'No TollGuru API key set yet — add the TollGuru key in <strong>Site Settings</strong> first.'}</p>`;
 		secToll += '<div class="sp-toolbar">';
-		secToll += `<div class="sp-toolbar-group"><span class="sp-toolbar-label">Vehicle</span><select id="sp-toll-vehicle" class="sp-select">${vTypes.map(([v, l]) => `<option value="${v}"${toll.vehicle_type === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
-		secToll += `<div class="sp-toolbar-group"><span class="sp-toolbar-label">Reimburse at</span><select id="sp-toll-basis" class="sp-select"><option value="tag"${toll.cost_basis !== 'cash' ? ' selected' : ''}>Tag / transponder rate</option><option value="cash"${toll.cost_basis === 'cash' ? ' selected' : ''}>Cash rate</option></select></div>`;
-		secToll += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-toll-save">Save</button>';
+		secToll += `<div class="sp-toolbar"><span class="sp-toolbar-label">Vehicle</span><select id="sp-toll-vehicle" class="sp-select">${vTypes.map(([v, l]) => `<option value="${v}"${toll.vehicle_type === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+		secToll += `<div class="sp-toolbar"><span class="sp-toolbar-label">Reimburse at</span><select id="sp-toll-basis" class="sp-select"><option value="tag"${toll.cost_basis !== 'cash' ? ' selected' : ''}>Tag / transponder rate</option><option value="cash"${toll.cost_basis === 'cash' ? ' selected' : ''}>Cash rate</option></select></div>`;
+		secToll += '<button type="button" class="unique sp-btn" id="sp-toll-save">Save</button>';
 		secToll += '</div>';
 		if (D.isGod) {
 			const tollLocOpts = approved.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
-			secToll += '<div class="sp-toolbar" style="margin-top:8px;">';
-			secToll += `<div class="sp-toolbar-group"><span class="sp-toolbar-label">Test toll</span><select id="sp-toll-test-from" class="sp-select"><option value="">From…</option>${tollLocOpts}</select><select id="sp-toll-test-to" class="sp-select"><option value="">To…</option>${tollLocOpts}</select></div>`;
-			secToll += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-toll-test">Test Toll API</button>';
-			secToll += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-toll-test-polyline" title="Probe whether this key may price tolls along the EXACT Google route (polyline endpoint), instead of letting TollGuru re-route.">Test Polyline Tolls</button>';
+			secToll += '<div class="sp-toolbar">';
+			secToll += `<div class="sp-toolbar"><span class="sp-toolbar-label">Test toll</span><select id="sp-toll-test-from" class="sp-select"><option value="">From…</option>${tollLocOpts}</select><select id="sp-toll-test-to" class="sp-select"><option value="">To…</option>${tollLocOpts}</select></div>`;
+			secToll += '<button type="button" class="unique sp-btn" id="sp-toll-test">Test Toll API</button>';
+			secToll += '<button type="button" class="unique sp-btn" id="sp-toll-test-polyline" title="Probe whether this key may price tolls along the EXACT Google route (polyline endpoint), instead of letting TollGuru re-route.">Test Polyline Tolls</button>';
 			secToll += '</div>';
-			secToll += '<div id="sp-toll-test-result" class="sp-mileage-api-test" hidden></div>';
+			secToll += '<div id="sp-toll-test-result" class="sp-card sp-card--inset" hidden></div>';
 		}
 		secToll += '</div>'; // #sp-toll-tollguru-config
 
 		// NTTA CSV mode — the reconciliation itself happens in each driver’s expense report.
-		secToll += `<div id="sp-toll-ntta-config"${tollMode === 'tollguru' ? ' hidden' : ''}>`;
+		secToll += `<div id="sp-toll-ntta-config" class="sp-stack sp-stack--sm"${tollMode === 'tollguru' ? ' hidden' : ''}>`;
 		secToll += '<p class="sp-text-secondary">Tolls are entered by uploading NTTA toll-statement CSVs and reconciling the charges against driver routes — that’s done from each driver’s <strong>expense report</strong>, not here. TollGuru auto-pricing is off in this mode.</p>';
 		secToll += '</div>';
+		secToll += '</div>'; // stack
 		secToll += cardEnd;
 
 		// Distance matrix (lazy-rendered on demand — can be a large grid). Everything that fills or
 		// diagnoses the grid lives on this card's header, beside the grid it acts on.
-		let matrixActions = '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-recompute" title="Ask Google for every missing pair, and geocode any destination without map coordinates">Recompute All Distances</button>'
-			+ '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-find-dupes" title="Find destinations that are really the same place, and merge them">Find Duplicates</button>';
+		let matrixActions = '<button type="button" class="unique sp-btn" id="sp-mileage-recompute" title="Ask Google for every missing pair, and geocode any destination without map coordinates">Recompute All Distances</button>'
+			+ '<button type="button" class="unique sp-btn" id="sp-mileage-find-dupes" title="Find destinations that are really the same place, and merge them">Find Duplicates</button>';
 		if (D.isGod) {
-			matrixActions += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-test-api">Test Google API</button>';
+			matrixActions += '<button type="button" class="unique sp-btn" id="sp-mileage-test-api">Test Google API</button>';
 		}
 		let secMatrix = card('Distance Matrix', matrixActions);
 		secMatrix += '<p class="sp-text-secondary">Cached miles between approved locations. Click any cell to set a manual value. Row and column headers stay pinned as you scroll — hover a truncated name to see it in full.</p>';
 		secMatrix += '<p class="sp-matrix-legend"><b class="sp-matrix-key sp-matrix-api"></b> calculated by Google <b class="sp-matrix-key sp-matrix-manual"></b> manual override <b class="sp-matrix-key sp-matrix-missing"></b> not computed yet</p>';
-		secMatrix += '<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-mileage-matrix-toggle">Show matrix</button>';
+		secMatrix += '<button type="button" class="unique sp-btn" id="sp-mileage-matrix-toggle">Show matrix</button>';
 		secMatrix += '<div class="sp-mileage-matrix-wrap" id="sp-mileage-matrix" hidden></div>';
 		if (D.isGod) {
-			secMatrix += '<div id="sp-mileage-api-test-result" class="sp-mileage-api-test" hidden></div>';
+			secMatrix += '<div id="sp-mileage-api-test-result" class="sp-card sp-card--inset" hidden></div>';
 		}
 		secMatrix += '<div id="sp-mileage-dupes" class="sp-dupe-results" hidden></div>';
 		secMatrix += cardEnd;
@@ -21504,15 +23268,15 @@ async function loadAdminMileage() {
 		let secPurpose = card('Trip Purpose Library');
 		secPurpose += '<p class="sp-text-secondary">Suggestions shown to drivers when they pick a stop\'s business purpose. Tick <strong>Requires note</strong> to prompt the driver for extra detail (e.g. who they met) whenever they choose that purpose.</p>';
 		secPurpose += '<div class="sp-purpose-rows" id="sp-mileage-purposes-list"></div>';
-		secPurpose += '<div class="sp-mileage-purpose-add"><input type="text" id="sp-mileage-purpose-new" class="sp-input" placeholder="Add a purpose…"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-mileage-purpose-add-btn">Add</button></div>';
+		secPurpose += '<div class="sp-toolbar"><input type="text" id="sp-mileage-purpose-new" class="sp-input" placeholder="Add a purpose…"><button type="button" class="unique sp-btn" id="sp-mileage-purpose-add-btn">Add</button></div>';
 		secPurpose += cardEnd;
 
 		// Chart of Accounts editor — the GL accounts (number + description) that feed the Other
 		// Expenses account dropdown and the category account pickers below.
 		let secAccounts = card('Chart of Accounts');
 		secAccounts += '<p class="sp-text-secondary">Your GL accounts. Give each a <strong>Number</strong>, a short <strong>Category</strong> (what shows on the expense report, e.g. “Office Supplies”), and an optional longer <strong>Description</strong> (extra detail, shown only in the staff account dropdown). Sorted by number.</p>';
-		secAccounts += '<div class="sp-exp-acct-rows" id="sp-exp-acct-list"></div>';
-		secAccounts += '<div class="sp-exp-add-row"><input type="text" id="sp-exp-acct-num" class="sp-input sp-exp-acct-num-in" placeholder="Number (e.g. 91200)"><input type="text" id="sp-exp-acct-cat" class="sp-input sp-exp-acct-cat-in" placeholder="Category (e.g. Office Supplies)"><input type="text" id="sp-exp-acct-desc" class="sp-input sp-exp-acct-desc-in" placeholder="Description (details, optional)"><button type="button" class="unique sp-btn sp-btn-secondary" id="sp-exp-acct-add-btn">Add</button></div>';
+		secAccounts += '<div class="sp-stack sp-stack--sm sp-exp-acct-rows" id="sp-exp-acct-list"></div>';
+		secAccounts += '<div class="sp-toolbar sp-exp-add-row"><input type="text" id="sp-exp-acct-num" class="sp-input sp-exp-acct-num-in" placeholder="Number (e.g. 91200)"><input type="text" id="sp-exp-acct-cat" class="sp-input sp-exp-acct-cat-in" placeholder="Category (e.g. Office Supplies)"><input type="text" id="sp-exp-acct-desc" class="sp-input sp-exp-acct-desc-in" placeholder="Description (details, optional)"><button type="button" class="unique sp-btn" id="sp-exp-acct-add-btn">Add</button></div>';
 		secAccounts += cardEnd;
 
 		// Expense Categories editor — the categories inside each section + the GL account each posts
@@ -21520,7 +23284,7 @@ async function loadAdminMileage() {
 		let secCategories = card('Expense Categories');
 		secCategories += '<p class="sp-text-secondary">The categories staff pick inside each expense section, and the GL account each posts to. Classify these however your business needs. <strong>Other Expenses</strong> has no fixed categories — staff choose an account per line.</p>';
 		secCategories += '<div id="sp-exp-cat-sections"></div>';
-		secCategories += '<div class="sp-exp-mileage-accts"><h4>Mileage posts to</h4><div class="sp-exp-mileage-accts-grid" id="sp-exp-mileage-accts"></div></div>';
+		secCategories += '<div class="sp-exp-mileage-accts"><h4>Mileage posts to</h4><div class="sp-grid" id="sp-exp-mileage-accts"></div></div>';
 		secCategories += cardEnd;
 
 		// Approval & accounting — the email address approved expense reports are sent to.
@@ -21561,8 +23325,8 @@ async function loadAdminMileage() {
 				const nameCell = (i === editingIdx)
 					? `<input type="text" class="sp-input sp-purpose-edit-input" data-i="${i}" value="${esc(p.label)}">`
 					: `<div class="sp-purpose-text">${esc(p.label)}</div>`;
-				return `<div class="sp-purpose-row" data-i="${i}">`
-					+ `<label class="sp-purpose-req unique" title="Prompt the driver for an additional note whenever they pick this purpose"><input type="checkbox" class="sp-purpose-req-cb" data-i="${i}"${p.requires_note ? ' checked' : ''}></label>`
+				return `<div class="sp-card sp-card--inset sp-purpose-row" data-i="${i}">`
+					+ `<label class="unique" title="Prompt the driver for an additional note whenever they pick this purpose"><input type="checkbox" class="sp-purpose-req-cb" data-i="${i}"${p.requires_note ? ' checked' : ''}></label>`
 					+ nameCell + iconBtn('edit', 'sp-purpose-edit', `data-i="${i}"`)
 					+ iconBtn('delete', 'sp-purpose-del', `data-i="${i}"`) + '</div>';
 			}).join('');
@@ -21664,7 +23428,7 @@ async function loadAdminMileage() {
 			// Always shown sorted by GL number (natural/numeric), not insertion order.
 			acctList.sort((a, b) => String(a.number).localeCompare(String(b.number), undefined, { numeric: true }));
 			box.innerHTML = acctList.length ? acctList.map((a, i) =>
-				`<div class="sp-exp-acct-row" data-i="${i}">`
+				`<div class="sp-toolbar sp-exp-acct-row" data-i="${i}">`
 				+ `<input type="text" class="sp-input sp-exp-acct-num-in sp-exp-acct-num-edit" data-i="${i}" value="${esc(a.number)}" placeholder="Number">`
 				+ `<input type="text" class="sp-input sp-exp-acct-cat-in sp-exp-acct-cat-edit" data-i="${i}" value="${esc(a.category || '')}" placeholder="Category">`
 				+ `<input type="text" class="sp-input sp-exp-acct-desc-edit" data-i="${i}" value="${esc(a.description)}" placeholder="Description (details)">`
@@ -21682,12 +23446,12 @@ async function loadAdminMileage() {
 			if (!box) return;
 			box.innerHTML = CAT_SECTIONS.map(([sec, label]) => {
 				const rows = (catArrays[sec] || []).map((c, i) =>
-					`<div class="sp-exp-cat-row" data-sec="${sec}" data-i="${i}">`
+					`<div class="sp-toolbar" data-sec="${sec}" data-i="${i}">`
 					+ `<input type="text" class="sp-input sp-exp-cat-label" data-sec="${sec}" data-i="${i}" value="${esc(c.label)}" placeholder="Category name">`
 					+ `<select class="sp-select sp-exp-cat-acct" data-sec="${sec}" data-i="${i}">${acctOptions(c.account)}</select>`
 					+ iconBtn('delete', 'sp-exp-cat-del', `data-sec="${sec}" data-i="${i}"`) + '</div>').join('');
-				return `<div class="sp-exp-cat-group"><h4>${esc(label)}</h4><div class="sp-exp-cat-rows">${rows || '<span class="unique sp-text-secondary">No categories.</span>'}</div>`
-					+ `<div class="sp-exp-add-row"><input type="text" class="sp-input sp-exp-cat-new" data-sec="${sec}" placeholder="Add a category…"><button type="button" class="unique sp-btn sp-btn-secondary sp-exp-cat-add" data-sec="${sec}">Add</button></div></div>`;
+				return `<div class="sp-exp-cat-group"><h4>${esc(label)}</h4><div class="sp-stack sp-stack--sm sp-exp-cat-rows">${rows || '<span class="unique sp-text-secondary">No categories.</span>'}</div>`
+					+ `<div class="sp-toolbar sp-exp-add-row"><input type="text" class="sp-input sp-exp-cat-new" data-sec="${sec}" placeholder="Add a category…"><button type="button" class="unique sp-btn sp-exp-cat-add" data-sec="${sec}">Add</button></div></div>`;
 			}).join('') + '<div class="sp-exp-cat-group"><h4>Other Expenses</h4><p class="sp-text-secondary">No fixed categories — staff choose a GL account per line from the chart above.</p></div>';
 			markUniqueSpans(box);
 			$$('.sp-exp-cat-label', box).forEach(inp => inp.addEventListener('change', () => { catArrays[inp.dataset.sec][+inp.dataset.i].label = inp.value.trim(); saveCategories(); }));
@@ -22104,8 +23868,8 @@ function showImportDestinationsModal(existingLocs, onSaved) {
 			<input type="file" id="sp-import-file" accept=".json,.csv" class="sp-input">
 			<div id="sp-import-candidates" class="sp-import-candidates"></div>
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-import-add" disabled>Add Selected</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-import-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-import-add" disabled>Add Selected</button>
+				<button type="button" class="unique sp-btn" id="sp-import-cancel">Cancel</button>
 			</div>
 		</div>
 	`;
@@ -22122,7 +23886,7 @@ function showImportDestinationsModal(existingLocs, onSaved) {
 	const renderCandidates = () => {
 		if (!candidates.length) { box.innerHTML = '<p class="sp-text-secondary">No candidates found in that file.</p>'; addBtn.disabled = true; return; }
 		let h = `<p class="sp-text-secondary">${candidates.length} candidate${candidates.length !== 1 ? 's' : ''} — already-known names are unticked by default.</p>`;
-		h += '<table class="sp-table sp-mileage-table"><thead class="sp-thead"><tr><th></th><th>Name</th><th>Address</th></tr></thead><tbody>';
+		h += '<table class="sp-table sp-mileage-table"><thead><tr><th></th><th>Name</th><th>Address</th></tr></thead><tbody>';
 		candidates.forEach((c, i) => {
 			const dup = have.has((c.name || '').toLowerCase());
 			h += '<tr>';
@@ -22187,7 +23951,7 @@ function renderMileageDuplicates(box, groups) {
 
 	groups.forEach((rows, gi) => {
 		const keep = bestOf(rows);
-		html += `<div class="sp-dupe-group" data-group="${gi}">`;
+		html += `<div class="sp-card sp-card--inset" data-group="${gi}">`;
 		rows.forEach(r => {
 			const tags = [];
 			if (r.store_linked) tags.push('linked to a store');
@@ -22203,7 +23967,7 @@ function renderMileageDuplicates(box, groups) {
 				${tags.length ? `<small class="sp-dupe-tags">${tags.join(' · ')}</small>` : ''}
 			</label>`;
 		});
-		html += `<button type="button" class="unique sp-btn sp-btn-secondary sp-dupe-merge" data-group="${gi}">Merge this set</button>`;
+		html += `<button type="button" class="unique sp-btn sp-dupe-merge" data-group="${gi}">Merge this set</button>`;
 		html += '</div>';
 	});
 
@@ -22268,7 +24032,7 @@ async function renderMileageMatrix(box) {
 
 	const key = (a, b) => (a <= b ? `${a}-${b}` : `${b}-${a}`);
 
-	let html = '<table class="sp-table sp-matrix-table"><thead class="sp-thead"><tr><th class="sp-matrix-corner"></th>';
+	let html = '<table class="sp-table sp-matrix-table"><thead><tr><th class="sp-matrix-corner"></th>';
 	locs.forEach(c => { html += `<th scope="col" title="${esc(c.name)}">${esc(c.name)}</th>`; });
 	html += '</tr></thead><tbody>';
 	locs.forEach(rLoc => {
@@ -22306,8 +24070,8 @@ function showMatrixCellModal(d, onSaved) {
 			<p class="sp-text-secondary">${esc(d.fromName)} ↔ ${esc(d.toName)}</p>
 			<div class="sp-form-group"><label>Miles</label><input type="number" step="0.1" min="0" id="sp-matrix-miles" class="sp-input" value="${d.miles || ''}"></div>
 			<div class="sp-modal-actions">
-				<button type="button" class="unique sp-btn sp-btn-primary" id="sp-matrix-save">Save</button>
-				<button type="button" class="unique sp-btn sp-btn-ghost" id="sp-matrix-cancel">Cancel</button>
+				<button type="button" class="unique sp-btn sp-btn--primary" id="sp-matrix-save">Save</button>
+				<button type="button" class="unique sp-btn" id="sp-matrix-cancel">Cancel</button>
 			</div>
 		</div>
 	`;
@@ -22519,23 +24283,23 @@ function renderFleet() {
 					<div class="sp-fleet-name">${s.url
 						? `<a class="unique" href="${esc(s.url)}/wp-admin/" target="_blank" rel="noopener" title="Open wp-admin">${esc(s.label)}</a>`
 						: esc(s.label)}</div>
-					<div class="sp-fleet-chips">${chips}</div>
+					<div class="sp-toolbar">${chips}</div>
 				</div>
 				<div class="sp-fleet-metrics">
 					<div class="sp-fleet-metric sp-fleet-metric-traffic" title="Click to switch 30d / 3m / 6m / 12m">
-						<div class="sp-fleet-metric-label">${fleetPeriodLabel('Traffic')}</div>
+						<div class="sp-field__hint sp-fleet-metric-label">${fleetPeriodLabel('Traffic')}</div>
 						<div class="sp-fleet-metric-value">${traffic ? `${fleetNum(traffic.sessions)} ${fleetDelta(traffic.pct)}` : '—'}</div>
 					</div>
 					<div class="sp-fleet-metric">
-						<div class="sp-fleet-metric-label">Audit</div>
+						<div class="sp-field__hint sp-fleet-metric-label">Audit</div>
 						<div class="sp-fleet-metric-value">${esc(audit)}</div>
 					</div>
 					<div class="sp-fleet-metric">
-						<div class="sp-fleet-metric-label">Keywords</div>
+						<div class="sp-field__hint sp-fleet-metric-label">Keywords</div>
 						<div class="sp-fleet-metric-value">${esc(kw)}</div>
 					</div>
 					<div class="sp-fleet-metric">
-						<div class="sp-fleet-metric-label">Reviews</div>
+						<div class="sp-field__hint sp-fleet-metric-label">Reviews</div>
 						<div class="sp-fleet-metric-value">${esc(rev)}</div>
 					</div>
 					<div class="sp-fleet-metric sp-fleet-metric-spark">${fleetSpark(s.spark)}</div>
@@ -22608,19 +24372,19 @@ function spBookSetMsg(backdrop, text) {
 // The header/footer action pair, so every booking modal offers the same two buttons in the
 // same order at both ends.
 function spBookActionRow(saveLabel, saveCls, disabled) {
-	return `<button type="button" class="unique sp-btn sp-btn-primary ${saveCls}"${disabled ? ' disabled' : ''}>${esc(saveLabel)}</button>`
-		+ '<button type="button" class="unique sp-btn sp-btn-secondary sp-book-cancel">Cancel</button>';
+	return `<button type="button" class="unique sp-btn sp-btn--primary ${saveCls}"${disabled ? ' disabled' : ''}>${esc(saveLabel)}</button>`
+		+ '<button type="button" class="unique sp-btn sp-book-cancel">Cancel</button>';
 }
 
 function spBookHead(title, saveLabel, saveCls, disabled) {
 	return '<div class="sp-card-header sp-header-grid sp-report-form-header">'
 		+ `<h3>${esc(title)}</h3>`
-		+ `<div class="sp-book-head-actions">${spBookActionRow(saveLabel, saveCls, disabled)}</div></div>`;
+		+ `<div class="sp-toolbar sp-toolbar--end">${spBookActionRow(saveLabel, saveCls, disabled)}</div></div>`;
 }
 
-function spBookFoot(saveLabel, saveCls, disabled) {
-	return `<div class="sp-report-form-actions">${spBookActionRow(saveLabel, saveCls, disabled)}`
-		+ '<span class="sp-book-form-msg"></span></div>';
+function spBookFoot(saveLabel, saveCls, disabled, extra = '') {
+	return `<div class="sp-report-form-actions">${spBookActionRow(saveLabel, saveCls, disabled)}${extra}`
+		+ '<span class="sp-field__hint sp-flag--danger sp-book-form-msg"></span></div>';
 }
 
 // A service saved before the single-buffer change can have unequal columns; show the
@@ -22656,22 +24420,31 @@ function initBookingAdmin() {
 	if (_spBookAdminWired) return;
 	_spBookAdminWired = true;
 
-	$('#sp-book-add-service')?.addEventListener('click', () => spBookServiceForm(0));
+	$('#sp-book-add-type')?.addEventListener('click', () => spBookServiceForm(0, { as: 'type' }));
 	$('#sp-book-add-resource')?.addEventListener('click', () => spBookResourceForm(0));
 	$('#sp-book-add-exception')?.addEventListener('click', () => spBookExceptionForm());
 	$('#sp-book-preview-run')?.addEventListener('click', () => spBookPreview());
 	$('#sp-book-notify-save')?.addEventListener('click', () => spBookSaveNotify());
 	$('#sp-book-add-plan')?.addEventListener('click', () => spBookPlanForm(0));
 	$('#sp-book-travel-save')?.addEventListener('click', () => spBookSaveTravel());
+	$('#sp-book-names-save')?.addEventListener('click', async (e) => {
+		const btn = e.currentTarget;
+		btn.disabled = true;
+		try {
+			const r = await spAjax('site_pulse_booking_save_names', { one: $('#sp-book-name-one').value, many: $('#sp-book-name-many').value });
+			spToast(r.success ? r.data.message : (r.data?.message || 'Could not save.'), 5000);
+		} catch (err) { spToast('Could not save — check your connection and try again.'); }
+		btn.disabled = false;
+	});
 	$('#sp-book-avail-resource')?.addEventListener('change', () => spBookRenderAvailability());
 
 	// Delegated so the row buttons survive every re-render of the lists.
-	$('#sp-panel-admin-booking')?.addEventListener('click', (e) => {
-		const svc = e.target.closest('[data-book-service]');
-		if (svc) {
-			const id = parseInt(svc.dataset.bookService, 10);
-			if (svc.dataset.act === 'delete') spBookDelete('service', id, 'service');
-			else spBookServiceForm(id);
+	['#sp-panel-admin-booking', '#sp-panel-booking-staff'].forEach(sel => $(sel)?.addEventListener('click', (e) => {
+		const typ = e.target.closest('[data-book-type]');
+		if (typ) {
+			const id = parseInt(typ.dataset.bookType, 10);
+			if (typ.dataset.act === 'delete') spBookTypeDelete(id);
+			else spBookServiceForm(id, { as: 'type' });
 			return;
 		}
 		const res = e.target.closest('[data-book-resource]');
@@ -22691,11 +24464,11 @@ function initBookingAdmin() {
 		if (rule) { spBookDeleteRule(parseInt(rule.dataset.bookRule, 10)); return; }
 		const saveHours = e.target.closest('#sp-book-save-hours');
 		if (saveHours) spBookSaveHours();
-	});
+	}));
 }
 
 async function loadBookingAdmin() {
-	const svcList = $('#sp-book-services-list');
+	const svcList = $('#sp-book-types-list');
 	if (svcList) svcList.innerHTML = '<div class="sp-loading"></div>';
 	try {
 		const res = await spAjax('site_pulse_booking_admin_data', {});
@@ -22715,7 +24488,7 @@ function spBookRenderAll() {
 	loadBookingNotify();
 	loadBookingPlans();
 	spBookRenderTravel();
-	spBookRenderServices();
+	spBookRenderTypes();
 	spBookRenderResources();
 	spBookFillResourceSelects();
 	spBookRenderAvailability();
@@ -22724,222 +24497,940 @@ function spBookRenderAll() {
 
 
 /*--------------------------------------------------------------
-# Services
+# Booking Types (Settings → Booking) + Offerings (Booking → Offerings)
+# A type is a template; an offering follows its type live for every rule it hasn't changed
+# (includes-site-pulse-booking-types.php). One form edits both: spBookServiceForm(id, { as }).
 --------------------------------------------------------------*/
 
-function spBookRenderServices() {
-	const box = $('#sp-book-services-list');
+const _spBookOffer = { wired: false, status: '' };
+
+// Rule key ↔ form field. Values are in the server's normalised units (minutes, cents, 0/1).
+const SP_BOOK_RULE_FIELDS = {
+	duration_min:          { sel: '#sp-bf-duration' },
+	slot_interval_min:     { sel: '#sp-bf-interval' },
+	buffer_min:            { sel: '#sp-bf-buffer' },
+	lead_time_min:         { sel: '#sp-bf-lead', unit: 'hours' },
+	max_advance_days:      { sel: '#sp-bf-advance' },
+	cancel_window_min:     { sel: '#sp-bf-cancel', unit: 'hours' },
+	capacity:              { sel: '#sp-bf-capacity' },
+	price_cents:           { sel: '#sp-bf-price', unit: 'money' },
+	deposit_cents:         { sel: '#sp-bf-deposit', unit: 'money' },
+	requires_payment:      { sel: '#sp-bf-pay', unit: 'text' },
+	requires_address:      { sel: '#sp-bf-address', unit: 'check' },
+	window_max_jobs:       { sel: '#sp-bf-maxjobs' },
+	dispatch_mode:         { sel: '#sp-bf-dispatch', unit: 'text' },
+	out_of_area_min:       { sel: '#sp-bf-ooa-min' },
+	out_of_area_policy:    { sel: '#sp-bf-ooa', unit: 'text' },
+	out_of_area_fee_cents: { sel: '#sp-bf-ooa-fee', unit: 'money' },
+	book_label:            { sel: '#sp-bf-booklabel', unit: 'text' },
+	full_label:            { sel: '#sp-bf-fulllabel', unit: 'text' },
+	taxable:               { sel: '#sp-bf-taxable', unit: 'check' },
+};
+const SP_BOOK_RULE_KEYS = Object.keys(SP_BOOK_RULE_FIELDS).concat(['windows', 'resource_ids']);
+
+function spBookRuleGet(root, key) {
+	const f = SP_BOOK_RULE_FIELDS[key];
+	const el = f && $(f.sel, root);
+	if (!el) return undefined;
+	if (f.unit === 'check') return el.checked ? 1 : 0;
+	if (f.unit === 'text') return String(el.value);
+	if (f.unit === 'money') { const n = parseFloat(String(el.value).replace(/[^0-9.]/g, '')); return isNaN(n) ? 0 : Math.round(n * 100); }
+	if (f.unit === 'hours') return Math.max(0, Math.round((parseFloat(el.value) || 0) * 60));
+	return parseInt(el.value, 10) || 0;
+}
+
+function spBookRuleSet(root, key, v) {
+	const f = SP_BOOK_RULE_FIELDS[key];
+	const el = f && $(f.sel, root);
+	if (!el) return;
+	if (f.unit === 'check') el.checked = !!Number(v);
+	else if (f.unit === 'money') el.value = Number(v) ? (Number(v) / 100).toFixed(2) : '';
+	else if (f.unit === 'hours') el.value = (Number(v) || 0) / 60;
+	else el.value = v ?? '';
+	el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+// '8:00' / '08:00:00' → '08:00:00', the server's stored form, so windows compare exactly.
+function spBookHms(t) {
+	const m = String(t || '').match(/^(\d{1,2}):(\d{2})/);
+	return m ? `${m[1].padStart(2, '0')}:${m[2]}:00` : '';
+}
+function spBookParseList(v) {
+	if (Array.isArray(v)) return v;
+	try { const x = JSON.parse(v || '[]'); return Array.isArray(x) ? x : []; } catch (e) { return []; }
+}
+function spBookWinNorm(list) {
+	return JSON.stringify(spBookParseList(list).filter(w => w.start && w.end).map(w => ({ label: w.label || '', start: spBookHms(w.start), end: spBookHms(w.end) })));
+}
+function spBookIdsNorm(list) {
+	return JSON.stringify((list || []).map(Number).filter(Boolean).sort((a, b) => a - b));
+}
+
+// A type's rules in the shape the form reads a service row in.
+function spBookRulesAsService(r) {
+	r = r || {};
+	return {
+		duration_min: r.duration_min, slot_interval_min: r.slot_interval_min,
+		buffer_before_min: r.buffer_min, buffer_after_min: r.buffer_min,
+		lead_time_min: r.lead_time_min, max_advance_days: r.max_advance_days, cancel_window_min: r.cancel_window_min,
+		capacity: r.capacity, price_cents: r.price_cents, deposit_cents: r.deposit_cents,
+		requires_payment: r.requires_payment, requires_address: r.requires_address,
+		slot_mode: r.slot_mode, windows: r.windows || '[]', window_max_jobs: r.window_max_jobs,
+		dispatch_mode: r.dispatch_mode, out_of_area_min: r.out_of_area_min, out_of_area_policy: r.out_of_area_policy,
+		out_of_area_fee_cents: r.out_of_area_fee_cents, resource_ids: r.resource_ids || [],
+		opts: { book_label: r.book_label, full_label: r.full_label, taxable: !!Number(r.taxable) },
+	};
+}
+
+// Fetch the booking setup payload, then redraw whichever booking screen is showing.
+async function spBookRefresh() {
+	try {
+		const res = await spAjax('site_pulse_booking_admin_data', {});
+		if (!res.success) return;
+		_spBookAdmin = res.data;
+	} catch (e) { return; }
+	if ($('#sp-panel-admin-booking')?.classList.contains('active')) spBookRenderTypes();
+	spBookRenderOfferings();
+}
+
+function spBookTypeSummary(t) {
+	const r = t.rules || {};
+	const bits = [t.kind_label];
+	if (t.mode === 'session') bits.push(`${parseInt(r.capacity, 10) || 1} seats`);
+	else bits.push(r.slot_mode === 'window' ? 'arrival windows' : `${parseInt(r.duration_min, 10) || 60} min`);
+	bits.push(parseInt(r.price_cents, 10) ? spBookMoney(r.price_cents) : 'no set price');
+	if (Number(r.requires_address)) bits.push('at the customer’s address');
+	return bits;
+}
+
+function spBookRenderTypes() {
+	const box = $('#sp-book-types-list');
 	if (!box || !_spBookAdmin) return;
-	const rows = _spBookAdmin.services || [];
-	if (!rows.length) {
-		box.innerHTML = '<div class="sp-empty">No services yet. Add the first thing customers can book.</div>';
-		return;
-	}
-	const modes = _spBookAdmin.modes || {};
-	box.innerHTML = `<table class="sp-table"><thead><tr>
-		<th>Name</th><th>Type</th><th>Length</th><th>Price</th><th>Status</th><th></th>
-	</tr></thead><tbody>${rows.map(s => {
-		// The registry label is a full sentence ("Appointment — slots generated…"); the table
-		// only has room for the first clause.
-		const mode = String(modes[s.mode] || s.mode).split('—')[0].trim();
-		const badge = s.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft';
-		return `<tr>
-			<td><strong>${esc(s.name)}</strong><div class="sp-book-sub">${esc(s.slug)}</div></td>
-			<td>${esc(mode)}</td>
-			<td>${parseInt(s.duration_min, 10)} min</td>
-			<td>${spBookMoney(s.price_cents)}</td>
-			<td><span class="sp-status-badge ${badge}">${s.status === 'active' ? 'Active' : 'Inactive'}</span></td>
-			<td class="sp-book-actions">
-				${iconBtn('edit', '', `data-book-service="${s.id}" data-act="edit"`)}
-				${iconBtn('delete', '', `data-book-service="${s.id}" data-act="delete"`)}
-			</td>
-		</tr>`;
-	}).join('')}</tbody></table>`;
+	const types = _spBookAdmin.types || [];
+	box.innerHTML = types.length
+		? `<div class="sp-list sp-book-card-list">${types.map(t => {
+			return `<div class="sp-row" data-sp-open data-book-type="${t.id}" data-act="edit">`
+				+ `<span class="sp-row__lead"><span class="sp-row__thumb">${spIcon(t.mode === 'session' ? 'users' : 'calendar')}</span></span>`
+				+ `<span class="sp-row__main"><span class="sp-row__title">${esc(t.name)}</span>`
+				+   `<span class="sp-meta">${spBookTypeSummary(t).map(m => `<span>${esc(m)}</span>`).join('')}</span>`
+				+   (t.description ? `<span class="sp-meta"><span>${esc(t.description)}</span></span>` : '')
+				+   `<span class="sp-toolbar"><span class="sp-chip">${t.offerings ? `${t.offerings} ${spTerm('service', t.offerings !== 1, true)}` : 'Not used yet'}</span></span>`
+				+ '</span><span class="sp-row__trail">'
+				+   `${spEditMark()}<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-book-type="${t.id}" data-act="delete" title="Delete" aria-label="Delete">${spIcon('trash')}</button>`
+				+ '</span></div>';
+		}).join('')}</div>`
+		: '<div class="sp-empty">No templates. Add one for each kind of thing you offer — a class, an appointment, a service call.</div>';
 	markUniqueSpans(box);
 }
 
-function spBookServiceForm(id) {
-	const svc = (_spBookAdmin?.services || []).find(s => parseInt(s.id, 10) === id) || {};
-	const modes = _spBookAdmin?.modes || {};
-	const resources = _spBookAdmin?.resources || [];
+async function spBookTypeDelete(id) {
+	const t = (_spBookAdmin?.types || []).find(x => x.id === id);
+	if (!t) return;
+	const msg = t.offerings
+		? `Delete the template “${t.name}”? Its ${t.offerings} ${spTerm('service', t.offerings !== 1, true)} ${t.offerings === 1 ? 'keeps its' : 'keep their'} current settings but stop following a template.`
+		: `Delete the template “${t.name}”?`;
+	if (!await spConfirm(msg)) return;
+	try {
+		const res = await spAjax('site_pulse_booking_delete_type', { id });
+		if (!res.success) { spAlert(res.data?.message || 'Could not delete.'); return; }
+		spToast(res.data?.message || 'Deleted.');
+		spBookRefresh();
+	} catch (e) { spAlert('Could not delete.'); }
+}
+
+
+/*--------------------------------------------------------------
+# Offerings list
+--------------------------------------------------------------*/
+
+function initBookingOfferings() {
+	const S = _spBookOffer;
+	if (S.wired) return;
+	S.wired = true;
+	const panel = $('#sp-panel-booking-offerings');
+	let t = null;
+	$('#sp-book-offer-search')?.addEventListener('input', () => { clearTimeout(t); t = setTimeout(spBookRenderOfferings, 200); });
+	$('#sp-book-offer-type')?.addEventListener('change', spBookRenderOfferings);
+	$('#sp-book-offer-sort')?.addEventListener('change', spBookRenderOfferings);
+	$$('[data-sp-book-offer-status]', panel).forEach(tab => tab.addEventListener('click', () => {
+		$$('[data-sp-book-offer-status]', panel).forEach(b => b.classList.toggle('is-active', b === tab));
+		S.status = tab.dataset.spBookOfferStatus;
+		spBookRenderOfferings();
+	}));
+	$('#sp-book-offer-new')?.addEventListener('click', () => spBookOfferPicker());
+	$('#sp-book-offerings')?.addEventListener('click', (e) => {
+		const el = e.target.closest('[data-book-service]');
+		if (!el) return;
+		const id = parseInt(el.dataset.bookService, 10);
+		if (el.dataset.act === 'delete') spBookDelete('service', id, 'offering');
+		else if (el.dataset.act === 'schedule') spBookScheduleForm(id, { onDone: spBookRefresh });
+		else spBookServiceForm(id);
+	});
+}
+
+async function loadBookingOfferings() {
+	const box = $('#sp-book-offerings');
+	if (box && !_spBookAdmin) box.innerHTML = SP_LIST_SKELETON;
+	await spBookRefresh();
+	if (box && !_spBookAdmin) box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load offerings. Try again in a moment.') + '</div>';
+}
+
+function spBookRenderOfferings() {
+	const box = $('#sp-book-offerings');
+	if (!box || !_spBookAdmin) return;
+	const A = _spBookAdmin;
+	const types = A.types || [];
+	const kinds = A.kinds || {};
+
+	const sel = $('#sp-book-offer-type');
+	if (sel) {
+		const cur = sel.value;
+		sel.innerHTML = '<option value="">Every template</option>' + types.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')
+			+ ((A.services || []).some(s => !s.type_id) ? '<option value="0">No template</option>' : '');
+		sel.value = [...sel.options].some(o => o.value === cur) ? cur : '';
+	}
+
+	const q = ($('#sp-book-offer-search')?.value || '').trim().toLowerCase();
+	const tf = sel?.value ?? '';
+	const sort = $('#sp-book-offer-sort')?.value || 'az';
+	const rows = (A.services || []).filter(s => (!_spBookOffer.status || s.status === _spBookOffer.status)
+		&& (tf === '' || String(s.type_id) === tf)
+		&& (!q || `${s.name} ${s.description || ''}`.toLowerCase().includes(q)));
+	rows.sort((a, b) => {
+		if (sort === 'za') return b.name.localeCompare(a.name);
+		if (sort === 'newest') return parseInt(b.id, 10) - parseInt(a.id, 10);
+		if (sort === 'next') return (a.stats?.next_at || '9999').localeCompare(b.stats?.next_at || '9999');
+		return a.name.localeCompare(b.name);
+	});
+
+	const cnt = $('#sp-book-offer-count');
+	if (cnt) cnt.textContent = `${rows.length} ${spTerm('service', rows.length !== 1, true)}`;
+
+	const filtered = q || tf !== '' || _spBookOffer.status;
+	box.innerHTML = rows.length
+		? '<div class="sp-card sp-card--flush"><div class="sp-list">' + rows.map(s => {
+			const t = types.find(x => x.id === s.type_id);
+			const st = s.stats || {};
+			const session = s.mode === 'session';
+			const price = parseInt(s.price_cents, 10) ? spBookMoney(s.price_cents) + (s.kind === 'series' ? ' for every date' : '') : 'Free';
+			const meta = [t ? t.name : (kinds[s.kind]?.short || ''), price];
+			if (session) {
+				meta.push(st.dates ? `${st.dates} upcoming ${st.dates === 1 ? 'date' : 'dates'}` : 'No upcoming dates');
+				if (st.next) meta.push(`next ${st.next}`);
+				if (st.dates && st.capacity) {
+					meta.push(s.kind === 'series'
+						? `${Math.round(st.taken / st.dates)} of ${Math.round(st.capacity / st.dates)} enrolled`
+						: `${st.taken} of ${st.capacity} seats booked`);
+				}
+			} else {
+				meta.push(s.slot_mode === 'window' ? 'arrival windows' : `${parseInt(s.duration_min, 10)} min`);
+				if (st.booked) meta.push(`${st.booked} upcoming`);
+			}
+			const custom = t ? (s.overrides || []).length : 0;
+			const chips = [];
+			if (s.status !== 'active') chips.push('<span class="sp-chip sp-chip--warning">Turned off</span>');
+			if (s.event) chips.push(`<span class="sp-chip sp-chip--brand">Event: ${esc(s.event.title)}${s.event.status !== 'publish' ? ' (draft)' : ''}</span>`);
+			if (custom) chips.push(`<span class="sp-chip" title="Settings this ${esc(spTerm('service', false, true))} changed from its template">${custom} custom</span>`);
+			return `<div class="sp-row" data-sp-open data-book-service="${s.id}" data-act="edit">`
+				+ `<span class="sp-row__lead"><span class="sp-row__thumb">${spIcon(session ? 'users' : 'calendar')}</span></span>`
+				+ `<span class="sp-row__main"><span class="sp-row__title">${esc(s.name)}</span>`
+				+   `<span class="sp-meta">${meta.filter(Boolean).map(m => `<span>${esc(m)}</span>`).join('')}</span>`
+				+   (chips.length ? `<span class="sp-toolbar">${chips.join('')}</span>` : '')
+				+ '</span><span class="sp-row__trail">'
+				+   `${spEditMark()}<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-book-service="${s.id}" data-act="delete" title="Delete" aria-label="Delete">${spIcon('trash')}</button>`
+				+ '</span></div>';
+		}).join('') + '</div></div>'
+		: spEmptyHTML({
+			icon: 'calendar',
+			title: filtered ? `No ${spTerm('service', true, true)} match` : 'Nothing to book yet',
+			text: filtered ? 'Try another search, template or tab.' : `Add a ${spTerm('service', false, true)}: pick a template (a class, an appointment, a service call…) and give it a name and price.`,
+		});
+	markUniqueSpans(box);
+}
+
+// Add Offering: pick the type first, so its rules fill the form.
+function spBookOfferPicker() {
+	const types = _spBookAdmin?.types || [];
+	if (!types.length) { spBookServiceForm(0, { typeId: 0 }); return; }
+	const backdrop = spFormModal();
+	let html = '<div class="sp-card sp-report-form-wrap sp-book-form">';
+	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>Add ${esc(spTerm('service'))}</h3>`
+		+ '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-book-cancel">Cancel</button></div></div>';
+	html += `<p class="sp-help-text sp-help-text--keep">Pick the template closest to what you’re adding. Its settings fill in, and you can change any of them for this ${esc(spTerm('service', false, true))}. Templates are set up in Settings &rarr; Booking.</p>`;
+	html += '<div class="sp-list sp-book-card-list">' + types.map(t => `<button type="button" class="unique sp-row" data-pick-type="${t.id}">`
+		+ `<span class="sp-row__lead"><span class="sp-row__thumb">${spIcon(t.mode === 'session' ? 'users' : 'calendar')}</span></span>`
+		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(t.name)}</span>`
+		+ `<span class="sp-meta">${spBookTypeSummary(t).map(m => `<span>${esc(m)}</span>`).join('')}</span>`
+		+ (t.description ? `<span class="sp-meta"><span>${esc(t.description)}</span></span>` : '')
+		+ `</span><span class="sp-row__trail">${spIcon('chev-r')}</span></button>`).join('')
+		+ `<button type="button" class="unique sp-row" data-pick-type="0"><span class="sp-row__main"><span class="sp-row__title">No template</span><span class="sp-meta"><span>Start blank and set everything by hand</span></span></span><span class="sp-row__trail">${spIcon('chev-r')}</span></button>`
+		+ '</div></div>';
+	backdrop.innerHTML = html;
+	markUniqueSpans(backdrop);
+	$$('.sp-book-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
+	$$('[data-pick-type]', backdrop).forEach(b => b.addEventListener('click', () => {
+		closeFormModal();
+		spBookServiceForm(0, { typeId: parseInt(b.dataset.pickType, 10) || 0 });
+	}));
+}
+
+/*--------------------------------------------------------------
+# The type / offering form
+--------------------------------------------------------------*/
+
+// The words for each field, per shape: [label, unit hint, ⓘ text]. A missing shape hides the field.
+const SP_BOOK_FIELD_TEXT = {
+	duration: {
+		appointment: ['How long it takes', '(minutes)', 'The length of the appointment. Customers see it, and that person can’t be booked for anything else during it.'],
+		call:        ['Typical job length', '(minutes)', 'Roughly how long one job takes. Customers don’t see this; it decides how many jobs fit in an arrival window and how full each tech’s day gets.'],
+		class:       ['Class length', '(minutes)', 'How long each class runs. It sets the end time shown on the calendar and the event page.'],
+		series:      ['Class length', '(minutes)', 'How long each class in the series runs. It sets the end time shown on the calendar and the event page.'],
+	},
+	interval: {
+		appointment: ['Start times every', '(minutes)', 'How often start times are offered. With 30, a customer sees 9:00, 9:30, 10:00… Use 60 for hour blocks, or 15 for short services.'],
+	},
+	capacity: {
+		class:  ['Seats', '(per date)', 'How many people can sign up for each date. When every seat is taken, the button switches to your “full” wording.'],
+		series: ['Seats', '(whole series)', 'How many people can enroll. One seat covers every date in the series.'],
+		appointment: ['People per time slot', '', 'Leave at 1 for one customer at a time. Set it higher for a group booking, like a lesson for up to 4 people.'],
+	},
+	maxjobs: {
+		call: ['Most jobs per window', '(0 = no limit)', 'A cap on how many jobs one tech takes in a single window. Leave at 0 to fit as many as the job length allows.'],
+	},
+	buffer: {
+		appointment: ['Break between appointments', '(minutes)', 'Time kept free after each appointment, for cleanup or a breather. Back-to-back bookings get this gap between them.'],
+		call:        ['Drive time between jobs', '(minutes)', 'The least time kept between two jobs for driving. When both addresses are known and the real drive is longer, the longer time is used.'],
+	},
+	lead: {
+		appointment: ['Book at least', '(hours ahead)', 'How much notice you need. With 24, nobody can book anything that starts in the next 24 hours. 0 allows same-hour bookings.'],
+		call:        ['Book at least', '(hours ahead)', 'How much notice you need. With 24, nobody can book a window that starts in the next 24 hours.'],
+		class:       ['Stop sign-ups', '(hours before)', 'Sign-ups close this many hours before the class starts. 0 lets people sign up until it begins.'],
+		series:      ['Stop enrollment', '(hours before)', 'Enrollment closes this many hours before the first class. Nobody can join a series after it has started.'],
+		rental:      ['Book at least', '(hours ahead)', 'How much notice you need before a stay can start.'],
+	},
+	advance: {
+		appointment: ['Book up to', '(days ahead)', 'How far into the future customers can book. With 60, nothing more than 60 days out is offered.'],
+		call:        ['Book up to', '(days ahead)', 'How far into the future customers can book. With 30, nothing more than 30 days out is offered.'],
+		class:       ['Show dates up to', '(days ahead)', 'How far ahead class dates can be booked. A weekly class is added to the calendar this far ahead, and topped up every day.'],
+		series:      ['Show dates up to', '(days ahead)', 'How far ahead dates are listed. A series is usually a fixed set of dates, so this rarely matters.'],
+		rental:      ['Book up to', '(days ahead)', 'How far into the future a stay can be booked.'],
+	},
+	price: {
+		appointment: ['Price', '', 'What it costs. Leave blank if it’s free or priced on the day.'],
+		call:        ['Price', '', 'The price of the visit, if it has one (a tune-up, a diagnostic fee). Leave blank if you quote on site.'],
+		class:       ['Price', '(per date)', 'What one person pays for one date. Leave blank for a free class or RSVP.'],
+		series:      ['Price', '(whole series)', 'What one person pays for every date in the series. Leave blank if it’s free.'],
+		rental:      ['Price', '(per night)', 'The nightly price.'],
+	},
+};
+
+// ⓘ: a small button that opens one line of help under the field. Returns [button, panel] as HTML.
+let _spInfoSeq = 0;
+function spInfoPair(text) {
+	const id = 'sp-info-' + (++_spInfoSeq);
+	return [
+		`<button type="button" class="unique sp-info" aria-label="What’s this?" aria-expanded="false" aria-controls="${id}">?</button>`,
+		`<div class="sp-info__text" id="${id}" hidden>${text}</div>`,
+	];
+}
+
+// ctx.as = 'type' edits a template; otherwise a service. ctx.typeId = the template a NEW service starts from.
+function spBookServiceForm(id, ctx = {}) {
+	const asType = ctx.as === 'type';
+	const A = _spBookAdmin || {};
+	const types = A.types || [];
+	const kinds = A.kinds || {};
+	const resources = A.resources || [];
+
+	let rec = null;
+	let svc;
+	if (asType) {
+		rec = types.find(t => t.id === id) || null;
+		svc = Object.assign(spBookRulesAsService(rec?.rules), { name: rec?.name || '', description: rec?.description || '' });
+	} else {
+		rec = (A.services || []).find(s => parseInt(s.id, 10) === id) || null;
+		if (rec) svc = rec;
+		else {
+			const t = types.find(x => x.id === ctx.typeId);
+			svc = t ? Object.assign(spBookRulesAsService(t.rules), { type_id: t.id, kind: t.kind }) : { kind: 'appointment' };
+		}
+	}
 	const linked = (svc.resource_ids || []).map(Number);
+	let typeId = asType ? 0 : (parseInt(svc.type_id, 10) || 0);
+	const opts = svc.opts || {};
+	const noun = asType ? 'Template' : spTerm('service');
+	const kindOpts = (cur) => Object.entries(kinds).map(([k, v]) => `<option value="${esc(k)}"${cur === k ? ' selected' : ''}>${esc(v.label)}</option>`).join('');
+
+	// One field: label (+ unit) with its ⓘ, the help panel, then the control. Words are filled per shape.
+	const field = (key, control) => {
+		const [btn, box] = spInfoPair('');
+		return `<div class="sp-form-group" data-bf="${key}"><label><span data-bf-label></span>${btn}<span class="sp-field__hint" data-bf-unit></span></label>${box}${control}</div>`;
+	};
+	const tipped = (label, tip, control, extra = '') => {
+		const [btn, box] = spInfoPair(tip);
+		return `<div class="sp-form-group"${extra}><label>${label}${btn}</label>${box}${control}</div>`;
+	};
+	const check = (idAttr, checked, label, tip) => {
+		const [btn, box] = spInfoPair(tip);
+		return `<label class="sp-check-row"><input type="checkbox" id="${idAttr}"${checked ? ' checked' : ''}> ${label} ${btn}</label>${box}`;
+	};
 
 	const backdrop = spFormModal();
 	let html = '<div class="sp-card sp-report-form-wrap sp-book-form">';
-	html += spBookHead(`${id ? 'Edit' : 'New'} Service`, 'Save Service', 'sp-bf-save', false);
+	html += spBookHead(`${id ? 'Edit' : 'New'} ${noun}`, 'Save', 'sp-bf-save', false);
 
-	html += '<div class="sp-form-group"><label for="sp-bf-name">Name</label>'
-		+ `<input type="text" id="sp-bf-name" class="sp-input" value="${esc(svc.name || '')}" placeholder="e.g. In-Home Personal Training"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bf-name">Name</label><input type="text" id="sp-bf-name" class="sp-input" value="${esc(svc.name || '')}" placeholder="${asType ? 'e.g. Haircut, Private Lesson, AC Tune-Up' : 'e.g. Intro to Oil Painting, Men’s Haircut, AC Tune-Up'}"></div>`;
 
-	html += '<div class="sp-form-group"><label for="sp-bf-slotmode">How times are offered</label><select id="sp-bf-slotmode" class="sp-select">'
-		+ [['exact', 'An exact start time — 9:00, 9:30, 10:00'],
-		   ['window', 'An arrival window — 8am to 12pm']].map(([v, l]) =>
-			`<option value="${v}"${(svc.slot_mode || 'exact') === v ? ' selected' : ''}>${l}</option>`).join('')
-		+ '</select></div>';
-
-	html += '<div class="sp-form-group"><label for="sp-bf-mode">Booking type</label><select id="sp-bf-mode" class="sp-select">'
-		+ Object.entries(modes).map(([k, v]) =>
-			`<option value="${esc(k)}"${(svc.mode || 'appointment') === k ? ' selected' : ''}>${esc(v)}</option>`).join('')
-		+ '</select></div>';
-
-	html += '<div class="sp-form-group"><label for="sp-bf-desc">Description</label>'
-		+ `<textarea id="sp-bf-desc" class="sp-textarea" rows="2">${esc(svc.description || '')}</textarea></div>`;
-
-	html += '<div class="sp-book-form-grid">';
-	html += `<div class="sp-form-group"><label for="sp-bf-duration">Length<span class="sp-field-unit">(in minutes)</span></label><input type="number" min="5" step="5" id="sp-bf-duration" class="sp-input" value="${parseInt(svc.duration_min, 10) || 60}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-interval">Slot every<span class="sp-field-unit">(in minutes)</span></label><input type="number" min="5" step="5" id="sp-bf-interval" class="sp-input" value="${parseInt(svc.slot_interval_min, 10) || 30}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-buffer">Travel buffer<span class="sp-field-unit">(in minutes)</span></label><input type="number" min="0" step="5" id="sp-bf-buffer" class="sp-input" value="${spBookBufferOf(svc)}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-lead">Min notice<span class="sp-field-unit">(in hours)</span></label><input type="number" min="0" step="0.5" id="sp-bf-lead" class="sp-input" value="${svc.lead_time_min === undefined ? 12 : (parseInt(svc.lead_time_min, 10) / 60)}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-advance">Book up to<span class="sp-field-unit">(in days)</span></label><input type="number" min="1" id="sp-bf-advance" class="sp-input" value="${parseInt(svc.max_advance_days, 10) || 60}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-cancel">Cancel window<span class="sp-field-unit">(in hours)</span></label><input type="number" min="0" step="0.5" id="sp-bf-cancel" class="sp-input" value="${svc.cancel_window_min === undefined ? 12 : (parseInt(svc.cancel_window_min, 10) / 60)}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-capacity">Seats<span class="sp-field-unit">(per slot)</span></label><input type="number" min="1" id="sp-bf-capacity" class="sp-input" value="${parseInt(svc.capacity, 10) || 1}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-price">Price</label><input type="text" id="sp-bf-price" class="sp-input" value="${svc.price_cents ? (svc.price_cents / 100).toFixed(2) : ''}" placeholder="0.00"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-deposit">Deposit</label><input type="text" id="sp-bf-deposit" class="sp-input" value="${svc.deposit_cents ? (svc.deposit_cents / 100).toFixed(2) : ''}" placeholder="0.00"></div>`;
-	html += '</div>';
-	html += '<div class="sp-help-text">Buffer is kept clear on <strong>both</strong> sides of every appointment &mdash; enter the travel time between jobs once. Two back-to-back appointments get one gap of that length, not two.</div>';
-
-	html += '<div id="sp-bf-dispatch-fields">';
-	html += '<h4 class="sp-book-subhead">Who Gets The Job</h4>';
-	html += '<p class="sp-help-text">With more than one person available, this decides who is offered. <strong>Nearest</strong> measures how much extra driving the job adds to each person&rsquo;s existing day &mdash; someone already working that area wins even if another person is technically closer right now.</p>';
-	html += '<div class="sp-form-group"><label for="sp-bf-dispatch">Assign to</label><select id="sp-bf-dispatch" class="sp-select">'
-		+ [['order', 'The first person available'],
-		   ['nearest', 'Whoever is already working nearest']].map(([v, l]) =>
-			`<option value="${v}"${(svc.dispatch_mode || 'order') === v ? ' selected' : ''}>${l}</option>`).join('')
-		+ '</select></div>';
-	html += '<div id="sp-bf-ooa-fields"><div class="sp-book-form-grid">';
-	html += `<div class="sp-form-group"><label for="sp-bf-ooa-min">Out of the way past<span class="sp-field-unit">(extra minutes)</span></label><input type="number" min="0" id="sp-bf-ooa-min" class="sp-input" value="${svc.out_of_area_min === undefined ? 45 : parseInt(svc.out_of_area_min, 10)}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bf-ooa-fee">Surcharge</label><input type="text" id="sp-bf-ooa-fee" class="sp-input" value="${svc.out_of_area_fee_cents ? (svc.out_of_area_fee_cents / 100).toFixed(2) : ''}" placeholder="0.00"></div>`;
-	html += '</div>';
-	html += '<div class="sp-form-group"><label for="sp-bf-ooa">When a job is out of the way</label><select id="sp-bf-ooa" class="sp-select">'
-		+ [['allow', 'Offer it anyway'],
-		   ['surcharge', 'Offer it with the surcharge added'],
-		   ['block', 'Do not offer it — the customer waits for a day someone is nearby']].map(([v, l]) =>
-			`<option value="${v}"${(svc.out_of_area_policy || 'allow') === v ? ' selected' : ''}>${l}</option>`).join('')
-		+ '</select>';
-	html += '<div class="sp-help-text">Blocking saves driving but turns away same-day work &mdash; sensible for a tune-up, costly for a no-heat call. Emergency work is usually better as its own service that always offers.</div></div>';
-	html += '</div>';
-	html += '<div id="sp-bf-window-fields">';
-	html += '<h4 class="sp-book-subhead">Arrival Windows</h4>';
-	html += '<p class="sp-help-text">The windows customers choose from. A window is a <strong>container</strong>, not a single slot &mdash; several jobs can share one, and it stays available until the work no longer fits. Windows are automatically trimmed to the hours each person actually works, so a short Saturday drops its afternoon window on its own.</p>';
-	html += '<div id="sp-bf-windows"></div>';
-	html += '<div class="sp-book-card-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny" id="sp-bf-add-window">Add Window</button></div>';
-	html += `<div class="sp-form-group"><label for="sp-bf-maxjobs">Most jobs per window<span class="sp-field-unit">(0 = only limited by time)</span></label><input type="number" min="0" id="sp-bf-maxjobs" class="sp-input" value="${parseInt(svc.window_max_jobs, 10) || 0}"></div>`;
-	html += '</div>';
-
-	html += '<div class="sp-form-group"><label for="sp-bf-pay">Payment</label><select id="sp-bf-pay" class="sp-select">'
-		+ ['none', 'deposit', 'full'].map(v =>
-			`<option value="${v}"${(svc.requires_payment || 'none') === v ? ' selected' : ''}>`
-			+ (v === 'none' ? 'Not required at booking' : v === 'deposit' ? 'Deposit at booking' : 'Pay in full at booking')
-			+ '</option>').join('')
-		+ '</select><div class="sp-help-text">Taking payment needs the payments phase — leave this on “Not required” for now.</div></div>';
-
-	html += `<label class="sp-check-row"><input type="checkbox" id="sp-bf-address"${Number(svc.requires_address) ? ' checked' : ''}> Customer address required (on-location service)</label>`;
-	html += `<label class="sp-check-row"><input type="checkbox" id="sp-bf-active"${(svc.status || 'active') === 'active' ? ' checked' : ''}> Active</label>`;
-
-	if (resources.length) {
-		html += '<div class="sp-form-group"><label>Who can deliver this</label><div class="sp-book-picklist">'
-			+ resources.map(r => `<label class="sp-check-row"><input type="checkbox" class="sp-bf-res" value="${r.id}"${linked.includes(Number(r.id)) ? ' checked' : ''}> ${esc(r.name)}</label>`).join('')
-			+ '</div><div class="sp-help-text">Leave all unchecked for “anyone” — the right answer for a one-person business.</div></div>';
+	if (asType) {
+		const locked = !!(rec && rec.offerings);
+		html += tipped('Kind', 'What shape of booking this is, which decides the settings below. <strong>Appointment</strong>: a set start time with one person. <strong>Service call</strong>: an arrival window at the customer’s address. <strong>Class</strong>: seats on dates. <strong>Class series</strong>: one price for every date. <strong>Rental</strong>: a range of dates.' + (locked ? '<br><br>Services use this template, so its kind is fixed. Make a new template for a different kind.' : ''),
+			`<select id="sp-bf-kind" class="sp-select"${locked ? ' disabled' : ''}>${kindOpts(rec?.kind || ctx.kind || 'appointment')}</select>`);
+	} else {
+		html += tipped('Template', `The template this ${spTerm('service', false, true)} follows. Settings you change here are marked <em>Custom</em> and belong to this ${spTerm('service', false, true)}; everything else updates when the template changes. Templates are set up in Settings &rarr; Booking.`,
+			`<select id="sp-bf-type" class="sp-select">${types.map(t => `<option value="${t.id}"${typeId === t.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}<option value="0"${typeId ? '' : ' selected'}>No template: set everything here</option></select>`);
+		html += tipped('Kind', 'What shape of booking this is. A service with a template takes its kind from the template.',
+			`<select id="sp-bf-kind-free" class="sp-select">${kindOpts(svc.kind || 'appointment')}</select>`, ' id="sp-bf-notype"');
 	}
 
-	html += spBookFoot('Save Service', 'sp-bf-save', false);
+	html += tipped('Description', asType ? 'What this template is for. It’s shown when someone picks a template for a new service.' : 'Shown to customers when they choose what to book. A sentence or two is plenty.',
+		`<textarea id="sp-bf-desc" class="sp-textarea" rows="2">${esc(svc.description || '')}</textarea>`);
+
+	// ── The basics for this shape ──
+	html += '<div class="sp-book-form-grid">';
+	html += field('duration', `<input type="number" min="5" step="5" id="sp-bf-duration" class="sp-input" value="${parseInt(svc.duration_min, 10) || 60}">`);
+	html += field('interval', `<input type="number" min="5" step="5" id="sp-bf-interval" class="sp-input" value="${parseInt(svc.slot_interval_min, 10) || 30}">`);
+	html += field('capacity', `<input type="number" min="1" id="sp-bf-capacity" class="sp-input" value="${parseInt(svc.capacity, 10) || 1}">`);
+	html += field('maxjobs', `<input type="number" min="0" id="sp-bf-maxjobs" class="sp-input" value="${parseInt(svc.window_max_jobs, 10) || 0}">`);
+	html += '</div>';
+
+	{
+		const [btn, box] = spInfoPair('The time windows customers choose from, like 8–12 and 12–4. You promise to arrive inside the window. Several jobs can share one window, and it stays open until your techs’ time is full. Windows are trimmed to each tech’s working hours automatically.');
+		html += `<div id="sp-bf-window-fields"><h4 class="sp-book-subhead">Arrival Windows ${btn}</h4>${box}<div id="sp-bf-windows"></div>`
+			+ '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn-tiny" id="sp-bf-add-window">Add Window</button></div></div>';
+	}
+
+	// ── Price & payment ──
+	html += '<h4 class="sp-book-subhead">Price &amp; Payment</h4><div class="sp-book-form-grid">';
+	html += field('price', `<input type="text" id="sp-bf-price" class="sp-input" value="${svc.price_cents ? (svc.price_cents / 100).toFixed(2) : ''}" placeholder="0.00">`);
+	html += tipped('Collect when they book', 'Whether customers pay online when they book. <strong>Nothing</strong> reserves the time with no checkout: use it for free bookings and for jobs you bill afterwards. A deposit or the full price is paid through your Store checkout (the Store module must be on).',
+		'<select id="sp-bf-pay" class="sp-select">' + [['none', 'Nothing (free, or pay later)'], ['deposit', 'A deposit'], ['full', 'The full price']].map(([v, l]) =>
+			`<option value="${v}"${(svc.requires_payment || 'none') === v ? ' selected' : ''}>${l}</option>`).join('') + '</select>');
+	html += tipped('Deposit', 'The amount taken when they book. Collect the rest however you normally do.',
+		`<input type="text" id="sp-bf-deposit" class="sp-input" value="${svc.deposit_cents ? (svc.deposit_cents / 100).toFixed(2) : ''}" placeholder="0.00">`, ' id="sp-bf-deposit-group"');
+	html += '</div>';
+	html += `<div id="sp-bf-tax-row">${check('sp-bf-taxable', opts.taxable, 'Charge sales tax on this', 'Adds your sales tax rate (Settings → E-Commerce) at checkout. Many services aren’t taxable; check your state’s rules.')}</div>`;
+
+	// ── Who does it ──
+	if (resources.length) {
+		const [btn, box] = spInfoPair('');
+		html += `<h4 class="sp-book-subhead" id="sp-bf-res-label"><span data-bf-res-title>Who Does It</span> ${btn}</h4>${box}<div class="sp-book-picklist">`
+			+ resources.map(r => `<label class="sp-check-row"><input type="checkbox" class="sp-bf-res" value="${r.id}"${linked.includes(Number(r.id)) ? ' checked' : ''}> ${esc(r.name)}</label>`).join('')
+			+ '</div>';
+	}
+
+	// ── When people can book ──
+	html += '<h4 class="sp-book-subhead">When People Can Book</h4><div class="sp-book-form-grid">';
+	html += field('lead', `<input type="number" min="0" step="0.5" id="sp-bf-lead" class="sp-input" value="${svc.lead_time_min === undefined ? 12 : (parseInt(svc.lead_time_min, 10) / 60)}">`);
+	html += field('advance', `<input type="number" min="1" id="sp-bf-advance" class="sp-input" value="${parseInt(svc.max_advance_days, 10) || 60}">`);
+	html += field('buffer', `<input type="number" min="0" step="5" id="sp-bf-buffer" class="sp-input" value="${spBookBufferOf(svc)}">`);
+	html += '</div>';
+	// Not used until customers can cancel online — kept so a save doesn't lose the value.
+	html += `<input type="hidden" id="sp-bf-cancel" value="${svc.cancel_window_min === undefined ? 12 : (parseInt(svc.cancel_window_min, 10) / 60)}">`;
+
+	// ── More settings (rarely touched) ──
+	html += '<details class="sp-bf-more"><summary>More settings</summary>';
+	html += '<div id="sp-bf-more-capacity" class="sp-book-form-grid"></div>';
+	html += `<div id="sp-bf-address-row">${check('sp-bf-address', Number(svc.requires_address), 'Held at the customer’s address', 'Tick this if you go to the customer (mobile grooming, in-home lessons). They’re asked for their address, and drive time between jobs is taken into account.')}</div>`;
+	html += '<div id="sp-bf-dispatch-fields">';
+	html += tipped('Who gets the job', 'With more than one tech free, this decides who is offered. <strong>Nearest</strong> measures how much extra driving the job adds to each tech’s existing day, so someone already working that area wins even if another tech is closer right now.',
+		'<select id="sp-bf-dispatch" class="sp-select">' + [['order', 'The first person available'], ['nearest', 'Whoever is already working nearest']].map(([v, l]) =>
+			`<option value="${v}"${(svc.dispatch_mode || 'order') === v ? ' selected' : ''}>${l}</option>`).join('') + '</select>');
+	html += '<div id="sp-bf-ooa-fields"><div class="sp-book-form-grid">';
+	html += tipped('Out of the way past<span class="sp-field__hint">(extra minutes)</span>', 'A job counts as out of the way when it would add more than this much driving to the nearest tech’s day.',
+		`<input type="number" min="0" id="sp-bf-ooa-min" class="sp-input" value="${svc.out_of_area_min === undefined ? 45 : parseInt(svc.out_of_area_min, 10)}">`);
+	html += tipped('Surcharge', 'Added to the price of an out-of-the-way job, when you choose to offer those with a surcharge.',
+		`<input type="text" id="sp-bf-ooa-fee" class="sp-input" value="${svc.out_of_area_fee_cents ? (svc.out_of_area_fee_cents / 100).toFixed(2) : ''}" placeholder="0.00">`);
+	html += '</div>';
+	html += tipped('When a job is out of the way', 'Blocking saves driving but turns away same-day work: sensible for a tune-up, costly for a no-heat call. Emergency work is usually better as its own service that always offers.',
+		'<select id="sp-bf-ooa" class="sp-select">' + [['allow', 'Offer it anyway'], ['surcharge', 'Offer it with the surcharge added'], ['block', 'Don’t offer it (they wait for a day someone is nearby)']].map(([v, l]) =>
+			`<option value="${v}"${(svc.out_of_area_policy || 'allow') === v ? ' selected' : ''}>${l}</option>`).join('') + '</select>');
+	html += '</div></div>';   // #sp-bf-ooa-fields, #sp-bf-dispatch-fields
+	html += '<div id="sp-bf-session-fields" class="sp-book-form-grid">';
+	html += tipped('Button text', 'The words on the website’s booking button for this class.', `<input type="text" maxlength="40" id="sp-bf-booklabel" class="sp-input" value="${esc(opts.book_label || 'Book Now')}" placeholder="Book Now">`);
+	html += tipped('When it’s full', 'What the button says once every seat is taken.', `<input type="text" maxlength="40" id="sp-bf-fulllabel" class="sp-input" value="${esc(opts.full_label || 'Class Full')}" placeholder="Class Full">`);
+	html += '</div>';
+	html += '</details>';
+
+	if (!asType) {
+		if (svc.event) html += `<p class="sp-help-text sp-help-text--keep">Shown on the website through the event <strong>${esc(svc.event.title)}</strong>${svc.event.status !== 'publish' ? ' (a draft)' : ''}; its dates come from this service. Change the link from the event (Events → the event → Booking).</p>`;
+		html += check('sp-bf-active', (svc.status || 'active') === 'active', 'Taking bookings', 'Untick to stop new bookings without deleting the service. Bookings already made stay as they are.');
+	}
+
+	// Dates are part of setting a class up, so they sit in the editor (classes and class series).
+	if (!asType) {
+		html += '<div class="sp-section" id="sp-bf-dates-section">'
+			+ (id ? '<div id="sp-bf-dates-box"></div>' : '<p class="sp-help-text sp-help-text--keep">Save first, then add its dates here.</p>')
+			+ '</div>';
+	}
+
+	// Duplicate sits with Save and Cancel (a saved service only).
+	const dup = !asType && id ? `<button type="button" class="unique sp-btn" id="sp-bf-dup" title="A new ${esc(spTerm('service', false, true))} with these settings — no dates or bookings">Duplicate</button>` : '';
+	html += spBookFoot(`Save ${noun}`, 'sp-bf-save', false, dup);
 	html += '</div>';
 	backdrop.innerHTML = html;
-	markUniqueSpans(backdrop);
 
-	// Arrival windows, edited as a list. Kept in JS state rather than read back off the DOM so a
-	// half-typed row can't silently become a window.
-	let winRows = [];
-	try { winRows = JSON.parse(svc.windows || '[]') || []; } catch (e) { winRows = []; }
-	if (!Array.isArray(winRows)) winRows = [];
+	let winRows = spBookParseList(svc.windows);
+	const dispatchSel = $('#sp-bf-dispatch', backdrop);
+	const kindSel = $('#sp-bf-kind', backdrop);
+	const freeKindSel = $('#sp-bf-kind-free', backdrop);
+	const typeSel = $('#sp-bf-type', backdrop);
 
-	const slotModeSel = $('#sp-bf-slotmode', backdrop);
-	const renderWindows = () => {
-		const box = $('#sp-bf-windows', backdrop);
-		box.innerHTML = winRows.length
-			? winRows.map((w, i) => `<div class="sp-book-window-row" data-i="${i}">
-				<input type="text" class="sp-input sp-bf-wlabel" placeholder="Label (e.g. Morning)" value="${esc(w.label || '')}">
-				<input type="time" class="sp-input sp-bf-wstart" value="${esc((w.start || '').slice(0, 5))}">
-				<span class="sp-book-dash">to</span>
-				<input type="time" class="sp-input sp-bf-wend" value="${esc((w.end || '').slice(0, 5))}">
-				${iconBtn('delete', 'sp-bf-wdel', `data-i="${i}"`)}
-			</div>`).join('')
-			: '<div class="sp-empty">No windows yet. Add the ones customers should choose from.</div>';
-		markUniqueSpans(box);
-		$$('.sp-bf-wdel', box).forEach(b => b.addEventListener('click', () => {
-			winRows.splice(parseInt(b.dataset.i, 10), 1);
-			renderWindows();
-		}));
-	};
+	const curType = () => (asType ? null : types.find(t => t.id === typeId) || null);
+	const kindNow = () => asType ? kindSel.value : (curType() ? curType().kind : freeKindSel.value);
+	const capGroup = $('[data-bf="capacity"]', backdrop);
+	const mainGrid = capGroup.parentElement;
+
 	const readWindows = () => $$('#sp-bf-windows .sp-book-window-row', backdrop).map(row => ({
 		label: $('.sp-bf-wlabel', row).value,
 		start: $('.sp-bf-wstart', row).value,
 		end: $('.sp-bf-wend', row).value,
 	})).filter(w => w.start && w.end);
 
-	const dispatchSel = $('#sp-bf-dispatch', backdrop);
-	const syncDispatch = () => {
-		// Dispatch only means anything for on-location work, where there is driving to compare.
-		$('#sp-bf-dispatch-fields', backdrop).hidden = !$('#sp-bf-address', backdrop).checked;
-		$('#sp-bf-ooa-fields', backdrop).hidden = dispatchSel.value !== 'nearest';
+	// Inherited vs custom, per rule: compared in the server's units against the current template.
+	const ruleNow = (k) => {
+		if (k === 'windows') return kindNow() === 'call' ? spBookWinNorm(readWindows()) : '[]';
+		if (k === 'resource_ids') return spBookIdsNorm($$('.sp-bf-res:checked', backdrop).map(c => c.value));
+		return spBookRuleGet(backdrop, k);
 	};
-	dispatchSel.addEventListener('change', syncDispatch);
-	$('#sp-bf-address', backdrop).addEventListener('change', syncDispatch);
-	syncDispatch();
-	const syncSlotMode = () => {
-		$('#sp-bf-window-fields', backdrop).hidden = slotModeSel.value !== 'window';
-		// In window mode the length is an ESTIMATE used for capacity, not a promise to the customer.
-		const dur = $('#sp-bf-duration', backdrop)?.closest('.sp-form-group')?.querySelector('label');
-		if (dur) dur.innerHTML = slotModeSel.value === 'window'
-			? 'Typical job length<span class="sp-field-unit">(in minutes)</span>'
-			: 'Length<span class="sp-field-unit">(in minutes)</span>';
+	const ruleOf = (k, t) => {
+		const r = t.rules || {};
+		if (k === 'windows') return t.kind === 'call' ? spBookWinNorm(r.windows) : '[]';
+		if (k === 'resource_ids') return spBookIdsNorm(r.resource_ids);
+		return r[k];
 	};
-	slotModeSel.addEventListener('change', syncSlotMode);
+	const same = (a, b) => String(a ?? '') === String(b ?? '');
+	const setRule = (k, t) => {
+		const r = t.rules || {};
+		if (k === 'windows') { winRows = spBookParseList(r.windows); renderWindows(); return; }
+		if (k === 'resource_ids') { const ids = (r.resource_ids || []).map(Number); $$('.sp-bf-res', backdrop).forEach(c => { c.checked = ids.includes(Number(c.value)); }); return; }
+		spBookRuleSet(backdrop, k, r[k]);
+	};
+	// Each rule's "Custom · reset" goes under its control (never inside a label).
+	const markSlot = (k) => {
+		if (k === 'windows') return [$('#sp-bf-windows', backdrop), 'afterend'];
+		if (k === 'resource_ids') return [$('.sp-book-picklist', backdrop), 'afterend'];
+		const el = SP_BOOK_RULE_FIELDS[k] && $(SP_BOOK_RULE_FIELDS[k].sel, backdrop);
+		if (!el) return [null];
+		return el.type === 'checkbox' ? [el.closest('.sp-check-row'), 'afterend'] : [el, 'afterend'];
+	};
+	if (!asType) SP_BOOK_RULE_KEYS.forEach(k => {
+		const [a, where] = markSlot(k);
+		if (a) a.insertAdjacentHTML(where, `<span class="sp-bf-inh" data-k="${k}"></span>`);
+	});
+	const drawMarks = () => {
+		const t = curType();
+		$$('.sp-bf-inh', backdrop).forEach(m => {
+			const k = m.dataset.k;
+			const html = !t || same(ruleNow(k), ruleOf(k, t)) ? ''
+				: `<button type="button" class="unique sp-bf-inh__own" data-reset="${k}" title="Changed from the ${esc(t.name)} template. Click to go back to the template’s setting.">Custom &middot; reset</button>`;
+			if (m.innerHTML !== html) { m.innerHTML = html; markUniqueSpans(m); }
+		});
+	};
+
+	const renderWindows = () => {
+		const box = $('#sp-bf-windows', backdrop);
+		box.innerHTML = winRows.length
+			? winRows.map((w, i) => `<div class="sp-book-window-row" data-i="${i}">
+				<input type="text" class="sp-input sp-bf-wlabel" placeholder="Label (e.g. Morning)" value="${esc(w.label || '')}">
+				<input type="time" class="sp-input sp-bf-wstart" value="${esc((w.start || '').slice(0, 5))}">
+				<span class="sp-field__hint">to</span>
+				<input type="time" class="sp-input sp-bf-wend" value="${esc((w.end || '').slice(0, 5))}">
+				${iconBtn('delete', 'sp-bf-wdel', `data-i="${i}"`)}
+			</div>`).join('')
+			: '<div class="sp-empty">No windows yet. Add the ones customers should choose from.</div>';
+		markUniqueSpans(box);
+		$$('.sp-bf-wdel', box).forEach(b => b.addEventListener('click', () => {
+			winRows = readWindows();
+			winRows.splice(parseInt(b.dataset.i, 10), 1);
+			renderWindows();
+		}));
+		drawMarks();
+	};
+
+	// Show only what this shape uses, in its own words.
+	const syncShape = () => {
+		const k = kindNow();
+		const show = (el, on) => { if (el) el.hidden = !on; };
+		Object.entries(SP_BOOK_FIELD_TEXT).forEach(([key, byKind]) => {
+			const g = $(`[data-bf="${key}"]`, backdrop);
+			if (!g) return;
+			const t = byKind[k];
+			g.hidden = !t;
+			if (!t) return;
+			$('[data-bf-label]', g).textContent = t[0];
+			$('[data-bf-unit]', g).textContent = t[1];
+			$('[data-bf-unit]', g).hidden = !t[1];
+			$('.sp-info__text', g).innerHTML = t[2];
+		});
+		// A group appointment's seats are an advanced setting; a class's seats are a basic one.
+		const capHome = k === 'appointment' ? $('#sp-bf-more-capacity', backdrop) : mainGrid;
+		if (capGroup.parentElement !== capHome) capHome.appendChild(capGroup);
+		show($('#sp-bf-notype', backdrop), !asType && !curType());
+		show($('#sp-bf-window-fields', backdrop), k === 'call');
+		show($('#sp-bf-session-fields', backdrop), k === 'class' || k === 'series');
+		show($('#sp-bf-address-row', backdrop), k === 'appointment');
+		show($('#sp-bf-dispatch-fields', backdrop), k === 'call' || (k === 'appointment' && $('#sp-bf-address', backdrop).checked));
+		show($('#sp-bf-ooa-fields', backdrop), dispatchSel.value === 'nearest');
+		const pay = $('#sp-bf-pay', backdrop).value;
+		show($('#sp-bf-deposit-group', backdrop), pay === 'deposit');
+		show($('#sp-bf-tax-row', backdrop), pay !== 'none');
+		show($('#sp-bf-dates-section', backdrop), k === 'class' || k === 'series');
+		const resTitle = $('[data-bf-res-title]', backdrop);
+		if (resTitle) {
+			const words = {
+				appointment: ['Who Can Take It', 'Who can take this appointment. Leave everyone unticked if anyone can.'],
+				call:        ['Which Techs Can Go', 'Which technicians can be sent. Leave everyone unticked for anyone.'],
+				class:       ['Instructor', 'Who teaches it. Leave everyone unticked if it doesn’t matter.'],
+				series:      ['Instructor', 'Who teaches it. Leave everyone unticked if it doesn’t matter.'],
+				rental:      ['Which Units', 'Which rooms or units can be booked.'],
+			}[k] || ['Who Does It', ''];
+			resTitle.textContent = words[0];
+			const box = document.getElementById($('#sp-bf-res-label .sp-info', backdrop).getAttribute('aria-controls'));
+			if (box) box.innerHTML = words[1] + ' Staff and resources are set up in Booking &rarr; Staff &amp; Hours.';
+		}
+	};
+
+	dispatchSel.addEventListener('change', syncShape);
+	$('#sp-bf-address', backdrop).addEventListener('change', syncShape);
+	$('#sp-bf-pay', backdrop).addEventListener('change', syncShape);
+	kindSel?.addEventListener('change', syncShape);
+	freeKindSel?.addEventListener('change', syncShape);
+	typeSel?.addEventListener('change', () => {
+		const old = curType();
+		const next = types.find(t => t.id === parseInt(typeSel.value, 10)) || null;
+		// Settings still following the old template move to the new one (a new blank service takes all of them).
+		if (next) SP_BOOK_RULE_KEYS.forEach(k => {
+			if (old ? same(ruleNow(k), ruleOf(k, old)) : !id) setRule(k, next);
+		});
+		if (!next && old && freeKindSel) freeKindSel.value = old.kind;
+		typeId = next ? next.id : 0;
+		syncShape(); drawMarks();
+	});
 	$('#sp-bf-add-window', backdrop).addEventListener('click', () => {
 		winRows = readWindows();
 		winRows.push({ label: '', start: '08:00', end: '12:00' });
 		renderWindows();
 	});
-	renderWindows();
-	syncSlotMode();
+	backdrop.addEventListener('input', drawMarks);
+	backdrop.addEventListener('change', drawMarks);
+	backdrop.addEventListener('click', (e) => {
+		const r = e.target.closest('[data-reset]');
+		if (!r) return;
+		e.preventDefault();
+		const t = curType();
+		if (t) { setRule(r.dataset.reset, t); syncShape(); drawMarks(); }
+	});
 
+	renderWindows();
+	syncShape();
+	drawMarks();
+	markUniqueSpans(backdrop);
+
+	if ($('#sp-bf-dates-box', backdrop)) spBookSchedule($('#sp-bf-dates-box', backdrop), id, { name: svc.name, embedded: true, onChange: spBookRefresh });
 	$$('.sp-book-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
 	spBookOnClick(backdrop, 'sp-bf-save', async () => {
 		spBookBusy(backdrop, 'sp-bf-save', true);
+		const k = kindNow();
+		const data = {
+			id,
+			name: $('#sp-bf-name', backdrop).value,
+			description: $('#sp-bf-desc', backdrop).value,
+			duration_min: $('#sp-bf-duration', backdrop).value,
+			slot_interval_min: $('#sp-bf-interval', backdrop).value,
+			buffer_min: $('#sp-bf-buffer', backdrop).value,
+			lead_time_hours: $('#sp-bf-lead', backdrop).value,
+			max_advance_days: $('#sp-bf-advance', backdrop).value,
+			cancel_window_hours: $('#sp-bf-cancel', backdrop).value,
+			capacity: $('#sp-bf-capacity', backdrop).value,
+			price: $('#sp-bf-price', backdrop).value,
+			deposit: $('#sp-bf-deposit', backdrop).value,
+			requires_payment: $('#sp-bf-pay', backdrop).value,
+			requires_address: $('#sp-bf-address', backdrop).checked ? 1 : 0,
+			slot_mode: k === 'call' ? 'window' : 'exact',
+			dispatch_mode: dispatchSel.value,
+			out_of_area_min: $('#sp-bf-ooa-min', backdrop).value,
+			out_of_area_policy: $('#sp-bf-ooa', backdrop).value,
+			out_of_area_fee: $('#sp-bf-ooa-fee', backdrop).value,
+			windows: JSON.stringify(readWindows()),
+			window_max_jobs: $('#sp-bf-maxjobs', backdrop).value,
+			resource_ids: $$('.sp-bf-res:checked', backdrop).map(cb => cb.value),
+			resource_ids_sent: 1,
+			book_label: $('#sp-bf-booklabel', backdrop).value,
+			full_label: $('#sp-bf-fulllabel', backdrop).value,
+			taxable: $('#sp-bf-taxable', backdrop).checked ? 1 : 0,
+		};
+		if (asType) {
+			data.kind = kindSel.value;
+		} else {
+			data.type_id = typeId;
+			if (!typeId) data.kind = freeKindSel.value;
+			data.status = $('#sp-bf-active', backdrop).checked ? 'active' : 'inactive';
+		}
 		try {
-			const res = await spAjax('site_pulse_booking_save_service', {
-				id,
-				name: $('#sp-bf-name', backdrop).value,
-				mode: $('#sp-bf-mode', backdrop).value,
-				description: $('#sp-bf-desc', backdrop).value,
-				duration_min: $('#sp-bf-duration', backdrop).value,
-				slot_interval_min: $('#sp-bf-interval', backdrop).value,
-				buffer_min: $('#sp-bf-buffer', backdrop).value,
-				lead_time_hours: $('#sp-bf-lead', backdrop).value,
-				max_advance_days: $('#sp-bf-advance', backdrop).value,
-				cancel_window_hours: $('#sp-bf-cancel', backdrop).value,
-				capacity: $('#sp-bf-capacity', backdrop).value,
-				price: $('#sp-bf-price', backdrop).value,
-				deposit: $('#sp-bf-deposit', backdrop).value,
-				requires_payment: $('#sp-bf-pay', backdrop).value,
-				requires_address: $('#sp-bf-address', backdrop).checked ? 1 : 0,
-				slot_mode: slotModeSel.value,
-				dispatch_mode: dispatchSel.value,
-				out_of_area_min: $('#sp-bf-ooa-min', backdrop).value,
-				out_of_area_policy: $('#sp-bf-ooa', backdrop).value,
-				out_of_area_fee: $('#sp-bf-ooa-fee', backdrop).value,
-				windows: JSON.stringify(readWindows()),
-				window_max_jobs: $('#sp-bf-maxjobs', backdrop).value,
-				status: $('#sp-bf-active', backdrop).checked ? 'active' : 'inactive',
-				resource_ids: $$('.sp-bf-res:checked', backdrop).map(cb => cb.value),
-			});
+			const res = await spAjax(asType ? 'site_pulse_booking_save_type' : 'site_pulse_booking_save_service', data);
 			if (!res.success) { spBookSetMsg(backdrop, res.data?.message || 'Could not save.'); spBookBusy(backdrop, 'sp-bf-save', false); return; }
 			closeFormModal();
-			spToast('Service saved.');
-			loadBookingAdmin();
+			spToast(res.data?.message || 'Saved.', 5000);
+			await spBookRefresh();
+			// A new class goes straight to its dates.
+			if (!asType && !id && (k === 'class' || k === 'series') && res.data?.id) spBookScheduleForm(res.data.id, { name: data.name, onDone: spBookRefresh });
 		} catch (e) { spBookSetMsg(backdrop, 'Could not save.'); spBookBusy(backdrop, 'sp-bf-save', false); }
 	});
+	$('#sp-bf-dup', backdrop)?.addEventListener('click', async (e) => {
+		e.target.disabled = true;
+		try {
+			const r = await spAjax('site_pulse_booking_duplicate_service', { id });
+			if (r.success) { closeFormModal(); spToast(r.data.message || 'Copied.', 6000); await spBookRefresh(); spBookServiceForm(r.data.id); return; }
+			spAlert(r.data?.message || `Could not copy that ${spTerm('service', false, true)}.`);
+		} catch (err) { spAlert('Could not copy — check your connection and try again.'); }
+		e.target.disabled = false;
+	});
 	$('#sp-bf-name', backdrop)?.focus();
+}
+
+
+/*--------------------------------------------------------------
+# Booking → Customers (everyone who has booked)
+--------------------------------------------------------------*/
+
+const _spBookCust = { wired: false, seq: 0, page: 1, pages: 1, rows: [] };
+
+function initBookingCustomers() {
+	const S = _spBookCust;
+	if (S.wired) return;
+	S.wired = true;
+	let t = null;
+	$('#sp-book-cust-search')?.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => loadBookingCustomers(), 300); });
+	$('#sp-book-cust-sort')?.addEventListener('change', () => loadBookingCustomers());
+	$('#sp-book-customers')?.addEventListener('click', (e) => {
+		const row = e.target.closest('[data-ckey]');
+		if (row) spBookCustomerDetail(row.dataset.ckey, row.dataset.name);
+	});
+	$('#sp-book-cust-more')?.addEventListener('click', (e) => { if (e.target.closest('button')) loadBookingCustomers(true); });
+}
+
+async function loadBookingCustomers(more) {
+	const box = $('#sp-book-customers');
+	if (!box) return;
+	const S = _spBookCust;
+	const seq = ++S.seq;
+	S.page = more ? S.page + 1 : 1;
+	if (!more) box.innerHTML = SP_LIST_SKELETON;
+	try {
+		const res = await spAjax('site_pulse_booking_customers', {
+			search: $('#sp-book-cust-search')?.value || '',
+			sort: $('#sp-book-cust-sort')?.value || 'recent',
+			page: S.page,
+		});
+		if (seq !== S.seq) return;
+		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load customers. Try again in a moment.') + '</div>'; return; }
+		const d = res.data;
+		S.rows = more ? S.rows.concat(d.customers || []) : (d.customers || []);
+		S.pages = d.pages || 1;
+		const cnt = $('#sp-book-cust-count');
+		if (cnt) cnt.textContent = `${d.total || 0} ${d.total === 1 ? 'customer' : 'customers'}`;
+		const searching = ($('#sp-book-cust-search')?.value || '').trim() !== '';
+		box.innerHTML = S.rows.length
+			? '<div class="sp-card sp-card--flush"><div class="sp-list">' + S.rows.map(c => {
+				const meta = [c.email || c.phone, `${c.bookings} ${c.bookings === 1 ? 'booking' : 'bookings'}`, c.upcoming ? `${c.upcoming} upcoming` : '', c.last ? `Last ${c.last}` : ''].filter(Boolean);
+				return `<button type="button" class="unique sp-row" data-ckey="${esc(c.key)}" data-name="${esc(c.name || '')}">`
+					+ `<span class="sp-row__lead">${spAvatarHTML(c.name || c.email || '?')}</span>`
+					+ `<span class="sp-row__main"><span class="sp-row__title">${esc(c.name || c.email || c.phone)}</span>`
+					+   `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span></span>`
+					+ `<span class="sp-row__trail">${c.paid ? `<span class="sp-row__value">${esc(c.paid)}</span>` : ''}${spIcon('chev-r')}</span></button>`;
+			}).join('') + '</div></div>'
+			: spEmptyHTML({
+				icon: 'users',
+				title: searching ? 'No customers match that search' : 'No customers yet',
+				text: searching ? 'Try a name, email or phone number.' : 'Everyone who books appears here.',
+			});
+		markUniqueSpans(box);
+		const moreBox = $('#sp-book-cust-more');
+		if (moreBox) { moreBox.innerHTML = S.rows.length ? spStoreMoreHTML(S) : ''; markUniqueSpans(moreBox); }
+	} catch (e) {
+		if (seq === S.seq) box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load customers. Try again in a moment.') + '</div>';
+	}
+}
+
+// One customer in a sheet: how to reach them and every booking (a series = one row), each opening on top.
+async function spBookCustomerDetail(key, name) {
+	const sheet = spSheetOpen({ title: name || key, body: SP_LIST_SKELETON });
+	let res;
+	try { res = await spAjax('site_pulse_booking_customer_get', { key }); } catch (e) {}
+	if (!sheet.isConnected) return;
+	if (!res || !res.success) {
+		$('.sp-sheet__body', sheet).innerHTML = '<div class="sp-card">' + spWidgetEmpty(spErrorText(res, 'Couldn\'t load that customer.')) + '</div>';
+		return;
+	}
+	const c = res.data.customer;
+	const list = res.data.bookings || [];
+	$('.sp-sheet__title', sheet).textContent = c.name || c.email || key;
+	const contact = [];
+	if (c.email) contact.push(`<a class="unique sp-btn" href="mailto:${esc(c.email)}">${spIcon('mail')} Email</a>`);
+	if (c.phone) contact.push(`<a class="unique sp-btn" href="tel:${esc(c.phone)}">${spIcon('phone')} Call</a>`);
+	const upcoming = list.filter(b => b.future && ['pending', 'confirmed'].includes(b.status));
+	const past = list.filter(b => !upcoming.includes(b));
+	const rowsHTML = (rows) => '<div class="sp-card sp-card--flush"><div class="sp-list">' + rows.map(b => `<button type="button" class="unique sp-row" data-bid="${b.id}">`
+		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(b.service || 'Booking')}</span>`
+		+ `<span class="sp-meta"><span>${esc(b.when)}</span>${b.dates > 1 ? `<span>${b.dates} dates</span>` : ''}<span>${esc(b.code)}</span></span></span>`
+		+ `<span class="sp-row__trail">${spBookStatusChip(b.status)}<span class="sp-row__value">${esc(b.price)}</span>${spIcon('chev-r')}</span></button>`).join('') + '</div></div>';
+	let h = `<p class="sp-meta sp-meta--lg">${[c.email, c.phone, `${list.length} ${list.length === 1 ? 'booking' : 'bookings'}`].filter(Boolean).map(f => `<span>${esc(f)}</span>`).join('')}</p>`
+		+ (contact.length ? `<div class="sp-actions sp-actions--fit">${contact.join('')}</div>` : '');
+	if (upcoming.length) h += `<div class="sp-section"><div class="sp-section__head"><h3 class="sp-section__title">Upcoming</h3></div>${rowsHTML(upcoming)}</div>`;
+	if (past.length) h += `<div class="sp-section"><div class="sp-section__head"><h3 class="sp-section__title">${upcoming.length ? 'Past & cancelled' : 'Bookings'}</h3></div>${rowsHTML(past)}</div>`;
+	const body = $('.sp-sheet__body', sheet);
+	body.innerHTML = h;
+	markUniqueSpans(body);
+	body.addEventListener('click', (e) => {
+		const r = e.target.closest('[data-bid]');
+		if (r) spBookDetail(parseInt(r.dataset.bid, 10));
+	});
+}
+
+/*--------------------------------------------------------------
+# Session schedule (Settings → Booking → a session service → Dates)
+# Single dates and weekly schedules for a session-mode service. These rows are what
+# the public calendar shows and what customers book seats in.
+--------------------------------------------------------------*/
+
+// opts (when opened from somewhere other than Settings → Booking, e.g. an event's linked booking):
+// { name, onDone } — the title to show, and what to run after Done.
+async function spBookScheduleForm(serviceId, opts = {}) {
+	const backdrop = spFormModal();
+	backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap sp-book-form sp-book-schedule"><div class="sp-loading"></div></div>';
+	spBookSchedule(backdrop, serviceId, opts);
+}
+
+// A service's dates: add one or a weekly run, the weekly schedules, and every upcoming date with its seats.
+// Drawn into `host` — its own pop-up (spBookScheduleForm) or, with opts.embedded, the Dates section of the
+// service editor, so dates are set up with the rest of the service.
+async function spBookSchedule(host, serviceId, opts = {}) {
+	const backdrop = host;
+	const svc = (_spBookAdmin?.services || []).find(s => parseInt(s.id, 10) === serviceId) || { name: opts.name || '' };
+	if (opts.embedded) host.innerHTML = '<div class="sp-loading"></div>';
+	const days = _spBookAdmin?.weekdays || ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+	const today = _spBookAdmin?.today || new Date().toISOString().slice(0, 10);
+
+	let drawn = false;
+	const draw = async () => {
+		// Embedded: every redraw after the first follows a change, so the list behind the editor catches up.
+		if (drawn && opts.embedded && opts.onChange) opts.onChange();
+		drawn = true;
+		let d;
+		try {
+			const res = await spAjax('site_pulse_booking_schedule', { service_id: serviceId });
+			if (!res.success) { if (opts.embedded) { host.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load the dates.')}</div>`; return; } spAlert(res.data?.message || 'Could not load the schedule.'); closeFormModal(); return; }
+			d = res.data;
+		} catch (e) { if (opts.embedded) { host.innerHTML = '<div class="sp-empty">Could not load the dates.</div>'; return; } spAlert('Could not load the schedule.'); closeFormModal(); return; }
+
+		let html = opts.embedded ? '<div class="sp-stack sp-book-schedule">' : '<div class="sp-card sp-report-form-wrap sp-book-form sp-book-schedule">';
+		if (!opts.embedded) {
+			html += '<div class="sp-card-header sp-header-grid sp-report-form-header">'
+				+ `<h3>Dates &mdash; ${esc(svc.name || spTerm('service'))}</h3>`
+				+ '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-book-cancel">Done</button></div></div>';
+		}
+
+		// ── Add ──
+		html += '<h4 class="sp-book-subhead">Add Dates</h4>';
+		html += '<div class="sp-options">'
+			+ '<label class="sp-check-row"><input type="radio" name="sp-bs-kind" value="once" checked> A single date</label>'
+			+ '<label class="sp-check-row"><input type="radio" name="sp-bs-kind" value="weekly"> Every week</label></div>';
+		html += '<div class="sp-book-form-grid">';
+		html += `<div class="sp-form-group" data-bs-kind="once"><label for="sp-bs-date">Date</label><input type="date" id="sp-bs-date" class="sp-input" min="${esc(today)}"></div>`;
+		html += `<div class="sp-form-group"><label for="sp-bs-time">Starts at</label><input type="time" id="sp-bs-time" class="sp-input"></div>`;
+		html += `<div class="sp-form-group"><label for="sp-bs-dur">Length<span class="sp-field__hint">(in minutes)</span></label><input type="number" min="5" step="5" id="sp-bs-dur" class="sp-input" value="${d.duration || 60}"></div>`;
+		html += `<div class="sp-form-group"><label for="sp-bs-cap">Seats</label><input type="number" min="1" id="sp-bs-cap" class="sp-input" value="${d.capacity || 1}"></div>`;
+		html += `<div class="sp-form-group" data-bs-kind="weekly" hidden><label for="sp-bs-from">Starting</label><input type="date" id="sp-bs-from" class="sp-input" value="${esc(today)}"></div>`;
+		html += `<div class="sp-form-group" data-bs-kind="weekly" hidden><label for="sp-bs-until">Until<span class="sp-field__hint">(blank = ongoing)</span></label><input type="date" id="sp-bs-until" class="sp-input"></div>`;
+		html += '</div>';
+		html += '<div class="sp-form-group sp-book-schedule-days" data-bs-kind="weekly" hidden><label>On</label><div class="sp-book-picklist">'
+			+ days.map((n, i) => `<label class="sp-check-row"><input type="checkbox" class="sp-bs-day" value="${i}"> ${esc(n.slice(0, 3))}</label>`).join('')
+			+ `</div><div class="sp-help-text">Dates are kept ${d.horizon} days ahead (this service’s “Book up to”), and topped up every day.</div></div>`;
+		html += '<div class="sp-toolbar sp-toolbar--end"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-bs-add">Add</button></div>';
+
+		// ── Weekly schedules ──
+		if (d.recurrences.length) {
+			html += '<h4 class="sp-book-subhead">Weekly Schedules</h4><div class="sp-card sp-card--flush"><div class="sp-list">'
+				+ d.recurrences.map(r => `<div class="sp-row">
+					<div class="sp-row__main"><span class="sp-row__title">${esc(r.label)}</span><span class="sp-field__hint">${esc([r.range, `${r.capacity} seats`].filter(Boolean).join(' · '))}</span></div>
+					<div class="sp-row__trail"><button type="button" class="unique sp-btn sp-btn--sm" data-bs-end="${r.id}">End</button></div></div>`).join('')
+				+ '</div></div>';
+		}
+
+		// ── Upcoming dates ──
+		html += `<h4 class="sp-book-subhead">Upcoming Dates${d.sessions.length ? ` <span class="unique sp-field__hint sp-field__hint--inline">(${d.sessions.length}${d.sessions.length >= 200 ? '+' : ''})</span>` : ''}</h4>`;
+		html += d.sessions.length
+			? '<div class="sp-card sp-card--flush"><div class="sp-list">' + d.sessions.map(s => `<div class="sp-row" data-bs-session="${s.id}">
+				<div class="sp-row__main"><span class="sp-row__title">${esc(s.label)}</span><span class="sp-field__hint">${esc(s.time)}${s.recurrence_id ? ' · weekly' : ''}</span></div><div class="sp-row__trail">
+				<div class="sp-book-schedule-seats"><span>${s.seats_taken} of</span><input type="number" class="sp-input" min="${Math.max(1, s.seats_taken)}" value="${s.capacity}" data-bs-cap="${s.id}" aria-label="Seats"><span>booked</span></div>
+				${iconBtn('delete', '', `data-bs-remove="${s.id}"`)}</div></div>`).join('') + '</div></div>'
+			: '<div class="sp-empty">No upcoming dates yet. Add one above and it shows on the website calendar.</div>';
+		html += '</div>';
+		host.innerHTML = html;
+		markUniqueSpans(host);
+
+		const syncKind = () => {
+			const kind = $('input[name="sp-bs-kind"]:checked', backdrop)?.value || 'once';
+			$$('[data-bs-kind]', backdrop).forEach(el => { el.hidden = el.dataset.bsKind !== kind; });
+		};
+		$$('input[name="sp-bs-kind"]', backdrop).forEach(r => r.addEventListener('change', syncKind));
+		syncKind();
+		if (!opts.embedded) $$('.sp-book-cancel', backdrop).forEach(b => b.addEventListener('click', () => { closeFormModal(); if (opts.onDone) opts.onDone(); }));
+
+		$('#sp-bs-add', backdrop).addEventListener('click', async (e) => {
+			const kind = $('input[name="sp-bs-kind"]:checked', backdrop)?.value || 'once';
+			const data = {
+				service_id: serviceId,
+				kind,
+				time: $('#sp-bs-time', backdrop).value,
+				duration_min: $('#sp-bs-dur', backdrop).value,
+				capacity: $('#sp-bs-cap', backdrop).value,
+			};
+			if (kind === 'weekly') {
+				data.weekdays = $$('.sp-bs-day:checked', backdrop).map(c => c.value);
+				data.start_date = $('#sp-bs-from', backdrop).value;
+				data.end_date = $('#sp-bs-until', backdrop).value;
+				if (!data.weekdays.length) { spAlert('Pick at least one day of the week.'); return; }
+			} else {
+				data.date = $('#sp-bs-date', backdrop).value;
+				if (!data.date) { spAlert('Pick a date.'); return; }
+			}
+			if (!data.time) { spAlert('Pick a start time.'); return; }
+			e.target.disabled = true;
+			try {
+				const r = await spAjax('site_pulse_booking_schedule_add', data);
+				if (r.success) { spToast(r.data.message || 'Added.', 5000); draw(); return; }
+				spAlert(r.data?.message || 'Could not add that.');
+			} catch (err) { spAlert('Could not add that — check your connection and try again.'); }
+			e.target.disabled = false;
+		});
+
+		$$('[data-bs-end]', backdrop).forEach(b => b.addEventListener('click', async () => {
+			if (!await spConfirm('End this weekly schedule?\n\nNo new dates are made, and its upcoming dates with nobody booked come off the calendar. Dates that already have bookings stay.')) return;
+			const r = await spAjax('site_pulse_booking_recurrence_end', { id: b.dataset.bsEnd });
+			if (r.success) { spToast(r.data.message, 6000); draw(); } else spAlert(r.data?.message || 'Could not end it.');
+		}));
+		$$('[data-bs-remove]', backdrop).forEach(b => b.addEventListener('click', async () => {
+			if (!await spConfirm('Remove this date from the calendar?')) return;
+			const r = await spAjax('site_pulse_booking_session_remove', { id: b.dataset.bsRemove });
+			if (r.success) { spToast('Date removed.'); draw(); } else spAlert(r.data?.message || 'Could not remove it.');
+		}));
+		$$('[data-bs-cap]', backdrop).forEach(inp => inp.addEventListener('change', async () => {
+			const r = await spAjax('site_pulse_booking_session_capacity', { id: inp.dataset.bsCap, capacity: inp.value });
+			if (r.success) spToast('Seats updated.'); else { spAlert(r.data?.message || 'Could not change the seats.'); draw(); }
+		}));
+	};
+	draw();
 }
 
 
@@ -22952,27 +25443,23 @@ function spBookRenderResources() {
 	if (!box || !_spBookAdmin) return;
 	const rows = _spBookAdmin.resources || [];
 	if (!rows.length) {
-		box.innerHTML = '<div class="sp-empty">No resources yet. Add the person (or room, or unit) that gets booked.</div>';
+		box.innerHTML = '<div class="sp-empty">No staff yet. Add the people (or rooms, chairs, trucks) that customers book.</div>';
 		return;
 	}
 	const users = _spBookAdmin.users || [];
-	box.innerHTML = `<table class="sp-table"><thead><tr>
-		<th>Name</th><th>Type</th><th>Linked user</th><th>Seats</th><th>Status</th><th></th>
-	</tr></thead><tbody>${rows.map(r => {
+	box.innerHTML = '<div class="sp-card sp-card--flush"><div class="sp-list">' + rows.map(r => {
 		const u = users.find(x => Number(x.id) === Number(r.user_id));
-		const badge = r.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft';
-		return `<tr>
-			<td><strong>${esc(r.name)}</strong>${r.timezone ? `<div class="sp-book-sub">${esc(r.timezone)}</div>` : ''}</td>
-			<td>${esc(r.resource_type)}</td>
-			<td>${u ? esc(u.name) : '—'}</td>
-			<td>${parseInt(r.capacity, 10) || 1}</td>
-			<td><span class="sp-status-badge ${badge}">${r.status === 'active' ? 'Active' : 'Inactive'}</span></td>
-			<td class="sp-book-actions">
-				${iconBtn('edit', '', `data-book-resource="${r.id}" data-act="edit"`)}
-				${iconBtn('delete', '', `data-book-resource="${r.id}" data-act="delete"`)}
-			</td>
-		</tr>`;
-	}).join('')}</tbody></table>`;
+		const seats = parseInt(r.capacity, 10) || 1;
+		const meta = [esc(r.resource_type), u ? `Linked to ${esc(u.name)}` : '', `${seats} seat${seats === 1 ? '' : 's'}`, r.timezone ? esc(r.timezone) : ''].filter(Boolean);
+		return '<div class="sp-row"><span class="sp-row__main">'
+			+ `<span class="sp-row__title">${esc(r.name)}</span>`
+			+ `<span class="sp-meta">${meta.map(m => `<span>${m}</span>`).join('')}</span></span>`
+			+ '<span class="sp-row__trail">'
+			+ (r.status === 'active' ? '' : '<span class="sp-status-badge sp-status-draft">Inactive</span>')
+			+ iconBtn('edit', '', `data-book-resource="${r.id}" data-act="edit"`)
+			+ iconBtn('delete', '', `data-book-resource="${r.id}" data-act="delete"`)
+			+ '</span></div>';
+	}).join('') + '</div></div>';
 	markUniqueSpans(box);
 }
 
@@ -22996,8 +25483,8 @@ function spBookResourceForm(id) {
 		+ '</select><div class="sp-help-text">Linking a user is what lets “View own bookings only” scope their calendar to this resource.</div></div>';
 
 	html += '<div class="sp-book-form-grid">';
-	html += `<div class="sp-form-group"><label for="sp-br-capacity">Seats<span class="sp-field-unit">(for classes)</span></label><input type="number" min="1" id="sp-br-capacity" class="sp-input" value="${parseInt(r.capacity, 10) || 1}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-br-tz">Timezone<span class="sp-field-unit">(override)</span></label><input type="text" id="sp-br-tz" class="sp-input" value="${esc(r.timezone || '')}" placeholder="${esc(_spBookAdmin?.timezone || '')}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-br-capacity">Seats<span class="sp-field__hint">(for classes)</span></label><input type="number" min="1" id="sp-br-capacity" class="sp-input" value="${parseInt(r.capacity, 10) || 1}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-br-tz">Timezone<span class="sp-field__hint">(override)</span></label><input type="text" id="sp-br-tz" class="sp-input" value="${esc(r.timezone || '')}" placeholder="${esc(_spBookAdmin?.timezone || '')}"></div>`;
 	html += `<div class="sp-form-group"><label for="sp-br-email">Email</label><input type="email" id="sp-br-email" class="sp-input" value="${esc(r.email || '')}"></div>`;
 	html += `<div class="sp-form-group"><label for="sp-br-phone">Phone</label><input type="text" id="sp-br-phone" class="sp-input" value="${esc(r.phone || '')}"></div>`;
 	html += '</div>';
@@ -23038,7 +25525,7 @@ async function spBookDelete(kind, id, label) {
 		const res = await spAjax(`site_pulse_booking_delete_${kind}`, { id });
 		if (!res.success) { spAlert(res.data?.message || 'Could not delete.'); return; }
 		spToast(res.data?.message || 'Deleted.');
-		loadBookingAdmin();
+		if (kind === 'service') spBookRefresh(); else loadBookingAdmin();
 	} catch (e) { spAlert('Could not delete.'); }
 }
 
@@ -23081,12 +25568,12 @@ function spBookRenderAvailability() {
 			return `<div class="sp-book-hours-row${on ? '' : ' sp-book-day-off'}" data-weekday="${wd}">
 				<label class="sp-check-row sp-book-day-toggle"><input type="checkbox" class="sp-book-day-on"${on ? ' checked' : ''}> <span>${esc(label)}</span></label>
 				<input type="time" class="sp-input sp-book-day-start" value="${spBookTimeInput(row?.start_time) || '09:00'}"${on ? '' : ' disabled'}>
-				<span class="sp-book-dash">to</span>
+				<span class="sp-field__hint">to</span>
 				<input type="time" class="sp-input sp-book-day-end" value="${spBookTimeInput(row?.end_time) || '17:00'}"${on ? '' : ' disabled'}>
 			</div>`;
 		}).join('')
 		+ '</div>'
-		+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-primary" id="sp-book-save-hours">Save Hours</button>'
+		+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn--primary" id="sp-book-save-hours">Save Hours</button>'
 		+ `<span class="sp-help-text">Times are ${esc(_spBookAdmin.timezone || 'local time')}.</span></div>`;
 
 	// Enabling a day should immediately make its times editable, not after a save.
@@ -23113,7 +25600,7 @@ function spBookRenderAvailability() {
 						<td>${time}</td>
 						<td>${Number(r.resource_id) === 0 ? 'Everyone' : 'This resource'}</td>
 						<td>${esc(r.note || '')}</td>
-						<td class="sp-book-actions">${iconBtn('delete', '', `data-book-rule="${r.id}"`)}</td>
+						<td class="sp-toolbar sp-toolbar--end">${iconBtn('delete', '', `data-book-rule="${r.id}"`)}</td>
 					</tr>`;
 				}).join('')
 				+ '</tbody></table>'
@@ -23279,25 +25766,25 @@ async function spBookPreview() {
 
 		const d = res.data;
 		const svc = d.service || {};
-		let html = `<div class="sp-book-preview-summary"><strong>${d.total}</strong> slot${d.total === 1 ? '' : 's'} `
+		let html = `<div class="sp-card sp-card--well"><strong>${d.total}</strong> slot${d.total === 1 ? '' : 's'} `
 			+ `over ${d.days.length} day${d.days.length === 1 ? '' : 's'} · ${esc(svc.name || '')} · ${svc.duration_min} min · `
 			+ `${svc.lead_time_min} min notice · up to ${svc.max_advance_days} days ahead · ${esc(d.timezone || '')}</div>`;
 
-		html += '<div class="sp-book-preview-days">';
+		html += '<div class="sp-stack sp-stack--sm">';
 		html += d.days.map(day => {
 			let body;
 			if (day.slots.length) {
-				body = '<div class="sp-book-slots">' + day.slots.map(s =>
+				body = '<div class="sp-toolbar">' + day.slots.map(s =>
 					`<span class="sp-book-slot" title="${esc(s.resource)}">${esc(s.time)}</span>`).join('') + '</div>';
 			} else if (!day.windows.length) {
 				// The distinction that makes this a diagnostic rather than just a preview.
-				body = '<div class="sp-book-nowhy">No working hours this day</div>';
+				body = '<div class="sp-field__hint">No working hours this day</div>';
 			} else {
-				body = '<div class="sp-book-nowhy">Open ' + day.windows.map(w => esc(w.label)).join(', ')
+				body = '<div class="sp-field__hint">Open ' + day.windows.map(w => esc(w.label)).join(', ')
 					+ ' — but nothing bookable (already booked, or inside the notice window)</div>';
 			}
-			return `<div class="sp-book-preview-day${day.slots.length ? '' : ' sp-book-day-empty'}">
-				<div class="sp-book-preview-date">${esc(day.label)}<span class="sp-book-slot-count">${day.slots.length}</span></div>
+			return `<div class="sp-card sp-card--inset sp-book-preview-day${day.slots.length ? '' : ' sp-book-day-empty'}">
+				<div class="sp-book-preview-date">${esc(day.label)}<span class="sp-field__hint sp-book-slot-count">${day.slots.length}</span></div>
 				${body}</div>`;
 		}).join('');
 		html += '</div>';
@@ -23320,8 +25807,13 @@ async function spBookPreview() {
 # breakpoint with no layout arithmetic.
 --------------------------------------------------------------*/
 
-const _spBookCal = { view: 'day', anchor: '', resource: 0, canManage: false, wired: false };
+const _spBookCal = { mode: 'calendar', view: 'month', anchor: '', resource: 0, canManage: false, wired: false };
 const _spBookListState = { wired: false };
+
+/** Current Bookings is on screen in its List view — so a change elsewhere should refresh the list. */
+function spBookListShowing() {
+	return !!$('#sp-panel-booking-calendar')?.classList.contains('active') && _spBookCal.mode === 'list';
+}
 
 // Date helpers. Everything is a 'YYYY-MM-DD' string; Dates are only ever built at
 // NOON so a DST shift or a negative UTC offset can never roll the day over.
@@ -23374,11 +25866,35 @@ function initBookingCalendar() {
 		_spBookCal.resource = parseInt(e.target.value, 10) || 0;
 		loadBookingCalendar();
 	});
-	$$('.sp-book-cal-view').forEach(btn => btn.addEventListener('click', () => {
-		_spBookCal.view = btn.dataset.view;
-		$$('.sp-book-cal-view').forEach(b => b.classList.toggle('active', b === btn));
+	const panel = $('#sp-panel-booking-calendar');
+	// Calendar / List and Day / Week / Month stick to whatever this viewer last left them on (this device).
+	const pref = (k, ok) => { try { const v = localStorage.getItem('sp_book_cal_' + k); return ok.includes(v) ? v : ''; } catch (e) { return ''; } };
+	const keep = (k, v) => { try { localStorage.setItem('sp_book_cal_' + k, v); } catch (e) {} };
+	_spBookCal.view = pref('view', ['day', 'week', 'month']) || _spBookCal.view;
+	_spBookCal.mode = pref('mode', ['calendar', 'list']) || _spBookCal.mode;
+	const spanSel = $('#sp-book-cal-span');
+	if (spanSel) spanSel.value = _spBookCal.view;
+	$$('[data-sp-book-mode]', panel).forEach(t => t.classList.toggle('is-active', t.dataset.spBookMode === _spBookCal.mode));
+	// Day / Week / Month — the span, in the toolbar's dropdown.
+	spanSel?.addEventListener('change', (e) => { _spBookCal.view = e.target.value; keep('view', _spBookCal.view); loadBookingCalendar(); });
+	// Calendar / List — the tabs.
+	$$('[data-sp-book-mode]', panel).forEach(tab => tab.addEventListener('click', () => {
+		_spBookCal.mode = tab.dataset.spBookMode;
+		keep('mode', _spBookCal.mode);
+		$$('[data-sp-book-mode]', panel).forEach(t => t.classList.toggle('is-active', t === tab));
 		loadBookingCalendar();
 	}));
+	// Status (list) + resource, in the Filter sheet.
+	$('[data-sp-book-filters]', panel)?.addEventListener('click', () => spOpenFilterSheet($('[data-sp-book-filter-holder]'), {
+		clear: () => {
+			const st = $('#sp-book-status'); if (st) st.value = '';
+			const rs = $('#sp-book-cal-resource'); if (rs) rs.value = '';
+			_spBookCal.resource = 0;
+			loadBookingCalendar();
+		},
+		onClose: spSyncFilterSummaries,
+	}));
+	initBookingList();
 
 	// Delegated: chips are re-rendered on every navigation.
 	$('#sp-book-calendar')?.addEventListener('click', (e) => {
@@ -23410,6 +25926,20 @@ async function loadBookingCalendar() {
 	const label = $('#sp-book-cal-range');
 	if (label) label.textContent = range.label;
 
+	// List mode: the same day / week / month as rows (with search + status) instead of the grid. The
+	// search box and the 1 / 2 / cards toggle only mean something for the list.
+	const list = _spBookCal.mode === 'list';
+	const panel = $('#sp-panel-booking-calendar');
+	box.hidden = list;
+	const listBox = $('#sp-book-list', panel); if (listBox) listBox.hidden = !list;
+	const search = $('[data-sp-book-listonly]', panel); if (search) search.hidden = !list;
+	const cols = $('[data-sp-cols]', panel); if (cols) cols.hidden = !list;
+	// Status only filters the list (the calendar always shows what's booked). The field may be inside
+	// the open Filter sheet, so it's found by attribute, not within the panel.
+	const statusField = $('[data-sp-book-status-field]'); if (statusField) statusField.hidden = !list;
+	spSyncFilterSummaries();
+	if (list) { loadBookingList(); return; }
+
 	box.innerHTML = '<div class="sp-loading"></div>';
 	try {
 		const res = await spAjax('site_pulse_booking_calendar', {
@@ -23423,6 +25953,8 @@ async function loadBookingCalendar() {
 
 		const byDate = {};
 		(res.data.bookings || []).forEach(b => { (byDate[b.date] = byDate[b.date] || []).push(b); });
+		const n = (res.data.bookings || []).length;
+		const cnt = $('#sp-book-count'); if (cnt) cnt.textContent = `${n} ${n === 1 ? 'booking' : 'bookings'}`;
 
 		if (_spBookCal.view === 'month') box.innerHTML = spBookMonthHTML(range, byDate, res.data.today);
 		else if (_spBookCal.view === 'week') box.innerHTML = spBookWeekHTML(range, byDate, res.data.today);
@@ -23437,7 +25969,7 @@ async function loadBookingCalendar() {
 function spBookFillCalResources(list) {
 	const sel = $('#sp-book-cal-resource');
 	if (!sel || sel.dataset.filled === '1') return;
-	sel.innerHTML = '<option value="0">All</option>'
+	sel.innerHTML = '<option value="">Everyone</option>'
 		+ list.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
 	sel.dataset.filled = '1';
 }
@@ -23459,16 +25991,16 @@ function spBookChip(b) {
 
 function spBookDayHTML(date, list) {
 	if (!list.length) return '<div class="sp-empty">Nothing booked this day.</div>';
-	return '<div class="sp-book-agenda">' + list.map(b => `
-		<button type="button" class="unique sp-book-agenda-row" data-booking-id="${b.id}">
-			<span class="sp-book-agenda-time">${esc(b.time)}<small>${esc(b.end_time)}</small></span>
-			<span class="sp-book-agenda-main">
-				<strong>${esc(b.customer)}</strong>
-				<span class="sp-book-agenda-sub">${esc(b.service)}${b.resource ? ' · ' + esc(b.resource) : ''}</span>
-				${b.address ? `<span class="sp-book-agenda-sub">${esc(b.address)}</span>` : ''}
+	return '<div class="sp-card sp-card--flush"><div class="sp-list">' + list.map(b => `
+		<button type="button" class="unique sp-row sp-book-agenda-row" data-booking-id="${b.id}">
+			<span class="sp-row__lead sp-book-agenda-time">${esc(b.time)}<small>${esc(b.end_time)}</small></span>
+			<span class="sp-row__main">
+				<span class="sp-row__title">${esc(b.customer)}</span>
+				<span class="sp-field__hint">${esc(b.service)}${b.resource ? ' · ' + esc(b.resource) : ''}</span>
+				${b.address ? `<span class="sp-field__hint">${esc(b.address)}</span>` : ''}
 			</span>
-			<span class="sp-status-badge ${spBookStatusClass(b.status)}">${esc(b.status.replace('_', ' '))}</span>
-		</button>`).join('') + '</div>';
+			<span class="sp-row__trail"><span class="sp-status-badge ${spBookStatusClass(b.status)}">${esc(b.status.replace('_', ' '))}</span></span>
+		</button>`).join('') + '</div></div>';
 }
 
 function spBookWeekHTML(range, byDate, today) {
@@ -23494,7 +26026,7 @@ function spBookMonthHTML(range, byDate, today) {
 		cells += `<div class="sp-book-month-cell${out}${d === today ? ' sp-book-today' : ''}">
 			<div class="sp-book-month-date">${day.getDate()}</div>
 			${list.slice(0, 3).map(spBookChip).join('')}
-			${list.length > 3 ? `<span class="sp-book-more">+${list.length - 3} more</span>` : ''}
+			${list.length > 3 ? `<span class="sp-field__hint">+${list.length - 3} more</span>` : ''}
 		</div>`;
 	}
 	return `<div class="sp-book-month">${cells}</div>`;
@@ -23524,32 +26056,62 @@ function initBookingList() {
 async function loadBookingList() {
 	const box = $('#sp-book-list');
 	if (!box) return;
-	box.innerHTML = '<div class="sp-loading"></div>';
+	box.innerHTML = SP_LIST_SKELETON;
 	try {
+		// The span the calendar is on. Month view's grid range pads into the neighbouring months, so
+		// the list uses the month's real first and last day instead.
+		if (!_spBookCal.anchor) _spBookCal.anchor = _spBookAdmin?.today || spBookStr(new Date());
+		let { from, to } = spBookCalRange();
+		if (_spBookCal.view === 'month') {
+			from = spBookMonthStart(_spBookCal.anchor);
+			const last = spBookDay(from);
+			last.setMonth(last.getMonth() + 1, 0);
+			to = spBookStr(last);
+		}
 		const res = await spAjax('site_pulse_booking_list', {
-			status: $('#sp-book-status')?.value ?? 'upcoming',
+			// The filter's '' (no filter) is "Active"; "Every status" is 'all'. The server's names differ.
+			status: ({ '': 'upcoming', all: '' })[$('#sp-book-status')?.value || ''] ?? $('#sp-book-status').value,
 			search: $('#sp-book-search')?.value || '',
+			from, to,
+			resource_id: _spBookCal.resource || 0,
 		});
-		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load bookings.')}</div>`; return; }
+		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load bookings. Try again in a moment.') + '</div>'; return; }
 
 		const rows = res.data.bookings || [];
-		if (!rows.length) { box.innerHTML = '<div class="sp-empty">No bookings match.</div>'; return; }
-
-		box.innerHTML = `<table class="sp-table"><thead><tr>
-			<th>When</th><th>Customer</th><th>Service</th><th>With</th><th>Status</th><th>Ref</th>
-		</tr></thead><tbody>${rows.map(b => `
-			<tr class="sp-book-row" data-booking-id="${b.id}">
-				<td><strong>${esc(b.day_label)}</strong><div class="sp-book-sub">${esc(b.time)}</div></td>
-				<td>${esc(b.customer)}<div class="sp-book-sub">${esc(b.phone || b.email || '')}</div></td>
-				<td>${esc(b.service)}</td>
-				<td>${esc(b.resource)}</td>
-				<td><span class="sp-status-badge ${spBookStatusClass(b.status)}">${esc(b.status.replace('_', ' '))}</span></td>
-				<td class="sp-book-sub">${esc(b.code)}</td>
-			</tr>`).join('')}</tbody></table>`;
+		const cnt = $('#sp-book-count'); if (cnt) cnt.textContent = `${rows.length} ${rows.length === 1 ? 'booking' : 'bookings'}`;
+		box.innerHTML = rows.length
+			? `<div class="sp-card sp-card--flush"><div class="sp-list">${rows.map(spBookListRow).join('')}</div></div>`
+			: spEmptyHTML({ icon: 'calendar', panel: $('#sp-panel-booking-calendar'), title: 'No bookings here', text: 'Nothing booked in this span. Try the arrows, a longer span, or Filter.', filteredTitle: 'No bookings match these filters' });
 		markUniqueSpans(box);
 	} catch (e) {
-		box.innerHTML = '<div class="sp-empty">Error loading bookings.</div>';
+		box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load bookings. Try again in a moment.') + '</div>';
 	}
+}
+
+// A booking's status as a chip, toned the way every list in Site Pulse tones status.
+function spBookStatusChip(status) {
+	const tone = { confirmed: 'success', pending: 'warning', completed: 'brand' }[status] || '';
+	const label = String(status || '').replace('_', ' ');
+	return `<span class="sp-chip${tone ? ' sp-chip--' + tone : ''}">${esc(label.charAt(0).toUpperCase() + label.slice(1))}</span>`;
+}
+
+// The date as a tile (day number over the month) — the at-a-glance "when" of a booking row.
+function spBookDateTile(ymd) {
+	const d = ymd ? spBookDay(ymd) : null;
+	return d ? `<span class="sp-row__thumb sp-book-date-tile"><strong>${d.getDate()}</strong><small>${SP_BOOK_MONTHS[d.getMonth()].slice(0, 3)}</small></span>` : `<span class="sp-row__thumb">${spIcon('calendar')}</span>`;
+}
+
+// One booking: date tile, customer, time · what · with whom, contact, status. The row opens the detail.
+function spBookListRow(b) {
+	const meta = [b.time, b.service, b.resource].filter(Boolean);
+	const contact = [b.phone || b.email, b.code].filter(Boolean);
+	return `<button type="button" class="unique sp-row" data-booking-id="${b.id}">`
+		+ `<span class="sp-row__lead">${spBookDateTile(b.date)}</span>`
+		+ `<span class="sp-row__main"><span class="sp-row__title">${esc(b.customer || 'Customer')}</span>`
+		+   (meta.length ? `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>` : '')
+		+   (contact.length ? `<span class="sp-meta">${contact.map(m => `<span>${esc(m)}</span>`).join('')}</span>` : '')
+		+   `<span class="sp-toolbar">${spBookStatusChip(b.status)}${b.party_size > 1 ? `<span class="sp-chip">${b.party_size} people</span>` : ''}</span>`
+		+ `</span><span class="sp-row__trail">${spIcon('chev-r')}</span></button>`;
 }
 
 
@@ -23571,8 +26133,8 @@ async function spBookNewForm(presetDate) {
 	}
 	const services = (_spBookAdmin?.services || []).filter(s => s.status === 'active');
 	if (!services.length) {
-		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>No active services yet. Add one under Settings → Booking first.</p>'
-			+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-book-cancel">Close</button></div></div>';
+		backdrop.innerHTML = '<div class="sp-card sp-report-form-wrap"><p>No active booking types yet. Add one under Settings → Booking first.</p>'
+			+ '<div class="sp-report-form-actions"><button type="button" class="unique sp-btn sp-book-cancel">Close</button></div></div>';
 		$$('.sp-book-cancel', backdrop).forEach(b => b.addEventListener('click', () => closeFormModal()));
 		return;
 	}
@@ -23587,10 +26149,10 @@ async function spBookNewForm(presetDate) {
 	html += '<div class="sp-form-group"><label for="sp-nb-resource">With</label><select id="sp-nb-resource" class="sp-select"><option value="0">Anyone available</option>'
 		+ resources.map(r => `<option value="${r.id}">${esc(r.name)}</option>`).join('') + '</select></div>';
 	html += `<div class="sp-form-group"><label for="sp-nb-date">Date</label><input type="date" id="sp-nb-date" class="sp-input" value="${esc(presetDate || _spBookAdmin?.today || '')}"></div>`;
-	html += '<div class="sp-form-group" id="sp-nb-zip-wrap" hidden><label for="sp-nb-zip">ZIP<span class="sp-field-unit">(sets travel time)</span></label><input type="text" id="sp-nb-zip" class="sp-input" inputmode="numeric" maxlength="10"></div>';
+	html += '<div class="sp-form-group" id="sp-nb-zip-wrap" hidden><label for="sp-nb-zip">ZIP<span class="sp-field__hint">(sets travel time)</span></label><input type="text" id="sp-nb-zip" class="sp-input" inputmode="numeric" maxlength="10"></div>';
 	html += '</div>';
 
-	html += '<div class="sp-form-group"><label>Available times</label><div id="sp-nb-slots" class="sp-book-slots"><span class="sp-book-nowhy">Pick a date.</span></div></div>';
+	html += '<div class="sp-form-group"><label>Available times</label><div id="sp-nb-slots" class="sp-toolbar"><span class="sp-field__hint">Pick a date.</span></div></div>';
 
 	html += '<div class="sp-book-form-grid">';
 	html += '<div class="sp-form-group"><label for="sp-nb-name">Customer name</label><input type="text" id="sp-nb-name" class="sp-input"></div>';
@@ -23631,17 +26193,17 @@ async function spBookNewForm(presetDate) {
 	const loadSlots = async () => {
 		chosen = null;
 		setSaveBusy(true);
-		if (!dateIn.value) { slotBox.innerHTML = '<span class="sp-book-nowhy">Pick a date.</span>'; return; }
+		if (!dateIn.value) { slotBox.innerHTML = '<span class="sp-field__hint">Pick a date.</span>'; return; }
 		slotBox.innerHTML = '<div class="sp-loading-inline"></div>';
 		try {
 			const r = await spAjax('site_pulse_booking_slots', {
 				service_id: svcSel.value, resource_id: resSel.value, date: dateIn.value,
 				zip: zipIn.value,
 			});
-			if (!r.success) { slotBox.innerHTML = `<span class="sp-book-nowhy">${esc(r.data?.message || 'Could not load times.')}</span>`; return; }
+			if (!r.success) { slotBox.innerHTML = `<span class="sp-field__hint">${esc(r.data?.message || 'Could not load times.')}</span>`; return; }
 			const slots = r.data.slots || [];
 			if (!slots.length) {
-				slotBox.innerHTML = '<span class="sp-book-nowhy">Nothing available that day. Check the hours under Settings → Booking.</span>';
+				slotBox.innerHTML = '<span class="sp-field__hint">Nothing available that day. Check the hours under Settings → Booking.</span>';
 				return;
 			}
 			// A window slot is a labelled range; an exact slot is a start time. The server decides
@@ -23650,8 +26212,8 @@ async function spBookNewForm(presetDate) {
 				`<button type="button" class="unique sp-book-slot sp-book-slot-pick${s.is_window ? ' sp-book-slot-window' : ''}" data-i="${i}">`
 				+ (s.window ? `<strong>${esc(s.window)}</strong>` : '')
 				+ esc(s.time)
-				+ (s.surcharge ? `<small class="sp-book-slot-fee">+$${(s.surcharge / 100).toFixed(2)}</small>`
-					: (s.out_of_area ? '<small class="sp-book-slot-far">out of the way</small>' : ''))
+				+ (s.surcharge ? `<small class="sp-flag sp-flag--warning">+$${(s.surcharge / 100).toFixed(2)}</small>`
+					: (s.out_of_area ? '<small class="sp-field__hint">out of the way</small>' : ''))
 				+ (s.resource && !(resSel.value * 1) ? `<small>${esc(s.resource)}</small>` : '')
 				+ '</button>'
 			).join('');
@@ -23661,7 +26223,7 @@ async function spBookNewForm(presetDate) {
 				setSaveBusy(false);
 			}));
 			markUniqueSpans(slotBox);
-		} catch (e) { slotBox.innerHTML = '<span class="sp-book-nowhy">Error loading times.</span>'; }
+		} catch (e) { slotBox.innerHTML = '<span class="sp-field__hint">Error loading times.</span>'; }
 	};
 
 	svcSel.addEventListener('change', () => { syncAddress(); loadSlots(); });
@@ -23705,7 +26267,7 @@ async function spBookNewForm(presetDate) {
 			closeFormModal();
 			spToast('Booking created.');
 			loadBookingCalendar();
-			if ($('#sp-panel-booking-list')?.classList.contains('active')) loadBookingList();
+			if (spBookListShowing()) loadBookingList();
 		} catch (e) { spBookSetMsg(backdrop, 'Could not create the booking.'); setSaveBusy(false); }
 	});
 	$('#sp-nb-name', backdrop)?.focus();
@@ -23732,31 +26294,32 @@ async function spBookDetail(id) {
 
 	let html = '<div class="sp-card sp-report-form-wrap sp-book-form">';
 	html += `<div class="sp-card-header sp-header-grid sp-report-form-header"><h3>${esc(b.customer)}</h3>`
-		+ '<button type="button" class="unique sp-btn sp-btn-ghost sp-book-cancel">Close</button></div>';
+		+ '<button type="button" class="unique sp-btn sp-book-cancel">Close</button></div>';
 
-	html += '<div class="sp-meta-bar">';
-	html += `<div><span>When</span><strong>${esc(b.day_label)} · ${esc(b.time)}–${esc(b.end_time)}</strong></div>`;
-	html += `<div><span>Service</span><strong>${esc(b.service)}</strong></div>`;
-	html += `<div><span>With</span><strong>${esc(b.resource || '—')}</strong></div>`;
-	html += `<div><span>Status</span><strong>${esc(b.status.replace('_', ' '))}</strong></div>`;
-	html += `<div><span>Reference</span><strong>${esc(b.code)}</strong></div>`;
-	if (b.phone) html += `<div><span>Phone</span><strong>${esc(b.phone)}</strong></div>`;
-	if (b.email) html += `<div><span>Email</span><strong>${esc(b.email)}</strong></div>`;
-	if (b.address) html += `<div><span>Address</span><strong>${esc(b.address)}</strong></div>`;
+	html += '<div class="sp-card sp-card--well sp-grid">';
+	html += `<div class="sp-field"><span class="sp-field__hint">When</span><strong>${esc(b.day_label)} · ${esc(b.time)}–${esc(b.end_time)}</strong></div>`;
+	html += `<div class="sp-field"><span class="sp-field__hint">Service</span><strong>${esc(b.service)}</strong></div>`;
+	html += `<div class="sp-field"><span class="sp-field__hint">With</span><strong>${esc(b.resource || '—')}</strong></div>`;
+	html += `<div class="sp-field"><span class="sp-field__hint">Status</span><strong>${esc(b.status.replace('_', ' '))}</strong></div>`;
+	html += `<div class="sp-field"><span class="sp-field__hint">Reference</span><strong>${esc(b.code)}</strong></div>`;
+	if (b.phone) html += `<div class="sp-field"><span class="sp-field__hint">Phone</span><strong>${esc(b.phone)}</strong></div>`;
+	if (b.email) html += `<div class="sp-field"><span class="sp-field__hint">Email</span><strong>${esc(b.email)}</strong></div>`;
+	if (b.address) html += `<div class="sp-field"><span class="sp-field__hint">Address</span><strong>${esc(b.address)}</strong></div>`;
 	html += '</div>';
 
-	if (b.notes) html += `<div class="sp-form-group"><label>Customer note</label><div class="sp-book-note">${esc(b.notes)}</div></div>`;
+	if (b.notes) html += `<div class="sp-form-group"><label>Customer note</label><div class="sp-card sp-card--well">${esc(b.notes)}</div></div>`;
 
 	if (can) {
 		html += `<div class="sp-form-group"><label for="sp-bd-note">Staff note</label><textarea id="sp-bd-note" class="sp-textarea" rows="2">${esc(b.staff_notes || '')}</textarea></div>`;
-		html += '<div class="sp-book-detail-actions">';
-		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-bd-savenote">Save Note</button>';
-		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-bd-move">Reschedule</button>';
-		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-bd-done">Mark Completed</button>';
-		html += '<button type="button" class="unique sp-btn sp-btn-secondary" id="sp-bd-noshow">No Show</button>';
-		html += '<button type="button" class="unique sp-btn sp-btn-danger" id="sp-bd-cancel">Cancel Booking</button>';
+		html += '<div class="sp-toolbar">';
+		html += '<button type="button" class="unique sp-btn" id="sp-bd-savenote">Save Note</button>';
+		html += '<button type="button" class="unique sp-btn" id="sp-bd-move">Reschedule</button>';
+		html += '<button type="button" class="unique sp-btn" id="sp-bd-done">Mark Completed</button>';
+		html += '<button type="button" class="unique sp-btn" id="sp-bd-noshow">No Show</button>';
+		html += '<button type="button" class="unique sp-btn sp-btn--danger" id="sp-bd-cancel">Cancel Booking</button>';
+		if (D.isGod || (D.userCaps || []).includes('delete_bookings')) html += '<button type="button" class="unique sp-btn sp-btn--danger" id="sp-bd-delete" title="Erase a test booking: no emails, no refund">Delete Booking</button>';
 		html += '</div>';
-		html += '<span class="sp-book-form-msg" id="sp-bd-msg"></span>';
+		html += '<span class="sp-field__hint sp-flag--danger sp-book-form-msg" id="sp-bd-msg"></span>';
 	}
 	html += '</div>';
 	backdrop.innerHTML = html;
@@ -23765,7 +26328,7 @@ async function spBookDetail(id) {
 	const refresh = () => {
 		closeFormModal();
 		loadBookingCalendar();
-		if ($('#sp-panel-booking-list')?.classList.contains('active')) loadBookingList();
+		if (spBookListShowing()) loadBookingList();
 	};
 	const msg = () => $('#sp-bd-msg', backdrop);
 
@@ -23800,6 +26363,18 @@ async function spBookDetail(id) {
 		} catch (e) { msg().textContent = 'Could not cancel.'; }
 	});
 
+	$('#sp-bd-delete', backdrop)?.addEventListener('click', async () => {
+		if (!await spConfirm(`Permanently delete ${b.customer}'s booking (${b.code})?
+
+For test bookings: it is erased with its seats, payment records and pass use. No email is sent and nothing is refunded. This cannot be undone.`)) return;
+		try {
+			const r = await spAjax('site_pulse_booking_delete', { id });
+			if (!r.success) { msg().textContent = r.data?.message || 'Could not delete.'; return; }
+			spToast('Booking deleted.');
+			refresh();
+		} catch (e) { msg().textContent = 'Could not delete.'; }
+	});
+
 	$('#sp-bd-move', backdrop)?.addEventListener('click', () => spBookMoveForm(b));
 }
 
@@ -23810,7 +26385,7 @@ async function spBookMoveForm(b) {
 	html += spBookHead(`Reschedule ${b.customer}`, 'Move Booking', 'sp-bm-save', true);
 	html += `<p class="sp-help-text">Currently ${esc(b.day_label)} at ${esc(b.time)}.</p>`;
 	html += `<div class="sp-form-group"><label for="sp-bm-date">New date</label><input type="date" id="sp-bm-date" class="sp-input" value="${esc(b.date)}"></div>`;
-	html += '<div class="sp-form-group"><label>Available times</label><div id="sp-bm-slots" class="sp-book-slots"></div></div>';
+	html += '<div class="sp-form-group"><label>Available times</label><div id="sp-bm-slots" class="sp-toolbar"></div></div>';
 	html += spBookFoot('Move Booking', 'sp-bm-save', true) + '</div>';
 	backdrop.innerHTML = html;
 	markUniqueSpans(backdrop);
@@ -23828,9 +26403,9 @@ async function spBookMoveForm(b) {
 			const r = await spAjax('site_pulse_booking_slots', {
 				service_id: b.service_id, resource_id: b.resource_id, date: dateIn.value,
 			});
-			if (!r.success) { slotBox.innerHTML = `<span class="sp-book-nowhy">${esc(r.data?.message || 'Could not load times.')}</span>`; return; }
+			if (!r.success) { slotBox.innerHTML = `<span class="sp-field__hint">${esc(r.data?.message || 'Could not load times.')}</span>`; return; }
 			const slots = r.data.slots || [];
-			if (!slots.length) { slotBox.innerHTML = '<span class="sp-book-nowhy">Nothing free that day.</span>'; return; }
+			if (!slots.length) { slotBox.innerHTML = '<span class="sp-field__hint">Nothing free that day.</span>'; return; }
 			slotBox.innerHTML = slots.map((s, i) => `<button type="button" class="unique sp-book-slot sp-book-slot-pick" data-i="${i}">${esc(s.time)}</button>`).join('');
 			$$('.sp-book-slot-pick', slotBox).forEach(btn => btn.addEventListener('click', () => {
 				chosen = slots[parseInt(btn.dataset.i, 10)];
@@ -23838,7 +26413,7 @@ async function spBookMoveForm(b) {
 				setSaveBusy(false);
 			}));
 			markUniqueSpans(slotBox);
-		} catch (e) { slotBox.innerHTML = '<span class="sp-book-nowhy">Error loading times.</span>'; }
+		} catch (e) { slotBox.innerHTML = '<span class="sp-field__hint">Error loading times.</span>'; }
 	};
 	dateIn.addEventListener('change', loadSlots);
 	loadSlots();
@@ -23860,7 +26435,7 @@ async function spBookMoveForm(b) {
 			closeFormModal();
 			spToast('Booking moved.');
 			loadBookingCalendar();
-			if ($('#sp-panel-booking-list')?.classList.contains('active')) loadBookingList();
+			if (spBookListShowing()) loadBookingList();
 		} catch (e) { spBookSetMsg(backdrop, 'Could not move it.'); setSaveBusy(false); }
 	});
 }
@@ -23895,10 +26470,10 @@ function spBookRenderNotify() {
 	const d = _spBookNotify;
 
 	let html = '<div class="sp-book-form-grid">';
-	html += `<div class="sp-form-group"><label for="sp-bn-reminder">Reminder<span class="sp-field-unit">(hours before)</span></label><input type="number" min="1" id="sp-bn-reminder" class="sp-input" value="${parseInt(d.reminder_hours, 10) || 24}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bn-followup">Follow-up<span class="sp-field-unit">(hours after)</span></label><input type="number" min="1" id="sp-bn-followup" class="sp-input" value="${parseInt(d.followup_hours, 10) || 24}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bn-staff">Staff alerts<span class="sp-field-unit">(email)</span></label><input type="email" id="sp-bn-staff" class="sp-input" value="${esc(d.staff_email || '')}" placeholder="site admin"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bn-reply">Reply-to<span class="sp-field-unit">(email)</span></label><input type="email" id="sp-bn-reply" class="sp-input" value="${esc(d.reply_to || '')}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bn-reminder">Reminder<span class="sp-field__hint">(hours before)</span></label><input type="number" min="1" id="sp-bn-reminder" class="sp-input" value="${parseInt(d.reminder_hours, 10) || 24}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bn-followup">Follow-up<span class="sp-field__hint">(hours after)</span></label><input type="number" min="1" id="sp-bn-followup" class="sp-input" value="${parseInt(d.followup_hours, 10) || 24}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bn-staff">Staff alerts<span class="sp-field__hint">(email)</span></label><input type="email" id="sp-bn-staff" class="sp-input" value="${esc(d.staff_email || '')}" placeholder="site admin"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bn-reply">Reply-to<span class="sp-field__hint">(email)</span></label><input type="email" id="sp-bn-reply" class="sp-input" value="${esc(d.reply_to || '')}"></div>`;
 	html += '</div>';
 
 	// SMS rides on the AI Chat module's Twilio credentials — without them there is
@@ -23913,11 +26488,11 @@ function spBookRenderNotify() {
 
 	html += '<div class="sp-book-templates">';
 	(d.templates || []).forEach(t => {
-		html += `<div class="sp-book-template" data-key="${esc(t.key)}">
-			<div class="sp-book-template-head">
+		html += `<div class="sp-card sp-card--inset sp-book-template" data-key="${esc(t.key)}">
+			<div class="sp-toolbar sp-book-template-head">
 				<label class="sp-check-row"><input type="checkbox" class="sp-bn-on"${t.enabled ? ' checked' : ''}> <strong>${esc(t.label)}</strong></label>
-				<span class="sp-book-template-when">${esc(t.when)}${t.to === 'staff' ? ' · to staff' : ''}</span>
-				<button type="button" class="unique sp-btn sp-btn-secondary sp-btn-tiny sp-bn-test">Send Test</button>
+				<span class="sp-field__hint sp-book-template-when">${esc(t.when)}${t.to === 'staff' ? ' · to staff' : ''}</span>
+				<button type="button" class="unique sp-btn sp-btn-tiny sp-bn-test">Send Test</button>
 			</div>
 			<input type="text" class="sp-input sp-bn-subject" value="${esc(t.subject)}" placeholder="Subject">
 			<textarea class="sp-textarea sp-bn-body" rows="6">${esc(t.body)}</textarea>
@@ -23979,6 +26554,7 @@ function initBookingPasses() {
 	if (_spBookPassesWired) return;
 	_spBookPassesWired = true;
 
+	const panel = $('#sp-panel-booking-passes');
 	$('#sp-book-pass-new')?.addEventListener('click', () => spBookPassForm(0));
 	$('#sp-book-passes')?.addEventListener('click', (e) => {
 		const btn = e.target.closest('[data-pass-id]');
@@ -23987,40 +26563,71 @@ function initBookingPasses() {
 		if (btn.dataset.act === 'delete') spBookPassDelete(id);
 		else spBookPassForm(id);
 	});
+	// Search, Active / Cancelled / All and the sort all work on the rows already loaded.
+	let t = null;
+	$('#sp-book-pass-search')?.addEventListener('input', () => { clearTimeout(t); t = setTimeout(spBookRenderPasses, 200); });
+	$('#sp-book-pass-sort')?.addEventListener('change', spBookRenderPasses);
+	$$('[data-sp-book-pass-tab]', panel).forEach(tab => tab.addEventListener('click', () => {
+		$$('[data-sp-book-pass-tab]', panel).forEach(b => b.classList.toggle('is-active', b === tab));
+		spBookRenderPasses();
+	}));
 }
 
 async function loadBookingPasses() {
 	const box = $('#sp-book-passes');
 	if (!box) return;
-	box.innerHTML = '<div class="sp-loading"></div>';
+	box.innerHTML = SP_LIST_SKELETON;
 	try {
 		const res = await spAjax('site_pulse_booking_passes', {});
-		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load passes.')}</div>`; return; }
+		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load memberships. Try again in a moment.') + '</div>'; return; }
 		_spBookPasses = res.data;
-
-		const rows = res.data.passes || [];
-		if (!rows.length) {
-			box.innerHTML = '<div class="sp-empty">No passes or memberships yet. Issue one to a customer who has paid outside the app.</div>';
-			return;
-		}
-		box.innerHTML = `<table class="sp-table"><thead><tr>
-			<th>Customer</th><th>Plan</th><th>Covers</th><th>Balance</th><th>Status</th><th></th>
-		</tr></thead><tbody>${rows.map(p => `
-			<tr>
-				<td><strong>${esc(p.customer)}</strong><div class="sp-book-sub">${esc(p.customer_email || p.customer_phone || '')}</div></td>
-				<td>${esc(p.name)}<div class="sp-book-sub">${esc(spBookPassShapeLabel(p))}</div></td>
-				<td>${esc(p.service)}</td>
-				<td>${esc(p.balance)}${p.period_label ? `<div class="sp-book-sub">${esc(p.period_label)}</div>` : ''}</td>
-				<td><span class="sp-status-badge ${p.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft'}">${p.status === 'active' ? 'Active' : 'Cancelled'}</span></td>
-				<td class="sp-book-actions">
-					${iconBtn('edit', '', `data-pass-id="${p.id}" data-act="edit"`)}
-					${iconBtn('delete', '', `data-pass-id="${p.id}" data-act="delete"`)}
-				</td>
-			</tr>`).join('')}</tbody></table>`;
-		markUniqueSpans(box);
+		spBookRenderPasses();
 	} catch (e) {
-		box.innerHTML = '<div class="sp-empty">Error loading passes.</div>';
+		box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load memberships. Try again in a moment.') + '</div>';
 	}
+}
+
+// The search box, the tab and the sort, applied to a loaded list — shared by the Booking setup lists,
+// which are small enough to filter in the browser.
+function spBookFilterRows(rows, { search = '', fields = [], keep = () => true, sort = '', name = r => r.name || '' } = {}) {
+	const q = search.trim().toLowerCase();
+	let out = rows.filter(r => keep(r) && (!q || fields.some(f => String(r[f] || '').toLowerCase().includes(q))));
+	if (sort === 'az') out = out.slice().sort((a, b) => name(a).localeCompare(name(b)));
+	if (sort === 'za') out = out.slice().sort((a, b) => name(b).localeCompare(name(a)));
+	return out;
+}
+
+function spBookRenderPasses() {
+	const box = $('#sp-book-passes');
+	if (!box || !_spBookPasses) return;
+	const all = _spBookPasses.passes || [];
+	const tab = $('#sp-panel-booking-passes [data-sp-book-pass-tab].is-active')?.dataset.spBookPassTab || 'active';
+	const sort = $('#sp-book-pass-sort')?.value || 'newest';
+	const rows = spBookFilterRows(all, {
+		search: $('#sp-book-pass-search')?.value || '',
+		fields: ['customer', 'customer_email', 'customer_phone', 'name', 'service'],
+		keep: p => tab === 'all' || (tab === 'active' ? p.status === 'active' : p.status !== 'active'),
+		sort, name: p => p.customer || '',
+	});
+	const cnt = $('#sp-book-pass-count'); if (cnt) cnt.textContent = `${rows.length} ${rows.length === 1 ? 'membership' : 'memberships'}`;
+	box.innerHTML = rows.length
+		? `<div class="sp-card sp-card--flush"><div class="sp-list">${rows.map(p => {
+			const meta = [spBookPassShapeLabel(p), p.service].filter(Boolean);
+			const bal  = [p.balance, p.period_label].filter(Boolean).join(' · ');
+			return `<div class="sp-row" data-sp-open data-pass-id="${p.id}" data-act="edit">`
+				+ `<span class="sp-row__lead"><span class="sp-row__thumb">${spIcon('users')}</span></span>`
+				+ `<span class="sp-row__main"><span class="sp-row__title">${esc(p.customer)}</span>`
+				+   `<span class="sp-meta"><span>${esc(p.name)}</span>${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>`
+				+   ((p.customer_email || p.customer_phone) ? `<span class="sp-meta"><span>${esc(p.customer_email || p.customer_phone)}</span></span>` : '')
+				+   `<span class="sp-toolbar">${p.status === 'active' ? '<span class="sp-chip sp-chip--success">Active</span>' : '<span class="sp-chip">Cancelled</span>'}${bal ? `<span class="sp-chip">${esc(bal)}</span>` : ''}</span>`
+				+ '</span><span class="sp-row__trail">'
+				+   `${spEditMark()}<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-pass-id="${p.id}" data-act="delete" title="Delete" aria-label="Delete">${spIcon('trash')}</button>`
+				+ '</span></div>';
+		}).join('')}</div></div>`
+		: spEmptyHTML({ icon: 'users', panel: $('#sp-panel-booking-passes'),
+			title: all.length ? 'No memberships here' : 'No memberships yet',
+			text: all.length ? 'Nothing matches this search or tab.' : 'Press Add Membership to give a customer a membership or session pack.' });
+	markUniqueSpans(box);
 }
 
 function spBookPassShapeLabel(p) {
@@ -24055,7 +26662,7 @@ function spBookPassForm(id) {
 		+ plans.map(pl => `<option value="${pl.id}"${planId === Number(pl.id) ? ' selected' : ''}>${esc(pl.name)} — ${esc(pl.summary)}</option>`).join('')
 		+ `<option value="0"${planId === 0 ? ' selected' : ''}>Custom — set the terms for this person only</option>`
 		+ '</select>'
-		+ (plans.length ? '' : '<div class="sp-help-text">No plans set up yet. Add them under Settings &rarr; Booking so you can issue in one click.</div>')
+		+ (plans.length ? '' : '<div class="sp-help-text">No membership types set up yet. Add them under Settings &rarr; Booking so you can issue one in one click.</div>')
 		+ '</div>';
 	html += '<div class="sp-help-text" id="sp-bp-plansummary"></div>';
 
@@ -24070,11 +26677,11 @@ function spBookPassForm(id) {
 		+ '</select></div>';
 
 	html += '<div id="sp-bp-allowance-fields"><div class="sp-book-form-grid">';
-	html += `<div class="sp-form-group"><label for="sp-bp-allow">Sessions<span class="sp-field-unit">(per period)</span></label><input type="number" min="1" id="sp-bp-allow" class="sp-input" value="${p.allowance || 2}"></div>`;
-	html += '<div class="sp-form-group"><label for="sp-bp-period">Resets<span class="sp-field-unit">(how often)</span></label><select id="sp-bp-period" class="sp-select">'
+	html += `<div class="sp-form-group"><label for="sp-bp-allow">Sessions<span class="sp-field__hint">(per period)</span></label><input type="number" min="1" id="sp-bp-allow" class="sp-input" value="${p.allowance || 2}"></div>`;
+	html += '<div class="sp-form-group"><label for="sp-bp-period">Resets<span class="sp-field__hint">(how often)</span></label><select id="sp-bp-period" class="sp-select">'
 		+ Object.entries(d.periods || {}).map(([k, v]) => `<option value="${k}"${(p.period || 'week') === k ? ' selected' : ''}>${esc(v)}</option>`).join('')
 		+ '</select></div>';
-	html += `<div class="sp-form-group"><label for="sp-bp-rollmax">Rollover cap<span class="sp-field-unit">(0 = no cap)</span></label><input type="number" min="0" id="sp-bp-rollmax" class="sp-input" value="${p.rollover_max || 0}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bp-rollmax">Rollover cap<span class="sp-field__hint">(0 = no cap)</span></label><input type="number" min="0" id="sp-bp-rollmax" class="sp-input" value="${p.rollover_max || 0}"></div>`;
 	html += '</div>';
 	html += `<label class="sp-check-row"><input type="checkbox" id="sp-bp-roll"${p.rollover ? ' checked' : ''}> Unused sessions roll into the next period (one period only)</label>`;
 	html += '<div class="sp-form-group"><label for="sp-bp-overage">If they book past the allowance</label><select id="sp-bp-overage" class="sp-select">'
@@ -24088,14 +26695,14 @@ function spBookPassForm(id) {
 	html += '<div class="sp-form-group"><label for="sp-bp-service">Covers</label><select id="sp-bp-service" class="sp-select"><option value="0">Any service</option>'
 		+ (d.services || []).map(sv => `<option value="${sv.id}"${Number(p.service_id) === Number(sv.id) ? ' selected' : ''}>${esc(sv.name)}</option>`).join('')
 		+ '</select></div>';
-	html += `<div class="sp-form-group"><label for="sp-bp-price">Price<span class="sp-field-unit">(per period)</span></label><input type="text" id="sp-bp-price" class="sp-input" value="${esc(p.price || '')}" placeholder="400.00"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bp-price">Price<span class="sp-field__hint">(per period)</span></label><input type="text" id="sp-bp-price" class="sp-input" value="${esc(p.price || '')}" placeholder="400.00"></div>`;
 	html += '</div>';
 	html += '</div>';
 	// --- end custom --------------------------------------------------------
 
 	html += '<div class="sp-book-form-grid">';
 	html += `<div class="sp-form-group"><label for="sp-bp-start">Starts</label><input type="date" id="sp-bp-start" class="sp-input" value="${esc(p.starts_on || d.today || '')}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-bp-end">Ends<span class="sp-field-unit">(blank = ongoing)</span></label><input type="date" id="sp-bp-end" class="sp-input" value="${esc(p.expires_on || '')}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-bp-end">Ends<span class="sp-field__hint">(blank = ongoing)</span></label><input type="date" id="sp-bp-end" class="sp-input" value="${esc(p.expires_on || '')}"></div>`;
 	html += '</div>';
 	html += '<div class="sp-help-text" id="sp-bp-anchor-note"></div>';
 
@@ -24217,35 +26824,45 @@ let _spBookPlans = null;
 async function loadBookingPlans() {
 	const box = $('#sp-book-plans-list');
 	if (!box) return;
-	box.innerHTML = '<div class="sp-loading"></div>';
+	box.innerHTML = SP_LIST_SKELETON;
 	try {
 		const res = await spAjax('site_pulse_booking_plans', {});
-		if (!res.success) { box.innerHTML = `<div class="sp-empty">${esc(res.data?.message || 'Could not load plans.')}</div>`; return; }
+		if (!res.success) { box.innerHTML = '<div class="sp-card">' + spWidgetEmpty(res.data?.message || 'Couldn\'t load membership types. Try again in a moment.') + '</div>'; return; }
 		_spBookPlans = res.data;
-
-		const rows = res.data.plans || [];
-		if (!rows.length) {
-			box.innerHTML = '<div class="sp-empty">No plans yet. Add the memberships and packs you sell — for example “Two Sessions A Week”, $400 a month.</div>';
-			return;
-		}
-		box.innerHTML = `<table class="sp-table"><thead><tr>
-			<th>Plan</th><th>Includes</th><th>Covers</th><th>On it</th><th>Status</th><th></th>
-		</tr></thead><tbody>${rows.map(p => `
-			<tr>
-				<td><strong>${esc(p.name)}</strong>${p.description ? `<div class="sp-book-sub">${esc(p.description)}</div>` : ''}</td>
-				<td>${esc(p.summary)}</td>
-				<td>${esc(p.service)}</td>
-				<td>${p.members ? `${p.members} member${p.members === 1 ? '' : 's'}` : '—'}</td>
-				<td><span class="sp-status-badge ${p.status === 'active' ? 'sp-status-submitted' : 'sp-status-draft'}">${p.status === 'active' ? 'Active' : 'Retired'}</span></td>
-				<td class="sp-book-actions">
-					${iconBtn('edit', '', `data-plan-id="${p.id}" data-act="edit"`)}
-					${iconBtn('delete', '', `data-plan-id="${p.id}" data-act="delete"`)}
-				</td>
-			</tr>`).join('')}</tbody></table>`;
-		markUniqueSpans(box);
+		spBookRenderPlans();
 	} catch (e) {
-		box.innerHTML = '<div class="sp-empty">Error loading plans.</div>';
+		box.innerHTML = '<div class="sp-card">' + spWidgetEmpty('Couldn\'t load membership types. Try again in a moment.') + '</div>';
 	}
+}
+
+function spBookRenderPlans() {
+	const box = $('#sp-book-plans-list');
+	if (!box || !_spBookPlans) return;
+	const all = _spBookPlans.plans || [];
+	const tab = 'all';   // a card in Settings → Booking: every type, retired ones marked
+	const sort = 'az';
+	let rows = spBookFilterRows(all, {
+		search: '',
+		fields: ['name', 'description', 'summary', 'service'],
+		keep: p => tab === 'all' || (tab === 'active' ? p.status === 'active' : p.status !== 'active'),
+		sort,
+	});
+	if (sort === 'members') rows = rows.slice().sort((a, b) => (b.members || 0) - (a.members || 0));
+	box.innerHTML = rows.length
+		? `<div class="sp-list sp-book-card-list">${rows.map(p => {
+			const meta = [p.summary, p.service].filter(Boolean);
+			return `<div class="sp-row" data-sp-open data-plan-id="${p.id}" data-act="edit">`
+				+ `<span class="sp-row__lead"><span class="sp-row__thumb">${spIcon('receipt')}</span></span>`
+				+ `<span class="sp-row__main"><span class="sp-row__title">${esc(p.name)}</span>`
+				+   (meta.length ? `<span class="sp-meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</span>` : '')
+				+   (p.description ? `<span class="sp-meta"><span>${esc(p.description)}</span></span>` : '')
+				+   `<span class="sp-toolbar">${p.status === 'active' ? '' : '<span class="sp-chip sp-chip--warning">Retired</span>'}<span class="sp-chip">${p.members ? `${p.members} member${p.members === 1 ? '' : 's'}` : 'No members yet'}</span></span>`
+				+ '</span><span class="sp-row__trail">'
+				+   `${spEditMark()}<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete" data-plan-id="${p.id}" data-act="delete" title="Delete" aria-label="Delete">${spIcon('trash')}</button>`
+				+ '</span></div>';
+		}).join('')}</div>`
+		: '<div class="sp-empty">No membership types yet. Add the memberships and packs you sell — for example “Two Sessions A Week”, $400 a month.</div>';
+	markUniqueSpans(box);
 }
 
 function spBookPlanForm(id) {
@@ -24256,7 +26873,7 @@ function spBookPlanForm(id) {
 
 	const backdrop = spFormModal();
 	let html = '<div class="sp-card sp-report-form-wrap sp-book-form">';
-	html += spBookHead(`${id ? 'Edit' : 'New'} Membership Plan`, 'Save Plan', 'sp-pl-save', false);
+	html += spBookHead(`${id ? 'Edit' : 'New'} Membership Type`, 'Save', 'sp-pl-save', false);
 
 	html += `<div class="sp-form-group"><label for="sp-pl-name">Plan name</label><input type="text" id="sp-pl-name" class="sp-input" value="${esc(p.name || '')}" placeholder="e.g. Two Sessions A Week"></div>`;
 	html += `<div class="sp-form-group"><label for="sp-pl-desc">Description</label><input type="text" id="sp-pl-desc" class="sp-input" value="${esc(p.description || '')}" placeholder="Shown to staff when issuing"></div>`;
@@ -24266,11 +26883,11 @@ function spBookPlanForm(id) {
 		+ '</select></div>';
 
 	html += '<div id="sp-pl-allowance"><div class="sp-book-form-grid">';
-	html += `<div class="sp-form-group"><label for="sp-pl-allow">Sessions<span class="sp-field-unit">(per period)</span></label><input type="number" min="1" id="sp-pl-allow" class="sp-input" value="${p.allowance || 2}"></div>`;
-	html += '<div class="sp-form-group"><label for="sp-pl-period">Resets<span class="sp-field-unit">(how often)</span></label><select id="sp-pl-period" class="sp-select">'
+	html += `<div class="sp-form-group"><label for="sp-pl-allow">Sessions<span class="sp-field__hint">(per period)</span></label><input type="number" min="1" id="sp-pl-allow" class="sp-input" value="${p.allowance || 2}"></div>`;
+	html += '<div class="sp-form-group"><label for="sp-pl-period">Resets<span class="sp-field__hint">(how often)</span></label><select id="sp-pl-period" class="sp-select">'
 		+ Object.entries(d.periods || {}).map(([k, v]) => `<option value="${k}"${(p.allowance_period || 'week') === k ? ' selected' : ''}>${esc(v)}</option>`).join('')
 		+ '</select></div>';
-	html += `<div class="sp-form-group"><label for="sp-pl-rollmax">Rollover cap<span class="sp-field-unit">(0 = no cap)</span></label><input type="number" min="0" id="sp-pl-rollmax" class="sp-input" value="${p.rollover_max || 0}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-pl-rollmax">Rollover cap<span class="sp-field__hint">(0 = no cap)</span></label><input type="number" min="0" id="sp-pl-rollmax" class="sp-input" value="${p.rollover_max || 0}"></div>`;
 	html += '</div>';
 	html += `<label class="sp-check-row"><input type="checkbox" id="sp-pl-roll"${Number(p.rollover) ? ' checked' : ''}> Unused sessions roll into the next period (one period only)</label>`;
 	html += '<div class="sp-form-group"><label for="sp-pl-overage">If they book past the allowance</label><select id="sp-pl-overage" class="sp-select">'
@@ -24280,7 +26897,7 @@ function spBookPlanForm(id) {
 
 	html += '<div id="sp-pl-pack"><div class="sp-book-form-grid">';
 	html += `<div class="sp-form-group"><label for="sp-pl-credits">Sessions in the pack</label><input type="number" min="1" id="sp-pl-credits" class="sp-input" value="${p.credits_total || 10}"></div>`;
-	html += `<div class="sp-form-group"><label for="sp-pl-term">Expires after<span class="sp-field-unit">(days, 0 = never)</span></label><input type="number" min="0" id="sp-pl-term" class="sp-input" value="${p.term_days || 0}"></div>`;
+	html += `<div class="sp-form-group"><label for="sp-pl-term">Expires after<span class="sp-field__hint">(days, 0 = never)</span></label><input type="number" min="0" id="sp-pl-term" class="sp-input" value="${p.term_days || 0}"></div>`;
 	html += '</div></div>';
 
 	html += '<div class="sp-book-form-grid">';
@@ -24363,18 +26980,18 @@ function spBookRenderTravel() {
 	const examples = (t.examples || []).map(e =>
 		`<li><b>${e.miles} miles</b><span>${e.minutes} min</span></li>`).join('');
 
-	const calRow = (band, label, hint) => `<div class="sp-book-cal-row" data-band="${band}">`
+	const calRow = (band, label, hint) => `<div class="sp-card sp-card--inset sp-book-cal-row" data-band="${band}">`
 		+ `<p class="sp-book-cal-q">${label}</p>`
-		+ '<div class="sp-book-cal-fields">'
+		+ '<div class="sp-toolbar sp-book-cal-fields">'
 		+ '<input type="text" class="sp-input sp-cal-a" maxlength="10" placeholder="ZIP" aria-label="First ZIP">'
-		+ '<span class="sp-book-cal-to">to</span>'
+		+ '<span class="sp-field__hint sp-book-cal-to">to</span>'
 		+ '<input type="text" class="sp-input sp-cal-b" maxlength="10" placeholder="ZIP" aria-label="Second ZIP">'
-		+ '<span class="sp-book-cal-to">takes about</span>'
+		+ '<span class="sp-field__hint sp-book-cal-to">takes about</span>'
 		+ '<input type="number" min="1" class="sp-input sp-cal-min" placeholder="min" aria-label="Minutes">'
-		+ '<button type="button" class="unique sp-btn sp-btn-secondary sp-cal-go">Use this</button>'
+		+ '<button type="button" class="unique sp-btn sp-cal-go">Use this</button>'
 		+ '</div>'
 		+ `<div class="sp-help-text">${hint}</div>`
-		+ '<div class="sp-book-cal-msg" hidden></div>'
+		+ '<div class="sp-field__hint sp-book-cal-msg" hidden></div>'
 		+ '</div>';
 
 	box.innerHTML =
@@ -24394,18 +27011,18 @@ function spBookRenderTravel() {
 
 		+ '<h4 class="sp-book-subhead">Limits</h4>'
 		+ '<div class="sp-book-form-grid">'
-		+ `<div class="sp-form-group"><label for="sp-tv-intra">Always allow at least${spHelp('Even two jobs on the same street need time to pack up, walk out and get parked again. No trip is ever allowed less than this, so it also acts as the floor under everything above.')}<span class="sp-field-unit">(minutes)</span></label><input type="number" min="0" id="sp-tv-intra" class="sp-input" value="${t.intrazonal}"></div>`
-		+ `<div class="sp-form-group"><label for="sp-tv-cap">Never allow more than${spHelp('A safety net. If a ZIP code is mistyped and puts the customer in another state, this stops the resulting travel time from wiping out a whole day of availability.')}<span class="sp-field-unit">(minutes)</span></label><input type="number" min="0" id="sp-tv-cap" class="sp-input" value="${t.cap}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-intra">Always allow at least${spHelp('Even two jobs on the same street need time to pack up, walk out and get parked again. No trip is ever allowed less than this, so it also acts as the floor under everything above.')}<span class="sp-field__hint">(minutes)</span></label><input type="number" min="0" id="sp-tv-intra" class="sp-input" value="${t.intrazonal}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-cap">Never allow more than${spHelp('A safety net. If a ZIP code is mistyped and puts the customer in another state, this stops the resulting travel time from wiping out a whole day of availability.')}<span class="sp-field__hint">(minutes)</span></label><input type="number" min="0" id="sp-tv-cap" class="sp-input" value="${t.cap}"></div>`
 		+ '</div>'
 
 		+ '<details class="sp-book-advanced"><summary>Advanced &mdash; the raw numbers</summary>'
 		+ '<div class="sp-help-text">These are set by the calibration above. Change them by hand only if you already know what you want them to be.</div>'
 		+ '<div class="sp-book-form-grid">'
-		+ `<div class="sp-form-group"><label for="sp-tv-band">Short trips are under${spHelp('Where the short-trip rule stops and the cross-town rule takes over. Longer runs get more highway and fewer traffic lights, so they are costed differently.')}<span class="sp-field-unit">(miles)</span></label><input type="number" min="1" step="0.5" id="sp-tv-band" class="sp-input" value="${t.band_miles}"></div>`
-		+ `<div class="sp-form-group"><label for="sp-tv-ld">Short trip detour${spHelp('How much longer the road is than the straight line. 1.4 means 10 straight-line miles works out to about 14 miles of actual driving.')}<span class="sp-field-unit">(x straight line)</span></label><input type="number" min="1" step="0.1" id="sp-tv-ld" class="sp-input" value="${t.local_detour}"></div>`
-		+ `<div class="sp-form-group"><label for="sp-tv-lp">Short trip pace${spHelp('Minutes per road mile on a short trip. This is the number the calibration above works out for you.')}<span class="sp-field-unit">(min per mile)</span></label><input type="number" min="0.1" step="0.1" id="sp-tv-lp" class="sp-input" value="${t.local_pace}"></div>`
-		+ `<div class="sp-form-group"><label for="sp-tv-md">Cross-town detour${spHelp('The same idea as the short-trip detour, but long runs tend to follow highways, so the road is usually a little straighter.')}<span class="sp-field-unit">(x straight line)</span></label><input type="number" min="1" step="0.1" id="sp-tv-md" class="sp-input" value="${t.metro_detour}"></div>`
-		+ `<div class="sp-form-group"><label for="sp-tv-mp">Cross-town pace${spHelp('Minutes per road mile on a long run. Usually slower than the short-trip pace despite the highways, because of what sits at either end of them.')}<span class="sp-field-unit">(min per mile)</span></label><input type="number" min="0.1" step="0.1" id="sp-tv-mp" class="sp-input" value="${t.metro_pace}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-band">Short trips are under${spHelp('Where the short-trip rule stops and the cross-town rule takes over. Longer runs get more highway and fewer traffic lights, so they are costed differently.')}<span class="sp-field__hint">(miles)</span></label><input type="number" min="1" step="0.5" id="sp-tv-band" class="sp-input" value="${t.band_miles}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-ld">Short trip detour${spHelp('How much longer the road is than the straight line. 1.4 means 10 straight-line miles works out to about 14 miles of actual driving.')}<span class="sp-field__hint">(x straight line)</span></label><input type="number" min="1" step="0.1" id="sp-tv-ld" class="sp-input" value="${t.local_detour}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-lp">Short trip pace${spHelp('Minutes per road mile on a short trip. This is the number the calibration above works out for you.')}<span class="sp-field__hint">(min per mile)</span></label><input type="number" min="0.1" step="0.1" id="sp-tv-lp" class="sp-input" value="${t.local_pace}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-md">Cross-town detour${spHelp('The same idea as the short-trip detour, but long runs tend to follow highways, so the road is usually a little straighter.')}<span class="sp-field__hint">(x straight line)</span></label><input type="number" min="1" step="0.1" id="sp-tv-md" class="sp-input" value="${t.metro_detour}"></div>`
+		+ `<div class="sp-form-group"><label for="sp-tv-mp">Cross-town pace${spHelp('Minutes per road mile on a long run. Usually slower than the short-trip pace despite the highways, because of what sits at either end of them.')}<span class="sp-field__hint">(min per mile)</span></label><input type="number" min="0.1" step="0.1" id="sp-tv-mp" class="sp-input" value="${t.metro_pace}"></div>`
 		+ '</div></details>';
 
 	$$('.sp-cal-go', box).forEach(btn => btn.addEventListener('click', () => spBookCalibrate(btn.closest('.sp-book-cal-row'))));
@@ -24425,7 +27042,7 @@ async function spBookCalibrate(row) {
 	};
 
 	msg.hidden = false;
-	msg.className = 'sp-book-cal-msg';
+	msg.className = 'sp-field__hint sp-book-cal-msg';
 	msg.textContent = 'Working…';
 	btn.disabled = true;
 
@@ -24435,7 +27052,7 @@ async function spBookCalibrate(row) {
 		if (!back) return;
 		const m = $('.sp-book-cal-msg', back);
 		m.hidden = false;
-		m.className = 'sp-book-cal-msg' + (cls ? ' ' + cls : '');
+		m.className = 'sp-field__hint sp-book-cal-msg' + (cls ? ' ' + cls : '');
 		m.textContent = text;
 	};
 
@@ -24443,7 +27060,7 @@ async function spBookCalibrate(row) {
 		const r = await spAjax('site_pulse_booking_calibrate_travel', {
 			band, zip_a: typed.a, zip_b: typed.b, minutes: typed.m,
 		});
-		if (!r.success) { say('is-bad', r.data?.message || 'Could not work that out.'); return; }
+		if (!r.success) { say('sp-flag--danger', r.data?.message || 'Could not work that out.'); return; }
 
 		// Re-render from the server's numbers rather than patching fields in place, so the
 		// examples and the advanced values can never disagree with what was actually stored.
@@ -24456,10 +27073,10 @@ async function spBookCalibrate(row) {
 			$('.sp-cal-b', back).value = typed.b;
 			$('.sp-cal-min', back).value = typed.m;
 		}
-		say('is-good', r.data.message || 'Done.');
+		say('sp-flag sp-flag--success', r.data.message || 'Done.');
 		spToast('Travel times updated.');
 	} catch (e) {
-		say('is-bad', 'Could not work that out.');
+		say('sp-flag--danger', 'Could not work that out.');
 	} finally {
 		const back = $(`.sp-book-cal-row[data-band="${band}"] .sp-cal-go`);
 		if (back) back.disabled = false;
@@ -24512,7 +27129,7 @@ function initAskAi() {
 		$('#sp-ask-new')?.addEventListener('click', spAskReset);
 		const ex = $('#sp-ask-examples');
 		if (ex) {
-			ex.innerHTML = SP_ASK_EXAMPLES.map(q => `<button type="button" class="unique sp-ask-example">${esc(q)}</button>`).join('');
+			ex.innerHTML = SP_ASK_EXAMPLES.map(q => `<button type="button" class="unique sp-filter sp-ask-example">${esc(q)}</button>`).join('');
 			ex.addEventListener('click', e => {
 				const b = e.target.closest('.sp-ask-example');
 				const input = $('#sp-ask-input');
@@ -24593,7 +27210,7 @@ async function spAskFollow(runId, question, append) {
 // .is-current — that is the one the progress and report renderers paint into.
 function spAskShell(question, followup, past) {
 	return `<div class="sp-ask-run${past ? '' : ' is-current'}"${followup ? ' data-followup="1"' : ''}>`
-		+ `<div class="sp-ask-question">${esc(question)}</div><div class="sp-ask-progress"></div><div class="sp-ask-report"></div></div>`;
+		+ `<div class="sp-card sp-card--tint sp-ask-question">${esc(question)}</div><div class="sp-ask-progress"></div><div class="sp-ask-report"></div></div>`;
 }
 
 function spAskCur(out) {
@@ -24625,7 +27242,7 @@ function spAskRenderComposer(out, runId) {
 	out.querySelector('.sp-ask-followup')?.remove();
 	out.insertAdjacentHTML('beforeend', '<form class="sp-ask-composer sp-ask-followup">'
 		+ '<textarea class="sp-input sp-ask-input" rows="2" maxlength="1000" placeholder="Ask a follow-up question…"></textarea>'
-		+ '<button type="submit" class="unique sp-btn sp-btn-primary">Ask</button>'
+		+ '<button type="submit" class="unique sp-btn sp-btn--primary">Ask</button>'
 		+ '</form>');
 	const form = out.querySelector('.sp-ask-followup');
 	const ta   = form.querySelector('textarea');
@@ -24656,14 +27273,14 @@ function spAskRenderProgress(out, log, error, runId, status) {
 	if (!p) return;
 	let h = '';
 	if (log && log.length) {
-		h += '<ol class="sp-ask-steps">' + log.map((l, i) => {
+		h += '<ol class="sp-card sp-card--inset sp-ask-steps">' + log.map((l, i) => {
 			const active = i === log.length - 1 && status === 'running';
 			const cls = l.kind === 'error' ? 'is-error' : (active ? 'is-active' : 'is-done');
 			return `<li class="sp-ask-step ${cls}">${esc(l.text)}</li>`;
 		}).join('') + '</ol>';
 	}
 	if (error) {
-		h += `<div class="sp-ask-error">${esc(error)} <button type="button" class="unique sp-btn sp-btn-ghost sp-ask-retry">Try again</button></div>`;
+		h += `<div class="sp-flag sp-flag--danger">${esc(error)} <button type="button" class="unique sp-btn sp-ask-retry">Try again</button></div>`;
 	}
 	p.innerHTML = h;
 	p.classList.toggle('is-collapsed', status === 'done');
@@ -24688,7 +27305,7 @@ function spAskRenderReport(out, r) {
 function spAskFillReport(host, r) {
 	if (!host || !r) return;
 	host.innerHTML = spAskReportHtml(r)
-		+ '<div class="sp-ask-actions"><button type="button" class="unique sp-btn sp-btn-secondary sp-ask-print">Download PDF</button></div>';
+		+ '<div class="sp-ask-actions"><button type="button" class="unique sp-btn sp-ask-print">Download PDF</button></div>';
 	host.querySelector('.sp-ask-print')?.addEventListener('click', () => spAskPrint(r));
 }
 
@@ -24696,12 +27313,12 @@ function spAskFillReport(host, r) {
 // (markUniqueSpans would exempt them from inherited color — see the Site Pulse color trap).
 function spAskReportHtml(r) {
 	const labels = r.labels || {};
-	let h = `<div class="sp-ask-doc"><h3 class="sp-ask-title">${esc(r.title || '')}</h3>`;
+	let h = `<div class="sp-card sp-ask-doc"><h3 class="sp-ask-title">${esc(r.title || '')}</h3>`;
 	// The shared stat tiles (the same ones Mileage and the other modules use), with the number in
 	// the icon's spot on the left and the AI's (long) label beside it.
 	if (r.stats && r.stats.length) {
-		h += '<div class="sp-stat-grid sp-ask-stats">' + r.stats.map(s =>
-			`<div class="sp-tile sp-stat-tile sp-ask-tile"><div class="sp-tile-value sp-stat-value">${esc(s.value)}</div><div class="sp-tile-label sp-stat-label">${esc(s.label)}</div></div>`
+		h += '<div class="sp-grid sp-grid--wide sp-ask-stats">' + r.stats.map(s =>
+			`<div class="sp-card sp-card--well sp-ask-stat"><div class="sp-stat__value">${esc(s.value)}</div><div class="sp-stat__label">${esc(s.label)}</div></div>`
 		).join('') + '</div>';
 	}
 	if (r.summary) h += `<div class="sp-ask-md">${spAskMd(r.summary)}</div>`;
@@ -24719,7 +27336,7 @@ function spAskReportHtml(r) {
 
 function spAskTable(cols, rows) {
 	if (!rows.length) return '<p class="sp-help-text">Nothing to show.</p>';
-	return '<div class="sp-card sp-table-card sp-ask-table-wrap"><table class="sp-table sp-ask-table"><thead class="sp-thead"><tr>'
+	return '<div class="sp-card sp-card--flush sp-table-wrap sp-table-card sp-ask-table-wrap"><table class="sp-table sp-ask-table"><thead><tr>'
 		+ cols.map(c => `<th>${esc(c)}</th>`).join('') + '</tr></thead><tbody>'
 		+ rows.map(r => '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('')
 		+ '</tbody></table></div>';
@@ -24779,10 +27396,10 @@ function spAskChart(s) {
 		g += `<text class="sp-ask-axis" x="${padL + step * (i + 0.5)}" y="${H - padB + 18}" text-anchor="middle">${esc(t.length > 16 ? t.slice(0, 15) + '…' : t)}</text>`;
 	});
 	const legend = series.length > 1
-		? '<div class="sp-ask-legend">' + series.map((se, si) => `<div class="sp-ask-legend-item"><i class="sp-ask-swatch sp-ask-c${si}"></i>${esc(se.name)}</div>`).join('') + '</div>'
+		? '<div class="sp-toolbar sp-ask-legend">' + series.map((se, si) => `<div class="sp-ask-legend-item"><i class="sp-ask-swatch sp-ask-c${si}"></i>${esc(se.name)}</div>`).join('') + '</div>'
 		: '';
 	return `<div class="sp-ask-chart">`
-		+ `<button type="button" class="unique sp-ask-chart-zoom" aria-label="Expand chart" title="Expand chart">${ICON_EXPAND}</button>`
+		+ `<button type="button" class="unique sp-btn sp-btn--icon sp-btn--sm sp-ask-chart-zoom" aria-label="Expand chart" title="Expand chart">${ICON_EXPAND}</button>`
 		+ `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(s.heading || 'Chart')}">${g}</svg>${legend}</div>`;
 }
 
@@ -24798,7 +27415,7 @@ function spAskExpandChart(chart) {
 	modal.className = 'sp-modal-backdrop sp-ask-chart-backdrop';
 	modal.innerHTML = '<div class="sp-modal sp-ask-chart-full">'
 		+ '<div class="sp-ask-chart-full-scroll"></div>'
-		+ '<div class="sp-modal-actions"><button type="button" class="unique sp-btn sp-btn-ghost" data-sp-close="1">Close</button></div>'
+		+ '<div class="sp-modal-actions"><button type="button" class="unique sp-btn" data-sp-close="1">Close</button></div>'
 		+ '</div>';
 
 	const scroll = modal.querySelector('.sp-ask-chart-full-scroll');
@@ -24869,8 +27486,8 @@ async function spAskLoadHistory() {
 			const state = r.status === 'error' ? ' · failed' : (r.status === 'running' ? ' · in progress' : '');
 			return `<div class="sp-ask-hist-row${r.id === _spAsk.runId ? ' is-current' : ''}">`
 				+ `<button type="button" class="unique sp-ask-hist-open" data-run="${r.id}">${esc(r.question)}</button>`
-				+ `<div class="sp-ask-hist-meta">${esc(fmtReportDate(String(r.created_at).slice(0, 10)))}${state}</div>`
-				+ `<button type="button" class="unique sp-ask-hist-del" data-run="${r.id}" aria-label="Delete this question" title="Delete">×</button>`
+				+ `<div class="sp-field__hint sp-ask-hist-meta">${esc(fmtReportDate(String(r.created_at).slice(0, 10)))}${state}</div>`
+				+ `<button type="button" class="unique sp-btn sp-btn--ghost sp-btn--icon sp-btn--sm sp-icon-delete sp-ask-hist-del" data-run="${r.id}" aria-label="Delete this question" title="Delete">×</button>`
 				+ '</div>';
 		}).join('') : '<div class="sp-help-text">Your questions will appear here.</div>';
 	}
@@ -24924,9 +27541,9 @@ function spAskRenderIndex(idx) {
 	const pct = total ? Math.floor(done / total * 100) : 100;
 	el.innerHTML = '<h3 class="sp-ask-side-title">AI index</h3>'
 		+ `<div class="sp-ask-index-bar"><div style="width:${pct}%"></div></div>`
-		+ `<div class="sp-ask-hist-meta">${pct}% of ${total.toLocaleString()} items read${pct < 100 ? ' — fills in automatically in the background' : ''}</div>`
-		+ rows.map(r => `<div class="sp-ask-hist-meta">${esc(r.label)}: ${r.indexed.toLocaleString()} / ${r.total.toLocaleString()}</div>`).join('')
-		+ (pct < 100 ? '<button type="button" class="unique sp-btn sp-btn-ghost sp-ask-index-build" id="sp-ask-index-build">Build index now</button>' : '');
+		+ `<div class="sp-field__hint sp-ask-hist-meta">${pct}% of ${total.toLocaleString()} items read${pct < 100 ? ' — fills in automatically in the background' : ''}</div>`
+		+ rows.map(r => `<div class="sp-field__hint sp-ask-hist-meta">${esc(r.label)}: ${r.indexed.toLocaleString()} / ${r.total.toLocaleString()}</div>`).join('')
+		+ (pct < 100 ? '<button type="button" class="unique sp-btn sp-ask-index-build" id="sp-ask-index-build">Build index now</button>' : '');
 }
 
 // Index while the page is open — one server batch per call, until nothing is left (or 40 rounds).
@@ -24951,10 +27568,9 @@ function spAskPrint(r) {
 	const css = [
 		'body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#222;margin:36px;font-size:13px;line-height:1.5}',
 		'.q{color:#666;margin:0 0 6px}h3{font-size:22px;margin:0 0 14px}h4{font-size:15px;margin:22px 0 8px}h5{font-size:13px;margin:12px 0 4px}',
-		'.sp-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px}',
-		'.sp-tile{border:1px solid #ccc;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;background:#f7f5f2}',
-		'.sp-ask-tile{gap:14px}.sp-ask-tile .sp-stat-value{flex:0 0 auto;max-width:45%;font-size:24px}.sp-ask-tile .sp-stat-label{flex:1 1 auto;min-width:0;border-left:1px solid #ccc;padding-left:16px}',
-		'.sp-stat-label{color:#666;font-size:11px;font-weight:700;text-transform:uppercase}.sp-stat-value{font-size:20px;font-weight:700}',
+		'.sp-ask-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 16px}',
+		'.sp-ask-stat{border:1px solid #ccc;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:14px;background:#f7f5f2}',
+		'.sp-ask-stat .sp-stat__value{flex:0 0 auto;max-width:45%;font-size:24px;font-weight:700}.sp-ask-stat .sp-stat__label{flex:1 1 auto;min-width:0;border-left:1px solid #ccc;padding-left:16px;color:#666;font-size:11px;font-weight:700;text-transform:uppercase}',
 		'table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #e3e3e3;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f4f4f4}',
 		'.sp-ask-scope{margin-top:20px;color:#555;font-size:12px;border-top:1px solid #ddd;padding-top:10px}',
 		'svg{width:100%;height:auto}.sp-ask-grid{stroke:#e5e5e5}.sp-ask-axis{font-size:11px;fill:#666}.sp-ask-line{fill:none;stroke-width:2.5}',

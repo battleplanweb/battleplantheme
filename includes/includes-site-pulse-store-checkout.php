@@ -92,6 +92,31 @@ function sp_store_stripe_ready(): bool {
 }
 
 /**
+ * The publishable key. Only the on-site (embedded) checkout uses it — the hosted
+ * redirect runs nothing of Stripe's in the browser. Not a secret, so a plain setting.
+ */
+function sp_store_stripe_publishable(): string {
+	$key = defined( 'BP_STORE_STRIPE_PUBLISHABLE' ) && BP_STORE_STRIPE_PUBLISHABLE
+		? (string) BP_STORE_STRIPE_PUBLISHABLE
+		: trim( sp_store_get_setting( 'stripe_publishable', '' ) );
+	return strpos( $key, 'pk_' ) === 0 ? $key : '';
+}
+
+/**
+ * Does the shopper pay inside our checkout page rather than on Stripe's?
+ *
+ * Fails back to the hosted redirect, never to a broken page: no publishable key, or
+ * one whose mode disagrees with the secret key (pk_test_ beside rk_live_), means the
+ * redirect — which needs only the secret key and is known to work.
+ */
+function sp_store_stripe_embedded(): bool {
+	if ( sp_store_get_setting( 'stripe_checkout_style', 'embedded' ) !== 'embedded' ) return false;
+	$pk = sp_store_stripe_publishable();
+	if ( $pk === '' ) return false;
+	return ( strpos( $pk, 'pk_live_' ) === 0 ) === ( sp_store_stripe_mode() === 'live' );
+}
+
+/**
  * How tax is worked out. Left as a per-install setting rather than a build-time
  * decision because the honest answer differs per client:
  *   none    no tax added (a client under their state's threshold, or tax-inclusive pricing)
@@ -271,6 +296,13 @@ function sp_store_start_checkout(): void {
 		wp_die( 'Checkout is not available on this site yet.', 'Checkout', [ 'response' => 503 ] );
 	}
 
+	// An embedded processor needs our checkout page to mount in, so an old link to
+	// this endpoint goes there instead — before any stock is reserved.
+	if ( sp_store_provider_shape() === 'embedded' ) {
+		wp_safe_redirect( sp_store_checkout_page_url() );
+		exit;
+	}
+
 	$cart = sp_store_current_cart();
 	if ( ! $cart ) sp_store_checkout_bail( 'Your cart has expired.' );
 
@@ -281,6 +313,7 @@ function sp_store_start_checkout(): void {
 	// cart, the customer is told here rather than after paying for it.
 	$reserved = [];
 	foreach ( $lines as $line ) {
+		if ( ( $line['kind'] ?? 'product' ) !== 'product' ) continue;     // seats are held once the order exists
 		if ( sp_store_commit_stock( (int) $line['variant_id'], (int) $line['qty'] ) ) {
 			$reserved[ (int) $line['variant_id'] ] = (int) $line['qty'];
 			continue;
@@ -301,6 +334,13 @@ function sp_store_start_checkout(): void {
 	if ( ! $order_id ) {
 		foreach ( $reserved as $variant_id => $qty ) sp_store_release_stock( $variant_id, $qty );
 		sp_store_checkout_bail( 'We could not start your order. Please try again.' );
+	}
+	if ( function_exists( 'sp_store_bookings_hold' ) ) {
+		$held = sp_store_bookings_hold( $order_id, (string) $cart['email'], '' );
+		if ( is_wp_error( $held ) ) {
+			sp_store_cancel_pending_order( $order_id, $held->get_error_message() );
+			sp_store_checkout_bail( $held->get_error_message() );
+		}
 	}
 
 	// ---- Hand off.
@@ -391,6 +431,30 @@ function sp_store_stripe_begin( int $order_id ) {
 		];
 	}
 
+	// The service fee, worked out with the rest of the quote and stored on the order.
+	// Marked non-taxable for Stripe Tax: it is charged on the goods, and the flat-rate
+	// tax above was already computed without it. A renewing membership's share is split
+	// off below into a recurring line of its own, so every renewal carries it too.
+	$fee       = (int) $order['fee_card_cents'] + (int) $order['fee_platform_cents'];
+	$fee_renew = (int) $order['fee_renew_card_cents'] + (int) $order['fee_renew_platform_cents'];
+	$fee_line  = static function ( int $cents ): array {
+		$product = [ 'name' => 'Service fee' ];
+		if ( sp_store_tax_mode() === 'provider' ) $product['tax_code'] = 'txcd_00000000';
+		return [
+			'quantity'   => 1,
+			'price_data' => [
+				'currency'     => strtolower( sp_store_currency() ),
+				'unit_amount'  => $cents,
+				'product_data' => $product,
+			],
+		];
+	};
+	$fee_index = null;
+	if ( $fee > 0 ) {
+		$params['line_items'][] = $fee_line( $fee );
+		$fee_index = array_key_last( $params['line_items'] );
+	}
+
 	if ( sp_store_tax_mode() === 'provider' ) {
 		$params['automatic_tax'] = [ 'enabled' => 'true' ];
 	}
@@ -409,6 +473,18 @@ function sp_store_stripe_begin( int $order_id ) {
 			$params['line_items'][ $i ]['price_data']['recurring'] = [ 'interval' => $interval ];
 			$params['line_items'][ $i ]['quantity'] = 1;
 			$renews = true;
+			$interval_used = $interval;
+		}
+		if ( $renews && $fee_renew > 0 && $fee_index !== null ) {
+			// The membership's share of the fee renews with it; whatever is left (the fee on
+			// anything else in the cart) stays a one-off on the first invoice.
+			$once = $fee - $fee_renew;
+			if ( $once > 0 ) $params['line_items'][ $fee_index ]['price_data']['unit_amount'] = $once;
+			else unset( $params['line_items'][ $fee_index ] );
+			$recurring = $fee_line( $fee_renew );
+			$recurring['price_data']['recurring'] = [ 'interval' => $interval_used ];
+			$params['line_items'][] = $recurring;
+			$params['line_items'] = array_values( $params['line_items'] );
 		}
 		if ( $renews ) {
 			$params['mode'] = 'subscription';
@@ -417,9 +493,23 @@ function sp_store_stripe_begin( int $order_id ) {
 		}
 	}
 
+	// Embedded Checkout: the same session, mounted in our page. Stripe takes one
+	// return_url in place of success/cancel, and sends the top window there once paid,
+	// so the return page's session_id safety net works exactly as it does for the redirect.
+	$embedded = sp_store_stripe_embedded();
+	if ( $embedded ) {
+		$params['ui_mode']    = 'embedded';
+		$params['return_url'] = $params['success_url'];
+		unset( $params['success_url'], $params['cancel_url'] );
+	}
+
 	// The order number as the idempotency key: a double-click makes one session, not two.
 	$session = sp_store_stripe( 'POST', 'checkout/sessions', $params, 'order-' . $order['number'] );
 	if ( is_wp_error( $session ) ) return $session;
+
+	if ( $embedded && empty( $session['client_secret'] ) ) {
+		return new WP_Error( 'sp_store_stripe', 'Stripe did not return a payment form for this order.' );
+	}
 
 	global $wpdb;
 	$wpdb->update( sp_store_table( 'orders' ), [
@@ -427,6 +517,14 @@ function sp_store_stripe_begin( int $order_id ) {
 		'provider_checkout' => sp_store_checkout_guard( (string) ( $session['id'] ?? '' ) ),
 		'updated_at'        => current_time( 'mysql', true ),
 	], [ 'id' => $order_id ] );
+
+	if ( $embedded ) {
+		return [ 'config' => [
+			'provider'      => 'stripe',
+			'key'           => sp_store_stripe_publishable(),
+			'client_secret' => (string) $session['client_secret'],
+		] ];
+	}
 
 	return [ 'url' => (string) $session['url'] ];
 }
@@ -515,6 +613,12 @@ function sp_store_create_pending_order( array $cart, array $lines, array $quote 
 			'shipping_rate_id' => (int) ( $quote['shipping_rate_id'] ?? 0 ),
 			'shipping_method'  => mb_substr( (string) ( $quote['shipping_name'] ?? '' ), 0, 120 ),
 			'tax_cents'      => (int) $quote['tax_cents'],
+			'fee_card_cents'     => (int) ( $quote['fee_card_cents'] ?? 0 ),
+			'fee_platform_cents' => (int) ( $quote['fee_platform_cents'] ?? 0 ),
+			'fee_card_rate'      => (float) ( $quote['fee_card_rate'] ?? 0 ),
+			'fee_platform_rate'  => (float) ( $quote['fee_platform_rate'] ?? 0 ),
+			'fee_renew_card_cents'     => (int) ( $quote['fee_renew_card_cents'] ?? 0 ),
+			'fee_renew_platform_cents' => (int) ( $quote['fee_renew_platform_cents'] ?? 0 ),
 			'total_cents'    => (int) $quote['total_cents'],
 			'currency'       => sp_store_currency(),
 			'source'         => 'web',
@@ -528,7 +632,8 @@ function sp_store_create_pending_order( array $cart, array $lines, array $quote 
 	if ( ! $order_id ) return 0;
 
 	foreach ( $lines as $line ) {
-		$variant = sp_store_get_variant( (int) $line['variant_id'] );
+		$is_booking = ( $line['kind'] ?? 'product' ) === 'booking';
+		$variant    = $is_booking ? null : sp_store_get_variant( (int) $line['variant_id'] );
 		$wpdb->insert( sp_store_table( 'order_items' ), [
 			'order_id'          => $order_id,
 			'variant_id'        => (int) $line['variant_id'],
@@ -540,9 +645,11 @@ function sp_store_create_pending_order( array $cart, array $lines, array $quote 
 			'unit_price_cents'  => (int) $line['unit_cents'],
 			'subtotal_cents'    => (int) $line['line_cents'],
 			'total_cents'       => (int) $line['line_cents'],
-			'taxable'           => $variant ? (int) $variant['taxable'] : 1,
-			'requires_shipping' => $variant ? (int) $variant['requires_shipping'] : 1,
+			'taxable'           => $is_booking ? (int) ! empty( $line['taxable'] ) : ( $variant ? (int) $variant['taxable'] : 1 ),
+			'requires_shipping' => $is_booking ? 0 : ( $variant ? (int) $variant['requires_shipping'] : 1 ),
 			'weight_grams'      => $variant ? (int) $variant['weight_grams'] * (int) $line['qty'] : 0,
+			'kind'              => $is_booking ? 'booking' : 'product',
+			'session_id'        => $is_booking ? (int) $line['session_id'] : 0,
 			'created_at'        => $now,
 		] );
 	}
@@ -558,6 +665,7 @@ function sp_store_cancel_pending_order( int $order_id, string $reason = '' ): vo
 	if ( ! $order || $order['status'] !== 'pending' ) return;
 
 	foreach ( sp_store_order_items( $order_id ) as $item ) {
+		if ( ! (int) $item['variant_id'] ) continue;             // a booking line — released by the hook below
 		sp_store_release_stock( (int) $item['variant_id'], (int) $item['qty'] );
 	}
 
@@ -567,6 +675,9 @@ function sp_store_cancel_pending_order( int $order_id, string $reason = '' ): vo
 		'cancel_reason' => mb_substr( $reason, 0, 255 ),
 		'updated_at'    => current_time( 'mysql', true ),
 	], [ 'id' => $order_id ] );
+
+	/** A pending order that will never be paid: anything else it was holding (booking seats) lets go. */
+	do_action( 'sp_store_order_cancelled', $order_id, $reason );
 }
 
 function sp_store_order_items( int $order_id ): array {
@@ -667,6 +778,7 @@ function sp_store_settle_order( int $order_id, array $session ): bool {
 	foreach ( sp_store_order_items( $order_id ) as $item ) {
 		$variant_id = (int) $item['variant_id'];
 		$qty        = (int) $item['qty'];
+		if ( ! $variant_id ) continue;                          // a booking line: confirmed on sp_store_order_paid
 		sp_store_adjust_stock( $variant_id, -$qty, 'sale', $order_id, 'Order ' . $order['number'] );
 		sp_store_release_stock( $variant_id, $qty );
 	}

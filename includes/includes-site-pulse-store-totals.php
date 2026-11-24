@@ -25,6 +25,7 @@ happens to be divided into lines. Three $25 lines and one $75 line both pay
 ----------------------------------------------------------------
 # Shipping
 # Tax
+# Service Fees
 # The Quote
 --------------------------------------------------------------*/
 
@@ -280,6 +281,55 @@ function sp_store_tax_cents( int $taxable_goods, int $shipping_cents ): int {
 
 
 /*--------------------------------------------------------------
+# Service Fees
+--------------------------------------------------------------*/
+
+/*
+ * Passed on to the customer as ONE "Service fee" line, but kept as two figures on
+ * the order: the card processor's share (the client's cost of taking cards) and the
+ * Site Pulse share (what the client owes Battle Plan, invoiced by hand). E-Commerce →
+ * Service Fees totals them. The card rate is the client's to set; the Site Pulse rate
+ * only god can see or change (sp_store_setting_defs). Both default to 0 — each store
+ * is set up by hand — and 0 switches either off.
+ *
+ * Charged on the goods only: subtotal less any discount, before shipping and tax.
+ * Each share is rounded on its own and the line is their sum, so the two figures on
+ * the order always add up to exactly what the customer paid.
+ *
+ * Memberships pay it too unless "Charge it on memberships" is off (fee_memberships).
+ * A renewing membership's share is also stored as fee_renew_*: Stripe charges it as a
+ * recurring line every period, and each renewal payment records it (members file).
+ */
+function sp_store_fee_rates(): array {
+	$clamp = static fn( string $v ): float => round( max( 0, min( 10, (float) $v ) ), 2 );
+	return [
+		'card'     => $clamp( sp_store_get_setting( 'fee_card_rate', '0' ) ),
+		'platform' => $clamp( sp_store_get_setting( 'fee_platform_rate', '0' ) ),
+	];
+}
+
+/** Does the service fee apply to membership purchases and renewals? On unless switched off. */
+function sp_store_fee_on_memberships(): bool {
+	return sp_store_get_setting( 'fee_memberships', '1' ) === '1';
+}
+
+/** The two fee shares for a pre-tax, pre-shipping amount, in cents. */
+function sp_store_fees_for( int $base_cents ): array {
+	$rates = sp_store_fee_rates();
+	$base  = max( 0, $base_cents );
+	$card  = (int) round( $base * $rates['card'] / 100 );
+	$plat  = (int) round( $base * $rates['platform'] / 100 );
+	return [
+		'card_cents'     => $card,
+		'platform_cents' => $plat,
+		'cents'          => $card + $plat,
+		'card_rate'      => $rates['card'],
+		'platform_rate'  => $rates['platform'],
+	];
+}
+
+
+/*--------------------------------------------------------------
 # The Quote
 --------------------------------------------------------------*/
 
@@ -307,6 +357,11 @@ function sp_store_quote( array $lines, array $args = [] ): array {
 
 		// Only taxable items enter the taxable base — a gift card or a digital
 		// download in the same basket must not be taxed as merchandise.
+		// A booking line says for itself (its service's / event's "Charge sales tax" box).
+		if ( isset( $line['taxable'] ) ) {
+			if ( $line['taxable'] ) $taxable_goods += $line_total;
+			continue;
+		}
 		$variant = sp_store_get_variant( (int) $line['variant_id'] );
 		if ( ! $variant || ! empty( $variant['taxable'] ) ) $taxable_goods += $line_total;
 	}
@@ -337,12 +392,35 @@ function sp_store_quote( array $lines, array $args = [] ): array {
 	$provider_tax = sp_store_tax_mode() === 'provider';
 	$tax          = $provider_tax ? 0 : sp_store_tax_cents( $taxable_goods, $shipping );
 
+	$discount = 0;
+
+	// Membership lines: left out of the fee entirely when it is off for memberships, and
+	// a renewing one's share noted separately so it can be charged every period.
+	$fee_base   = $subtotal - $discount;
+	$renew_base = 0;
+	if ( function_exists( 'sp_member_product_plan' ) && function_exists( 'sp_store_members_on' ) && sp_store_members_on() ) {
+		foreach ( $lines as $line ) {
+			if ( ( $line['kind'] ?? 'product' ) === 'booking' || ! sp_member_product_plan( (int) ( $line['product_id'] ?? 0 ) ) ) continue;
+			if ( ! sp_store_fee_on_memberships() )                                   $fee_base   -= (int) $line['line_cents'];
+			elseif ( sp_member_product_interval( (int) $line['product_id'] ) !== '' ) $renew_base += (int) $line['line_cents'];
+		}
+	}
+	$fees  = sp_store_fees_for( $fee_base );
+	$renew = sp_store_fees_for( $renew_base );
+
 	return [
 		'subtotal_cents'   => $subtotal,
-		'discount_cents'   => 0,
+		'discount_cents'   => $discount,
 		'shipping_cents'   => $shipping,
 		'tax_cents'        => $tax,
-		'total_cents'      => $subtotal + $shipping + $tax,
+		'fee_cents'          => $fees['cents'],
+		'fee_card_cents'     => $fees['card_cents'],
+		'fee_platform_cents' => $fees['platform_cents'],
+		'fee_card_rate'      => $fees['card_rate'],
+		'fee_platform_rate'  => $fees['platform_rate'],
+		'fee_renew_card_cents'     => $renew['card_cents'],
+		'fee_renew_platform_cents' => $renew['platform_cents'],
+		'total_cents'      => $subtotal - $discount + $fees['cents'] + $shipping + $tax,
 		'taxable_cents'    => $taxable_goods,
 		'needs_shipping'   => $needs,
 		'shipping_rates'   => $rates,
@@ -357,7 +435,7 @@ function sp_store_quote( array $lines, array $args = [] ): array {
 
 /** The same quote with every amount also formatted for display. */
 function sp_store_quote_display( array $quote ): array {
-	foreach ( [ 'subtotal', 'discount', 'shipping', 'tax', 'total' ] as $key ) {
+	foreach ( [ 'subtotal', 'discount', 'shipping', 'tax', 'fee', 'total' ] as $key ) {
 		$quote[ $key ] = sp_store_money( (int) $quote[ $key . '_cents' ], $quote['currency'] );
 	}
 	return $quote;

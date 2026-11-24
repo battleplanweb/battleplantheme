@@ -6,6 +6,7 @@
 >>> TABLE OF CONTENTS:
 ----------------------------------------------------------------
 # Job Description Rewrite
+# Project Headline
 # Service Page Intro
 --------------------------------------------------------------*/
 
@@ -14,7 +15,8 @@
 # Job Description Rewrite
 --------------------------------------------------------------*/
 
-function bp_geo_prompt_rewrite_description( string $company, string $company_name_instruction, string $location_note, string $existing_terms_str, string $raw_description ): string {
+function bp_geo_prompt_rewrite_description( string $company, string $company_name_instruction, string $location_note, string $existing_terms_str, string $raw_description, string $service_pages_str = '' ): string {
+	$pages_block = $service_pages_str !== '' ? "\n\nTHE COMPANY'S SERVICE PAGES (slug — title):\n{$service_pages_str}" : "\n\nTHE COMPANY'S SERVICE PAGES: none listed — return an empty link_page.";
 	return <<<PROMPT
 You are an SEO copywriter for a home services company called "{$company}".
 
@@ -39,10 +41,32 @@ A technician has written a rough job description after completing a service call
    - If no existing term fits well, invent a clean, lowercase, hyphenated slug using full words.
    - service_category must NEVER be empty or null. If the notes are vague, pick the closest general category for this trade.
 
+3. Write a headline for this specific project.
+   - 4 to 10 words, Title Case, plain text.
+   - Describe what was actually done on THIS job: the equipment, the problem found, or the result.
+     e.g. "Storm-Damaged Shingles Replaced Before Spring Rains", "Failed Capacitor Gets a 20-Year-Old Unit Cooling Again".
+   - Do not start with the city name. Mention the city only if it reads naturally.
+   - Never include the company name, street address, zip code, or customer name.
+   - No generic filler like "Quality Service", "Another Happy Customer", or "Job Complete".
+
+4. Pick a link_phrase: 2 to 6 consecutive words copied EXACTLY (same spelling and punctuation) from your
+   rewritten_description that describe the service work performed — e.g. "installed a brand new roof",
+   "replaced the failed capacitor". It becomes a link to the company's page for that service.
+   - Must be a verb phrase about the work, not the company name, the city, or the customer.
+   - link_page: the slug of the ONE service page below where a reader of link_phrase should land
+     (e.g. a shingle roof replacement → the shingle roofing page, not metal roofing). Copy the slug
+     exactly from the list. Return an empty string if no page genuinely fits.
+
+5. List also_mentions: OTHER services (not the service_category) that your rewritten_description
+   actually mentions as work done or recommended on this job — e.g. a roofing job that also replaced gutters.
+   - "service": a base service slug following the same rules as service_category. Prefer an existing one.
+   - "phrase": 2 to 6 consecutive words copied EXACTLY from your rewritten_description about that work.
+   - At most 3. Return an empty array if nothing else is mentioned. Never invent mentions.
+
 {$location_note}
 
 EXISTING SERVICE TERMS (slugs):
-{$existing_terms_str}
+{$existing_terms_str}{$pages_block}
 
 RAW TECHNICIAN DESCRIPTION:
 {$raw_description}
@@ -51,8 +75,100 @@ Respond ONLY with a valid JSON object. No preamble, no markdown, no explanation.
 Put service_category FIRST so the classification is never lost to truncation. Format:
 {
   "service_category": "...",
+  "headline": "...",
+  "link_phrase": "...",
+  "link_page": "...",
+  "also_mentions": [ { "service": "...", "phrase": "..." } ],
   "rewritten_description": "..."
 }
+PROMPT;
+}
+
+
+/*--------------------------------------------------------------
+# Project Headline
+--------------------------------------------------------------*/
+// Backfill for jobs rewritten before headlines / link phrases existed — reads the saved description.
+
+function bp_geo_prompt_headline( string $service, string $city, string $state, string $description, string $existing_types_str = '', string $service_pages_str = '', string $current_phrase = '' ): string {
+	$pages_block  = $service_pages_str !== '' ? "THE COMPANY'S SERVICE PAGES (slug — title):\n{$service_pages_str}" : "THE COMPANY'S SERVICE PAGES: none listed — return an empty link_page.";
+	$phrase_note  = $current_phrase !== '' ? "\n- This job already has a link_phrase: \"{$current_phrase}\". Return that same phrase." : '';
+	return <<<PROMPT
+You are an SEO copywriter for a home services company.
+
+For the completed project below, write:
+
+1. headline
+- 4 to 10 words, Title Case, plain text.
+- Describe what was actually done on THIS job: the equipment, the problem found, or the result.
+  e.g. "Storm-Damaged Shingles Replaced Before Spring Rains", "Failed Capacitor Gets a 20-Year-Old Unit Cooling Again".
+- Do not start with the city name. Mention the city only if it reads naturally.
+- Never include the company name, street address, zip code, or customer name.
+- No generic filler like "Quality Service", "Another Happy Customer", or "Job Complete".
+
+2. link_phrase
+- 2 to 6 consecutive words copied EXACTLY (same spelling and punctuation) from the project description
+  that describe the service work performed — e.g. "installed a brand new roof". It becomes a link to the
+  company's page for that service.
+- Must be a verb phrase about the work, not the company name, the city, or the customer.
+- If no phrase in the description fits, return an empty string.{$phrase_note}
+
+3. link_page
+- The slug of the ONE service page listed below where a reader of link_phrase should land
+  (e.g. a shingle roof replacement → the shingle roofing page, not metal roofing). Copy the slug
+  exactly from the list. Return an empty string if no page genuinely fits.
+
+4. also_mentions
+- OTHER services (not {$service}) that the description actually mentions as work done or recommended
+  on this job — e.g. a roofing job that also replaced gutters.
+- "service": a lowercase, hyphenated base service slug using full words (no city/state). Prefer one from
+  the existing list below.
+- "phrase": 2 to 6 consecutive words copied EXACTLY from the description about that work.
+- At most 3. Return an empty array if nothing else is mentioned. Never invent mentions.
+
+EXISTING SERVICE SLUGS:
+{$existing_types_str}
+
+{$pages_block}
+
+SERVICE: {$service}
+LOCATION: {$city}, {$state}
+
+PROJECT DESCRIPTION:
+{$description}
+
+Respond ONLY with valid JSON: {"headline": "...", "link_phrase": "...", "link_page": "...", "also_mentions": [ { "service": "...", "phrase": "..." } ]}
+PROMPT;
+}
+
+
+/*--------------------------------------------------------------
+# Service Page Meta Description
+--------------------------------------------------------------*/
+// One summary sentence for a /service/ page's meta description, drawn only from the jobs listed there.
+// The call to action is appended in code (bp_geo_meta_desc_cta) so it stays consistent and editable.
+
+function bp_geo_prompt_meta_summary( string $service, string $city, string $state, string $jobs ): string {
+	return <<<PROMPT
+You are an SEO copywriter for a home services company.
+
+Write ONE sentence summarizing the completed {$service} projects in {$city}, {$state} described below.
+It becomes the start of the page's meta description in search results.
+
+RULES:
+- Follow this pattern: "Explore [service] projects in {$city}, {$state}, including [2 specifics]."
+  e.g. "Explore roof replacement projects in Waco, TX, including architectural shingles and decking repairs."
+- Write the service in lowercase unless it is an acronym (HVAC, AC).
+- The 2 specifics must be concrete work, materials, or equipment that actually appear in the projects
+  below. Never invent details. If there is only one clear specific, use one.
+- 75 to 100 characters. Plain text. End with a period.
+- Never include the company name, customer names, street addresses, prices, or claims like "best" or "#1".
+- No em-dashes.
+
+PROJECTS:
+{$jobs}
+
+Respond ONLY with valid JSON: {"summary": "..."}
 PROMPT;
 }
 

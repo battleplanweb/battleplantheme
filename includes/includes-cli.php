@@ -594,6 +594,37 @@ class BP_CLI_Command {
 	}
 
 	/**
+	 * Fill missing Jobsite GEO card data now — headline, service link phrase, other-service
+	 * mentions — instead of waiting for page views to queue it. Only empty fields are written.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--limit=<n>]
+	 * : Stop after this many jobs. Default: all.
+	 *
+	 * [--dry-run]
+	 * : List the jobs that would be processed, without calling the AI.
+	 *
+	 * @subcommand geo-backfill
+	 */
+	public function geo_backfill( $args, $assoc ) {
+		if ( ! function_exists( 'bp_geo_generate_headline' ) ) WP_CLI::error( 'Jobsite GEO module is not active on this site.' );
+
+		[ $todo, $missing ] = bp_geo_backfill_todo( (int) ( $assoc['limit'] ?? 0 ) );
+		WP_CLI::log( "{$missing} published job(s) need card data." );
+		if ( ! $todo ) WP_CLI::success( 'Nothing to do.' );
+		if ( ! $todo || isset( $assoc['dry-run'] ) ) return;
+
+		[ $rows, $noPage ] = bp_geo_backfill_run( $todo );
+		WP_CLI\Utils\format_items( 'table', $rows, [ 'id', 'job', 'result', 'headline', 'phrase', 'page', 'mentions' ] );
+
+		if ( $noPage ) WP_CLI::warning( 'No service page to link for: ' . implode( ', ', $noPage ) . ' — add the right page under the "Our Services" menu item, or set "Service Link Page" on the job.' );
+
+		$fail = count( array_filter( $rows, fn( $r ) => $r['result'] !== 'ok' ) );
+		$fail ? WP_CLI::warning( "{$fail} job(s) failed — see the result column." ) : WP_CLI::success( 'Done. Purge the WP Engine + Cloudflare cache to see it on the /service/ pages.' );
+	}
+
+	/**
 	 * Whole-site SEO check: every indexable page's title + description, and every weak
 	 * image alt (deduped across pages — a sidebar logo counts once). Read-only. Feeds the
 	 * fleet runner (`bp-fleet audit`), so the default output is one JSON object.

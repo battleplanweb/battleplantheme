@@ -231,6 +231,7 @@ select {
 	border-bottom:                                             var(--input-border-bottom);
 	border-left:                                               var(--input-border-left);
 	box-shadow:                                                var(--input-box-shadow);
+	outline:                                                   var(--input-outline);
 	border-radius:                                             var(--input-border-radius);
 	text-shadow:                                               var(--input-text-shadow);
 	transform:                                                 var(--input-transform);
@@ -270,6 +271,7 @@ select:focus,
 	border-bottom:                                             var(--input-border-bottom-focus);
 	border-left:                                               var(--input-border-left-focus);
 	box-shadow:                                                var(--input-box-shadow-focus);
+	outline:                                                   var(--input-outline-focus);
 	border-radius:                                             var(--input-border-radius-focus);
 	text-shadow:                                               var(--input-text-shadow-focus);
 	transform:                                                 var(--input-transform-focus);
@@ -320,7 +322,7 @@ a.page-numbers:visited {
 	font-variant:                                              var(--button-font-variant);
 	letter-spacing:                                            var(--button-letter-spacing);
 	transform:                                                 var(--button-transform);
-	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+	transition:                                                var(--button-transition);
 }
 
 a.button:hover,
@@ -367,7 +369,7 @@ ul.tabs li.current {
 	font-variant:                                              var(--button-font-variant-hover);
 	letter-spacing:                                            var(--button-letter-spacing-hover);
 	transform:                                                 var(--button-transform-hover);
-	transition:                                                all var(--main-trans-speed) var(--main-trans-easing);
+	transition:                                                var(--button-transition-hover);
 }
 
 

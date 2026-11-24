@@ -14,7 +14,7 @@ get_header(); ?>
 
 		<?php if ( have_posts() ) :
 			$archiveHeadline = 'Upcoming Events';
-			$archiveIntro = '<div class="calender-btn-row">[btn link="/calendar/"]Calender View[/btn]</div>';
+			$archiveIntro = bp_calendar_views( 'list' );
 			$grid = "3e";
 			$valign = "stretch";
 			$break = "2";
@@ -33,7 +33,10 @@ get_header(); ?>
 
 			if ( function_exists( 'overrideArchive' ) ) { overrideArchive( get_post_type() ); }
 
-			$currentMonth = date('F Y', strtotime('-1 month'));
+			// Soonest first, by each event's next date (its date blocks), not the legacy start_date meta,
+			// which Site Pulse-made events may store in a different format.
+			global $wp_query;
+			usort( $wp_query->posts, static fn( $a, $b ) => bp_event_next_date( $a->ID ) <=> bp_event_next_date( $b->ID ) );
 
 		// Build Archive
 			while ( have_posts() ) : the_post();
@@ -46,14 +49,13 @@ get_header(); ?>
 				$startDate = esc_attr(get_post_meta( get_the_ID(), 'start_date', true ));
 				$endDate = esc_attr(get_post_meta( get_the_ID(), 'end_date', true ));
 
-				if ( date('F Y', strtotime($startDate)) != $currentMonth ) :
-					$currentMonth = date('F Y', strtotime($startDate));
-					$buildArchive .= '<h2 class="month-divider span-all">'.$currentMonth.'</h2>';
-				endif;
+				// No month headings: each card carries its own date badge (month + day) on the photo.
+				$next = bp_event_next_date( get_the_ID() );
+				$badge = $next ? '<span class="event-date-badge" aria-hidden="true"><span class="event-date-badge-month">'.date( 'M', $next ).'</span><span class="event-date-badge-day">'.date( 'j', $next ).'</span></span>' : '';
 
 				$classes = 'col-archive col-'.get_post_type().' col-'.get_the_ID().' '.$addClass;
 
-				$buildArchive .= do_shortcode('[col name="'.sanitize_title(get_the_title()).'" class="'.$classes.'"][build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="'.$buildMeta.'" no_pic="'.$noPic.'"][group]'.$buildMeta.'[/group][/col]');
+				$buildArchive .= do_shortcode('[col name="'.sanitize_title(get_the_title()).'" class="'.$classes.'"]'.$badge.'[build-archive type="'.get_post_type().'" show_thumb="'.$showThumb.'" show_btn="'.$showBtn.'" btn_text="'.$btnText.'" btn_pos="'.$btnPos.'" title_pos="'.$titlePos.'" show_excerpt="'.$showExcerpt.'" show_content="'.$showContent.'" show_date="'.$showDate.'" show_author="'.$showAuthor.'" pic_size="'.$picSize.'" text_size="'.$textSize.'" accordion="'.$accordion.'" add_info="'.$buildMeta.'" no_pic="'.$noPic.'"][group]'.$buildMeta.'[/group][/col]');
 			endwhile;
 
 		// Display Archive

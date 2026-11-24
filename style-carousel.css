@@ -457,9 +457,12 @@
 	}
 
 	/* Testimonials */
+	/* Cap the WRAPPER, not the svg: the initials centre on the wrapper and sites round the
+	   wrapper with border-radius, so a narrower svg sat left inside a wide oval. */
 	.block-image.image-testimonials.testimonials-generic-icon {
 		position:                                                 relative;
 		width:                                                    100%;
+		max-width:                                                60vw;
 		margin:                                                   0 auto;
 	}
 
@@ -471,6 +474,6 @@
 	}
 
 	.testimonials-generic-icon .anonymous-icon {
-		max-width:                                                60vw;
+		display:                                                  block;
 	}
 }

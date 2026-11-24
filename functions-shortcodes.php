@@ -759,7 +759,7 @@ function battleplan_get_service_areas() {
 	if ( function_exists('bp_geo_parse_service_slug') ) {
 		$implied_terms = get_terms(['taxonomy' => 'jobsite_geo-services', 'hide_empty' => false]);
 		foreach ( (is_wp_error($implied_terms) ? [] : (array) $implied_terms) as $implied ) {
-			$parsed = bp_geo_parse_service_slug($implied->slug);
+			$parsed = bp_geo_parse_service_slug(bp_geo_service_term_key($implied));
 			if (!$parsed['city'] || !$parsed['state']) continue;
 
 			$impliedSlug = sanitize_title($parsed['city'] . ' ' . $parsed['state']);
@@ -972,7 +972,7 @@ function battleplan_getRandomImage($atts, $content = null ) {
 add_shortcode( 'get-row-of-pics', 'battleplan_getRowOfPics' );
 function battleplan_getRowOfPics($atts, $content = null ) {
 	$atts = bp_orderby_atts($atts, 'order_by');
-	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'row'=>'1', 'offset'=>'0', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true' ), $atts );
+	$a = shortcode_atts( array( 'id'=>'', 'tag'=>'row-of-pics', 'link'=>'no', 'col'=>'4', 'row'=>'1', 'offset'=>'0', 'size'=>'half-s', 'valign'=>'center', 'class'=>'', 'order_by'=>'rand', 'order'=>'asc', 'shuffle'=>'no', 'lazy'=>'true', 'gap'=>'' ), $atts );
 	$col = esc_attr($a['col']);
 	$row = esc_attr($a['row']);
 	$size = esc_attr($a['size']);
@@ -1063,7 +1063,7 @@ function battleplan_getRowOfPics($atts, $content = null ) {
 		$imageArray = array_merge($right, array_reverse($left));
 	endif;
 
-	return do_shortcode('[layout class="flex-row-of-pics" grid="'.$col.'e" valign="'.esc_attr($a['valign']).'"]'.printArray($imageArray).'[/layout]');
+	return do_shortcode('[layout class="flex-row-of-pics" grid="'.$col.'e" valign="'.esc_attr($a['valign']).'" gap="'.esc_attr($a['gap']).'"]'.printArray($imageArray).'[/layout]');
 }
 
 add_filter('posts_request', function($sql, $query) {

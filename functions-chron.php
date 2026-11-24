@@ -104,6 +104,11 @@ if (($forceC = bp_chron_claim('c', 86400 * 3)) !== null) {
 if (($forceD = bp_chron_claim('d', 86400 * 7, 86400 * 6)) !== null) {
     require_once get_template_directory() . '/functions-keyword-rankings.php';
     bp_kw_run_chron($forceD);
+} elseif (get_option('bp_kw_pending') && bp_chron_claim('k', 3 * 3600) !== null) {
+    // Keyword checks go through DataForSEO's queue; collect finished results every few hours
+    // while any are waiting (task_get is free). Quiet when nothing is pending.
+    require_once get_template_directory() . '/functions-keyword-rankings.php';
+    bp_kw_collect_pending(40);
 }
 
 

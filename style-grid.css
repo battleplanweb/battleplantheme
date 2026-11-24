@@ -51,6 +51,12 @@ section.section-parallax {
 .hero-box > picture.hero-picture {
 	display:                                                   contents;
 }
+/* display:contents promotes the <source> to a child of the hero box too, and <source> has no UA
+   display:none — so it became an empty grid item: a zero-height first row plus the section's row gap
+   above the content. */
+.hero-picture > source {
+	display:                                                   none;
+}
 
 .hero-bg {
 	position:                                                  absolute;
@@ -358,6 +364,10 @@ div.grid-fit > .span-all {
 
 div.grid-custom {
 	width:                                                     100%;
+	grid-template-columns:                                     var(--grid-custom, 1fr);
+	/* [layout grid="1fr 600px"] sets --grid-custom inline (functions-grid.php). Kept at this
+	   low specificity on purpose so .flex.break-N and the div.grid-custom break rules can
+	   collapse it to one column on smaller screens. */
 }
 
 .strip-elem .flex .col,
